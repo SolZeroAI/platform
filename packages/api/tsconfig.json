@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/server/*"],
+      "infra/*": ["../infra/src/*"],
+      "@c0-agent/shared": ["../shared/src/index.ts"],
+      "@c0-agent/shared/*": ["../shared/src/*"],
+      "@c0/api": ["./src/index.ts"],
+      "@c0/api/*": ["./src/*"]
+    },
+    "types": ["@cloudflare/workers-types", "node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose an improvement to c0
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the organizational or individual workflow that is difficult today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like c0 to do?
+      description: Describe the desired behavior without requiring a specific implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What alternatives have you considered?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add examples, mockups, or related links. Do not include private organizational information.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched for an existing issue before filing this request.
+          required: true

@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "term (workspace)",
+      "type": "process",
+      "command": "${env:SHELL}",
+      "args": ["-l"],
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 10
+      }
+    },
+    {
+      "label": "term (web)",
+      "type": "process",
+      "command": "${env:SHELL}",
+      "args": ["-l"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 10
+      }
+    },
+    {
+      "label": "term (api)",
+      "type": "process",
+      "command": "${env:SHELL}",
+      "args": ["-l"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 10
+      }
+    }
+  ]
+}

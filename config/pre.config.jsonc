@@ -1,0 +1,156 @@
+{
+  // Complete example deployment configuration. Copy and customize this shape for a stage deployment.
+  // Secret values stay outside JSONC and are referenced by environment binding name.
+  "$schema": "./c0.config.schema.json",
+  "schemaVersion": 1,
+  "deployment": {
+    "appName": "c0",
+    "zone": "localhost",
+    // "webFqdn": "ai.example.com",
+    // "apiFqdn": "api.ai.example.com",
+    "useApiShield": false,
+    "observability": {
+      "logsDestinations": [],
+      "tracesDestinations": [],
+      "logsHeadSamplingRate": 1,
+      "tracesHeadSamplingRate": 1,
+    },
+  },
+  "application": {
+    "logLevel": "trace",
+    "sendSlackNotifications": false,
+    "slackChannel": "",
+    "sandboxInactivityTimeoutMs": 600000,
+    "showTestErrorButton": true,
+    "betterAuthSessionTransferEnabled": true,
+  },
+  // Credential sign-in provisions these configured administrators as c0 users.
+  "admins": {
+    "adminEmails": ["admin@example.com"],
+    "adminDomains": [],
+  },
+  // Provider capabilities independently control sign-in, provisioning, and linking.
+  "auth": {
+    "defaultSignInProviderId": "credential",
+    "adminPassword": {
+      "env": "C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD",
+      "generateIfMissing": true,
+    },
+    "providers": {
+      "credential": {
+        "kind": "credential",
+        "enabled": true,
+        "displayName": "Administrator",
+        "capabilities": {
+          "signIn": true,
+          "provisionUsers": true,
+          "link": false,
+        },
+        "provisioning": {
+          "scope": "configured-admins",
+        },
+      },
+
+      // Any social or OIDC provider can become a sign-in authority. Its kind does not grant
+      // authority; the capabilities below do. Keep implicit account linking disabled.
+      // "company-oidc": {
+      //   "kind": "oidc",
+      //   "enabled": true,
+      //   "displayName": "Company SSO",
+      //   "issuer": "https://identity.example.com",
+      //   "clientId": "your-client-id",
+      //   "clientSecret": { "env": "C0_AUTH_COMPANY_OIDC_CLIENT_SECRET" },
+      //   "scopes": ["openid", "profile", "email", "offline_access"],
+      //   "capabilities": {
+      //     "signIn": true,
+      //     "provisionUsers": true,
+      //     "link": true
+      //   }
+      // }
+
+      // Enabling integrations.githubApp also requires this explicit link-capable provider.
+      // Its clientId and clientSecret reference must match the GitHub App configuration.
+      // "github": {
+      //   "kind": "social",
+      //   "enabled": true,
+      //   "displayName": "GitHub",
+      //   "clientId": "your-github-app-client-id",
+      //   "clientSecret": { "env": "GITHUB_APP_CLIENT_SECRET" },
+      //   "capabilities": {
+      //     "signIn": false,
+      //     "provisionUsers": false,
+      //     "link": true
+      //   }
+      // }
+    },
+  },
+  // Remove an optional runtime-configurable domain to manage it from Admin instead.
+  "aiProviders": {
+    // Configure LiteLLM from Admin after sign-in, or uncomment this deployment-managed block.
+    // "litellm": {
+    //   "enabled": true,
+    //   "baseUrl": "https://litellm.example.com",
+    //   "defaultModel": null,
+    //   "defaultReasoningLevel": null,
+    //   "adapterOverrides": {},
+    //   "apiKey": { "env": "C0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY" }
+    // }
+  },
+
+  // Omit MCPCF to configure it from Admin, or uncomment this deployment-managed block.
+  // "mcpcf": {
+  //   "enabled": true,
+  //   "baseUrl": "https://mcpcf.example.com",
+  //   "userOauthProviderId": "company-oidc",
+  //   "expectedIssuer": null,
+  //   "authTypeAllowlist": ["oauth", "token"],
+  //   "serverBlacklist": [],
+  //   "adminApiToken": { "env": "C0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN" }
+  // },
+
+  "integrations": {
+    // When enabled, register <authBaseUrl>/api/auth/callback/github in the GitHub App and
+    // grant read-only access to account email addresses for Better Auth profile resolution.
+    "githubApp": {
+      "enabled": false,
+      "appId": "",
+      "clientId": "",
+      "slug": "",
+      "clientSecret": {
+        "env": "GITHUB_APP_CLIENT_SECRET",
+      },
+      "privateKey": {
+        "env": "GITHUB_APP_PRIVATE_KEY",
+      },
+    },
+    "slack": {
+      "enabled": false,
+      "botToken": {
+        "env": "SLACK_TOKEN",
+      },
+    },
+  },
+  // Only explicit generateIfMissing references may be generated into Alchemy state.
+  "security": {
+    "betterAuthSecret": {
+      "env": "BETTER_AUTH_SECRET",
+      "generateIfMissing": true,
+    },
+    "mcpcfProxySigningSecret": {
+      "env": "MCPCF_PROXY_SIGNING_SECRET",
+      "generateIfMissing": true,
+    },
+    "tokenEncryptionKey": {
+      "env": "TOKEN_ENCRYPTION_KEY",
+      "generateIfMissing": true,
+    },
+    "repositorySecretsEncryptionKey": {
+      "env": "REPO_SECRETS_ENCRYPTION_KEY",
+      "generateIfMissing": true,
+    },
+  },
+  "aiSearch": {
+    // Set when this deployment has a Cloudflare AI Search service-token identifier.
+    // "serviceTokenId": { "env": "CF_AI_SEARCH_SERVICE_TOKEN_ID" }
+  },
+}

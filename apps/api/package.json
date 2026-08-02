@@ -1,0 +1,24 @@
+{
+  "name": "@c0/background-api",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "scripts": {
+    "dev": "nub run --cwd ../../packages/infra dev:api",
+    "build": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint index.ts src infra",
+    "lint:fix": "oxlint --fix index.ts src infra"
+  },
+  "dependencies": {
+    "@c0-agent/shared": "workspace:*",
+    "@c0/api": "workspace:*",
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "devDependencies": {
+    "alchemy": "2.0.0-beta.67",
+    "effect": "4.0.0-beta.100",
+    "typescript": "^7.0.2"
+  }
+}

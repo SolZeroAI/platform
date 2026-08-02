@@ -1,0 +1,4 @@
+interface:
+  display_name: "Debug Cloudflare Workers"
+  short_description: "Debug Workers with observability and Wrangler"
+  default_prompt: "Use $debug-cloudflare-workers-observability to debug a deployed Cloudflare Worker issue with logs, traces, and runtime data."

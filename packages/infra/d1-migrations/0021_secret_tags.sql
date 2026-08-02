@@ -1,0 +1,1 @@
+ALTER TABLE global_secrets ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';

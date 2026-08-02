@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Runtime ABI"
+  short_description: "Version workflow runtime and manifest contracts safely"
+  default_prompt: "Use $workflow-runtime-abi to decide whether a workflow node option or adapter behavior change needs a manifest/runtime ABI update, then add the migration and compatibility tests."

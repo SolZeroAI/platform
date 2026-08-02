@@ -1,0 +1,19 @@
+diff --git a/dist/lib/container.js b/dist/lib/container.js
+index 8171b36c16bcda3bd70a68d4750e392cf3364680..ec39851b8a454aa0217c09fb1a07e8c77ff53b93 100644
+--- a/dist/lib/container.js
++++ b/dist/lib/container.js
+@@ -952,9 +952,12 @@ export class Container extends DurableObject {
+                 });
+                 return new Response(null, { status: res.status, webSocket: client, headers: res.headers });
+             }
+-            if (res.body !== null) {
++            // `response.body` is `null` for no-body statuses; wrapping 204/205/304 with a stream body
++            // produces an invalid Response and breaks proxying through Cloudflare Containers.
++            const status = res.status;
++            if (res.body != null && ![101, 204, 205, 304].includes(status)) {
+                 const { readable, writable } = new IdentityTransformStream();
+-                res.body?.pipeTo(writable).finally(() => {
++                res.body.pipeTo(writable).finally(() => {
+                     this.decrementInflight();
+                 });
+                 return new Response(readable, res);

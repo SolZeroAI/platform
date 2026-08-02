@@ -1,0 +1,26 @@
+# Template for a stage secret file. Copy this file to config/.dev.vars,
+# config/.test.vars, config/.pre.vars, or config/.prod.vars as needed.
+# Non-secret configuration belongs in config/<stage>.config.jsonc.
+# Setting generated security secrets is optional; Alchemy generates and persists
+# them in its state. Uncomment integration secrets only when enabling their config.
+
+# Credential and external sign-in providers
+# C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD=
+
+# AI providers and MCP Context Forge
+# C0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY=
+# C0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN=
+
+# Internal security keys
+# MCPCF_PROXY_SIGNING_SECRET=
+# TOKEN_ENCRYPTION_KEY=
+# REPO_SECRETS_ENCRYPTION_KEY=
+# BETTER_AUTH_SECRET=
+
+# GitHub App and Slack integration secrets
+# GITHUB_APP_CLIENT_SECRET=
+# GITHUB_APP_PRIVATE_KEY=
+# SLACK_TOKEN=
+
+# Cloudflare AI Search service-token identifier
+# CF_AI_SEARCH_SERVICE_TOKEN_ID=

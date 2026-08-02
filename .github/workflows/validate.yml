@@ -1,0 +1,54 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Repository validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Nub
+        uses: ./.github/actions/setup-nub
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Validate configuration
+        run: nub run config:check
+
+      - name: Typecheck
+        run: nub run typecheck
+
+      - name: Lint
+        run: nub run lint
+
+      - name: Check formatting
+        run: nub run format
+
+      - name: Test
+        run: nub run test
+
+      - name: Build
+        run: nub run build

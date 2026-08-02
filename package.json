@@ -1,0 +1,123 @@
+{
+  "name": "c0-agent",
+  "version": "1.4.4",
+  "private": true,
+  "description": "c0 is an AI agent with configurable context and tools. It can be used synchronously with humans in the loop, or asynchronously via API, webhooks, MCP, and other integrations.",
+  "homepage": "https://github.com/Consensys/c0#readme",
+  "bugs": {
+    "url": "https://github.com/Consensys/c0/issues"
+  },
+  "license": "LGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Consensys/c0.git"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "nub run dev:app",
+    "dev:api": "nub run --filter @c0/background-api dev",
+    "dev:web": "nub run --filter @c0/background-web dev",
+    "dev:app": "nub run --cwd packages/infra dev",
+    "dev:apps": "nub run dev:app",
+    "dev:logs": "./scripts/watch-logs.sh",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint && oxlint packages/infra tests scripts/workflows scripts/sync-github-env-secrets.ts vitest.config.ts apps/api/index.ts apps/api/env.d.ts",
+    "lint:workspaces": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix && oxlint --fix packages/infra tests scripts/workflows scripts/sync-github-env-secrets.ts vitest.config.ts apps/api/index.ts apps/api/env.d.ts",
+    "test:workspaces": "turbo run test",
+    "test": "turbo run test && vitest run",
+    "alchemy:state:bootstrap": "nub run --cwd packages/infra alchemy cloudflare bootstrap",
+    "alchemy:state:tree": "CI=true nub run --cwd packages/infra alchemy state tree alchemy.state.run.ts",
+    "alchemy:state:stacks": "CI=true nub run --cwd packages/infra alchemy state stacks alchemy.state.run.ts",
+    "alchemy:state:stages": "CI=true nub run --cwd packages/infra alchemy state stages alchemy.state.run.ts",
+    "alchemy:state:resources": "CI=true nub run --cwd packages/infra alchemy state resources alchemy.state.run.ts",
+    "alchemy:state:get": "CI=true nub run --cwd packages/infra alchemy state get alchemy.state.run.ts",
+    "auth:admin-password": "tsx scripts/print-admin-password.ts",
+    "config:check": "tsx scripts/c0-config.ts check",
+    "config:schema": "tsx scripts/c0-config.ts schema",
+    "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
+    "workflow:runtime:audit": "tsx scripts/workflows/audit-runtime-abi.ts",
+    "clean": "turbo run clean",
+    "infra:plan:dev": "nub run --cwd packages/infra plan:dev",
+    "infra:plan:pre": "nub run --cwd packages/infra plan:pre",
+    "infra:plan:prod": "nub run --cwd packages/infra plan:prod",
+    "infra:deploy:dev": "nub run --cwd packages/infra deploy:dev",
+    "infra:deploy:pre": "nub run --cwd packages/infra deploy:pre",
+    "infra:deploy:prod": "nub run --cwd packages/infra deploy:prod",
+    "infra:destroy:dev": "nub run --cwd packages/infra destroy:dev",
+    "infra:destroy:pre": "nub run --cwd packages/infra destroy:pre",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt .",
+    "lint:fix:max": "oxlint --fix --fix-suggestions --fix-dangerously .",
+    "generate:openapi": "concurrently --passthrough-arguments --kill-others --kill-signal SIGKILL --success command-1 \"nub run dev:api {@}\" \"wait-on -t 20s http://localhost:1337/openapi.json && curl http://localhost:1337/openapi.json | json > openapi.json && echo 'OpenAPI generated'\"",
+    "test:watch": "vitest",
+    "test:e2e": "RUN_E2E=1 vitest run tests/e2e/opencode-workflow.test.ts"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.0-beta.100",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "1.0.0-rc.2-e38a2ba",
+    "effect": "4.0.0-beta.100"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "@mpsuesser/oxlint-plugin-effect": "0.2.2",
+    "@oxlint/plugins": "1.66.0",
+    "@types/node": "^24.12.4",
+    "alchemy": "2.0.0-beta.67",
+    "concurrently": "^9.2.1",
+    "drizzle-kit": "1.0.0-rc.2-e38a2ba",
+    "json": "^11.0.0",
+    "jsonc-parser": "^3.3.1",
+    "openapi-types": "^12.1.3",
+    "oxfmt": "^0.49.0",
+    "oxlint": "^1.64.0",
+    "tsx": "^4.22.0",
+    "turbo": "2.10.5",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.6",
+    "wait-on": "9.0.10",
+    "wrangler": "^4.91.0"
+  },
+  "overrides": {
+    "@cloudflare/codemode": "0.5.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "ai": "7.0.36",
+    "chat": "4.34.0",
+    "workerd": "1.20260721.1"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "nub",
+      "version": "0.4.11",
+      "onFail": "warn"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "24.15.0"
+    }
+  },
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "packageManager": "nub@0.4.11",
+  "allowBuilds": {
+    "@mongodb-js/zstd": true,
+    "core-js-pure": true,
+    "esbuild": true,
+    "msgpackr-extract": true,
+    "node-liblzma": true,
+    "sharp": true,
+    "unicode-animations": true,
+    "workerd": true
+  },
+  "patchedDependencies": {
+    "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
+    "alchemy@2.0.0-beta.67": "patches/alchemy@2.0.0-beta.67.patch"
+  }
+}

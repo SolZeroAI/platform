@@ -1,0 +1,1 @@
+ALTER TABLE sessions ADD COLUMN tools_json TEXT NOT NULL DEFAULT '[]';

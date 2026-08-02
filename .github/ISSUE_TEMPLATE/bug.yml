@@ -1,0 +1,62 @@
+name: Bug report
+description: Report reproducible behavior that is not working as expected
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve c0. Do not include credentials, private data, or internal URLs.
+        Report suspected vulnerabilities through private vulnerability reporting instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the behavior and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      description: Provide the smallest set of steps, config, or sample code needed to reproduce the issue.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: c0 version or commit
+      placeholder: v1.0.0 or commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include relevant runtime, browser, operating system, and deployment details.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or additional context
+      description: Remove tokens, cookies, authorization headers, personal data, and internal identifiers.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched for an existing issue before filing this report.
+          required: true
+        - label: I removed secrets and private information from this report.
+          required: true

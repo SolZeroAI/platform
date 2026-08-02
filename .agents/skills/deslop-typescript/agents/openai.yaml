@@ -1,0 +1,5 @@
+interface:
+  display_name: "Deslop TypeScript"
+  short_description: "De-slop nearly finished JS and TS changes"
+  default_prompt: "Use $deslop-typescript to run a final cleanup pass on this JavaScript or TypeScript change before commit."
+

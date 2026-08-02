@@ -1,0 +1,59 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "lib": [
+      "ESNext"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": [
+        "./packages/api/src/server/*"
+      ],
+      "infra/*": [
+        "./packages/infra/src/*"
+      ],
+      "@c0-agent/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@c0-agent/shared/*": [
+        "./packages/shared/src/*"
+      ],
+      "@c0/api": [
+        "./packages/api/src/index.ts"
+      ],
+      "@c0/api/*": [
+        "./packages/api/src/*"
+      ]
+    },
+    "types": [
+      "@types/node",
+      "@cloudflare/workers-types"
+    ],
+    "outDir": "./dist"
+  },
+  "tsc-alias": {
+    "resolveFullPaths": true
+  },
+  "include": [
+    "apps/api/**/*.ts",
+    "apps/api/**/*.tsx",
+    "packages/api/**/*.ts",
+    "packages/infra/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.d.ts",
+    "vitest.config.ts",
+    "vitest.alchemy.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "opensrc"
+  ]
+}

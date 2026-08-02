@@ -1,0 +1,92 @@
+# The pinned upstream setup-nub action currently references actions/cache by tag.
+# Keep this small equivalent local action until upstream publishes a fully pinned
+# composite action so repository action-policy checks can resolve every action.
+name: Setup Nub
+description: Install Linux native prerequisites, Nub, restore its cache, and provision the repository Node version.
+author: Consensys
+
+inputs:
+  nub-version:
+    description: Nub version to install.
+    required: false
+    default: "0.4.11"
+  node-version-file:
+    description: File containing the Node version to provision.
+    required: false
+    default: .nvmrc
+  cache-dependency-path:
+    description: Lockfile used to invalidate the Nub cache.
+    required: false
+    default: nub.lock
+
+runs:
+  using: composite
+  steps:
+    - name: Install Linux build dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v pkg-config >/dev/null || ! pkg-config --exists liblzma; then
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+        fi
+
+    - name: Install Nub
+      shell: bash
+      env:
+        NUB_VERSION: ${{ inputs.nub-version }}
+      run: |
+        set -euo pipefail
+        npm install --global "@nubjs/nub@${NUB_VERSION}"
+        nub --version
+
+    - name: Resolve Nub cache paths
+      id: cachepaths
+      shell: bash
+      run: |
+        set -euo pipefail
+        store="$(nub store path)"
+        cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/nub"
+        {
+          echo "store=$store"
+          echo "node-cache=$cache_root/node"
+          echo "pm-cache=$cache_root/pm"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Cache Nub store
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: |
+          ${{ steps.cachepaths.outputs.store }}
+          ${{ steps.cachepaths.outputs.node-cache }}
+          ${{ steps.cachepaths.outputs.pm-cache }}
+        key: nub-${{ runner.os }}-${{ runner.arch }}-${{ inputs.nub-version }}-${{ hashFiles(inputs.node-version-file) }}-${{ hashFiles(inputs.cache-dependency-path) }}
+        restore-keys: |
+          nub-${{ runner.os }}-${{ runner.arch }}-${{ inputs.nub-version }}-${{ hashFiles(inputs.node-version-file) }}-
+          nub-${{ runner.os }}-${{ runner.arch }}-${{ inputs.nub-version }}-
+
+    - name: Provision pinned Node
+      shell: bash
+      env:
+        NODE_VERSION_FILE: ${{ inputs.node-version-file }}
+      run: |
+        set -euo pipefail
+        if [ ! -f "$NODE_VERSION_FILE" ]; then
+          echo "Node version file not found: $NODE_VERSION_FILE" >&2
+          exit 1
+        fi
+
+        node_version="$(head -n 1 "$NODE_VERSION_FILE" | tr -d 'v[:space:]')"
+        if [ -z "$node_version" ]; then
+          echo "Node version file is empty: $NODE_VERSION_FILE" >&2
+          exit 1
+        fi
+
+        nub node install "$node_version"
+        node_path="$(nub node which 2>/dev/null)"
+        if [ -z "$node_path" ]; then
+          echo "Nub did not resolve a managed Node installation" >&2
+          exit 1
+        fi
+        echo "$(dirname "$node_path")" >> "$GITHUB_PATH"

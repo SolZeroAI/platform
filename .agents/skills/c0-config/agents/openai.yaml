@@ -1,0 +1,4 @@
+interface:
+  display_name: "c0 Config"
+  short_description: "Standards for dynamic c0 configuration"
+  default_prompt: "Use $c0-config to update c0 dynamic configuration, provider, or registry storage."

@@ -1,0 +1,478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+    "schemaVersion": { "type": "number", "enum": [1] },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "zone": { "type": "string" },
+        "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "apiFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "useApiShield": { "type": "boolean" },
+        "observability": {
+          "type": "object",
+          "properties": {
+            "logsDestinations": { "type": "array", "items": { "type": "string" } },
+            "tracesDestinations": { "type": "array", "items": { "type": "string" } },
+            "logsHeadSamplingRate": {
+              "anyOf": [
+                { "type": "number" },
+                { "type": "string", "enum": ["NaN"] },
+                { "type": "string", "enum": ["Infinity"] },
+                { "type": "string", "enum": ["-Infinity"] }
+              ],
+              "allOf": [{ "minimum": 0, "maximum": 1 }]
+            },
+            "tracesHeadSamplingRate": {
+              "anyOf": [
+                { "type": "number" },
+                { "type": "string", "enum": ["NaN"] },
+                { "type": "string", "enum": ["Infinity"] },
+                { "type": "string", "enum": ["-Infinity"] }
+              ],
+              "allOf": [{ "minimum": 0, "maximum": 1 }]
+            }
+          },
+          "required": [
+            "logsDestinations",
+            "tracesDestinations",
+            "logsHeadSamplingRate",
+            "tracesHeadSamplingRate"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": ["appName", "zone", "useApiShield", "observability"],
+      "additionalProperties": false
+    },
+    "application": {
+      "type": "object",
+      "properties": {
+        "logLevel": { "type": "string", "enum": ["trace", "debug"] },
+        "sendSlackNotifications": { "type": "boolean" },
+        "slackChannel": { "type": "string" },
+        "sandboxInactivityTimeoutMs": {
+          "anyOf": [
+            { "type": "number" },
+            { "type": "string", "enum": ["NaN"] },
+            { "type": "string", "enum": ["Infinity"] },
+            { "type": "string", "enum": ["-Infinity"] }
+          ]
+        },
+        "showTestErrorButton": { "type": "boolean" },
+        "betterAuthSessionTransferEnabled": { "type": "boolean" }
+      },
+      "required": [
+        "logLevel",
+        "sendSlackNotifications",
+        "slackChannel",
+        "sandboxInactivityTimeoutMs",
+        "showTestErrorButton",
+        "betterAuthSessionTransferEnabled"
+      ],
+      "additionalProperties": false
+    },
+    "admins": {
+      "type": "object",
+      "properties": {
+        "adminEmails": { "type": "array", "items": { "type": "string" } },
+        "adminDomains": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["adminEmails", "adminDomains"],
+      "additionalProperties": false
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "defaultSignInProviderId": { "type": "string" },
+        "providers": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": { "type": "string", "enum": ["credential"] },
+                  "enabled": { "type": "boolean" },
+                  "displayName": { "type": "string" },
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": false
+                  },
+                  "provisioning": {
+                    "type": "object",
+                    "properties": { "scope": { "type": "string", "enum": ["configured-admins"] } },
+                    "required": ["scope"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["kind", "enabled", "displayName", "capabilities", "provisioning"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": { "type": "string", "enum": ["social"] },
+                  "enabled": { "type": "boolean" },
+                  "displayName": { "type": "string" },
+                  "clientId": { "type": "string" },
+                  "clientSecret": {
+                    "type": "object",
+                    "properties": {
+                      "env": { "type": "string" },
+                      "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                    },
+                    "required": ["env"],
+                    "additionalProperties": false
+                  },
+                  "scopes": {
+                    "anyOf": [
+                      { "type": "array", "items": { "type": "string" } },
+                      { "type": "null" }
+                    ]
+                  },
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "enabled",
+                  "displayName",
+                  "clientId",
+                  "clientSecret",
+                  "capabilities"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": { "type": "string", "enum": ["oidc"] },
+                  "enabled": { "type": "boolean" },
+                  "displayName": { "type": "string" },
+                  "issuer": { "type": "string" },
+                  "clientId": { "type": "string" },
+                  "clientSecret": {
+                    "type": "object",
+                    "properties": {
+                      "env": { "type": "string" },
+                      "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                    },
+                    "required": ["env"],
+                    "additionalProperties": false
+                  },
+                  "scopes": {
+                    "anyOf": [
+                      { "type": "array", "items": { "type": "string" } },
+                      { "type": "null" }
+                    ]
+                  },
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "enabled",
+                  "displayName",
+                  "issuer",
+                  "clientId",
+                  "clientSecret",
+                  "capabilities"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "adminPassword": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": false
+            },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": ["defaultSignInProviderId", "providers"],
+      "additionalProperties": false
+    },
+    "aiProviders": {
+      "type": "object",
+      "properties": {
+        "litellm": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "baseUrl": { "type": "string" },
+                "defaultModel": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                "defaultReasoningLevel": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "adapterOverrides": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" }
+                },
+                "apiKey": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "env": { "type": "string" },
+                        "generateIfMissing": {
+                          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                        }
+                      },
+                      "required": ["env"],
+                      "additionalProperties": false
+                    },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              "required": [
+                "enabled",
+                "baseUrl",
+                "defaultModel",
+                "defaultReasoningLevel",
+                "adapterOverrides"
+              ],
+              "additionalProperties": false
+            },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpcf": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "baseUrl": { "type": "string" },
+            "userOauthProviderId": { "type": "string" },
+            "expectedIssuer": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+            "authTypeAllowlist": { "type": "array", "items": { "type": "string" } },
+            "serverBlacklist": { "type": "array", "items": { "type": "string" } },
+            "adminApiToken": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": false
+                },
+                { "type": "null" }
+              ]
+            }
+          },
+          "required": [
+            "enabled",
+            "baseUrl",
+            "userOauthProviderId",
+            "expectedIssuer",
+            "authTypeAllowlist",
+            "serverBlacklist"
+          ],
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
+    },
+    "integrations": {
+      "type": "object",
+      "properties": {
+        "githubApp": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "appId": { "type": "string" },
+            "clientId": { "type": "string" },
+            "slug": { "type": "string" },
+            "clientSecret": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": false
+            },
+            "privateKey": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": false
+            },
+            "webhookSecret": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": false
+                },
+                { "type": "null" }
+              ]
+            }
+          },
+          "required": ["enabled", "appId", "clientId", "slug", "clientSecret", "privateKey"],
+          "additionalProperties": false
+        },
+        "slack": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "botToken": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["enabled", "botToken"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["githubApp", "slack"],
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "betterAuthSecret": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": false
+        },
+        "mcpcfProxySigningSecret": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": false
+        },
+        "tokenEncryptionKey": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": false
+        },
+        "repositorySecretsEncryptionKey": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "betterAuthSecret",
+        "mcpcfProxySigningSecret",
+        "tokenEncryptionKey",
+        "repositorySecretsEncryptionKey"
+      ],
+      "additionalProperties": false
+    },
+    "aiSearch": {
+      "type": "object",
+      "properties": {
+        "serviceTokenId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": false
+                },
+                { "type": "null" }
+              ]
+            },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "deployment",
+    "application",
+    "admins",
+    "auth",
+    "aiProviders",
+    "integrations",
+    "security",
+    "aiSearch"
+  ],
+  "additionalProperties": false
+}

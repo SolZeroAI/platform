@@ -1,0 +1,10 @@
+{
+  "plugins": {
+    "cloudflare": {
+      "enabled": true
+    },
+    "gsap-skills": {
+      "enabled": true
+    }
+  }
+}

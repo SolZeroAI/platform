@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Cloudflare Agent Stack"
+  short_description: "Plan and upgrade Cloudflare agent packages"
+  default_prompt: "Use $update-cloudflare-agent-stack to review current Cloudflare agent package versions, summarize release changes, and recommend an upgrade path."

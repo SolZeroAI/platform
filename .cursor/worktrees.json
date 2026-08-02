@@ -1,0 +1,7 @@
+{
+  "setup-worktree": [
+    "nub install --frozen-lockfile",
+    "cp $ROOT_WORKTREE_PATH/config/.env config/.env",
+    "cp $ROOT_WORKTREE_PATH/config/.dev.vars config/.dev.vars"
+  ]
+}

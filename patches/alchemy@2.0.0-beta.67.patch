@@ -1,0 +1,739 @@
+diff --git a/lib/Cloudflare/Workers/Assets.js b/lib/Cloudflare/Workers/Assets.js
+--- a/lib/Cloudflare/Workers/Assets.js
++++ b/lib/Cloudflare/Workers/Assets.js
+@@ -1,4 +1,4 @@
+-import createIgnore from "@alchemy.run/node-utils/ignore";
++import { Ignore } from "@alchemy.run/node-utils/ignore";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -48,7 +48,7 @@ const maybeReadString = Effect.fn(function* (file) {
+     return yield* fs.readFileString(file).pipe(Effect.catchIf((error) => error._tag === "PlatformError" && error.reason._tag === "NotFound", () => Effect.succeed(undefined)));
+ });
+ const createIgnoreMatcher = (patterns) => {
+-    const matcher = createIgnore().add(patterns);
++    const matcher = new Ignore().add(patterns);
+     return (file) => matcher.ignores(file);
+ };
+ /**
+diff --git a/src/Cloudflare/Workers/Assets.ts b/src/Cloudflare/Workers/Assets.ts
+--- a/src/Cloudflare/Workers/Assets.ts
++++ b/src/Cloudflare/Workers/Assets.ts
+@@ -1,4 +1,4 @@
+-import createIgnore from "@alchemy.run/node-utils/ignore";
++import { Ignore } from "@alchemy.run/node-utils/ignore";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -108,4 +108,4 @@
+ const createIgnoreMatcher = (patterns: string[]) => {
+-  const matcher = createIgnore().add(patterns);
++  const matcher = new Ignore().add(patterns);
+   return (file: string) => matcher.ignores(file);
+ };
+diff --git a/lib/Cloudflare/AI/SearchInstance.js b/lib/Cloudflare/AI/SearchInstance.js
+index 4057e184..70a98c15 100644
+--- a/lib/Cloudflare/AI/SearchInstance.js
++++ b/lib/Cloudflare/AI/SearchInstance.js
+@@ -417,7 +417,7 @@ export const SearchInstanceProvider = () => Provider.succeed(SearchInstance, {
+             name: output.namespace,
+             id: output.instanceId,
+         })
+-            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.void));
++            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.void));
+     }),
+ });
+ /**
+@@ -463,12 +463,13 @@ const retryTokenPropagation = (effect) => effect.pipe(Effect.retry({
+ const resolveNamespace = (namespace) => namespace ?? "default";
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId, namespace, id) => aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+-    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.succeed(undefined)));
++    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.succeed(undefined)));
+ const createInstanceId = (id, instanceId) => Effect.gen(function* () {
+     return instanceId ?? (yield* createPhysicalName({ id, lowercase: true }));
+ });
+diff --git a/lib/Cloudflare/Containers/ContainerApplication.d.ts b/lib/Cloudflare/Containers/ContainerApplication.d.ts
+index 04c1e6bf..f53f693f 100644
+--- a/lib/Cloudflare/Containers/ContainerApplication.d.ts
++++ b/lib/Cloudflare/Containers/ContainerApplication.d.ts
+@@ -170,6 +170,11 @@ export interface ContainerApplicationPropsBase extends PlatformProps {
+ export interface EffectfulContainerProps extends ContainerApplicationPropsBase {
+     /** Entrypoint file for the Effect program, typically `import.meta.url`. */
+     main: string;
++    /**
++     * Bundle `main` as a plain external program and preserve an inline
++     * Dockerfile as the complete image definition.
++     */
++    isExternal?: boolean;
+     /**
+      * Environment image for the generated Dockerfile — a plain registry
+      * reference, e.g. `"oven/bun:latest"`. Alchemy synthesizes the `FROM` line
+@@ -282,6 +287,7 @@ export type ContainerApplicationProps = EffectfulContainerProps | ExternalContai
+  */
+ export interface AnyContainerApplicationProps extends ContainerApplicationPropsBase {
+     main?: string;
++    isExternal?: boolean;
+     image?: string;
+     context?: string;
+     dockerfile?: string | InlineDockerfile;
+@@ -671,4 +677,4 @@ export declare namespace DevContainerImage {
+     }
+ }
+ export declare const ContainerProvider: () => import("effect/Layer").Layer<import("../../Provider.ts").Provider<ContainerApplication<unknown>>, never, import("../../AlchemyContext.ts").AlchemyContext | import("../../Artifacts.ts").ArtifactStore | import("../CloudflareEnvironment.ts").CloudflareEnvironment | import("@distilled.cloud/cloudflare").Credentials | import("../../Docker/Docker.ts").Docker | import("effect/FileSystem").FileSystem | import("effect/unstable/http/HttpClient").HttpClient | import("effect/Path").Path | import("../../Stack.ts").Stack | import("../../Stage.ts").Stage>;
+-//# sourceMappingURL=ContainerApplication.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=ContainerApplication.d.ts.map
+diff --git a/lib/Cloudflare/Containers/ContainerBundle.d.ts b/lib/Cloudflare/Containers/ContainerBundle.d.ts
+index 6ae5f351..c549ed5f 100644
+--- a/lib/Cloudflare/Containers/ContainerBundle.d.ts
++++ b/lib/Cloudflare/Containers/ContainerBundle.d.ts
+@@ -68,7 +68,7 @@ export declare const containerEnvPreamble: (props: Pick<AnyContainerApplicationP
+  * then appends the statements that copy the bundled program and set the
+  * entrypoint.
+  */
+-export declare const buildFinalDockerfile: (envPreamble: string | undefined, runtime: "bun" | "node", external?: string[], autoInstallExternals?: boolean) => string;
++export declare const buildFinalDockerfile: (envPreamble: string | undefined, runtime: "bun" | "node", external?: string[], autoInstallExternals?: boolean, isExternal?: boolean) => string;
+ /**
+  * Materialize resolved inline `dockerfile` content into a stable,
+  * deterministic build-context directory (containing only the Dockerfile) so
+@@ -125,4 +125,4 @@ export declare const prepareContainerBuildContext: (id: string, news: AnyContain
+     dockerfile: string;
+     hash: string;
+ }, Bundle.BundleError | import("effect/PlatformError").PlatformError, AlchemyContext | Docker | import("effect/FileSystem").FileSystem | Path.Path | Stack | import("../../Stage.ts").Stage>;
+-//# sourceMappingURL=ContainerBundle.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=ContainerBundle.d.ts.map
+diff --git a/lib/Cloudflare/Containers/ContainerBundle.js b/lib/Cloudflare/Containers/ContainerBundle.js
+index 85ff3ba8..8c556ca6 100644
+--- a/lib/Cloudflare/Containers/ContainerBundle.js
++++ b/lib/Cloudflare/Containers/ContainerBundle.js
+@@ -142,7 +142,10 @@ export const containerEnvPreamble = (props) => {
+  * then appends the statements that copy the bundled program and set the
+  * entrypoint.
+  */
+-export const buildFinalDockerfile = (envPreamble, runtime, external = [], autoInstallExternals = true) => {
++export const buildFinalDockerfile = (envPreamble, runtime, external = [], autoInstallExternals = true, isExternal = false) => {
++    if (isExternal && envPreamble) {
++        return `${envPreamble.trim()}\n`;
++    }
+     const base = envPreamble ??
+         (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
+     const runtimeBin = runtime === "bun" ? "bun" : "node";
+@@ -361,7 +364,7 @@ export const prepareContainerBuildContext = Effect.fn(function* (id, news) {
+     yield* validateContainerImageProps(news);
+     const runtime = news.runtime ?? "bun";
+     const context = yield* getStableContextDir(process.cwd(), dotAlchemy, `${id}-container`);
+-    const dockerfileContent = buildFinalDockerfile(yield* containerEnvPreamble(news), runtime, news.external, news.autoInstallExternals);
++    const dockerfileContent = buildFinalDockerfile(yield* containerEnvPreamble(news), runtime, news.external, news.autoInstallExternals, news.isExternal);
+     const [bundle] = yield* Effect.all([
+         bundleContainerProgram({
+             id,
+@@ -387,4 +390,4 @@ export const prepareContainerBuildContext = Effect.fn(function* (id, news) {
+         }),
+     };
+ });
+-//# sourceMappingURL=ContainerBundle.js.map
+\ No newline at end of file
++//# sourceMappingURL=ContainerBundle.js.map
+diff --git a/lib/Cloudflare/Containers/ContainerProvider.js b/lib/Cloudflare/Containers/ContainerProvider.js
+index 977eea8a..22d39bc9 100644
+--- a/lib/Cloudflare/Containers/ContainerProvider.js
++++ b/lib/Cloudflare/Containers/ContainerProvider.js
+@@ -142,7 +142,7 @@ export const LiveContainerProvider = () => Provider.effect(ContainerPlatform, Ef
+                 isExternal: props.isExternal,
+                 external: props.external,
+             });
+-            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals);
++            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals, props.isExternal);
+             const imageHash = (yield* sha256Object({
+                 bundleHash,
+                 dockerfile: finalDockerfile,
+@@ -286,7 +286,7 @@ export const LiveContainerProvider = () => Provider.effect(ContainerPlatform, Ef
+             }
+             const runtime = props.runtime ?? "bun";
+             const contextDir = yield* getStableContextDir(process.cwd(), dotAlchemy, `${id}-container`);
+-            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals);
++            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals, props.isExternal);
+             yield* docker.materialize({
+                 context: contextDir,
+                 dockerfile: finalDockerfile,
+@@ -813,4 +813,4 @@ const toAttributes = (application) => ({
+     version: application.version,
+     dev: undefined,
+ });
+-//# sourceMappingURL=ContainerProvider.js.map
+\ No newline at end of file
++//# sourceMappingURL=ContainerProvider.js.map
+diff --git a/lib/Cloudflare/Workers/InferEnv.d.ts b/lib/Cloudflare/Workers/InferEnv.d.ts
+index dcde5f55..39627ba6 100644
+--- a/lib/Cloudflare/Workers/InferEnv.d.ts
++++ b/lib/Cloudflare/Workers/InferEnv.d.ts
+@@ -25,11 +25,12 @@ import type { RateLimitBinding } from "./RateLimitBinding.ts";
+ import type { RpcErrorEnvelope, RpcStreamEnvelope } from "./Rpc.ts";
+ import type { VersionMetadataBinding } from "./VersionMetadataBinding.ts";
+ import type { Worker } from "./Worker.ts";
++import type { WorkerEntrypointBinding } from "./WorkerBinding.ts";
+ import type { WorkerLoader as WorkerLoaderResource } from "./WorkerLoader.ts";
+ export type InferEnv<W> = W extends Effect.Effect<infer A, infer _E, infer _R> ? InferEnv<A> : W extends Worker<any> ? InferEnv<Exclude<W["Props"]["env"], undefined>> : {
+     [k in keyof W]: GetBindingType<W[k]>;
+ };
+-export type GetBindingType<T> = T extends Container.Decl<any, any, any, any, infer DOShape> ? DurableObjectNamespace<DOShape & Rpc.DurableObjectBranded> : T extends Output<infer A, infer _Req> | Effect.Effect<infer A, infer _E, infer _R> ? GetBindingType<A> : T extends FlagshipNs.App ? Flagship : T extends Assets ? Service : T extends AlchemyRpc<infer Shape extends object> ? RpcWireShape<Shape> & Service : T extends D1.Database ? D1Database : T extends R2.Bucket ? R2Bucket : T extends KV.Namespace ? KVNamespace : T extends DispatchNamespaceResource ? DispatchNamespace : T extends Queues.Queue ? Queue<unknown> : T extends AI.Gateway ? Ai : T extends AIBinding ? Ai : T extends AI.Search ? AiSearchInstance : T extends AI.SearchNamespace ? AiSearchNamespace : T extends Email.SendEmail ? SendEmail : T extends AnalyticsEngine.Dataset ? AnalyticsEngineDataset : T extends ArtifactsNs.Namespace ? Artifacts : T extends RateLimitBinding ? RateLimit : T extends ImagesNs.ImagesBinding ? ImagesBinding : T extends BrowserBinding ? BrowserRun : T extends HyperdriveNs.Connection ? Hyperdrive : T extends VersionMetadataBinding ? WorkerVersionMetadata : T extends WorkerLoaderResource ? WorkerLoader : T extends WorkflowLike<infer Params> ? Workflow<Params> : T extends DurableObjectLike ? DurableObjectNamespace<Exclude<T["Shape"], undefined>> : T extends Redacted<any> ? string : T;
++export type GetBindingType<T> = T extends Container.Decl<any, any, any, any, infer DOShape> ? DurableObjectNamespace<DOShape & Rpc.DurableObjectBranded> : T extends Output<infer A, infer _Req> | Effect.Effect<infer A, infer _E, infer _R> ? GetBindingType<A> : T extends FlagshipNs.App ? Flagship : T extends Assets ? Service : T extends WorkerEntrypointBinding<infer Shape extends object> ? RpcWireShape<Shape> & Service : T extends AlchemyRpc<infer Shape extends object> ? RpcWireShape<Shape> & Service : T extends D1.Database ? D1Database : T extends R2.Bucket ? R2Bucket : T extends KV.Namespace ? KVNamespace : T extends DispatchNamespaceResource ? DispatchNamespace : T extends Queues.Queue ? Queue<unknown> : T extends AI.Gateway ? Ai : T extends AIBinding ? Ai : T extends AI.Search ? AiSearchInstance : T extends AI.SearchNamespace ? AiSearchNamespace : T extends Email.SendEmail ? SendEmail : T extends AnalyticsEngine.Dataset ? AnalyticsEngineDataset : T extends ArtifactsNs.Namespace ? Artifacts : T extends RateLimitBinding ? RateLimit : T extends ImagesNs.ImagesBinding ? ImagesBinding : T extends BrowserBinding ? BrowserRun : T extends HyperdriveNs.Connection ? Hyperdrive : T extends VersionMetadataBinding ? WorkerVersionMetadata : T extends WorkerLoaderResource ? WorkerLoader : T extends WorkflowLike<infer Params> ? Workflow<Params> : T extends DurableObjectLike ? DurableObjectNamespace<Exclude<T["Shape"], undefined>> : T extends Redacted<any> ? string : T;
+ /**
+  * Cloudflare service-binding wire shape for an Effect-native Worker.
+  *
+@@ -45,4 +46,4 @@ export type GetBindingType<T> = T extends Container.Decl<any, any, any, any, inf
+ export type RpcWireShape<Shape> = {
+     [K in keyof Shape as K extends "fetch" ? never : K]: Shape[K] extends (...args: infer A) => Effect.Effect<infer T, any, any> ? (...args: A) => Promise<T | RpcErrorEnvelope> : Shape[K] extends (...args: infer A) => Stream.Stream<any, any, any> ? (...args: A) => Promise<RpcStreamEnvelope | RpcErrorEnvelope> : Shape[K] extends Effect.Effect<infer T, any, any> ? Promise<T | RpcErrorEnvelope> : Shape[K] extends Stream.Stream<any, any, any> ? Promise<RpcStreamEnvelope | RpcErrorEnvelope> : Shape[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : Promise<Shape[K]>;
+ };
+-//# sourceMappingURL=InferEnv.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=InferEnv.d.ts.map
+diff --git a/lib/Cloudflare/Workers/WorkerAsyncBindings.js b/lib/Cloudflare/Workers/WorkerAsyncBindings.js
+index e1f813c6..3fef661e 100644
+--- a/lib/Cloudflare/Workers/WorkerAsyncBindings.js
++++ b/lib/Cloudflare/Workers/WorkerAsyncBindings.js
+@@ -398,6 +398,14 @@ const toBinding = (bindingName, binding) => {
+             service: binding.workerName,
+         };
+     }
++    else if (isWorkerEntrypointBinding(binding)) {
++        return {
++            type: "service",
++            name: bindingName,
++            service: binding.service,
++            entrypoint: binding.entrypoint,
++        };
++    }
+     else if (isIndex(binding)) {
+         return {
+             type: "vectorize",
+@@ -444,6 +452,10 @@ const toBinding = (bindingName, binding) => {
+         };
+     }
+ };
++const isWorkerEntrypointBinding = (binding) => typeof binding === "object" &&
++    binding !== null &&
++    "BindingType" in binding &&
++    binding.BindingType === "Cloudflare.WorkerEntrypointBinding";
+ export const getCronBindings = (bindings) => Array.from(new Set(bindings.flatMap((b) => b.data.crons ?? [])));
+ /**
+  * Merge the Workers Cache settings contributed by `yield* Cloudflare.cache()`
+diff --git a/lib/Cloudflare/Workers/WorkerBinding.d.ts b/lib/Cloudflare/Workers/WorkerBinding.d.ts
+index 1f8efe8f..2705abb4 100644
+--- a/lib/Cloudflare/Workers/WorkerBinding.d.ts
++++ b/lib/Cloudflare/Workers/WorkerBinding.d.ts
+@@ -91,7 +91,13 @@ export type WorkerBinding = Exclude<DistilledWorkerBinding, {
+     type: "queue";
+ }> | DurableObjectNamespaceWorkerBinding | QueueWorkerBinding | SelfUrlWorkerBinding;
+ export type WorkerSettingsBinding = Exclude<workers.GetScriptScriptAndVersionSettingResponse["bindings"], null | undefined>[number];
+-export type WorkerBindingResource = Json | Redacted.Redacted<Json> | Config.Config<Json> | Output.Output<Json | Redacted.Redacted<Json>, unknown> | Assets | Bucket | D1Database | Namespace | Queue | AiGateway | AIBinding | SearchInstance | SearchNamespace | Dataset | SendEmail | ArtifactsNamespace | RateLimitBinding | BrowserBinding | FlagshipApp | ImagesBinding | Hyperdrive | VectorizeIndex | Secret | Worker | WorkerLoader | VersionMetadataBinding | URLEffect | DispatchNamespace | DurableObjectLike<any> | WorkflowLike<any> | Container.Decl.Any;
++export interface WorkerEntrypointBinding<Shape extends object = object> {
++    readonly BindingType: "Cloudflare.WorkerEntrypointBinding";
++    readonly service: string;
++    readonly entrypoint: string;
++    readonly _Shape?: Shape;
++}
++export type WorkerBindingResource = Json | Redacted.Redacted<Json> | Config.Config<Json> | Output.Output<Json | Redacted.Redacted<Json>, unknown> | Assets | Bucket | D1Database | Namespace | Queue | AiGateway | AIBinding | SearchInstance | SearchNamespace | Dataset | SendEmail | ArtifactsNamespace | RateLimitBinding | BrowserBinding | FlagshipApp | ImagesBinding | Hyperdrive | VectorizeIndex | Secret | Worker | WorkerEntrypointBinding<any> | WorkerLoader | VersionMetadataBinding | URLEffect | DispatchNamespace | DurableObjectLike<any> | WorkflowLike<any> | Container.Decl.Any;
+ export type WorkerBindings = {
+     [bindingName in string]: WorkerBindingResource;
+ };
+@@ -307,4 +313,4 @@ export declare const bindWorker: <Shape, Req = never>(workerEff: Effect.Effect<i
+     } | undefined, never>;
+ } & Rpc<Shape>)) => Effect.Effect<Shape, never, Req | Worker<any>>;
+ export {};
+-//# sourceMappingURL=WorkerBinding.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=WorkerBinding.d.ts.map
+diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/WorkerProvider.js
+index 89cfb26a..e2e23300 100644
+--- a/lib/Cloudflare/Workers/WorkerProvider.js
++++ b/lib/Cloudflare/Workers/WorkerProvider.js
+@@ -2,7 +2,6 @@ import * as durableObjectsApi from "@distilled.cloud/cloudflare/durable-objects"
+ import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
+-import * as zones from "@distilled.cloud/cloudflare/zones";
+ import * as Config from "effect/Config";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -28,7 +27,7 @@ import { sha256Object } from "../../Util/sha256.js";
+ import { CloudflareEnvironment } from "../CloudflareEnvironment.js";
+ import { localRuntimeServices } from "../LocalRuntime.js";
+ import { CloudflareLogs } from "../Logs.js";
+-import { resolveZoneId } from "../Zone/lookup.js";
++import { findZoneByName, resolveZoneId } from "../Zone/lookup.js";
+ import { mergeAssetsConfigFiles, readAssets, readAssetsConfigFiles, uploadAssets, } from "./Assets.js";
+ import { getCompatibility } from "./Compatibility.js";
+ import { isDurableObjectExport } from "./DurableObject.js";
+@@ -786,25 +785,24 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+         return normalizeCrons(result.schedules.map((schedule) => schedule.cron));
+     });
+     /**
+-     * Infer the Cloudflare Zone ID for a given hostname by listing the
+-     * account's zones and matching the hostname against each zone's name —
+-     * walking up the DNS label hierarchy until a match is found.
++     * Infer the Cloudflare Zone ID for a hostname by checking candidate
++     * parent zone names from most-specific to least-specific.
+      */
+-    const inferZoneIdForHostname = (hostname, zoneCache) => Effect.gen(function* () {
++    const inferZoneIdForHostname = (accountId, hostname, zoneCache) => Effect.gen(function* () {
+         const cached = zoneCache.get(hostname);
+         if (cached)
+             return cached;
+-        const zoneList = yield* zones
+-            .listZones({})
+-            .pipe(Effect.map((response) => response.result ?? []));
+-        for (const zone of zoneList) {
+-            zoneCache.set(zone.name, zone.id);
+-        }
+         const parts = hostname.split(".");
+         for (let i = 0; i < parts.length - 1; i++) {
+             const candidate = parts.slice(i).join(".");
+-            const match = zoneList.find((z) => z.name === candidate);
++            const candidateCached = zoneCache.get(candidate);
++            if (candidateCached) {
++                zoneCache.set(hostname, candidateCached);
++                return candidateCached;
++            }
++            const match = yield* findZoneByName({ accountId, name: candidate });
+             if (match) {
++                zoneCache.set(candidate, match.id);
+                 zoneCache.set(hostname, match.id);
+                 return match.id;
+             }
+@@ -842,7 +840,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+         const toRemove = liveAll.filter((d) => !desiredSet.has(d.hostname));
+         yield* Effect.all(toRemove.map((d) => workers
+             .deleteDomain({ accountId, domainId: d.id })
+-            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void))), { concurrency: "unbounded" });
++            .pipe(Effect.catchCause(() => Effect.void))), { concurrency: "unbounded" });
+         if (desired.length === 0)
+             return [];
+         const zoneCache = new Map();
+@@ -874,7 +872,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+                     `it is already attached to Worker '${otherOwner.service ?? "<unknown>"}'. ` +
+                     `Detach it from that Worker first, or pick a different hostname.`));
+             }
+-            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
++            const zoneId = yield* inferZoneIdForHostname(accountId, hostname, zoneCache);
+             // Same eventual-consistency window as `setWorkerSubdomain`:
+             // PUT /accounts/.../workers/domains right after `putScript`
+             // can return `WorkerNotFound` until Cloudflare's script
+@@ -1158,7 +1156,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+                         zone: route.zone ?? route.zoneName,
+                         hostname: hostnameFromPattern(pattern),
+                     })
+-                    : yield* inferZoneIdForHostname(hostnameFromPattern(pattern), zoneCache);
++                    : yield* inferZoneIdForHostname(accountId, hostnameFromPattern(pattern), zoneCache);
+             const key = routeKey({ pattern, zoneId });
+             if (seen.has(key))
+                 continue;
+@@ -3557,7 +3555,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+                             accountId: output.accountId,
+                             domainId: d.id,
+                         })
+-                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                            .pipe(Effect.catchCause(() => Effect.void)),
+                     ]
+                     : []), { concurrency: "unbounded" });
+             }
+@@ -3841,4 +3839,4 @@ const validateWorkerTags = (scriptName, tags, alchemyTagCount) => Effect.gen(fun
+         }
+     }
+ });
+-//# sourceMappingURL=WorkerProvider.js.map
+\ No newline at end of file
++//# sourceMappingURL=WorkerProvider.js.map
+diff --git a/lib/Cloudflare/Workflows/Workflow.js b/lib/Cloudflare/Workflows/Workflow.js
+index 8c6dfbaf..e6056631 100644
+--- a/lib/Cloudflare/Workflows/Workflow.js
++++ b/lib/Cloudflare/Workflows/Workflow.js
+@@ -540,6 +540,10 @@ export const WorkflowProvider = () => Provider.effect(WorkflowResource, Effect.g
+             };
+         }),
+         delete: Effect.fn(function* ({ output }) {
++            // Dev workflows only exist in local state, just like the local
++            // provider's read/reconcile paths above.
++            if (ctx.dev)
++                return;
+             yield* Effect.logInfo(`Cloudflare Workflow delete: ${output.workflowName}`);
+             yield* workflows
+                 .deleteWorkflow({
+@@ -567,4 +571,4 @@ const wrapInstance = (raw) => ({
+     terminate: () => Effect.tryPromise(() => raw.terminate()).pipe(Effect.orDie),
+     sendEvent: (event) => Effect.tryPromise(() => raw.sendEvent(event)).pipe(Effect.orDie),
+ });
+-//# sourceMappingURL=Workflow.js.map
+\ No newline at end of file
++//# sourceMappingURL=Workflow.js.map
+diff --git a/src/Cloudflare/AI/SearchInstance.ts b/src/Cloudflare/AI/SearchInstance.ts
+index f7ab258e..74283e82 100644
+--- a/src/Cloudflare/AI/SearchInstance.ts
++++ b/src/Cloudflare/AI/SearchInstance.ts
+@@ -777,7 +777,7 @@ export const SearchInstanceProvider = () =>
+         })
+         .pipe(
+           Effect.catchTag(
+-            ["AiSearchInstanceNotFound", "NamespaceNotFound"],
++            ["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"],
+             () => Effect.void,
+           ),
+         );
+@@ -838,15 +838,17 @@ const resolveNamespace = (namespace: string | undefined): string =>
+ 
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId: string, namespace: string, id: string) =>
+   aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+     .pipe(
+-      Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () =>
+-        Effect.succeed(undefined),
++      Effect.catchTag(
++        ["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"],
++        () => Effect.succeed(undefined),
+       ),
+     );
+ 
+diff --git a/src/Cloudflare/Containers/ContainerApplication.ts b/src/Cloudflare/Containers/ContainerApplication.ts
+index b20e18fa..fddcb08d 100644
+--- a/src/Cloudflare/Containers/ContainerApplication.ts
++++ b/src/Cloudflare/Containers/ContainerApplication.ts
+@@ -204,6 +204,11 @@ export interface ContainerApplicationPropsBase extends PlatformProps {
+ export interface EffectfulContainerProps extends ContainerApplicationPropsBase {
+   /** Entrypoint file for the Effect program, typically `import.meta.url`. */
+   main: string;
++  /**
++   * Bundle `main` as a plain external program and preserve an inline
++   * Dockerfile as the complete image definition.
++   */
++  isExternal?: boolean;
+   /**
+    * Environment image for the generated Dockerfile — a plain registry
+    * reference, e.g. `"oven/bun:latest"`. Alchemy synthesizes the `FROM` line
+@@ -323,6 +328,7 @@ export type ContainerApplicationProps =
+  */
+ export interface AnyContainerApplicationProps extends ContainerApplicationPropsBase {
+   main?: string;
++  isExternal?: boolean;
+   image?: string;
+   context?: string;
+   dockerfile?: string | InlineDockerfile;
+diff --git a/src/Cloudflare/Containers/ContainerBundle.ts b/src/Cloudflare/Containers/ContainerBundle.ts
+index 7e392a2b..4398849d 100644
+--- a/src/Cloudflare/Containers/ContainerBundle.ts
++++ b/src/Cloudflare/Containers/ContainerBundle.ts
+@@ -203,7 +203,12 @@ export const buildFinalDockerfile = (
+   runtime: "bun" | "node",
+   external: string[] = [],
+   autoInstallExternals = true,
++  isExternal = false,
+ ): string => {
++  if (isExternal && envPreamble) {
++    return `${envPreamble.trim()}\n`;
++  }
++
+   const base =
+     envPreamble ??
+     (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
+@@ -484,6 +489,7 @@ export const prepareContainerBuildContext = Effect.fn(function* (
+     runtime,
+     news.external,
+     news.autoInstallExternals,
++    news.isExternal,
+   );
+   const [bundle] = yield* Effect.all(
+     [
+diff --git a/src/Cloudflare/Containers/ContainerProvider.ts b/src/Cloudflare/Containers/ContainerProvider.ts
+index 60ac2b3d..8e094fb9 100644
+--- a/src/Cloudflare/Containers/ContainerProvider.ts
++++ b/src/Cloudflare/Containers/ContainerProvider.ts
+@@ -233,6 +233,7 @@ export const LiveContainerProvider = () =>
+             runtime,
+             props.external,
+             props.autoInstallExternals,
++            props.isExternal,
+           );
+           const imageHash = (yield* sha256Object({
+             bundleHash,
+@@ -419,6 +420,7 @@ export const LiveContainerProvider = () =>
+             runtime,
+             props.external,
+             props.autoInstallExternals,
++            props.isExternal,
+           );
+           yield* docker.materialize({
+             context: contextDir,
+diff --git a/src/Cloudflare/Workers/InferEnv.ts b/src/Cloudflare/Workers/InferEnv.ts
+index bfda2f82..1a6620fa 100644
+--- a/src/Cloudflare/Workers/InferEnv.ts
++++ b/src/Cloudflare/Workers/InferEnv.ts
+@@ -35,6 +35,7 @@ import type { RateLimitBinding } from "./RateLimitBinding.ts";
+ import type { RpcErrorEnvelope, RpcStreamEnvelope } from "./Rpc.ts";
+ import type { VersionMetadataBinding } from "./VersionMetadataBinding.ts";
+ import type { Worker } from "./Worker.ts";
++import type { WorkerEntrypointBinding } from "./WorkerBinding.ts";
+ import type { WorkerLoader as WorkerLoaderResource } from "./WorkerLoader.ts";
+ 
+ export type InferEnv<W> =
+@@ -63,31 +64,33 @@ export type GetBindingType<T> =
+         ? Flagship
+         : T extends Assets
+           ? Service
+-          : T extends AlchemyRpc<infer Shape extends object>
++          : T extends WorkerEntrypointBinding<infer Shape extends object>
+             ? RpcWireShape<Shape> & Service
+-            : T extends D1.Database
+-              ? D1Database
+-              : T extends R2.Bucket
+-                ? R2Bucket
+-                : T extends KV.Namespace
+-                  ? KVNamespace
+-                  : T extends DispatchNamespaceResource
+-                    ? DispatchNamespace
+-                    : T extends Queues.Queue
+-                      ? Queue<unknown>
+-                      : T extends AI.Gateway
+-                        ? Ai
+-                        : T extends AIBinding
++            : T extends AlchemyRpc<infer Shape extends object>
++              ? RpcWireShape<Shape> & Service
++              : T extends D1.Database
++                ? D1Database
++                : T extends R2.Bucket
++                  ? R2Bucket
++                  : T extends KV.Namespace
++                    ? KVNamespace
++                    : T extends DispatchNamespaceResource
++                      ? DispatchNamespace
++                      : T extends Queues.Queue
++                        ? Queue<unknown>
++                        : T extends AI.Gateway
+                           ? Ai
+-                          : T extends AI.Search
+-                            ? AiSearchInstance
+-                            : T extends AI.SearchNamespace
+-                              ? AiSearchNamespace
+-                              : T extends Email.SendEmail
+-                                ? SendEmail
+-                                : T extends AnalyticsEngine.Dataset
+-                                  ? AnalyticsEngineDataset
+-                                  : T extends ArtifactsNs.Namespace
++                          : T extends AIBinding
++                            ? Ai
++                            : T extends AI.Search
++                              ? AiSearchInstance
++                              : T extends AI.SearchNamespace
++                                ? AiSearchNamespace
++                                : T extends Email.SendEmail
++                                  ? SendEmail
++                                  : T extends AnalyticsEngine.Dataset
++                                    ? AnalyticsEngineDataset
++                                    : T extends ArtifactsNs.Namespace
+                                     ? Artifacts
+                                     : T extends RateLimitBinding
+                                       ? RateLimit
+diff --git a/src/Cloudflare/Workers/WorkerAsyncBindings.ts b/src/Cloudflare/Workers/WorkerAsyncBindings.ts
+index c4869a2e..c71ebf3e 100644
+--- a/src/Cloudflare/Workers/WorkerAsyncBindings.ts
++++ b/src/Cloudflare/Workers/WorkerAsyncBindings.ts
+@@ -43,7 +43,11 @@ import {
+   type Worker,
+   type WorkerProps,
+ } from "./Worker.ts";
+-import type { WorkerBinding, WorkerBindingResource } from "./WorkerBinding.ts";
++import type {
++  WorkerBinding,
++  WorkerBindingResource,
++  WorkerEntrypointBinding,
++} from "./WorkerBinding.ts";
+ import { isWorkerLoader } from "./WorkerLoader.ts";
+ 
+ export const bindWorkerAsyncBindings = Effect.fn(function* (
+@@ -440,6 +444,13 @@ const toBinding = (
+       name: bindingName,
+       service: binding.workerName,
+     };
++  } else if (isWorkerEntrypointBinding(binding)) {
++    return {
++      type: "service",
++      name: bindingName,
++      service: binding.service,
++      entrypoint: binding.entrypoint,
++    };
+   } else if (isIndex(binding)) {
+     return {
+       type: "vectorize",
+@@ -483,6 +494,14 @@ const toBinding = (
+   }
+ };
+ 
++const isWorkerEntrypointBinding = (
++  binding: unknown,
++): binding is WorkerEntrypointBinding =>
++  typeof binding === "object" &&
++  binding !== null &&
++  "BindingType" in binding &&
++  binding.BindingType === "Cloudflare.WorkerEntrypointBinding";
++
+ export const getCronBindings = (
+   bindings: ReadonlyArray<ResourceBinding<Worker["Binding"]>>,
+ ) => Array.from(new Set(bindings.flatMap((b) => b.data.crons ?? [])));
+diff --git a/src/Cloudflare/Workers/WorkerBinding.ts b/src/Cloudflare/Workers/WorkerBinding.ts
+index 84afae1d..2d828b6c 100644
+--- a/src/Cloudflare/Workers/WorkerBinding.ts
++++ b/src/Cloudflare/Workers/WorkerBinding.ts
+@@ -112,6 +112,13 @@ export type WorkerSettingsBinding = Exclude<
+   null | undefined
+ >[number];
+ 
++export interface WorkerEntrypointBinding<Shape extends object = object> {
++  readonly BindingType: "Cloudflare.WorkerEntrypointBinding";
++  readonly service: string;
++  readonly entrypoint: string;
++  readonly _Shape?: Shape;
++}
++
+ export type WorkerBindingResource =
+   // Config values
+   | Json
+@@ -146,6 +153,7 @@ export type WorkerBindingResource =
+   | VectorizeIndex
+   | Secret
+   | Worker
++  | WorkerEntrypointBinding<any>
+   | WorkerLoader
+   | VersionMetadataBinding
+   // The Worker's own URL (`Worker.URL`).
+diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/WorkerProvider.ts
+index b86be59e..6b6a0d5c 100644
+--- a/src/Cloudflare/Workers/WorkerProvider.ts
++++ b/src/Cloudflare/Workers/WorkerProvider.ts
+@@ -2,7 +2,6 @@ import * as durableObjectsApi from "@distilled.cloud/cloudflare/durable-objects"
+ import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
+-import * as zones from "@distilled.cloud/cloudflare/zones";
+ import * as Config from "effect/Config";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -29,7 +28,7 @@ import { sha256Object } from "../../Util/sha256.ts";
+ import { CloudflareEnvironment } from "../CloudflareEnvironment.ts";
+ import { localRuntimeServices } from "../LocalRuntime.ts";
+ import { CloudflareLogs } from "../Logs.ts";
+-import { resolveZoneId } from "../Zone/lookup.ts";
++import { findZoneByName, resolveZoneId } from "../Zone/lookup.ts";
+ import {
+   mergeAssetsConfigFiles,
+   readAssets,
+@@ -1147,11 +1146,11 @@ export const LiveWorkerProvider = () =>
+         });
+ 
+       /**
+-       * Infer the Cloudflare Zone ID for a given hostname by listing the
+-       * account's zones and matching the hostname against each zone's name —
+-       * walking up the DNS label hierarchy until a match is found.
++       * Infer the Cloudflare Zone ID for a hostname by checking candidate
++       * parent zone names from most-specific to least-specific.
+        */
+       const inferZoneIdForHostname = (
++        accountId: string,
+         hostname: string,
+         zoneCache: Map<string, string>,
+       ) =>
+@@ -1159,18 +1158,17 @@ export const LiveWorkerProvider = () =>
+           const cached = zoneCache.get(hostname);
+           if (cached) return cached;
+ 
+-          const zoneList = yield* zones
+-            .listZones({})
+-            .pipe(Effect.map((response) => response.result ?? []));
+-          for (const zone of zoneList) {
+-            zoneCache.set(zone.name, zone.id);
+-          }
+-
+           const parts = hostname.split(".");
+           for (let i = 0; i < parts.length - 1; i++) {
+             const candidate = parts.slice(i).join(".");
+-            const match = zoneList.find((z) => z.name === candidate);
++            const candidateCached = zoneCache.get(candidate);
++            if (candidateCached) {
++              zoneCache.set(hostname, candidateCached);
++              return candidateCached;
++            }
++            const match = yield* findZoneByName({ accountId, name: candidate });
+             if (match) {
++              zoneCache.set(candidate, match.id);
+               zoneCache.set(hostname, match.id);
+               return match.id;
+             }
+@@ -1223,7 +1221,7 @@ export const LiveWorkerProvider = () =>
+             toRemove.map((d) =>
+               workers
+                 .deleteDomain({ accountId, domainId: d.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                .pipe(Effect.catchCause(() => Effect.void)),
+             ),
+             { concurrency: "unbounded" },
+           );
+@@ -1273,7 +1271,11 @@ export const LiveWorkerProvider = () =>
+               );
+             }
+ 
+-            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
++            const zoneId = yield* inferZoneIdForHostname(
++              accountId,
++              hostname,
++              zoneCache,
++            );
+             // Same eventual-consistency window as `setWorkerSubdomain`:
+             // PUT /accounts/.../workers/domains right after `putScript`
+             // can return `WorkerNotFound` until Cloudflare's script
+@@ -1658,6 +1660,7 @@ export const LiveWorkerProvider = () =>
+                     hostname: hostnameFromPattern(pattern),
+                   })
+                 : yield* inferZoneIdForHostname(
++                    accountId,
+                     hostnameFromPattern(pattern),
+                     zoneCache,
+                   );
+@@ -4828,7 +4831,7 @@ export const LiveWorkerProvider = () =>
+                           domainId: d.id,
+                         })
+                         .pipe(
+-                          Effect.catchTag("DomainNotFound", () => Effect.void),
++                          Effect.catchCause(() => Effect.void),
+                         ),
+                     ]
+                   : [],
+diff --git a/src/Cloudflare/Workflows/Workflow.ts b/src/Cloudflare/Workflows/Workflow.ts
+index 1cb1c6e7..bcf12aea 100644
+--- a/src/Cloudflare/Workflows/Workflow.ts
++++ b/src/Cloudflare/Workflows/Workflow.ts
+@@ -986,6 +986,10 @@ export const WorkflowProvider = () =>
+           };
+         }),
+         delete: Effect.fn(function* ({ output }) {
++          // Dev workflows only exist in local state, just like the local
++          // provider's read/reconcile paths above.
++          if (ctx.dev) return;
++
+           yield* Effect.logInfo(
+             `Cloudflare Workflow delete: ${output.workflowName}`,
+           );

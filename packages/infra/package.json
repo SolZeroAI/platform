@@ -1,0 +1,53 @@
+{
+  "name": "@c0/infra",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "alchemy": "nub exec tsx --env-file-if-exists=../../config/.env ./node_modules/alchemy/bin/alchemy.ts",
+    "dev": "nub run alchemy dev alchemy.run.ts --stage dev --env-file ../../config/.dev.vars",
+    "dev:api": "nub run alchemy dev alchemy.api.run.ts --stage dev --env-file ../../config/.dev.vars",
+    "dev:web": "nub run alchemy dev alchemy.web.run.ts --stage dev --env-file ../../config/.dev.vars",
+    "plan": "stage=${ALCHEMY_STAGE:-prod}; nub run alchemy plan alchemy.run.ts --stage \"$stage\" --env-file \"../../config/.${stage%%-*}.vars\"",
+    "plan:api": "stage=${ALCHEMY_STAGE:-prod}; nub run alchemy plan alchemy.api.run.ts --stage \"$stage\" --env-file \"../../config/.${stage%%-*}.vars\"",
+    "plan:web": "stage=${ALCHEMY_STAGE:-prod}; nub run alchemy plan alchemy.web.run.ts --stage \"$stage\" --env-file \"../../config/.${stage%%-*}.vars\"",
+    "plan:dev": "nub run alchemy plan alchemy.run.ts --stage dev --env-file ../../config/.dev.vars",
+    "plan:pre": "nub run alchemy plan alchemy.run.ts --stage pre --env-file ../../config/.pre.vars",
+    "plan:prod": "nub run alchemy plan alchemy.run.ts --stage prod --env-file ../../config/.prod.vars",
+    "deploy": "stage=${ALCHEMY_STAGE:-prod}; nub run alchemy deploy alchemy.run.ts --stage \"$stage\" --env-file \"../../config/.${stage%%-*}.vars\" --yes",
+    "deploy:dev": "nub run alchemy deploy alchemy.run.ts --stage dev --env-file ../../config/.dev.vars --yes",
+    "deploy:pre": "nub run alchemy deploy alchemy.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
+    "deploy:prod": "nub run alchemy deploy alchemy.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
+    "deploy:api:dev": "nub run alchemy deploy alchemy.api.run.ts --stage dev --env-file ../../config/.dev.vars --yes",
+    "deploy:api:pre": "nub run alchemy deploy alchemy.api.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
+    "deploy:api:prod": "nub run alchemy deploy alchemy.api.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
+    "deploy:web:dev": "nub run alchemy deploy alchemy.web.run.ts --stage dev --env-file ../../config/.dev.vars --yes",
+    "deploy:web:pre": "nub run alchemy deploy alchemy.web.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
+    "deploy:web:prod": "nub run alchemy deploy alchemy.web.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
+    "destroy": "stage=${ALCHEMY_STAGE:-prod}; nub run alchemy destroy alchemy.run.ts --stage \"$stage\" --env-file \"../../config/.${stage%%-*}.vars\" --yes",
+    "destroy:dev": "nub run alchemy destroy alchemy.run.ts --stage dev --env-file ../../config/.dev.vars --yes",
+    "destroy:pre": "nub run alchemy destroy alchemy.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
+    "destroy:prod": "nub run alchemy destroy alchemy.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
+    "build": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src"
+  },
+  "dependencies": {
+    "@c0-agent/shared": "workspace:*",
+    "@effect/platform-node": "4.0.0-beta.100",
+    "alchemy": "2.0.0-beta.67",
+    "dotenv": "^17.4.2",
+    "effect": "4.0.0-beta.100",
+    "jsonc-parser": "^3.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "@types/node": "^24.12.4",
+    "oxlint": "^1.64.0",
+    "tsx": "^4.22.0",
+    "typescript": "^7.0.2"
+  }
+}

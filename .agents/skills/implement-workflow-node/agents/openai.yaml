@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Workflow Node"
+  short_description: "Add workflow nodes using repo adapters"
+  default_prompt: "Use $implement-workflow-node to implement a new Workflow Node in the c0 agent repo."

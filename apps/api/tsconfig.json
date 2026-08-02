@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["@cloudflare/workers-types", "node"],
+    "paths": {
+      "infra/*": ["../../packages/infra/src/*"],
+      "@c0/api": ["../../packages/api/src/index.ts"],
+      "@c0/api/*": ["../../packages/api/src/*"],
+      "@c0-agent/shared": ["../../packages/shared/src/index.ts"],
+      "@c0-agent/shared/*": ["../../packages/shared/src/*"]
+    },
+    "noEmit": true
+  },
+  "include": ["index.ts", "env.d.ts", "src/**/*.ts", "src/**/*.tsx", "infra/**/*.ts"],
+  "exclude": ["node_modules"]
+}

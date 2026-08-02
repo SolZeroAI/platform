@@ -1,0 +1,13 @@
+# Default owner for repository changes.
+* @jtbeckman
+
+# Security-sensitive and release-critical surfaces.
+/.github/ @jtbeckman
+/config/ @jtbeckman
+/apps/api/infra/ @jtbeckman
+/packages/infra/ @jtbeckman
+/packages/api/src/server/background/auth/ @jtbeckman
+/LICENSE @jtbeckman
+/COPYING @jtbeckman
+/COPYING.LESSER @jtbeckman
+/THIRD_PARTY_NOTICES.md @jtbeckman

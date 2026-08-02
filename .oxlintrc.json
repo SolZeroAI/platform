@@ -1,0 +1,93 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["unicorn", "typescript", "oxc", "react"],
+  "jsPlugins": [
+    {
+      "name": "c0-lint",
+      "specifier": "./packages/c0-lint/src/index.ts"
+    },
+    {
+      "name": "effect",
+      "specifier": "@mpsuesser/oxlint-plugin-effect"
+    }
+  ],
+  "ignorePatterns": [
+    "**/.cursor/plans/**",
+    "node_modules",
+    "dist",
+    "**/.alchemy/**",
+    "**/.output/**",
+    "cloudflare-env-gen.d.ts",
+    "**/*.gen.ts"
+  ],
+  "rules": {
+    "c0-lint/max-file-lines": "error"
+  },
+  "overrides": [
+    {
+      "files": [
+        "apps/api/index.ts",
+        "apps/api/infra/**",
+        "packages/api/src/server/**",
+        "packages/infra/src/**",
+        "packages/shared/src/**"
+      ],
+      "rules": {
+        "c0-lint/no-if-statement": "error",
+        "c0-lint/no-ternary": "error",
+        "c0-lint/no-pipe-ladder": "error",
+        "c0-lint/no-flatmap-ladder": "error",
+        "c0-lint/no-effect-ladder": "error",
+        "c0-lint/no-effect-call-in-effect-arg": "error",
+        "c0-lint/no-nested-effect-call": "error",
+        "c0-lint/no-effect-as": "error",
+        "c0-lint/no-call-tower": "error",
+        "c0-lint/no-option-as": "error",
+        "c0-lint/no-arrow-ladder": "error",
+        "c0-lint/no-branch-in-object": "error",
+        "c0-lint/no-iife-wrapper": "error",
+        "c0-lint/no-return-in-arrow": "error",
+        "c0-lint/no-effect-never": "error",
+        "c0-lint/no-effect-async": "error",
+        "c0-lint/no-effect-do": "error",
+        "c0-lint/no-effect-bind": "error",
+        "c0-lint/no-nested-effect-gen": "error",
+        "c0-lint/no-match-void-branch": "error",
+        "c0-lint/no-match-effect-branch": "error",
+        "c0-lint/warn-effect-sync-wrapper": "error",
+        "c0-lint/no-effect-side-effect-wrapper": "error",
+        "c0-lint/no-effect-orElse-ladder": "error",
+        "c0-lint/no-return-in-callback": "error",
+        "c0-lint/no-manual-effect-channels": "error",
+        "c0-lint/prevent-dynamic-imports": "error",
+        "c0-lint/prefer-option-over-null": "error",
+        "c0-lint/avoid-untagged-errors": "error",
+        "c0-lint/use-effect-otel": "error",
+        "effect/avoid-try-catch": "warn",
+        "effect/prefer-match-over-switch": "warn",
+        "effect/imperative-loops": "warn",
+        "effect/avoid-data-tagged-error": "warn",
+        "effect/avoid-direct-json": "warn",
+        "effect/avoid-option-getorthrow": "warn",
+        "effect/avoid-process-env": "warn",
+        "effect/effect-run-in-body": "warn",
+        "effect/effect-promise-vs-trypromise": "warn",
+        "effect/prefer-schema-class": "warn",
+        "effect/avoid-any": "warn",
+        "effect/avoid-non-null-assertion": "warn",
+        "effect/avoid-native-fetch": "warn",
+        "effect/prefer-effect-fn": "warn",
+        "effect/prefer-namespace-imports": "warn",
+        "effect/prefer-redacted-config": "warn",
+        "effect/no-barrel-imports": "warn"
+      }
+    },
+    {
+      "files": ["packages/infra/alchemy.run.ts", "packages/infra/src/index.ts"],
+      "rules": {
+        "effect/avoid-process-env": "off",
+        "effect/avoid-node-imports": "off"
+      }
+    }
+  ]
+}

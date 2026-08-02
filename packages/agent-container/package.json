@@ -1,0 +1,30 @@
+{
+  "name": "@c0/agent-container",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/harness": "1.0.41",
+    "@ai-sdk/harness-claude-code": "1.0.42",
+    "@ai-sdk/harness-codex": "1.0.43",
+    "@ai-sdk/harness-opencode": "1.0.42",
+    "@ai-sdk/provider-utils": "5.0.12",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "ai": "7.0.36",
+    "effect": "4.0.0-beta.100",
+    "ws": "8.21.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@types/ws": "^8.5.13",
+    "typescript": "^7.0.2"
+  }
+}

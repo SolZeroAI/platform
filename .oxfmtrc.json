@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    ".cursor/plans/**",
+    "cloudflare-env-gen.d.ts",
+    "dist",
+    "tsconfig.json",
+    "node_modules",
+    "nub.lock",
+    "**/*.gen.ts",
+    "**/*.md",
+    "**/*.yaml",
+    "**/*.yml"
+  ],
+  "arrowParens": "always",
+  "semi": false
+}

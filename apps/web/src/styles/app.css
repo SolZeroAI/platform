@@ -1,0 +1,916 @@
+@import "@fontsource/manrope/400.css";
+@import "@fontsource/manrope/700.css";
+@import "@cloudflare/kumo/styles";
+@import "tailwindcss";
+@source "../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--color-kumo-canvas);
+  color: var(--text-color-kumo-default);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html:has([data-c0-admin-page]),
+body:has([data-c0-admin-page]) {
+  overflow: hidden;
+}
+
+:root,
+[data-theme="kumo"] {
+  --color-kumo-brand: #0078d7;
+  --color-kumo-brand-hover: #0066b8;
+  --text-color-kumo-brand: #0078d7;
+  --text-color-kumo-danger: #e02d2a;
+  /* Real danger red so bg/border/ring-kumo-danger are semantically correct.
+     Soft pink surfaces use --color-kumo-danger-tint instead. */
+  --color-kumo-danger: #e02d2a;
+  --color-kumo-danger-tint: #f8d9d8;
+}
+
+[data-mode="light"] {
+  --color-kumo-canvas: #fbfbfb;
+  --color-kumo-elevated: #f6f6f6;
+  --color-kumo-recessed: #ebebeb;
+  --color-kumo-tint: #ebebeb;
+  --color-kumo-base: #ffffff;
+  --color-kumo-control: #ffffff;
+  --text-color-kumo-subtle: #888a8c;
+  --text-color-kumo-placeholder: #98989a;
+  --text-color-kumo-inactive: #98989a;
+  --color-kumo-hairline: #ebebeb;
+  --color-kumo-fill: #ebebeb;
+  --color-kumo-line: color-mix(in srgb, #98989a 40%, transparent);
+}
+
+[data-mode="light"] body,
+[data-mode="light"] .bg-kumo-canvas {
+  background-color: #fbfbfb;
+}
+
+[data-mode="light"] :where(input, select, textarea, .bg-kumo-control) {
+  background-color: #ffffff;
+}
+
+[data-mode="light"] .bg-kumo-base {
+  background-color: #ffffff;
+}
+
+[data-mode="light"]
+  :where(.bg-kumo-elevated, [class~="bg-kumo-elevated/70"], [class~="bg-kumo-elevated/80"]) {
+  background-color: #f6f6f6;
+}
+
+[data-mode="light"] .bg-kumo-recessed {
+  background-color: #ebebeb;
+}
+
+[data-mode="light"] .bg-kumo-tint {
+  background-color: #ebebeb;
+}
+
+[data-mode="light"] :where([role="dialog"], [role="alertdialog"]):not(.fixed.inset-0) {
+  @apply bg-kumo-canvas;
+}
+
+[data-mode="light"] :where([role="dialog"].fixed.inset-0 > aside.bg-kumo-base) {
+  @apply bg-kumo-canvas;
+}
+
+[data-mode="dark"] {
+  --color-kumo-base: #2d2d2d;
+  --color-kumo-brand: #349cff;
+  --color-kumo-brand-hover: #4da6e8;
+  --text-color-kumo-danger: #ff6664;
+  --color-kumo-success: #40c977;
+  --text-color-kumo-success: #40c977;
+  --color-kumo-danger: #ff6664;
+  --color-kumo-danger-tint: #5e3a39;
+  --color-kumo-canvas: #181818;
+  --color-kumo-control: #2d2d2d;
+  --color-kumo-elevated: #1f1f1f;
+  --color-kumo-recessed: #262626;
+  --color-kumo-tint: #262626;
+  /* Default Kumo dark line (oklch 32%) reads too light vs fill-based row dividers. */
+  --color-kumo-line: var(--color-kumo-fill);
+  --text-color-kumo-brand: #349cff;
+}
+
+[data-mode="dark"] body,
+[data-mode="dark"] .bg-kumo-canvas {
+  background-color: #181818;
+}
+
+[data-mode="dark"] :where(input, select, textarea, .bg-kumo-control) {
+  background-color: #2d2d2d;
+}
+
+[data-mode="dark"] .bg-kumo-base {
+  background-color: #2d2d2d;
+}
+
+[data-mode="dark"]
+  :where(.bg-kumo-elevated, [class~="bg-kumo-elevated/70"], [class~="bg-kumo-elevated/80"]) {
+  background-color: #1f1f1f;
+}
+
+[data-mode="dark"] .bg-kumo-recessed {
+  background-color: #262626;
+}
+
+[data-mode="dark"] .bg-kumo-tint {
+  background-color: #262626;
+}
+
+[data-mode="dark"] :where([role="dialog"], [role="alertdialog"]):not(.fixed.inset-0) {
+  @apply bg-kumo-canvas;
+}
+
+[data-mode="dark"] :where([role="dialog"].fixed.inset-0 > aside.bg-kumo-base) {
+  @apply bg-kumo-canvas;
+}
+
+/* Keep Kumo dialog/sheet backdrops above page UI (e.g. workflow inspector inputs). */
+:where(.fixed.inset-0.bg-kumo-recessed, .fixed.inset-0.bg-kumo-overlay) {
+  z-index: 80;
+  pointer-events: auto;
+}
+
+:where([role="dialog"].fixed, [role="alertdialog"].fixed) {
+  z-index: 90;
+}
+
+/* Kumo tooltip popups are body-portaled and need to clear modal dialog layers. */
+.kumo-tooltip-popup {
+  position: relative;
+}
+
+/* Base UI transforms the positioner, so its stacking context must carry the z-index. */
+:where([data-side]:has(> .kumo-tooltip-popup)) {
+  z-index: 220;
+}
+
+/* Kumo Select menus opened from inside modal dialogs (see dialog-select-portal.ts). */
+[data-dialog-select-portal] {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+[data-dialog-select-portal] > * {
+  pointer-events: auto;
+}
+
+/* Kumo Select menus opened from sticky page controls. */
+[data-sticky-select-portal] {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+
+[data-sticky-select-portal] > * {
+  pointer-events: auto;
+}
+
+:where(
+  .fixed.inset-0[class*="bg-kumo-contrast/"]:has([role="dialog"], [role="alertdialog"]),
+  [role="dialog"].fixed.inset-0[class*="bg-kumo-contrast/"],
+  [role="alertdialog"].fixed.inset-0[class*="bg-kumo-contrast/"]
+) {
+  z-index: 80;
+}
+
+:where(button, input, select, textarea):not([class*="rounded-"]) {
+  border-radius: 0.5rem;
+}
+
+/* Soft destructive surfaces: tinted background, danger text, darker tint on hover. */
+.kumo-btn-destructive,
+.kumo-btn-destructive-sm {
+  @apply bg-kumo-danger-tint font-medium text-kumo-danger transition-[background-color,color,transform] hover:bg-kumo-danger-tint/70;
+}
+
+.kumo-btn-destructive {
+  @apply flex w-full items-center justify-center gap-2 px-3 py-2 text-sm;
+}
+
+.kumo-btn-destructive-sm {
+  @apply inline-flex w-auto shrink-0 items-center justify-center px-2.5 py-1.5 text-xs;
+}
+
+.kumo-btn-destructive:disabled,
+.kumo-btn-destructive-sm:disabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
+/* Kumo Button secondary-destructive → soft destructive surfaces.
+   Tinted background, danger text, and a subtle danger ring. */
+[data-kumo-component="Button"]:where([class*="!text-kumo-danger"], [class*="text-kumo-danger!"]) {
+  background-color: var(--color-kumo-danger-tint) !important;
+  color: var(--text-color-kumo-danger) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-kumo-danger) 30%, transparent) !important;
+}
+
+[data-kumo-component="Button"]:where(
+    [class*="!text-kumo-danger"],
+    [class*="text-kumo-danger!"]
+  ):hover:not(:disabled),
+[data-kumo-component="Button"]:where(
+    [class*="!text-kumo-danger"],
+    [class*="text-kumo-danger!"]
+  )[data-state="open"] {
+  background-color: color-mix(
+    in srgb,
+    var(--color-kumo-danger-tint) 85%,
+    var(--color-kumo-danger)
+  ) !important;
+  color: var(--text-color-kumo-danger) !important;
+}
+
+[data-kumo-component="Button"]:where(
+    [class*="!text-kumo-danger"],
+    [class*="text-kumo-danger!"]
+  ):disabled {
+  background-color: color-mix(in srgb, var(--color-kumo-danger-tint) 50%, transparent) !important;
+  color: color-mix(in srgb, var(--text-color-kumo-danger) 70%, transparent) !important;
+}
+
+::selection {
+  background-color: var(--color-kumo-brand);
+  color: var(--text-color-kumo-inverse);
+}
+
+.transparent-scrollbar,
+.workflow-node-catalog-scroll {
+  background: transparent;
+  outline: none;
+  scrollbar-color: rgba(153, 153, 153, 0.65) transparent;
+  scrollbar-width: thin;
+}
+
+.transparent-scrollbar::-webkit-scrollbar,
+.workflow-node-catalog-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.transparent-scrollbar::-webkit-scrollbar-track,
+.workflow-node-catalog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border: 0;
+}
+
+.transparent-scrollbar::-webkit-scrollbar-thumb,
+.workflow-node-catalog-scroll::-webkit-scrollbar-thumb {
+  background-clip: content-box;
+  background-color: rgba(153, 153, 153, 0.65);
+  border: 2px solid transparent;
+}
+
+/* Session composer: fade scrolling messages into the input area. */
+.session-composer-footer {
+  /* Solid canvas so the fade's end stop and the footer are the exact same color. */
+  background-color: var(--color-kumo-canvas);
+}
+
+.session-composer-textarea {
+  position: relative;
+  box-shadow: 0 8px 12px -8px rgba(0, 0, 0, 0.18);
+}
+
+[data-mode="dark"] .session-composer-textarea {
+  box-shadow: 0 8px 12px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Home composer: ring lives on the textarea (not the clipping card), so it
+   must be an inset shadow and share one box-shadow with the drop shadow. */
+.session-composer-textarea--ringed {
+  /* Match the card's rounded-xl so the inset ring corners aren't clipped. */
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 0 0 1px #e5e5e6,
+    0 8px 12px -8px rgba(0, 0, 0, 0.18);
+}
+
+[data-mode="dark"] .session-composer-textarea--ringed {
+  box-shadow:
+    inset 0 0 0 1px #292929,
+    0 8px 12px -8px rgba(0, 0, 0, 0.5);
+}
+
+.session-messages-pane::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  /* No z-index: stay above in-flow messages but below portaled popovers/menus
+     (Kumo dropdown positioner uses z-index: auto), so dropdowns aren't covered. */
+  height: 3rem;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--color-kumo-canvas) 18%, transparent) 35%,
+    color-mix(in srgb, var(--color-kumo-canvas) 45%, transparent) 60%,
+    color-mix(in srgb, var(--color-kumo-canvas) 78%, transparent) 82%,
+    var(--color-kumo-canvas) 100%
+  ) !important;
+}
+
+.session-turn-status-active {
+  animation: session-turn-status-enter 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.session-turn-status-complete-loader {
+  animation: session-turn-status-loader-out 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.session-turn-status-complete-label {
+  animation: session-turn-status-label-in 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* Kumo table sticky-column edge fades: use theme surface grays. Tailwind gradient
+   stops for kumo-* colors can resolve incorrectly and pick up brand tint. */
+table :is(th, td).sticky.right-0::before {
+  background-image: linear-gradient(to right, transparent, var(--color-kumo-base)) !important;
+}
+
+table :is(th, td).sticky.left-0::before {
+  background-image: linear-gradient(to left, transparent, var(--color-kumo-base)) !important;
+}
+
+/* Tint-header tables: match sticky header column fades to bg-kumo-tint (#262626). */
+table thead.bg-kumo-tint :is(th).sticky.right-0::before {
+  background-image: linear-gradient(to right, transparent, var(--color-kumo-tint)) !important;
+}
+
+table thead.bg-kumo-tint :is(th).sticky.left-0::before {
+  background-image: linear-gradient(to left, transparent, var(--color-kumo-tint)) !important;
+}
+
+table thead[data-compact] :is(th, td).sticky.right-0::before {
+  background-image: linear-gradient(to right, transparent, var(--color-kumo-elevated)) !important;
+}
+
+table thead[data-compact] :is(th, td).sticky.left-0::before {
+  background-image: linear-gradient(to left, transparent, var(--color-kumo-elevated)) !important;
+}
+
+table:has(thead[data-compact]) thead :is(th).sticky.right-0,
+table:has(thead[data-compact]) thead :is(th).sticky.left-0 {
+  background-color: var(--color-kumo-elevated) !important;
+}
+
+/* Compact-header tables: match sticky body cells to the elevated header column. */
+table:has(thead[data-compact]) tbody :is(td).sticky.right-0 {
+  background-color: var(--color-kumo-elevated) !important;
+}
+
+table:has(thead[data-compact]) tbody :is(td).sticky.right-0::before {
+  background-image: linear-gradient(to right, transparent, var(--color-kumo-elevated)) !important;
+}
+
+table:has(thead[data-compact]) tbody :is(td).sticky.left-0 {
+  background-color: var(--color-kumo-elevated) !important;
+}
+
+table:has(thead[data-compact]) tbody :is(td).sticky.left-0::before {
+  background-image: linear-gradient(to left, transparent, var(--color-kumo-elevated)) !important;
+}
+
+/* Previous sessions table: full-row navigation with theme-aware hover contrast. */
+.session-table-row {
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-table-row:hover {
+  --session-row-hover-bg: #ebebeb;
+  --session-row-hover-text: #000;
+  background-color: var(--session-row-hover-bg);
+  color: var(--session-row-hover-text);
+}
+
+.session-table-row:hover :is(.text-kumo-default, .text-kumo-subtle) {
+  color: var(--session-row-hover-text);
+}
+
+.session-table-row:hover :is(td).sticky.right-0 {
+  background-color: var(--session-row-hover-bg) !important;
+}
+
+.session-table-row:hover :is(td).sticky.right-0::before {
+  background-image: linear-gradient(to right, transparent, var(--session-row-hover-bg)) !important;
+}
+
+[data-mode="dark"] .session-table-row:hover {
+  --session-row-hover-bg: #3d3d3d;
+  --session-row-hover-text: #fff;
+}
+
+.workflow-connection-dash {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--text-color-kumo-subtle) 0 6px,
+    transparent 6px 12px
+  );
+  background-position: 0 0;
+  background-size: 1px 12px;
+  animation: workflow-connection-dash-flow 0.7s linear infinite;
+  opacity: 0.7;
+}
+
+.kumo-inverse-cta {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.38) inset,
+    0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+[data-mode="light"] .kumo-inverse-cta {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 4px 16px rgba(0, 0, 0, 0.14);
+}
+
+.home-toolbar-accent-blue {
+  background-color: rgb(14 165 233 / 10%);
+  color: #0284c7;
+}
+
+.home-toolbar-accent-blue:hover {
+  background-color: rgb(14 165 233 / 15%);
+  color: #0369a1;
+}
+
+[data-mode="dark"] .home-toolbar-accent-blue {
+  background-color: rgb(14 165 233 / 12%);
+  color: #7dd3fc;
+}
+
+[data-mode="dark"] .home-toolbar-accent-blue:hover {
+  background-color: rgb(14 165 233 / 18%);
+  color: #bae6fd;
+}
+
+.home-toolbar-accent-green {
+  background-color: rgb(16 185 129 / 10%);
+  color: #059669;
+}
+
+.home-toolbar-accent-green:hover {
+  background-color: rgb(16 185 129 / 15%);
+  color: #047857;
+}
+
+[data-mode="dark"] .home-toolbar-accent-green {
+  background-color: rgb(16 185 129 / 12%);
+  color: #6ee7b7;
+}
+
+[data-mode="dark"] .home-toolbar-accent-green:hover {
+  background-color: rgb(16 185 129 / 18%);
+  color: #a7f3d0;
+}
+
+.home-toolbar-accent-purple {
+  background-color: rgb(139 92 246 / 10%);
+  color: #7c3aed;
+}
+
+.home-toolbar-accent-purple:hover {
+  background-color: rgb(139 92 246 / 15%);
+  color: #6d28d9;
+}
+
+[data-mode="dark"] .home-toolbar-accent-purple {
+  background-color: rgb(139 92 246 / 12%);
+  color: #c4b5fd;
+}
+
+[data-mode="dark"] .home-toolbar-accent-purple:hover {
+  background-color: rgb(139 92 246 / 18%);
+  color: #ddd6fe;
+}
+
+.home-toolbar-accent-amber {
+  background-color: rgb(245 158 11 / 10%);
+  color: #d97706;
+}
+
+.home-toolbar-accent-amber:hover {
+  background-color: rgb(245 158 11 / 15%);
+  color: #b45309;
+}
+
+[data-mode="dark"] .home-toolbar-accent-amber {
+  background-color: rgb(245 158 11 / 12%);
+  color: #fcd34d;
+}
+
+[data-mode="dark"] .home-toolbar-accent-amber:hover {
+  background-color: rgb(245 158 11 / 18%);
+  color: #fde68a;
+}
+
+/* Workflow node category accents — muted in light mode, pastel in dark mode. */
+.workflow-cat-icon-trigger {
+  background-color: rgb(16 185 129 / 10%);
+  color: #059669;
+}
+
+.workflow-cat-icon-logic {
+  background-color: rgb(14 165 233 / 10%);
+  color: #0284c7;
+}
+
+.workflow-cat-icon-network {
+  background-color: rgb(6 182 212 / 10%);
+  color: #0891b2;
+}
+
+.workflow-cat-icon-session {
+  background-color: rgb(139 92 246 / 10%);
+  color: #7c3aed;
+}
+
+.workflow-cat-icon-slack {
+  background-color: rgb(34 197 94 / 10%);
+  color: #16a34a;
+}
+
+.workflow-cat-icon-notification {
+  background-color: rgb(217 70 239 / 10%);
+  color: #c026d3;
+}
+
+.workflow-cat-icon-storage {
+  background-color: rgb(245 158 11 / 10%);
+  color: #d97706;
+}
+
+.workflow-cat-hover-trigger:hover,
+.workflow-cat-hover-trigger:focus-visible {
+  background-color: rgb(16 185 129 / 10%);
+}
+
+.workflow-cat-hover-logic:hover,
+.workflow-cat-hover-logic:focus-visible {
+  background-color: rgb(14 165 233 / 10%);
+}
+
+.workflow-cat-hover-network:hover,
+.workflow-cat-hover-network:focus-visible {
+  background-color: rgb(6 182 212 / 10%);
+}
+
+.workflow-cat-hover-session:hover,
+.workflow-cat-hover-session:focus-visible {
+  background-color: rgb(139 92 246 / 10%);
+}
+
+.workflow-cat-hover-slack:hover,
+.workflow-cat-hover-slack:focus-visible {
+  background-color: rgb(34 197 94 / 10%);
+}
+
+.workflow-cat-hover-notification:hover,
+.workflow-cat-hover-notification:focus-visible {
+  background-color: rgb(217 70 239 / 10%);
+}
+
+.workflow-cat-hover-storage:hover,
+.workflow-cat-hover-storage:focus-visible {
+  background-color: rgb(245 158 11 / 10%);
+}
+
+.workflow-cat-surface-trigger {
+  background-color: rgb(16 185 129 / 10%);
+}
+
+.workflow-cat-surface-logic {
+  background-color: rgb(14 165 233 / 10%);
+}
+
+.workflow-cat-surface-network {
+  background-color: rgb(6 182 212 / 10%);
+}
+
+.workflow-cat-surface-session {
+  background-color: rgb(139 92 246 / 10%);
+}
+
+.workflow-cat-surface-slack {
+  background-color: rgb(34 197 94 / 10%);
+}
+
+.workflow-cat-surface-notification {
+  background-color: rgb(217 70 239 / 10%);
+}
+
+.workflow-cat-surface-storage {
+  background-color: rgb(245 158 11 / 10%);
+}
+
+.workflow-status-emerald {
+  background-color: rgb(16 185 129 / 10%);
+  color: #059669;
+}
+
+.workflow-status-red {
+  background-color: rgb(239 68 68 / 10%);
+  color: #dc2626;
+}
+
+.workflow-icon-amber {
+  color: #d97706;
+}
+
+.workflow-icon-violet {
+  color: #7c3aed;
+}
+
+.workflow-icon-sky {
+  color: #0284c7;
+}
+
+[data-mode="dark"] .workflow-cat-icon-trigger {
+  background-color: rgb(16 185 129 / 15%);
+  color: #6ee7b7;
+}
+
+[data-mode="dark"] .workflow-cat-icon-logic {
+  background-color: rgb(14 165 233 / 15%);
+  color: #7dd3fc;
+}
+
+[data-mode="dark"] .workflow-cat-icon-network {
+  background-color: rgb(6 182 212 / 15%);
+  color: #67e8f9;
+}
+
+[data-mode="dark"] .workflow-cat-icon-session {
+  background-color: rgb(139 92 246 / 15%);
+  color: #c4b5fd;
+}
+
+[data-mode="dark"] .workflow-cat-icon-slack {
+  background-color: rgb(34 197 94 / 15%);
+  color: #86efac;
+}
+
+[data-mode="dark"] .workflow-cat-icon-notification {
+  background-color: rgb(217 70 239 / 15%);
+  color: #f0abfc;
+}
+
+[data-mode="dark"] .workflow-cat-icon-storage {
+  background-color: rgb(245 158 11 / 15%);
+  color: #fcd34d;
+}
+
+[data-mode="dark"] .workflow-cat-hover-trigger:hover,
+[data-mode="dark"] .workflow-cat-hover-trigger:focus-visible {
+  background-color: rgb(16 185 129 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-logic:hover,
+[data-mode="dark"] .workflow-cat-hover-logic:focus-visible {
+  background-color: rgb(14 165 233 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-network:hover,
+[data-mode="dark"] .workflow-cat-hover-network:focus-visible {
+  background-color: rgb(6 182 212 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-session:hover,
+[data-mode="dark"] .workflow-cat-hover-session:focus-visible {
+  background-color: rgb(139 92 246 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-slack:hover,
+[data-mode="dark"] .workflow-cat-hover-slack:focus-visible {
+  background-color: rgb(34 197 94 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-notification:hover,
+[data-mode="dark"] .workflow-cat-hover-notification:focus-visible {
+  background-color: rgb(217 70 239 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-hover-storage:hover,
+[data-mode="dark"] .workflow-cat-hover-storage:focus-visible {
+  background-color: rgb(245 158 11 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-trigger {
+  background-color: rgb(16 185 129 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-logic {
+  background-color: rgb(14 165 233 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-network {
+  background-color: rgb(6 182 212 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-session {
+  background-color: rgb(139 92 246 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-slack {
+  background-color: rgb(34 197 94 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-notification {
+  background-color: rgb(217 70 239 / 15%);
+}
+
+[data-mode="dark"] .workflow-cat-surface-storage {
+  background-color: rgb(245 158 11 / 15%);
+}
+
+[data-mode="dark"] .workflow-status-emerald {
+  background-color: rgb(16 185 129 / 15%);
+  color: #6ee7b7;
+}
+
+[data-mode="dark"] .workflow-status-red {
+  background-color: rgb(239 68 68 / 15%);
+  color: #fca5a5;
+}
+
+[data-mode="dark"] .workflow-icon-amber {
+  color: #fcd34d;
+}
+
+[data-mode="dark"] .workflow-icon-violet {
+  color: #c4b5fd;
+}
+
+[data-mode="dark"] .workflow-icon-sky {
+  color: #7dd3fc;
+}
+
+.home-model-control {
+  cursor: pointer;
+}
+
+.home-model-control:hover {
+  background-color: var(--color-kumo-control);
+}
+
+.home-model-control:disabled {
+  cursor: not-allowed;
+}
+
+.workflow-revert-confirm-panel[data-state="open"] {
+  animation: workflow-revert-confirm-open 0.24s cubic-bezier(0.2, 0, 0, 1) both;
+  transform: scaleX(1);
+}
+
+.workflow-revert-confirm-panel[data-state="closing"] {
+  animation: workflow-revert-confirm-close 0.18s cubic-bezier(0.4, 0, 1, 1) both;
+  transform: scaleX(0.06);
+}
+
+.workflow-revert-confirm-panel[data-state="idle"] {
+  transform: scaleX(0.06);
+}
+
+.workflow-revert-confirm-content {
+  opacity: 0;
+  transform: translateX(4px);
+}
+
+.workflow-revert-confirm-panel[data-state="open"] .workflow-revert-confirm-content {
+  animation: workflow-revert-confirm-content-open 0.24s cubic-bezier(0.2, 0, 0, 1) both;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.workflow-revert-confirm-panel[data-state="closing"] .workflow-revert-confirm-content,
+.workflow-revert-confirm-panel[data-state="idle"] .workflow-revert-confirm-content {
+  opacity: 0;
+  transform: translateX(4px);
+}
+
+@keyframes workflow-connection-dash-flow {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 0 12px;
+  }
+}
+
+@keyframes workflow-revert-confirm-open {
+  from {
+    transform: scaleX(0.06);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes workflow-revert-confirm-content-open {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes workflow-revert-confirm-close {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0.06);
+  }
+}
+
+@keyframes session-turn-status-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes session-turn-status-loader-out {
+  0%,
+  28% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.25);
+  }
+}
+
+@keyframes session-turn-status-label-in {
+  0%,
+  38% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.25);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-revert-confirm-panel[data-state="open"],
+  .workflow-revert-confirm-panel[data-state="closing"] {
+    animation: none;
+  }
+
+  .workflow-revert-confirm-content {
+    transition: none;
+  }
+
+  .session-turn-status-active,
+  .session-turn-status-complete-loader,
+  .session-turn-status-complete-label {
+    animation: none;
+  }
+
+  .session-turn-status-complete-loader {
+    display: none;
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "types": [
+      "vite/client",
+      "@types/node"
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "infra/*": [
+        "../../packages/infra/src/*"
+      ],
+      "@c0-agent/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@c0-agent/shared/*": [
+        "../../packages/shared/src/*"
+      ]
+    }
+  },
+  "include": [
+    "cloudflare-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

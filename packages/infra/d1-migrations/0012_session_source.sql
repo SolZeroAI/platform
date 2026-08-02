@@ -1,0 +1,1 @@
+ALTER TABLE sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'web';

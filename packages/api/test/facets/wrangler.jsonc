@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../node_modules/wrangler/config-schema.json",
+  "name": "c0-isolate-facet-tests",
+  "main": "worker.ts",
+  "compatibility_date": "2026-07-21",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "enable_nodejs_tty_module",
+    "enable_nodejs_fs_module",
+    "enable_nodejs_http_modules",
+    "enable_nodejs_perf_hooks_module",
+    "enable_nodejs_v8_module",
+    "enable_nodejs_process_v2",
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ISOLATE_FACET_TEST_PARENT",
+        "class_name": "IsolateFacetTestParent",
+      },
+      // Test-harness-only binding: facet children are exported, but production
+      // does not bind or migrate IsolateSubAgent as a top-level Durable Object.
+      {
+        "name": "ISOLATE_FACET_TEST_CHILD",
+        "class_name": "IsolateFacetTestChild",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["IsolateFacetTestParent"],
+    },
+  ],
+}

@@ -1,0 +1,39 @@
+import type * as Cloudflare from "alchemy/Cloudflare"
+import type { Json } from "effect/Schema"
+import { describe, expectTypeOf, it } from "vitest"
+import type { ApiWorkerBindingResources } from "../../apps/api/infra"
+import type { WorkflowActionsEntrypoint } from "../../packages/api/src/server/background/workflows/runner"
+import type { ApiEnv } from "../../packages/infra/src/types/env"
+
+type InferredApiEnv = Cloudflare.InferEnv<ApiWorkerBindingResources>
+type WorkflowActionMethod<Name extends keyof WorkflowActionsEntrypoint> = (
+  ...args: Parameters<WorkflowActionsEntrypoint[Name]>
+) => Promise<Awaited<ReturnType<WorkflowActionsEntrypoint[Name]>>>
+
+describe("API env types", () => {
+  it("derive directly from the Alchemy API worker binding resources", () => {
+    expectTypeOf<ApiEnv>().toEqualTypeOf<InferredApiEnv>()
+    expectTypeOf<ApiEnv["AI_SEARCH"]>().toEqualTypeOf<AiSearchNamespace>()
+    expectTypeOf<ApiEnv["WORKFLOW_AI_SEARCH"]>().toEqualTypeOf<AiSearchNamespace>()
+    expectTypeOf<ApiEnv["AI_SEARCH_CONTENT_BUCKET"]>().toEqualTypeOf<R2Bucket>()
+    expectTypeOf<ApiEnv["C0_CONFIG_AUTH"]>().toEqualTypeOf<Json>()
+    expectTypeOf<ApiEnv["C0_STAGE_METADATA"]>().toEqualTypeOf<Json>()
+    expectTypeOf<ApiEnv["C0_DEPLOYMENT_CONFIG_DIGEST"]>().toEqualTypeOf<string>()
+    expectTypeOf<ApiEnv["C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD"]>().toEqualTypeOf<string>()
+    expectTypeOf<ApiEnv["AUTH_SIGN_IN_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>()
+    expectTypeOf<ApiEnv["DYNAMIC_WORKFLOW"]>().toEqualTypeOf<Workflow>()
+    expectTypeOf<ApiEnv["OPENCODE_AGENT"]>().toMatchTypeOf<DurableObjectNamespace>()
+    expectTypeOf<ApiEnv["CODEX_AGENT"]>().toMatchTypeOf<DurableObjectNamespace>()
+    expectTypeOf<ApiEnv["CLAUDE_CODE_AGENT"]>().toMatchTypeOf<DurableObjectNamespace>()
+    expectTypeOf<ApiEnv["ISOLATE_SESSION"]>().toMatchTypeOf<DurableObjectNamespace>()
+    expectTypeOf<ApiEnv["WORKFLOW_ACTIONS"]>().toMatchTypeOf<Service>()
+    expectTypeOf<ApiEnv>().not.toHaveProperty("ISOLATE_SUB_AGENT")
+    expectTypeOf<ApiEnv>().not.toHaveProperty("ISOLATE_SUBAGENT")
+    expectTypeOf<ApiEnv>().not.toHaveProperty("SELF")
+    expectTypeOf<ApiEnv>().not.toHaveProperty("SANDBOX")
+    expectTypeOf<ApiEnv>().not.toHaveProperty("CLOUDFLARE_API_TOKEN")
+    expectTypeOf<ApiEnv["WORKFLOW_ACTIONS"]["executeWorkflowNode"]>().toEqualTypeOf<
+      WorkflowActionMethod<"executeWorkflowNode">
+    >()
+  })
+})
