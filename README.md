@@ -1,3 +1,5 @@
+![c0 Agent landing page](docs/c0-landing.jpg)
+
 # c0
 
 c0 is an open-source AI platform built for enterprise work, tools, and context.

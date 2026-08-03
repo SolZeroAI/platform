@@ -2,7 +2,7 @@
   "name": "c0-agent",
   "version": "1.4.4",
   "private": true,
-  "description": "c0 is an AI agent with configurable context and tools. It can be used synchronously with humans in the loop, or asynchronously via API, webhooks, MCP, and other integrations.",
+  "description": "c0 is an open-source AI platform built for organizational work, tools, and context. A single deployment to Cloudflare to get started.",
   "homepage": "https://github.com/Consensys/c0#readme",
   "bugs": {
     "url": "https://github.com/Consensys/c0/issues"
