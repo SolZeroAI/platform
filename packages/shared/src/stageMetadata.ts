@@ -1,19 +1,19 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- Stage metadata exposes synchronous adapters for browser, Worker, and deployment callers while its Effect constructors remain typed. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Stage metadata exposes synchronous adapters for browser, Worker, and deployment callers while its Effect constructors remain typed. */
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
-import type { C0ApplicationConfig, C0DeploymentConfig } from "./c0-config"
+import type { S0ApplicationConfig, S0DeploymentConfig } from "./s0-config"
 
 const DEFAULT_SANDBOX_INACTIVITY_TIMEOUT_MS = 600_000
 const INTERNAL_MCP_LOCAL_ORIGIN = "http://host.docker.internal:1337"
-const INTERNAL_MCP_INTERNAL_ORIGIN = "http://c0-ai-search.internal"
+const INTERNAL_MCP_INTERNAL_ORIGIN = "http://s0-ai-search.internal"
 const INTERNAL_MCP_INTERNAL_HOST = new URL(INTERNAL_MCP_INTERNAL_ORIGIN).hostname
 
 export interface StageMetadataEnv {
   readonly STAGE: string
-  readonly C0_STAGE_METADATA?: unknown
+  readonly S0_STAGE_METADATA?: unknown
 }
 
 export type StageMetadataInput = string | StageMetadataEnv
@@ -46,7 +46,7 @@ function nonEmptyStringOption(value: string | undefined): Option.Option<string> 
   )
 }
 
-function stageInfraConfigFromDeployment(config: C0DeploymentConfig): StageInfraConfig {
+function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraConfig {
   return {
     zone: nonEmptyStringOption(config.zone),
     webFqdn: nonEmptyStringOption(config.webFqdn),
@@ -177,7 +177,7 @@ const StageMetadataBindingSchema = Schema.Union(
 )
 const decodeStageMetadataBinding = Schema.decodeUnknownSync(StageMetadataBindingSchema)
 
-function configuredAppStageProps(config: C0ApplicationConfig): AppStageProps {
+function configuredAppStageProps(config: S0ApplicationConfig): AppStageProps {
   return {
     ...config,
     sendSlackNotifications: config.sendSlackNotifications && config.slackChannel.trim().length > 0,
@@ -237,8 +237,8 @@ export function getAppStageMetadataFromStr(stageStr: string) {
 }
 
 export function getAppStageMetadataSync(input: string | StageMetadataEnv) {
-  if (typeof input !== "string" && input.C0_STAGE_METADATA !== undefined) {
-    const metadata = decodeStageMetadataBinding(input.C0_STAGE_METADATA)
+  if (typeof input !== "string" && input.S0_STAGE_METADATA !== undefined) {
+    const metadata = decodeStageMetadataBinding(input.S0_STAGE_METADATA)
     return { name: metadata.name, app: metadata.app } satisfies AppStageMetadata
   }
   const stage = Match.value(input).pipe(
@@ -463,7 +463,7 @@ export class Prod extends Data.TaggedClass("prod")<StageProps> {
 export function getStageMetadataFromStr(
   stageStr: string,
   config: StageInfraConfig = EMPTY_STAGE_INFRA_CONFIG,
-  application?: C0ApplicationConfig,
+  application?: S0ApplicationConfig,
 ) {
   const lowerCaseStage = stageStr.toLowerCase()
   const app = application ? configuredAppStageProps(application) : undefined
@@ -481,23 +481,23 @@ export function getStageMetadataFromStr(
 }
 
 export function getStageMetadata(env: StageMetadataEnv) {
-  return env.C0_STAGE_METADATA === undefined
+  return env.S0_STAGE_METADATA === undefined
     ? getStageMetadataFromStr(env.STAGE)
-    : Effect.succeed(decodeStageMetadataBinding(env.C0_STAGE_METADATA) as StageMetadata)
+    : Effect.succeed(decodeStageMetadataBinding(env.S0_STAGE_METADATA) as StageMetadata)
 }
 
 export function getStageMetadataFromConfig(
   stage: string,
-  deployment: C0DeploymentConfig,
-  application: C0ApplicationConfig,
+  deployment: S0DeploymentConfig,
+  application: S0ApplicationConfig,
 ) {
   return getStageMetadataFromStr(stage, stageInfraConfigFromDeployment(deployment), application)
 }
 
 export function getStageMetadataFromConfigSync(
   stage: string,
-  deployment: C0DeploymentConfig,
-  application: C0ApplicationConfig,
+  deployment: S0DeploymentConfig,
+  application: S0ApplicationConfig,
 ): StageMetadata {
   // oxlint-disable-next-line effect/effect-run-in-body -- Synchronous compiler boundary for infrastructure and tests.
   return Effect.runSync(getStageMetadataFromConfig(stage, deployment, application))

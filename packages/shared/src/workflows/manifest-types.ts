@@ -37,7 +37,7 @@ export interface WorkflowManifest {
 }
 
 export interface WorkflowExportDocument {
-  kind: "c0.workflow"
+  kind: "s0.workflow"
   exportVersion: 1
   name: string
   manifest: WorkflowManifest

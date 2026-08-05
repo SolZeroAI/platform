@@ -1,7 +1,7 @@
 import { Button } from "@cloudflare/kumo/components/button"
 import { History, Play, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { getWorkflowNodeDefinitionForNode, type WorkflowManifestNode } from "@c0-agent/shared"
+import { getWorkflowNodeDefinitionForNode, type WorkflowManifestNode } from "@solzero/shared"
 import {
   PendingConnectionReplacement,
   PendingManualInputOverwrite,

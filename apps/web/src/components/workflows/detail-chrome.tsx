@@ -14,8 +14,8 @@ import {
   X,
 } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
-import { type WorkflowManifestNode } from "@c0-agent/shared"
-import { C0Loader } from "@/components/c0-loader"
+import { type WorkflowManifestNode } from "@solzero/shared"
+import { S0Loader } from "@/components/s0-loader"
 import { Dialog, NEAR_FULL_DIALOG_CLASS_NAME } from "@/components/ui/dialog"
 import { useSidebarContext } from "@/components/sidebar-layout"
 import { WorkflowSummary, WorkflowViewTab } from "./types"
@@ -77,7 +77,7 @@ export function WorkflowDetailLoadingState() {
       aria-busy="true"
       aria-label="Loading workflow"
     >
-      <C0Loader size={48} />
+      <S0Loader size={48} />
     </main>
   )
 }

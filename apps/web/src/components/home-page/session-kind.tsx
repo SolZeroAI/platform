@@ -1,6 +1,6 @@
 import { Button } from "@cloudflare/kumo/components/button"
 import { Box, Check, Code2, X } from "lucide-react"
-import { type AgentRuntime, formatAgentRuntimeLabel } from "@c0-agent/shared"
+import { type AgentRuntime, formatAgentRuntimeLabel } from "@solzero/shared"
 import { Dialog } from "@/components/ui/dialog"
 import { copyToClipboard } from "@/lib/format"
 import { appToastManager } from "@/lib/toast-manager"

@@ -1,4 +1,4 @@
-import type { IdParams, WsTokenPayload } from "@c0/api"
+import type { IdParams, WsTokenPayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import { stringifyJson } from "../../../../../lib/json"
 import {

@@ -6,7 +6,7 @@ import type {
   ProviderSettingsSnapshot,
   RuntimeProviderModelOption,
   UserCustomProviderUpdate,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Input } from "@cloudflare/kumo/components/input"
 import { InputGroup } from "@cloudflare/kumo/components/input-group"

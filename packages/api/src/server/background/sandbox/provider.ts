@@ -3,7 +3,7 @@ import type {
   OpenCodeInteractionRequest,
   OpenCodeInteractionResponse,
   OpenCodeMcpServers,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { Effect } from "effect/Effect"
 import type { Attachment, SandboxEvent } from "../types"
 

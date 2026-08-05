@@ -3,7 +3,7 @@ import {
   isWorkflowTriggerNodeType,
   type WorkflowManifest,
   type WorkflowManifestNode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { stringifyJson } from "../../lib/json"
 import {
   CURRENT_WORKFLOW_RUNTIME_ABI_VERSION,
@@ -730,7 +730,7 @@ function safeDisposeRpcValue(value) {
 }
 
 async function withWorkflowActions(env, invoke) {
-  const result = await invoke(env.C0_WORKFLOW_ACTIONS);
+  const result = await invoke(env.S0_WORKFLOW_ACTIONS);
   safeDisposeRpcValue(result);
   return result;
 }
@@ -928,7 +928,7 @@ export class TenantWorkflow extends WorkflowEntrypoint {
         throw error;
       }
     } finally {
-      safeDisposeRpcValue(this.env?.C0_WORKFLOW_ACTIONS);
+      safeDisposeRpcValue(this.env?.S0_WORKFLOW_ACTIONS);
     }
   }
 }

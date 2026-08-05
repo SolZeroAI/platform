@@ -9,7 +9,7 @@ import {
   MIN_ISOLATE_STEP_LIMIT,
   normalizeIsolateStepLimit,
   type ProviderSettingsUpdatePayload,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { useBlocker } from "@tanstack/react-router"
 import { Box, Save } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"

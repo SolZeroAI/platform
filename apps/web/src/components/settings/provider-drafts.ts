@@ -21,6 +21,7 @@ type SharedProviderSource = {
   providerId?: unknown
   name?: unknown
   source?: unknown
+  credentialSource?: unknown
 }
 
 type SharedProviderOverrideSource = {
@@ -72,7 +73,7 @@ export function buildSharedProviderDrafts(
   )
 
   return providers
-    .filter((provider) => provider.source === "shared")
+    .filter((provider) => provider.source === "shared" && provider.credentialSource !== "binding")
     .map((provider) => {
       const providerId = readDraftText(provider.providerId)
       const override = overridesByProviderId.get(providerId)

@@ -481,9 +481,32 @@ export class AdminLitellmProviderResponse extends Schema.Class<AdminLitellmProvi
   cronStatus: AdminCronJobStatus,
 }) {}
 
+export class AdminCloudflareAiGatewayModel extends Schema.Class<AdminCloudflareAiGatewayModel>(
+  "AdminCloudflareAiGatewayModel",
+)({
+  id: Schema.String,
+  name: Schema.String,
+  description: Schema.String,
+  reasoningEfforts: Schema.Array(Schema.String),
+  defaultReasoningEffort: Schema.NullOr(Schema.String),
+}) {}
+
+export class AdminCloudflareAiGatewayProviderResponse extends Schema.Class<AdminCloudflareAiGatewayProviderResponse>(
+  "AdminCloudflareAiGatewayProviderResponse",
+)({
+  enabled: Schema.Boolean,
+  bindingConfigured: Schema.Boolean,
+  gatewayId: Schema.NullOr(Schema.String),
+  cacheTtl: Schema.NullOr(Schema.Number),
+  collectLogs: Schema.Boolean,
+  defaultModel: Schema.NullOr(Schema.String),
+  models: Schema.Record(Schema.String, AdminCloudflareAiGatewayModel),
+}) {}
+
 export class AdminAiProvidersResponse extends Schema.Class<AdminAiProvidersResponse>(
   "AdminAiProvidersResponse",
 )({
+  cloudflareAiGateway: AdminCloudflareAiGatewayProviderResponse,
   litellm: AdminLitellmProviderResponse,
 }) {}
 

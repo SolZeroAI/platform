@@ -1,7 +1,7 @@
-import type { AdminMcpcfConfigPayload } from "@c0/api"
+import type { AdminMcpcfConfigPayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import { C0_CONFIG_KEYS, C0ConfigStore } from "../../../background/db/c0-config"
+import { S0_CONFIG_KEYS, S0ConfigStore } from "../../../background/db/s0-config"
 import {
   McpcfRegistryStore,
   type McpcfAdminApiTokenPresence,
@@ -125,10 +125,10 @@ export const performUpdateMcpcfConfig = Effect.fn("admin.performUpdateMcpcfConfi
     })
     .pipe(Effect.catch((cause) => failMessage(describeError(cause), 400)))
 
-  const c0Config = new C0ConfigStore(context.env.C0_CONFIG, context.env.REPO_SECRETS_ENCRYPTION_KEY)
+  const s0Config = new S0ConfigStore(context.env.S0_CONFIG, context.env.REPO_SECRETS_ENCRYPTION_KEY)
   const tokenGuard = Effect.succeed(Boolean(token))
   yield* Effect.when(
-    c0Config.setEncryptedSecret(C0_CONFIG_KEYS.mcpcf.adminApiToken, token ?? ""),
+    s0Config.setEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken, token ?? ""),
     tokenGuard,
   )
 

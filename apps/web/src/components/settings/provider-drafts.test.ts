@@ -41,4 +41,20 @@ describe("provider settings drafts", () => {
       ),
     ).toBe(true)
   })
+
+  it("does not offer personal API key overrides for binding-backed providers", () => {
+    const drafts = buildSharedProviderDrafts(
+      [
+        {
+          providerId: "cloudflare-ai-gateway",
+          name: "Cloudflare AI Gateway",
+          source: "shared",
+          credentialSource: "binding",
+        },
+      ],
+      [],
+    )
+
+    expect(drafts).toEqual([])
+  })
 })

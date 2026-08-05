@@ -1,7 +1,7 @@
 import { tracing as workerTracing } from "cloudflare:workers"
 import type { ToolSet } from "ai"
 import * as Option from "effect/Option"
-import type { SessionToolSpec } from "@c0-agent/shared"
+import type { SessionToolSpec } from "@solzero/shared"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
 import type { Env } from "../../types"
 import {

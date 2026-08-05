@@ -52,7 +52,7 @@ function transportForServer(name: string, server: RuntimeMcpServer) {
 
 async function connectServer(name: string, server: RuntimeMcpServer): Promise<ConnectedMcpServer> {
   const timeout = server.timeout ?? DEFAULT_MCP_TIMEOUT_MS
-  const client = new Client({ name: `c0-agent-${name}`, version: "1.0.0" })
+  const client = new Client({ name: `s0-agent-${name}`, version: "1.0.0" })
   try {
     await client.connect(transportForServer(name, server), {
       timeout,

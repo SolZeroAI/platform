@@ -1,5 +1,5 @@
 import type { LoadWorkflowRunnerContext, WorkflowRunner } from "@cloudflare/dynamic-workflows"
-import type { WorkflowManifestNode } from "@c0-agent/shared"
+import type { WorkflowManifestNode } from "@solzero/shared"
 import { generateId } from "../auth/crypto"
 import {
   createWorkflowStoreFromD1,
@@ -347,7 +347,7 @@ async function loadObservedDynamicWorkflowRunner(input: {
       ...getWorkflowRuntimeKernelModules(),
     },
     env: {
-      C0_WORKFLOW_ACTIONS: resolveWorkflowActionsBinding(input),
+      S0_WORKFLOW_ACTIONS: resolveWorkflowActionsBinding(input),
     },
     globalOutbound: null,
   })

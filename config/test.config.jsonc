@@ -1,10 +1,10 @@
 {
   // Complete example deployment configuration. Copy and customize this shape for a stage deployment.
   // Secret values stay outside JSONC and are referenced by environment binding name.
-  "$schema": "./c0.config.schema.json",
+  "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
   "deployment": {
-    "appName": "c0",
+    "appName": "s0",
     "zone": "localhost",
     // "webFqdn": "ai.example.com",
     // "apiFqdn": "api.ai.example.com",
@@ -24,7 +24,7 @@
     "showTestErrorButton": true,
     "betterAuthSessionTransferEnabled": true,
   },
-  // Credential sign-in provisions these configured administrators as c0 users.
+  // Credential sign-in provisions these configured administrators as SolZero users.
   "admins": {
     "adminEmails": ["admin@example.com"],
     "adminDomains": [],
@@ -33,7 +33,7 @@
   "auth": {
     "defaultSignInProviderId": "credential",
     "adminPassword": {
-      "env": "C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD",
+      "env": "S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD",
       "generateIfMissing": true,
     },
     "providers": {
@@ -59,7 +59,7 @@
       //   "displayName": "Company SSO",
       //   "issuer": "https://identity.example.com",
       //   "clientId": "your-client-id",
-      //   "clientSecret": { "env": "C0_AUTH_COMPANY_OIDC_CLIENT_SECRET" },
+      //   "clientSecret": { "env": "S0_AUTH_COMPANY_OIDC_CLIENT_SECRET" },
       //   "scopes": ["openid", "profile", "email", "offline_access"],
       //   "capabilities": {
       //     "signIn": true,
@@ -86,6 +86,39 @@
   },
   // Remove an optional runtime-configurable domain to manage it from Admin instead.
   "aiProviders": {
+    // Cloudflare AI Gateway is deployment-managed and available to Isolate and compatible container runtimes.
+    "cloudflareAiGateway": {
+      "enabled": true,
+      "cacheTtl": null,
+      "collectLogs": true,
+      "defaultModel": "openai/gpt-5.6-luna",
+      "models": {
+        "openai/gpt-5.6-luna": {
+          "name": "GPT 5.6 Luna",
+          "description": "Cost-sensitive GPT 5.6 model for coding and agentic work",
+          "provider": { "npm": "@ai-sdk/openai", "api": "responses" },
+          "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
+        },
+        "openai/gpt-5.6-sol": {
+          "name": "GPT 5.6 Sol",
+          "description": "Frontier GPT 5.6 model for complex professional work",
+          "provider": { "npm": "@ai-sdk/openai", "api": "responses" },
+          "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
+        },
+        "anthropic/claude-opus-5": {
+          "name": "Claude Opus 5",
+          "description": "Anthropic model for complex agentic coding and enterprise work",
+          "provider": { "npm": "@ai-sdk/anthropic", "api": "messages" },
+          "reasoning": { "efforts": ["medium", "high", "max"], "default": "medium" },
+        },
+        "xai/grok-4.5": {
+          "name": "Grok 4.5",
+          "description": "xAI model for coding, agentic tasks, and knowledge work",
+          "provider": { "npm": "@ai-sdk/openai-compatible", "api": "chat_completions" },
+          "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
+        },
+      },
+    },
     // Configure LiteLLM from Admin after sign-in, or uncomment this deployment-managed block.
     // "litellm": {
     //   "enabled": true,
@@ -93,7 +126,7 @@
     //   "defaultModel": null,
     //   "defaultReasoningLevel": null,
     //   "adapterOverrides": {},
-    //   "apiKey": { "env": "C0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY" }
+    //   "apiKey": { "env": "S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY" }
     // }
   },
 
@@ -105,7 +138,7 @@
   //   "expectedIssuer": null,
   //   "authTypeAllowlist": ["oauth", "token"],
   //   "serverBlacklist": [],
-  //   "adminApiToken": { "env": "C0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN" }
+  //   "adminApiToken": { "env": "S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN" }
   // },
 
   "integrations": {

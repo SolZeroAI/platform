@@ -8,16 +8,16 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
-      "@c0-agent/shared": resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@solzero/shared": resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },
   test: {
     env: {
       VITE_STAGE: "test",
-      VITE_C0_LOG_LEVEL: "trace",
-      VITE_C0_SHOW_TEST_ERROR_BUTTON: "true",
-      VITE_C0_BETTER_AUTH_SESSION_TRANSFER_ENABLED: "true",
-      VITE_C0_SANDBOX_INACTIVITY_TIMEOUT_MS: "600000",
+      VITE_S0_LOG_LEVEL: "trace",
+      VITE_S0_SHOW_TEST_ERROR_BUTTON: "true",
+      VITE_S0_BETTER_AUTH_SESSION_TRANSFER_ENABLED: "true",
+      VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS: "600000",
     },
     environment: "node",
     include: ["src/**/*.test.ts"],

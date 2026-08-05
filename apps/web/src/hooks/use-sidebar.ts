@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-const SIDEBAR_STORAGE_KEY = "c0-agent-sidebar-open"
+const SIDEBAR_STORAGE_KEY = "s0-agent-sidebar-open"
 // Matches Tailwind `max-md` (width < 48rem).
 const MOBILE_SIDEBAR_MEDIA_QUERY = "(max-width: 767px)"
 

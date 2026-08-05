@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { c0RuleNames, type C0RuleName } from "../src/index"
+import { s0RuleNames, type S0RuleName } from "../src/index"
 
 const packageRoot = process.cwd()
 const repoRoot = resolve(packageRoot, "../..")
@@ -34,7 +34,7 @@ const maxFileLinesValid = Array.from(
 
 const requestSurfacePath = "packages/api/src/server/fixture.ts"
 
-const cases: Record<C0RuleName, RuleCase> = {
+const cases: Record<S0RuleName, RuleCase> = {
   "max-file-lines": {
     invalid: maxFileLinesInvalid,
     valid: maxFileLinesValid,
@@ -281,11 +281,11 @@ afterEach(() => {
 })
 
 function runOxlint(
-  ruleName: C0RuleName,
+  ruleName: S0RuleName,
   source: string,
   relativeSourcePath = "fixture.ts",
 ): RunResult {
-  const tempDir = mkdtempSync(join(tmpdir(), "c0-lint-rules-"))
+  const tempDir = mkdtempSync(join(tmpdir(), "s0-lint-rules-"))
   tempDirs.push(tempDir)
 
   const sourcePath = join(tempDir, relativeSourcePath)
@@ -302,9 +302,9 @@ function runOxlint(
     JSON.stringify(
       {
         plugins: [],
-        jsPlugins: [{ name: "c0-lint", specifier: pluginSpecifier }],
+        jsPlugins: [{ name: "s0-lint", specifier: pluginSpecifier }],
         rules: {
-          [`c0-lint/${ruleName}`]: "error",
+          [`s0-lint/${ruleName}`]: "error",
         },
       },
       null,
@@ -332,20 +332,20 @@ function runOxlint(
   }
 }
 
-describe("C0 oxlint rules", () => {
-  for (const ruleName of c0RuleNames) {
+describe("S0 oxlint rules", () => {
+  for (const ruleName of s0RuleNames) {
     it(`${ruleName} reports invalid code`, () => {
       const result = runOxlint(ruleName, cases[ruleName].invalid, cases[ruleName].invalidPath)
 
       expect(result.status).toBe("failed")
-      expect(result.output).toContain(`c0-lint(${ruleName})`)
+      expect(result.output).toContain(`s0-lint(${ruleName})`)
     })
 
     it(`${ruleName} accepts valid code`, () => {
       const result = runOxlint(ruleName, cases[ruleName].valid, cases[ruleName].validPath)
 
       expect(result.status).toBe("passed")
-      expect(result.output).not.toContain(`c0-lint(${ruleName})`)
+      expect(result.output).not.toContain(`s0-lint(${ruleName})`)
     })
   }
 
@@ -359,7 +359,7 @@ export const record = Effect.logInfo("request finished");`,
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(use-effect-otel)")
+    expect(result.output).not.toContain("s0-lint(use-effect-otel)")
   })
 
   it("use-effect-otel ignores console outside request observability surfaces", () => {
@@ -372,18 +372,18 @@ export const record = Effect.logInfo("request finished");`,
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(use-effect-otel)")
+    expect(result.output).not.toContain("s0-lint(use-effect-otel)")
   })
 
   it("max-file-lines ignores generated Alchemy output", () => {
     const result = runOxlint(
       "max-file-lines",
       maxFileLinesInvalid,
-      "packages/infra/.alchemy/out/c0-api-dev/index.js",
+      "packages/infra/.alchemy/out/s0-api-dev/index.js",
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(max-file-lines)")
+    expect(result.output).not.toContain("s0-lint(max-file-lines)")
   })
 
   it("avoid-untagged-errors reports recoverable Effect.fail errors", () => {
@@ -395,7 +395,7 @@ export const value = Effect.fail(new Error("recoverable"));`,
     )
 
     expect(result.status).toBe("failed")
-    expect(result.output).toContain("c0-lint(avoid-untagged-errors)")
+    expect(result.output).toContain("s0-lint(avoid-untagged-errors)")
   })
 
   it("avoid-untagged-errors reports Effect.mapError errors", () => {
@@ -409,7 +409,7 @@ export const value = Effect.succeed(1).pipe(
     )
 
     expect(result.status).toBe("failed")
-    expect(result.output).toContain("c0-lint(avoid-untagged-errors)")
+    expect(result.output).toContain("s0-lint(avoid-untagged-errors)")
   })
 
   it("avoid-untagged-errors reports thrown errors inside Effect handlers", () => {
@@ -423,7 +423,7 @@ export const value = Effect.gen(function* () {
     )
 
     expect(result.status).toBe("failed")
-    expect(result.output).toContain("c0-lint(avoid-untagged-errors)")
+    expect(result.output).toContain("s0-lint(avoid-untagged-errors)")
   })
 
   it("avoid-untagged-errors allows defects and ordinary JavaScript errors", () => {
@@ -439,7 +439,7 @@ export function assertRuntimeInvariant() {
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(avoid-untagged-errors)")
+    expect(result.output).not.toContain("s0-lint(avoid-untagged-errors)")
   })
 
   it("composition rules ignore utility-only Effect Clock and DateTime imports", () => {
@@ -457,7 +457,7 @@ export function currentIso(clock: Clock.Clock) {
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(no-if-statement)")
+    expect(result.output).not.toContain("s0-lint(no-if-statement)")
   })
 
   it("composition rules still run when DateTime imports accompany Effect code", () => {
@@ -475,7 +475,7 @@ export const value = Effect.sync(() => {
     )
 
     expect(result.status).toBe("failed")
-    expect(result.output).toContain("c0-lint(no-if-statement)")
+    expect(result.output).toContain("s0-lint(no-if-statement)")
   })
 
   it("composition rules ignore allowlisted backend Effect boundaries", () => {
@@ -494,6 +494,6 @@ export async function runBrowserAdapter() {
     )
 
     expect(result.status).toBe("passed")
-    expect(result.output).not.toContain("c0-lint(no-if-statement)")
+    expect(result.output).not.toContain("s0-lint(no-if-statement)")
   })
 })

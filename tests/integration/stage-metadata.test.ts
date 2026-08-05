@@ -15,12 +15,12 @@ describe("stage Slack notification metadata", () => {
       compiledStageEnv("prod", undefined, {
         ...TEST_APPLICATION_CONFIG,
         sendSlackNotifications: true,
-        slackChannel: "c0-alerts",
+        slackChannel: "s0-alerts",
       }),
     )
 
     expect(metadata.app.sendSlackNotifications).toBe(true)
-    expect(metadata.app.slackChannel).toBe("c0-alerts")
+    expect(metadata.app.slackChannel).toBe("s0-alerts")
   })
 
   it("does not send Slack notifications when the channel is omitted", () => {

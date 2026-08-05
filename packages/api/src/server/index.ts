@@ -6,11 +6,11 @@ export { IsolateSubAgent } from "./background/isolate/subagent"
 export { handleSessionWebSocketRequest } from "./background/router"
 export {
   requestWithSharedProviderCredential,
+  resolveSharedProviderCredential,
   resolveSharedProviderApiKey,
-  resolveSharedProviderOutboundHost,
+  resolveSharedProviderOutboundHosts,
   sharedProviderPathClass,
   sharedProviderRequestModel,
-  sharedProviderSecretName,
   SHARED_PROVIDER_OUTBOUND_HANDLER,
 } from "./background/sandbox/providers/shared-provider-outbound"
 export { SessionDO } from "./background/session/durable-object"
@@ -38,7 +38,7 @@ export {
 export { createBetterAuth } from "./lib/better-auth"
 export { handleMcpcfMcpRequest } from "./mcp/mcpcf"
 export {
-  isC0McpPath,
+  isS0McpPath,
   isMcpcfProxyMcpPath,
   isMcpPath,
   shouldDispatchMcpRequest,

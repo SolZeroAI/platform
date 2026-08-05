@@ -18,7 +18,7 @@ const appRecord = {
   id: "wsa_1",
   workflow_id: "wf_1",
   user_id: "user_1",
-  app_name: "Workflow c0",
+  app_name: "Workflow s0",
   signing_secret_key: "workflow_slack_apps_wsa_1_signing_secret",
   bot_token_secret_key: "workflow_slack_apps_wsa_1_bot_token",
   created_at: 1,
@@ -204,7 +204,7 @@ async function signSlackBody(body: string, secret: string, timestamp: string): P
 
 async function signedSlackRequest(path: string, body: string, secret = "signing-secret") {
   const timestamp = String(Math.floor(Date.now() / 1000))
-  return new Request(`https://c0.test${path}`, {
+  return new Request(`https://s0.test${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -498,7 +498,7 @@ describe("workflow Slack app public router", () => {
     expect(response?.status).toBe(200)
     await expect(response?.json()).resolves.toMatchObject({
       ok: true,
-      error: "Slack user is not linked to a c0 account",
+      error: "Slack user is not linked to a SolZero account",
       setupUrl: "http://localhost:3000/settings?slackUserId=U1",
       slackUserId: "U1",
       runs: [

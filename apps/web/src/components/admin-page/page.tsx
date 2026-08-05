@@ -7,7 +7,7 @@ import { AdminAgentSkillsPanel } from "@/components/admin-agent-skills-panel"
 import { AdminAiSearchPanel } from "@/components/admin-ai-search-panel"
 import { AdminAiProviderPanel } from "@/components/admin-ai-provider-panel"
 import { resetAdminDocumentScroll } from "@/components/admin-ai-provider-panel-ui"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { McpcfAdminPanel, McpcfRefreshDialog } from "@/components/admin-mcpcf-panel"
 import { PageHeader } from "@/components/page-header"
 import { SidebarLayout } from "@/components/sidebar-layout"
@@ -169,7 +169,7 @@ export function AdminContent({
   if (authStatus === "loading") {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-kumo-canvas">
-        <C0Loader size={32} />
+        <S0Loader size={32} />
       </div>
     )
   }
@@ -180,7 +180,7 @@ export function AdminContent({
 
   return (
     <div
-      data-c0-admin-page
+      data-s0-admin-page
       className="flex h-full min-w-0 flex-col overflow-hidden bg-kumo-canvas text-kumo-default"
     >
       <PageHeader

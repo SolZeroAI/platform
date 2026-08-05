@@ -35,12 +35,18 @@ flowchart TB
     end
   end
 
+  CloudflareAIGateway["Default model gateway\nCloudflare AI Gateway"]
   LiteLLM["Optional external model gateway\nLiteLLM Providers / Models"]
+  ContainerOutbound["Cloudflare Containers outbound handler\npolicy + credential injection"]
 
   Clients --> Identity
   Identity --> ControlPlane
   ControlPlane --> ExecutionPlane
-  ExecutionPlane --> LiteLLM
+  IsolateAgent --> CloudflareAIGateway
+  IsolateAgent --> LiteLLM
+  SandboxAgent --> ContainerOutbound
+  ContainerOutbound --> CloudflareAIGateway
+  ContainerOutbound --> LiteLLM
 
   IsolateAgent --> IsolateTools
   SandboxAgent --> SandboxTools

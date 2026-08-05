@@ -5,7 +5,7 @@ import type {
   SandboxStatus,
   SessionStatus,
 } from "../types"
-import type { AgentRuntime, SessionKind, SubagentMode } from "@c0-agent/shared"
+import type { AgentRuntime, SessionKind, SubagentMode } from "@solzero/shared"
 
 export interface SessionRow {
   id: string

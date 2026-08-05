@@ -1,5 +1,7 @@
-import type { AdminLitellmConfigPayload } from "@c0/api"
+import type { AdminLitellmConfigPayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import { getCloudflareAiGatewaySnapshot } from "../../../background/ai-providers/cloudflare-ai-gateway"
 import {
   getLitellmProviderSnapshot,
   syncLitellmModels as runLitellmModelSync,
@@ -50,10 +52,45 @@ function formatLitellmSnapshot(snapshot: LitellmProviderSnapshot) {
   }
 }
 
+function formatCloudflareAiGateway(context: ControlPlaneContext) {
+  return Option.match(getCloudflareAiGatewaySnapshot(context.env), {
+    onNone: () => ({
+      enabled: false,
+      bindingConfigured: false,
+      gatewayId: null,
+      cacheTtl: null,
+      collectLogs: false,
+      defaultModel: null,
+      models: {},
+    }),
+    onSome: ({ bindingConfigured, config, gatewayId }) => ({
+      enabled: config.enabled,
+      bindingConfigured,
+      gatewayId: Option.getOrNull(gatewayId),
+      cacheTtl: config.cacheTtl,
+      collectLogs: config.collectLogs,
+      defaultModel: config.defaultModel || null,
+      models: Object.fromEntries(
+        Object.entries(config.models).map(([id, model]) => [
+          id,
+          {
+            id,
+            name: model.name,
+            description: model.description ?? "",
+            reasoningEfforts: [...(model.reasoning?.efforts ?? [])],
+            defaultReasoningEffort: model.reasoning?.default ?? null,
+          },
+        ]),
+      ),
+    }),
+  })
+}
+
 export const getAiProvidersAdminResponse = Effect.fn("admin.getAiProvidersAdminResponse")(
   function* (context: ControlPlaneContext) {
     const litellm = yield* getLitellmProviderSnapshot(context.env)
     return {
+      cloudflareAiGateway: formatCloudflareAiGateway(context),
       litellm: formatLitellmSnapshot(litellm),
     }
   },

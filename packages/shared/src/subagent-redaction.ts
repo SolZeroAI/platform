@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- This module is the shared redaction boundary for model-authored compact text. Direct guards keep length and secret handling explicit. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- This module is the shared redaction boundary for model-authored compact text. Direct guards keep length and secret handling explicit. */
 
 export const SUBAGENT_TASK_PREVIEW_LIMIT = 280
 export const SUBAGENT_COMPACT_SUMMARY_LIMIT = 1_200

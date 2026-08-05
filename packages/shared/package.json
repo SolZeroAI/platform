@@ -1,5 +1,5 @@
 {
-  "name": "@c0-agent/shared",
+  "name": "@solzero/shared",
   "version": "1.4.4",
   "private": true,
   "type": "module",

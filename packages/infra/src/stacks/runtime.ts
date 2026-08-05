@@ -8,17 +8,17 @@ import dotenv from "dotenv"
 import * as Effect from "effect/Effect"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
 import {
-  c0ActiveSecretReferences,
-  c0ConfigPathForStage,
-  c0ConfigStageForStage,
-  canonicalC0ConfigJson,
+  s0ActiveSecretReferences,
+  s0ConfigPathForStage,
+  s0ConfigStageForStage,
+  canonicalS0ConfigJson,
   configSecretWithDefault,
   getStageMetadataFromConfig,
   requiredConfigString,
-  resolveC0Config,
-  type C0ResolvedConfig,
+  resolveS0Config,
+  type S0ResolvedConfig,
   type SecretReference,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { getApiInfraEnv, type ApiSecretInput } from "../../../../apps/api/infra"
 import { createDeploymentMetadata } from "../deploymentMetadata"
 
@@ -28,11 +28,11 @@ const __dirname = dirname(__filename)
 export const INFRA_DIR = resolve(__dirname, "../..")
 export const REPO_ROOT = resolve(INFRA_DIR, "../..")
 
-export function loadC0ConfigFile(repoRoot: string, stage: string): C0ResolvedConfig {
-  const configPath = resolve(repoRoot, c0ConfigPathForStage(stage))
+export function loadS0ConfigFile(repoRoot: string, stage: string): S0ResolvedConfig {
+  const configPath = resolve(repoRoot, s0ConfigPathForStage(stage))
   if (!existsSync(configPath)) {
     throw new Error(
-      `Missing c0 configuration file for stage '${stage}': ${configPath}. Preview stages use config/pre.config.jsonc.`,
+      `Missing s0 configuration file for stage '${stage}': ${configPath}. Preview stages use config/pre.config.jsonc.`,
     )
   }
   const errors: ParseError[] = []
@@ -43,7 +43,7 @@ export function loadC0ConfigFile(repoRoot: string, stage: string): C0ResolvedCon
       .join(", ")
     throw new Error(`Invalid JSONC in ${configPath}: ${details}`)
   }
-  return resolveC0Config(parsed)
+  return resolveS0Config(parsed)
 }
 
 export function loadStageVars(stageTag: string) {
@@ -51,12 +51,12 @@ export function loadStageVars(stageTag: string) {
 }
 
 function stageVarsTag(stage: string): string {
-  return c0ConfigStageForStage(stage)
+  return s0ConfigStageForStage(stage)
 }
 
 function generatedSecretLogicalId(environmentVariable: string): string {
   const stableIds: Readonly<Record<string, string>> = {
-    C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: "admin-password",
+    S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: "admin-password",
     BETTER_AUTH_SECRET: "better-auth-secret",
     MCPCF_PROXY_SIGNING_SECRET: "mcpcf-proxy-signing-secret",
     TOKEN_ENCRYPTION_KEY: "token-encryption-key",
@@ -99,39 +99,39 @@ function resolveSecretReference(reference: SecretReference) {
   })
 }
 
-function resolveConfigSecrets(config: C0ResolvedConfig) {
+function resolveConfigSecrets(config: S0ResolvedConfig) {
   return Effect.gen(function* () {
     const entries: [string, ApiSecretInput][] = []
-    for (const reference of uniqueSecretReferences(c0ActiveSecretReferences(config))) {
+    for (const reference of uniqueSecretReferences(s0ActiveSecretReferences(config))) {
       entries.push([reference.env, yield* resolveSecretReference(reference)])
     }
     return Object.fromEntries(entries)
   })
 }
 
-function deploymentConfigDigest(config: C0ResolvedConfig): string {
-  return createHash("sha256").update(canonicalC0ConfigJson(config)).digest("hex")
+function deploymentConfigDigest(config: S0ResolvedConfig): string {
+  return createHash("sha256").update(canonicalS0ConfigJson(config)).digest("hex")
 }
 
-export function c0StackRuntime() {
+export function s0StackRuntime() {
   return Effect.gen(function* () {
     const stage = yield* Alchemy.Stage
     const context = yield* Alchemy.AlchemyContext
     loadStageVars(stageVarsTag(stage))
-    const c0Config = loadC0ConfigFile(REPO_ROOT, stage)
+    const s0Config = loadS0ConfigFile(REPO_ROOT, stage)
     const apiEnv = getApiInfraEnv(
-      c0Config,
-      deploymentConfigDigest(c0Config),
-      yield* resolveConfigSecrets(c0Config),
+      s0Config,
+      deploymentConfigDigest(s0Config),
+      yield* resolveConfigSecrets(s0Config),
     )
     const stageMetadata = yield* getStageMetadataFromConfig(
       stage,
-      c0Config.deployment,
-      c0Config.application,
+      s0Config.deployment,
+      s0Config.application,
     ).pipe(Effect.orDie)
 
     return {
-      appName: c0Config.deployment.appName,
+      appName: s0Config.deployment.appName,
       apiEnv,
       cloudflareAccountId: yield* requiredConfigString("CLOUDFLARE_ACCOUNT_ID"),
       deploymentMetadata: createDeploymentMetadata({ repoRoot: REPO_ROOT }),

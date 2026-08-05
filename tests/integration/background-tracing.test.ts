@@ -61,7 +61,7 @@ afterEach(() => {
 })
 
 describe("background tracing", () => {
-  it("records nested Cloudflare spans with c0-local correlation ids", async () => {
+  it("records nested Cloudflare spans with s0-local correlation ids", async () => {
     const { spans, tracing } = makeTracing()
     const seenContexts: Array<{ traceId: string; spanId: string }> = []
 
@@ -105,12 +105,12 @@ describe("background tracing", () => {
     expect(spans.every((span) => span.ended)).toBe(true)
     expect(spans[0].attributes.status).toBe("ok")
     expect(spans[1].attributes["ai.model"]).toBe("litellm/gpt-5.4-mini")
-    expect(spans[0].attributes["c0.local_trace_id"]).toBe(seenContexts[0].traceId)
-    expect(spans[0].attributes["c0.local_span_id"]).toBe(seenContexts[0].spanId)
+    expect(spans[0].attributes["s0.local_trace_id"]).toBe(seenContexts[0].traceId)
+    expect(spans[0].attributes["s0.local_span_id"]).toBe(seenContexts[0].spanId)
     expect(spans[0].attributes["trace.id"]).toBe(seenContexts[0].traceId)
     expect(spans[0].attributes["span.id"]).toBe(seenContexts[0].spanId)
-    expect(spans[1].attributes["c0.local_trace_id"]).toBe(seenContexts[0].traceId)
-    expect(spans[1].attributes["c0.local_span_id"]).toBe(seenContexts[1].spanId)
+    expect(spans[1].attributes["s0.local_trace_id"]).toBe(seenContexts[0].traceId)
+    expect(spans[1].attributes["s0.local_span_id"]).toBe(seenContexts[1].spanId)
     expect(spans[1].attributes["trace.id"]).toBe(seenContexts[0].traceId)
     expect(spans[1].attributes["span.id"]).toBe(seenContexts[1].spanId)
   })
@@ -136,8 +136,8 @@ describe("background tracing", () => {
     expect(
       localSpanContextFromHeaders(
         new Headers({
-          "x-c0-local-parent-span-id": "not-a-span",
-          "x-c0-local-trace-id": context.traceId,
+          "x-s0-local-parent-span-id": "not-a-span",
+          "x-s0-local-trace-id": context.traceId,
         }),
       ),
     ).toBeUndefined()

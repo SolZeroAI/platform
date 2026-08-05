@@ -1,5 +1,5 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- Better Auth request hooks are an imperative adapter boundary whose path/body guards must reject before library route execution. */
-import { CREDENTIAL_AUTH_PROVIDER_ID, getStageMetadataSync } from "@c0-agent/shared"
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Better Auth request hooks are an imperative adapter boundary whose path/body guards must reject before library route execution. */
+import { CREDENTIAL_AUTH_PROVIDER_ID, getStageMetadataSync } from "@solzero/shared"
 import { betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { hashPassword } from "better-auth/crypto"
@@ -201,7 +201,7 @@ function authPolicyHook(env: ApiEnv, registry: ResolvedAuthProviderRegistry) {
       // oxlint-disable-next-line effect/effect-run-in-body -- Better Auth requires a Promise-returning middleware callback at this boundary.
       const adminConfig = await Effect.runPromise(getAdminConfig(env))
       if (!new Set<string>(adminConfig.adminEmails).has(email)) {
-        await hashPassword("c0-invalid-managed-credential")
+        await hashPassword("s0-invalid-managed-credential")
         throw new APIError("UNAUTHORIZED", { message: "Invalid email or password" })
       }
     }

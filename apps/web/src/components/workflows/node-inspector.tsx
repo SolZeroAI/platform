@@ -12,7 +12,7 @@ import {
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
   type WorkflowManifestNode,
   type WorkflowNodeDefinition,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { ExpandableLayerCard } from "@/components/expandable-layer-card"
 import { CodeSurface } from "@/components/code"
 import { recessedInputGroupClassName } from "@/lib/recessed-field"
@@ -464,7 +464,7 @@ export function NodeInspector({
                     label="Command"
                     value={String(node.options.command ?? "")}
                     onChange={(value) => updateOption("command", value)}
-                    helpText="Slash command name for command triggers, for example /c0."
+                    helpText="Slash command name for command triggers, for example /SolZero."
                   />
                   <LabeledInput
                     label="Action IDs"

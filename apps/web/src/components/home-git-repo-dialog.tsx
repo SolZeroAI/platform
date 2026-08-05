@@ -1,6 +1,6 @@
 "use client"
 
-import { getGitHubRepoTool, normalizeSessionTools, type SessionToolSpec } from "@c0-agent/shared"
+import { getGitHubRepoTool, normalizeSessionTools, type SessionToolSpec } from "@solzero/shared"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Banner } from "@cloudflare/kumo/components/banner"
 import { Button } from "@cloudflare/kumo/components/button"
@@ -12,9 +12,10 @@ import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Check, FolderGit2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { DialogPaginationPageSize } from "@/components/dialog-pagination-page-size"
 import { Dialog } from "@/components/ui/dialog"
+import { getS0Brand } from "@/lib/brand"
 
 const REPO_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 
@@ -108,6 +109,7 @@ export function HomeGitRepoDialog({
   saving = false,
   error,
 }: HomeGitRepoDialogProps) {
+  const brand = getS0Brand()
   const [draftTools, setDraftTools] = useState<SessionToolSpec[]>(selectedTools)
   const [saveError, setSaveError] = useState("")
   const selectedToolsRef = useRef(selectedTools)
@@ -253,7 +255,7 @@ export function HomeGitRepoDialog({
                           className="border-b border-kumo-hairline px-3 py-8 text-sm text-kumo-subtle"
                         >
                           <TableCellState>
-                            <C0Loader size={32} />
+                            <S0Loader size={32} />
                           </TableCellState>
                         </KumoTable.Cell>
                       </KumoTable.Row>
@@ -266,7 +268,7 @@ export function HomeGitRepoDialog({
                           <TableCellState>
                             <Empty
                               title="No repositories found"
-                              description="Try a different search, or install c0 on more repositories."
+                              description={`Try a different search, or install ${brand.name} on more repositories.`}
                             />
                           </TableCellState>
                         </KumoTable.Cell>
@@ -353,7 +355,7 @@ export function HomeGitRepoDialog({
                         rel="noreferrer"
                         variant="current"
                       >
-                        Install c0 here
+                        Install {brand.name} here
                       </KumoLink>
                     </>
                   }

@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import type { CreateSessionPayload, SessionKind } from "@c0/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@c0-agent/shared"
+import type { CreateSessionPayload, SessionKind } from "@solzero/api"
+import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   ControlPlaneFailure,
   createSessionWithIdentity,

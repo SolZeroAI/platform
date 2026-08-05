@@ -3,7 +3,7 @@ import type { NodeLike } from "./types.ts"
 
 const effectUtilityImportSources = new Set(["effect/Clock", "effect/DateTime"])
 
-export function isC0RequestObservabilitySurface(filename: string): boolean {
+export function isS0RequestObservabilitySurface(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
   return (
     normalized.endsWith("/apps/api/index.ts") ||
@@ -13,18 +13,18 @@ export function isC0RequestObservabilitySurface(filename: string): boolean {
   )
 }
 
-export function isC0AllowedDynamicImportBoundary(filename: string): boolean {
+export function isS0AllowedDynamicImportBoundary(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
   return (
     normalized.endsWith("/packages/api/src/server/background/workflows/runner.ts") ||
-    normalized.endsWith("/apps/web/src/components/c0-loader.tsx") ||
+    normalized.endsWith("/apps/web/src/components/s0-loader.tsx") ||
     normalized.endsWith("/apps/web/src/components/code/highlighter.ts") ||
     normalized.endsWith("/apps/web/src/routes/_authenticated.settings.tsx") ||
     normalized.endsWith("/apps/web/vite.config.ts")
   )
 }
 
-export function isC0AllowedBackendEffectBoundary(filename: string): boolean {
+export function isS0AllowedBackendEffectBoundary(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
   return (
     /\/packages\/infra\/alchemy(?:\.[^.]+)?\.run\.ts$/.test(normalized) ||

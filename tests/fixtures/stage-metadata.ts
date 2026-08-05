@@ -1,10 +1,10 @@
 import {
   getStageMetadataFromConfigSync,
-  type C0ApplicationConfig,
-  type C0DeploymentConfig,
+  type S0ApplicationConfig,
+  type S0DeploymentConfig,
 } from "../../packages/shared/src"
 
-export const TEST_APPLICATION_CONFIG: C0ApplicationConfig = {
+export const TEST_APPLICATION_CONFIG: S0ApplicationConfig = {
   logLevel: "debug",
   sendSlackNotifications: false,
   slackChannel: "",
@@ -13,8 +13,8 @@ export const TEST_APPLICATION_CONFIG: C0ApplicationConfig = {
   betterAuthSessionTransferEnabled: true,
 }
 
-export const TEST_DEPLOYMENT_CONFIG: C0DeploymentConfig = {
-  appName: "c0-test",
+export const TEST_DEPLOYMENT_CONFIG: S0DeploymentConfig = {
+  appName: "s0-test",
   zone: "example.org",
   useApiShield: false,
   observability: {
@@ -27,13 +27,13 @@ export const TEST_DEPLOYMENT_CONFIG: C0DeploymentConfig = {
 
 export function compiledStageEnv(
   stage: string,
-  deployment: C0DeploymentConfig = TEST_DEPLOYMENT_CONFIG,
-  application: C0ApplicationConfig = TEST_APPLICATION_CONFIG,
+  deployment: S0DeploymentConfig = TEST_DEPLOYMENT_CONFIG,
+  application: S0ApplicationConfig = TEST_APPLICATION_CONFIG,
 ) {
   const metadata = getStageMetadataFromConfigSync(stage, deployment, application)
   return {
     STAGE: stage,
-    C0_STAGE_METADATA: {
+    S0_STAGE_METADATA: {
       _tag: metadata._tag,
       name: metadata.name,
       app: metadata.app,

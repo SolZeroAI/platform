@@ -18,8 +18,8 @@ import type {
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Archive, ChevronDown, ChevronsUpDown, Code2, Globe2, MessageSquare } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AGENT_RUNTIMES, formatAgentRuntimeLabel, resolveAgentRuntime } from "@c0-agent/shared"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { AGENT_RUNTIMES, formatAgentRuntimeLabel, resolveAgentRuntime } from "@solzero/shared"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import {
   archiveSession,
   formatSessionLabel,
@@ -233,7 +233,7 @@ export function PreviousSessionsTable() {
             }}
             icon={
               archivingSessionIds.has(row.original.id) ? (
-                <C0Loader size={16} />
+                <S0Loader size={16} />
               ) : (
                 <Archive className="h-4 w-4" aria-hidden />
               )
@@ -454,7 +454,7 @@ export function PreviousSessionsTable() {
             disabled={isBulkArchiving}
             onClick={() => void handleArchiveSelected()}
             icon={
-              isBulkArchiving ? <C0Loader size={16} /> : <Archive className="h-4 w-4" aria-hidden />
+              isBulkArchiving ? <S0Loader size={16} /> : <Archive className="h-4 w-4" aria-hidden />
             }
           >
             Archive {selectedCount}
@@ -523,7 +523,7 @@ export function PreviousSessionsTable() {
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty
                         title="No agents found."

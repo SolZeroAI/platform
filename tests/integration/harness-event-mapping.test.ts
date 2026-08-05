@@ -98,12 +98,12 @@ describe("AI SDK harness event mapping", () => {
     expect(runtime.poll(0).events).toEqual([
       expect.objectContaining({
         type: "error",
-        error: "Codex harness requires a LiteLLM OpenAI-compatible model",
+        error: "Codex harness requires an OpenAI Responses or LiteLLM model",
       }),
       expect.objectContaining({
         type: "finish",
         success: false,
-        error: "Codex harness requires a LiteLLM OpenAI-compatible model",
+        error: "Codex harness requires an OpenAI Responses or LiteLLM model",
       }),
     ])
   })

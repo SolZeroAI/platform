@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import type { RepoMetadataPayload, RepoParams } from "@c0/api"
+import type { RepoMetadataPayload, RepoParams } from "@solzero/api"
 import { RepoMetadataStore } from "../../../../../background/db/repo-metadata"
 import { json, resolveIdentityAndRepo, runControlPlane } from "../../../shared/control-plane"
 

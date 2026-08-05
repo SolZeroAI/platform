@@ -158,7 +158,7 @@ const auditFailure = Effect.fn("admin.auditFailure")(function* (
 
 export const withAudit = <R>(
   input: AuditInput,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic audited-perform contract: the perform Effect channels must be named explicitly here.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic audited-perform contract: the perform Effect channels must be named explicitly here.
   perform: Effect.Effect<Response, unknown, R>,
 ) =>
   Effect.gen(function* () {

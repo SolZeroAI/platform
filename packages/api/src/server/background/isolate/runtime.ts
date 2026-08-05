@@ -1,5 +1,5 @@
 import type { Env } from "../types"
-import type { PullRequest } from "@c0-agent/shared"
+import type { PullRequest } from "@solzero/shared"
 import type { StreamCallback } from "@cloudflare/think"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"

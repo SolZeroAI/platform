@@ -1,20 +1,20 @@
-/* oxlint-disable c0-lint/max-file-lines -- MCPCF registry is already at the lint ceiling; keep registry storage changes localized. */
+/* oxlint-disable s0-lint/max-file-lines -- MCPCF registry is already at the lint ceiling; keep registry storage changes localized. */
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import type { C0McpcfConfig, McpcfServerDefinition, SessionToolSpec } from "@c0-agent/shared"
-import { getSelectedMcpcfServerIds, normalizeMcpcfServerSlug } from "@c0-agent/shared"
+import type { S0McpcfConfig, McpcfServerDefinition, SessionToolSpec } from "@solzero/shared"
+import { getSelectedMcpcfServerIds, normalizeMcpcfServerSlug } from "@solzero/shared"
 import { stringifyJson } from "../../lib/json"
 import { describeError } from "../../lib/effect-errors"
 import type { Env } from "../types"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-  C0_CONFIG_LOCATIONS,
-  C0ConfigStore,
-  getC0DeploymentConfig,
-  getC0DeploymentSecret,
-} from "./c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+  S0_CONFIG_LOCATIONS,
+  S0ConfigStore,
+  getS0DeploymentConfig,
+  getS0DeploymentSecret,
+} from "./s0-config"
 import {
   normalizeMcpcfSourceServer,
   normalizeMcpcfToolPreview,
@@ -134,7 +134,7 @@ interface McpcfRefreshContext {
   result: McpcfRefreshResult
 }
 
-type McpcfRegistryEnv = Pick<Env, "C0_CONFIG" | "REPO_SECRETS_ENCRYPTION_KEY">
+type McpcfRegistryEnv = Pick<Env, "S0_CONFIG" | "REPO_SECRETS_ENCRYPTION_KEY">
 
 function normalizeStringList(values: readonly string[] | null | undefined): string[] {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].sort((a, b) =>
@@ -169,7 +169,7 @@ function defaultMcpcfConfig(now = Date.now()): McpcfConfigRecord {
   }
 }
 
-/* oxlint-disable c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/no-ternary, c0-lint/prefer-option-over-null -- C0_CONFIG migration/registry decoders normalize untrusted JSON at a narrow boundary. */
+/* oxlint-disable s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- S0_CONFIG migration/registry decoders normalize untrusted JSON at a narrow boundary. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -262,7 +262,7 @@ function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord>
     Option.filter((record) => record.id.length > 0),
   )
 }
-/* oxlint-enable c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/no-ternary, c0-lint/prefer-option-over-null */
+/* oxlint-enable s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null */
 
 function makeDiffItem(
   server: Pick<McpcfServerRecord, "id" | "slug" | "label">,
@@ -378,10 +378,10 @@ function recordDiff(
 }
 
 export class McpcfRegistryStore {
-  private readonly c0Config
+  private readonly s0Config
 
   constructor(private readonly env: McpcfRegistryEnv) {
-    this.c0Config = new C0ConfigStore(env.C0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
+    this.s0Config = new S0ConfigStore(env.S0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
   }
 
   getConfig = Effect.fn("db.mcpcf.getConfig")(function* (this: McpcfRegistryStore) {
@@ -395,15 +395,15 @@ export class McpcfRegistryStore {
   getConfigWithPresence = Effect.fn("db.mcpcf.getConfigWithPresence")(
     function* (this: McpcfRegistryStore) {
       const now = Date.now()
-      const deploymentValue = getC0DeploymentConfig<C0McpcfConfig>(
+      const deploymentValue = getS0DeploymentConfig<S0McpcfConfig>(
         this.env,
-        C0_CONFIG_BINDINGS.mcpcf,
+        S0_CONFIG_BINDINGS.mcpcf,
       )
       const store = this
       return yield* Option.match(deploymentValue, {
         onNone: () =>
           Effect.gen(function* () {
-            const value = yield* store.c0Config.getJson(C0_CONFIG_KEYS.mcpcf.config)
+            const value = yield* store.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
             const configured = Option.isSome(value)
             const source = Match.value(configured).pipe(
               Match.when(true, () => "kv" as const),
@@ -422,7 +422,7 @@ export class McpcfRegistryStore {
             configured: true,
             source: "deployment" as const,
             locked: true,
-            envVarName: C0_CONFIG_LOCATIONS.mcpcf,
+            envVarName: S0_CONFIG_LOCATIONS.mcpcf,
             config: readMcpcfConfig(Option.some(value), now),
           } satisfies McpcfConfigPresence),
       })
@@ -438,9 +438,9 @@ export class McpcfRegistryStore {
 
   getAdminApiTokenStatus = Effect.fn("db.mcpcf.getAdminApiTokenStatus")(
     function* (this: McpcfRegistryStore) {
-      const deploymentConfig = getC0DeploymentConfig<C0McpcfConfig>(
+      const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
         this.env,
-        C0_CONFIG_BINDINGS.mcpcf,
+        S0_CONFIG_BINDINGS.mcpcf,
       )
       const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
         Option.fromNullishOr(config.adminApiToken),
@@ -449,8 +449,8 @@ export class McpcfRegistryStore {
       return yield* Option.match(deploymentTokenReference, {
         onNone: () =>
           Effect.gen(function* () {
-            const configured = yield* store.c0Config.encryptedSecretConfigured(
-              C0_CONFIG_KEYS.mcpcf.adminApiToken,
+            const configured = yield* store.s0Config.encryptedSecretConfigured(
+              S0_CONFIG_KEYS.mcpcf.adminApiToken,
             )
             const source = Match.value(configured).pipe(
               Match.when(true, () => "kv" as const),
@@ -465,15 +465,15 @@ export class McpcfRegistryStore {
             } satisfies McpcfAdminApiTokenPresence
           }),
         onSome: (reference) =>
-          Option.match(getC0DeploymentSecret(this.env, reference), {
+          Option.match(getS0DeploymentSecret(this.env, reference), {
             onNone: () =>
-              Effect.die(new Error(`${reference.env} is required by ${C0_CONFIG_LOCATIONS.mcpcf}`)),
+              Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
             onSome: () =>
               Effect.succeed({
                 configured: true,
                 source: "deployment" as const,
                 locked: true,
-                envVarName: `${C0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
+                envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
                 adminApiToken: Option.none<string>(),
               } satisfies McpcfAdminApiTokenPresence),
           }),
@@ -483,9 +483,9 @@ export class McpcfRegistryStore {
 
   getAdminApiTokenWithPresence = Effect.fn("db.mcpcf.getAdminApiTokenWithPresence")(
     function* (this: McpcfRegistryStore) {
-      const deploymentConfig = getC0DeploymentConfig<C0McpcfConfig>(
+      const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
         this.env,
-        C0_CONFIG_BINDINGS.mcpcf,
+        S0_CONFIG_BINDINGS.mcpcf,
       )
       const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
         Option.fromNullishOr(config.adminApiToken),
@@ -494,13 +494,13 @@ export class McpcfRegistryStore {
       return yield* Option.match(deploymentTokenReference, {
         onNone: () =>
           Effect.gen(function* () {
-            const configured = yield* store.c0Config.encryptedSecretConfigured(
-              C0_CONFIG_KEYS.mcpcf.adminApiToken,
+            const configured = yield* store.s0Config.encryptedSecretConfigured(
+              S0_CONFIG_KEYS.mcpcf.adminApiToken,
             )
             const adminApiToken = yield* Match.value(configured).pipe(
               Match.when(false, () => Effect.succeed(Option.none<string>())),
               Match.orElse(() =>
-                store.c0Config.getEncryptedSecret(C0_CONFIG_KEYS.mcpcf.adminApiToken),
+                store.s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken),
               ),
             )
             const source = Match.value(configured).pipe(
@@ -516,15 +516,15 @@ export class McpcfRegistryStore {
             } satisfies McpcfAdminApiTokenPresence
           }),
         onSome: (reference) =>
-          Option.match(getC0DeploymentSecret(this.env, reference), {
+          Option.match(getS0DeploymentSecret(this.env, reference), {
             onNone: () =>
-              Effect.die(new Error(`${reference.env} is required by ${C0_CONFIG_LOCATIONS.mcpcf}`)),
+              Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
             onSome: (adminApiToken) =>
               Effect.succeed({
                 configured: true,
                 source: "deployment" as const,
                 locked: true,
-                envVarName: `${C0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
+                envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
                 adminApiToken: Option.some(adminApiToken),
               } satisfies McpcfAdminApiTokenPresence),
           }),
@@ -570,7 +570,7 @@ export class McpcfRegistryStore {
       createdAt,
       updatedAt: now,
     } satisfies McpcfConfigRecord
-    yield* this.c0Config.putJson(C0_CONFIG_KEYS.mcpcf.config, record)
+    yield* this.s0Config.putJson(S0_CONFIG_KEYS.mcpcf.config, record)
     return record
   })
 
@@ -600,7 +600,7 @@ export class McpcfRegistryStore {
     this: McpcfRegistryStore,
     serverId: string,
   ) {
-    const value = yield* this.c0Config.getJson(C0_CONFIG_KEYS.mcpcf.server(serverId))
+    const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.server(serverId))
     return Option.flatMap(value, readMcpcfServerRecord)
   })
 
@@ -849,7 +849,7 @@ export class McpcfRegistryStore {
 
   getServerIndexWithPresence = Effect.fn("db.mcpcf.getServerIndexWithPresence")(
     function* (this: McpcfRegistryStore) {
-      const value = yield* this.c0Config.getJson(C0_CONFIG_KEYS.mcpcf.serverIndex)
+      const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
       const serverIds = Option.match(value, {
         onNone: () => [] as string[],
         onSome: readStringArray,
@@ -874,19 +874,19 @@ export class McpcfRegistryStore {
     const normalized = [
       ...new Set(serverIds.map((serverId) => serverId.trim()).filter(Boolean)),
     ].sort((left, right) => left.localeCompare(right))
-    yield* this.c0Config.putJson(C0_CONFIG_KEYS.mcpcf.serverIndex, normalized)
+    yield* this.s0Config.putJson(S0_CONFIG_KEYS.mcpcf.serverIndex, normalized)
   })
 
   private putServerRecord = Effect.fn("db.mcpcf.putServerRecord")(function* (
     this: McpcfRegistryStore,
     server: McpcfServerRecord,
   ) {
-    yield* this.c0Config.putJson(C0_CONFIG_KEYS.mcpcf.server(server.id), server)
+    yield* this.s0Config.putJson(S0_CONFIG_KEYS.mcpcf.server(server.id), server)
   })
 }
 
 function runMcpcfRegistryEffect<A, E>(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge for the generic Effect returned by the registry methods.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge for the generic Effect returned by the registry methods.
   effect: Effect.Effect<A, E>,
 ): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect McpcfRegistryStore to non-Effect runtime consumers (session MCP resolution and the MCP Context Forge server).

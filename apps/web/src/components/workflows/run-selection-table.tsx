@@ -4,7 +4,7 @@ import { Pagination } from "@cloudflare/kumo/components/pagination"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { type ColumnDef, flexRender } from "@tanstack/react-table"
 import { useMemo } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { WORKFLOW_PAGE_SIZE_OPTIONS } from "./types"
 import { type WorkflowRun, type WorkflowRunStatePatch, type WorkflowRunTableState } from "./types"
 import { WorkflowSortIcon } from "./index-page"
@@ -106,7 +106,7 @@ export function WorkflowRunSelectionTable({
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty
                         title="No workflow runs found."

@@ -5,7 +5,7 @@ import type {
   AdminAiSearchResponse,
   AdminAiSearchSource,
   AdminAiSearchSourcePayload,
-} from "@c0/api"
+} from "@solzero/api"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { InputArea } from "@cloudflare/kumo/components/input"
@@ -14,7 +14,7 @@ import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Tooltip, TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { Edit3, FileCode2, Plus, Save, Trash2, X } from "lucide-react"
 import { useLayoutEffect, useMemo, useState } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
 import {
@@ -69,7 +69,7 @@ const DATA_SOURCE_OPTIONS = [
 
 const SOURCE_FIELD_HELP = {
   sourceId:
-    "Used as the c0 source ID, Cloudflare AI Search instance ID, and basis for MCP tool names.",
+    "Used as the SolZero source ID, Cloudflare AI Search instance ID, and basis for MCP tool names.",
   label: "Human-readable name shown to admins and used in agent-facing tool descriptions.",
   dataSource: "Cloudflare AI Search data source type backing this instance.",
   maxResults: "Maximum number of search results returned by the source search tool.",
@@ -234,7 +234,7 @@ export function AdminAiSearchPanel({
                   <KumoTable.Row>
                     <KumoTable.Cell colSpan={4} className="h-32 text-kumo-subtle">
                       <TableCellState className="h-full">
-                        {loading ? <C0Loader size={32} /> : "No AI Search sources configured."}
+                        {loading ? <S0Loader size={32} /> : "No AI Search sources configured."}
                       </TableCellState>
                     </KumoTable.Cell>
                   </KumoTable.Row>
@@ -516,7 +516,7 @@ function DataSourceFields({
           label="R2 bucket"
           value={draft.r2BucketName}
           onChange={(value) => updateDraft("r2BucketName", value)}
-          placeholder="c0-ai-search-content-prod"
+          placeholder="s0-ai-search-content-prod"
           disabled={disabled}
           disabledEnvVarName={envVarName}
           required

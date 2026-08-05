@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- Admin configuration normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Admin configuration normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
 import * as Schema from "effect/Schema"
 
 export interface AdminConfig {

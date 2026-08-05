@@ -13,7 +13,7 @@ function matchesRoute(pathname: string, route: string): boolean {
   return pathname === route || pathname === `${route}/`
 }
 
-export function isC0McpPath(pathname: string): boolean {
+export function isS0McpPath(pathname: string): boolean {
   return (
     matchesRoute(pathname, INTERNAL_AI_SEARCH_MCP_ROUTE) ||
     matchesRoute(pathname, INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE)
@@ -25,7 +25,7 @@ export function isMcpcfProxyMcpPath(pathname: string): boolean {
 }
 
 export function isMcpPath(pathname: string): boolean {
-  return isC0McpPath(pathname) || isMcpcfProxyMcpPath(pathname)
+  return isS0McpPath(pathname) || isMcpcfProxyMcpPath(pathname)
 }
 
 const verifyMcpcfCapability = (request: Request, secret: string) =>
@@ -44,7 +44,7 @@ const shouldDispatchMcpRequestEffect = Effect.fn("mcp.routes.shouldDispatch")(fu
 }) {
   const pathname = new URL(input.request.url).pathname
   return yield* Match.value(pathname).pipe(
-    Match.when(isC0McpPath, () => Effect.succeed(input.workerRouteEnabled)),
+    Match.when(isS0McpPath, () => Effect.succeed(input.workerRouteEnabled)),
     Match.when(isMcpcfProxyMcpPath, () =>
       Option.match(Option.fromNullishOr(input.mcpcfProxySigningSecret), {
         onNone: () => Effect.succeed(false),

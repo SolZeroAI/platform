@@ -10,7 +10,7 @@ import {
   type SessionToolSpec,
   type SubagentMode,
   summarizeSessionTools,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   ArrowDown,
   ArrowUp,

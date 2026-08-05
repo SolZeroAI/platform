@@ -14,7 +14,7 @@ export interface CloudflareContextShape {
 }
 
 export class CloudflareContext extends Context.Service<CloudflareContext, CloudflareContextShape>()(
-  "c0/api/CloudflareContext",
+  "s0/api/CloudflareContext",
 ) {}
 
 export type CloudflareEffectContext = Context.Context<

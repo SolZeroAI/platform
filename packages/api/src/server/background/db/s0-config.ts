@@ -1,12 +1,12 @@
-/* oxlint-disable c0-lint/avoid-untagged-errors, c0-lint/no-manual-effect-channels, c0-lint/no-match-effect-branch, c0-lint/no-ternary -- C0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
+/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-manual-effect-channels, s0-lint/no-match-effect-branch, s0-lint/no-ternary -- S0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import type { SecretReference } from "@c0-agent/shared"
+import type { SecretReference } from "@solzero/shared"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { toError } from "../../lib/effect-errors"
 import { parseJson, stringifyJson } from "../../lib/json"
 
-export const C0_CONFIG_KEYS = {
+export const S0_CONFIG_KEYS = {
   admin: {
     config: "config/admin",
   },
@@ -33,21 +33,23 @@ export const C0_CONFIG_KEYS = {
   },
 } as const
 
-export const C0_CONFIG_BINDINGS = {
-  admin: "C0_CONFIG_ADMIN",
-  auth: "C0_CONFIG_AUTH",
-  litellm: "C0_CONFIG_LITELLM",
-  mcpcf: "C0_CONFIG_MCPCF",
+export const S0_CONFIG_BINDINGS = {
+  admin: "S0_CONFIG_ADMIN",
+  auth: "S0_CONFIG_AUTH",
+  cloudflareAiGateway: "S0_CONFIG_CLOUDFLARE_AI_GATEWAY",
+  litellm: "S0_CONFIG_LITELLM",
+  mcpcf: "S0_CONFIG_MCPCF",
 } as const
 
-export const C0_CONFIG_LOCATIONS = {
+export const S0_CONFIG_LOCATIONS = {
   admin: "active stage config:admins",
   auth: "active stage config:auth",
+  cloudflareAiGateway: "active stage config:aiProviders.cloudflareAiGateway",
   litellm: "active stage config:aiProviders.litellm",
   mcpcf: "active stage config:mcpcf",
 } as const
 
-export function getC0DeploymentConfig<T>(env: object, bindingName: string): Option.Option<T> {
+export function getS0DeploymentConfig<T>(env: object, bindingName: string): Option.Option<T> {
   return Option.fromNullishOr(Reflect.get(env, bindingName)).pipe(
     Option.filter(
       (value): value is T => typeof value === "object" && value !== null && !Array.isArray(value),
@@ -55,7 +57,7 @@ export function getC0DeploymentConfig<T>(env: object, bindingName: string): Opti
   )
 }
 
-export function getC0DeploymentSecret(
+export function getS0DeploymentSecret(
   env: object,
   reference: SecretReference | null | undefined,
 ): Option.Option<string> {
@@ -66,7 +68,7 @@ export function getC0DeploymentSecret(
   )
 }
 
-export interface C0ConfigEncryptedSecretRecord {
+export interface S0ConfigEncryptedSecretRecord {
   encryptedValue: string
   createdAt: number
   updatedAt: number
@@ -79,7 +81,7 @@ function requireEncryptionKey(encryptionKey: string | undefined): Effect.Effect<
   })
 }
 
-function readEncryptedSecretRecord(value: unknown): Option.Option<C0ConfigEncryptedSecretRecord> {
+function readEncryptedSecretRecord(value: unknown): Option.Option<S0ConfigEncryptedSecretRecord> {
   return Option.fromNullishOr(value).pipe(
     Option.filter(
       (resolved): resolved is Record<string, unknown> =>
@@ -123,14 +125,14 @@ function listKvKeyNames(
   )
 }
 
-export class C0ConfigStore {
+export class S0ConfigStore {
   constructor(
     private readonly kv: KVNamespace,
     private readonly encryptionKey?: string,
   ) {}
 
-  getJson = Effect.fn("db.c0Config.getJson")(function* <T = unknown>(
-    this: C0ConfigStore,
+  getJson = Effect.fn("db.s0Config.getJson")(function* <T = unknown>(
+    this: S0ConfigStore,
     key: string,
   ) {
     const raw = yield* Effect.tryPromise({
@@ -147,12 +149,12 @@ export class C0ConfigStore {
     })
   })
 
-  listKeys = Effect.fn("db.c0Config.listKeys")(function* (this: C0ConfigStore, prefix: string) {
+  listKeys = Effect.fn("db.s0Config.listKeys")(function* (this: S0ConfigStore, prefix: string) {
     return yield* listKvKeyNames(this.kv, prefix, Option.none())
   })
 
-  putJson = Effect.fn("db.c0Config.putJson")(function* (
-    this: C0ConfigStore,
+  putJson = Effect.fn("db.s0Config.putJson")(function* (
+    this: S0ConfigStore,
     key: string,
     value: unknown,
   ) {
@@ -163,23 +165,23 @@ export class C0ConfigStore {
     })
   })
 
-  delete = Effect.fn("db.c0Config.delete")(function* (this: C0ConfigStore, key: string) {
+  delete = Effect.fn("db.s0Config.delete")(function* (this: S0ConfigStore, key: string) {
     yield* Effect.tryPromise({
       try: () => this.kv.delete(key),
       catch: toError,
     })
   })
 
-  encryptedSecretConfigured = Effect.fn("db.c0Config.encryptedSecretConfigured")(function* (
-    this: C0ConfigStore,
+  encryptedSecretConfigured = Effect.fn("db.s0Config.encryptedSecretConfigured")(function* (
+    this: S0ConfigStore,
     key: string,
   ) {
     const record = yield* this.getEncryptedSecretRecord(key)
     return Option.isSome(record)
   })
 
-  getEncryptedSecret = Effect.fn("db.c0Config.getEncryptedSecret")(function* (
-    this: C0ConfigStore,
+  getEncryptedSecret = Effect.fn("db.s0Config.getEncryptedSecret")(function* (
+    this: S0ConfigStore,
     key: string,
   ) {
     const encryptionKey = yield* requireEncryptionKey(this.encryptionKey)
@@ -191,8 +193,8 @@ export class C0ConfigStore {
     })
   })
 
-  setEncryptedSecret = Effect.fn("db.c0Config.setEncryptedSecret")(function* (
-    this: C0ConfigStore,
+  setEncryptedSecret = Effect.fn("db.s0Config.setEncryptedSecret")(function* (
+    this: S0ConfigStore,
     key: string,
     plaintext: string,
   ) {
@@ -201,8 +203,8 @@ export class C0ConfigStore {
     yield* this.setEncryptedSecretCiphertext(key, encryptedValue)
   })
 
-  setEncryptedSecretCiphertext = Effect.fn("db.c0Config.setEncryptedSecretCiphertext")(function* (
-    this: C0ConfigStore,
+  setEncryptedSecretCiphertext = Effect.fn("db.s0Config.setEncryptedSecretCiphertext")(function* (
+    this: S0ConfigStore,
     key: string,
     encryptedValue: string,
   ) {
@@ -215,11 +217,11 @@ export class C0ConfigStore {
         () => now,
       ),
       updatedAt: now,
-    } satisfies C0ConfigEncryptedSecretRecord)
+    } satisfies S0ConfigEncryptedSecretRecord)
   })
 
-  private getEncryptedSecretRecord = Effect.fn("db.c0Config.getEncryptedSecretRecord")(function* (
-    this: C0ConfigStore,
+  private getEncryptedSecretRecord = Effect.fn("db.s0Config.getEncryptedSecretRecord")(function* (
+    this: S0ConfigStore,
     key: string,
   ) {
     const parsed = yield* this.getJson(key)
@@ -227,12 +229,12 @@ export class C0ConfigStore {
   })
 }
 
-function runC0ConfigEffect<A>(effect: Effect.Effect<A, Error>): Promise<A> {
+function runS0ConfigEffect<A>(effect: Effect.Effect<A, Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for non-Effect runtime consumers.
   return Effect.runPromise(effect)
 }
 
-export interface C0ConfigStorePromise {
+export interface S0ConfigStorePromise {
   getJson<T = unknown>(key: string): Promise<Option.Option<T>>
   putJson(key: string, value: unknown): Promise<void>
   encryptedSecretConfigured(key: string): Promise<boolean>
@@ -240,14 +242,14 @@ export interface C0ConfigStorePromise {
   setEncryptedSecret(key: string, plaintext: string): Promise<void>
 }
 
-export function createC0ConfigStore(kv: KVNamespace, encryptionKey?: string): C0ConfigStorePromise {
-  const store = new C0ConfigStore(kv, encryptionKey)
+export function createS0ConfigStore(kv: KVNamespace, encryptionKey?: string): S0ConfigStorePromise {
+  const store = new S0ConfigStore(kv, encryptionKey)
   return {
-    getJson: (key) => runC0ConfigEffect(store.getJson(key)),
-    putJson: (key, value) => runC0ConfigEffect(store.putJson(key, value)),
-    encryptedSecretConfigured: (key) => runC0ConfigEffect(store.encryptedSecretConfigured(key)),
-    getEncryptedSecret: (key) => runC0ConfigEffect(store.getEncryptedSecret(key)),
+    getJson: (key) => runS0ConfigEffect(store.getJson(key)),
+    putJson: (key, value) => runS0ConfigEffect(store.putJson(key, value)),
+    encryptedSecretConfigured: (key) => runS0ConfigEffect(store.encryptedSecretConfigured(key)),
+    getEncryptedSecret: (key) => runS0ConfigEffect(store.getEncryptedSecret(key)),
     setEncryptedSecret: (key, plaintext) =>
-      runC0ConfigEffect(store.setEncryptedSecret(key, plaintext)),
+      runS0ConfigEffect(store.setEncryptedSecret(key, plaintext)),
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@c0/background-api",
+  "name": "@solzero/background-api",
   "version": "1.4.4",
   "private": true,
   "type": "module",
@@ -12,9 +12,9 @@
     "lint:fix": "oxlint --fix index.ts src infra"
   },
   "dependencies": {
-    "@c0-agent/shared": "workspace:*",
-    "@c0/api": "workspace:*",
-    "@cloudflare/containers": "^0.3.7"
+    "@cloudflare/containers": "^0.3.7",
+    "@solzero/api": "workspace:*",
+    "@solzero/shared": "workspace:*"
   },
   "devDependencies": {
     "alchemy": "2.0.0-beta.67",

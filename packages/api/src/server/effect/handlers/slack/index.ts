@@ -1,6 +1,11 @@
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
-import type { IdParams, PromptPayload, RunSessionPayload, SlackQueuePromptPayload } from "@c0/api"
+import type {
+  IdParams,
+  PromptPayload,
+  RunSessionPayload,
+  SlackQueuePromptPayload,
+} from "@solzero/api"
 import { prompt as sessionPrompt } from "../sessions/id/prompt"
 import { stop as sessionStop } from "../sessions/id/stop"
 import { runSessionHttp } from "../../../application/session-run"

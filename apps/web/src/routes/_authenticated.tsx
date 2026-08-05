@@ -5,9 +5,9 @@ import { Tooltip } from "@cloudflare/kumo/components/tooltip"
 import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { CircleHelp, Info, LogIn } from "lucide-react"
 import { useState, type FormEvent, type ReactNode } from "react"
-import type { PublicAuthProvider, PublicAuthProviderRegistry } from "@c0-agent/shared"
-import { C0AnimatedIcon } from "@/components/c0-animated-icon"
-import { C0Loader } from "@/components/c0-loader"
+import type { PublicAuthProvider, PublicAuthProviderRegistry } from "@solzero/shared"
+import { S0AnimatedIcon } from "@/components/s0-animated-icon"
+import { S0Loader } from "@/components/s0-loader"
 import {
   authClient,
   AuthProviderConfigProvider,
@@ -17,6 +17,7 @@ import {
   useAuthSession,
 } from "@/lib/auth-client"
 import { loadAuthenticatedShellForRoute } from "@/lib/authenticated-shell.functions"
+import { getS0Brand } from "@/lib/brand"
 import { manrope } from "@/lib/fonts"
 import { ProviderSettingsProvider } from "@/hooks/use-provider-settings"
 
@@ -49,7 +50,7 @@ function AuthenticatedOutlet({
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <C0Loader size={32} />
+        <S0Loader size={32} />
       </div>
     )
   }
@@ -66,6 +67,7 @@ export function SignInPage({
 }: {
   authProviderConfig: PublicAuthProviderRegistry
 }) {
+  const brand = getS0Brand()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const signInProviders = [...authProviderConfig.providers]
@@ -120,8 +122,8 @@ export function SignInPage({
     <div className="flex min-h-screen flex-col items-center bg-kumo-canvas px-6">
       <div className="flex w-full flex-1 flex-col items-center justify-center gap-6">
         <div className="text-center">
-          <C0AnimatedIcon size={96} className="mx-auto mb-4" />
-          <h1 className={`text-3xl ${manrope.className}`}>Welcome to c0 Agent</h1>
+          <S0AnimatedIcon size={96} className="mx-auto mb-4" />
+          <h1 className={`text-3xl ${manrope.className}`}>Welcome to {brand.name}</h1>
           <p className="mt-2 max-w-md text-kumo-subtle">
             AI agent platform with relevant context and tools.
           </p>
@@ -157,7 +159,7 @@ export function SignInPage({
                   <>
                     Retrieve the generated password with{" "}
                     <code>nub run auth:admin-password -- &lt;stage&gt;</code>, or set it with{" "}
-                    <code>C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD</code>.
+                    <code>S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD</code>.
                   </>
                 }
               >

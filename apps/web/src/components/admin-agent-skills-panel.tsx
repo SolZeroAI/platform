@@ -1,13 +1,13 @@
 "use client"
 
-import type { AdminAgentSkillItem, AdminAgentSkillsResponse } from "@c0/api"
+import type { AdminAgentSkillItem, AdminAgentSkillsResponse } from "@solzero/api"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Switch } from "@cloudflare/kumo/components/switch"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Plus, Save, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeEditor } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
 import { getErrorMessage, requestJson } from "@/lib/admin-console-actions"
@@ -167,7 +167,7 @@ export function AdminAgentSkillsPanel({
               <KumoTable.Row>
                 <KumoTable.Cell colSpan={4} className="h-32 text-kumo-subtle">
                   <TableCellState className="h-full">
-                    {loading ? <C0Loader size={32} /> : "No global skills configured."}
+                    {loading ? <S0Loader size={32} /> : "No global skills configured."}
                   </TableCellState>
                 </KumoTable.Cell>
               </KumoTable.Row>

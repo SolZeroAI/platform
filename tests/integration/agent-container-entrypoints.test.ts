@@ -12,7 +12,7 @@ describe.each([
   ["claude-code", "claude-code.ts", "@ai-sdk/harness-claude-code"],
 ] as const)("%s agent container entrypoint", (runtime, entrypoint, harnessPackage) => {
   it("preserves the server startup side effect in the Alchemy bundle", async () => {
-    const outputDirectory = await mkdtemp(resolve(tmpdir(), `c0-${runtime}-container-`))
+    const outputDirectory = await mkdtemp(resolve(tmpdir(), `s0-${runtime}-container-`))
     try {
       const bundle = await Effect.runPromise(
         build(

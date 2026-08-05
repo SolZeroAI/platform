@@ -2,25 +2,25 @@ import { defineRule } from "@oxlint/plugins"
 import type { Context, Rule, Visitor } from "@oxlint/plugins"
 import {
   hasEffectSignal,
-  isC0AllowedBackendEffectBoundary,
-  isC0RequestObservabilitySurface,
-} from "./c0-boundaries.ts"
+  isS0AllowedBackendEffectBoundary,
+  isS0RequestObservabilitySurface,
+} from "./s0-boundaries.ts"
 import { messages } from "./messages.ts"
-import type { C0RuleName } from "./rule-names.ts"
+import type { S0RuleName } from "./rule-names.ts"
 import type { NodeLike, RuleReporter, RuleRuntime, VisitorMap } from "./types.ts"
 
 export function makeRule(
-  name: C0RuleName,
+  name: S0RuleName,
   createVisitors: (runtime: RuleRuntime, context: Context) => VisitorMap,
   options: {
     description?: string
     requiresEffectFile?: boolean
-    requiresC0RequestObservabilitySurface?: boolean
+    requiresS0RequestObservabilitySurface?: boolean
   } = {},
 ): Rule {
   const requiresEffectFile = options.requiresEffectFile ?? true
-  const requiresC0RequestObservabilitySurface =
-    options.requiresC0RequestObservabilitySurface ?? false
+  const requiresS0RequestObservabilitySurface =
+    options.requiresS0RequestObservabilitySurface ?? false
   return defineRule({
     meta: {
       type: "suggestion",
@@ -42,11 +42,11 @@ export function makeRule(
       return {
         before() {
           effectFile = false
-          const allowedBackendBoundary = isC0AllowedBackendEffectBoundary(context.filename)
+          const allowedBackendBoundary = isS0AllowedBackendEffectBoundary(context.filename)
           matchingFile =
             !allowedBackendBoundary &&
-            (!requiresC0RequestObservabilitySurface ||
-              isC0RequestObservabilitySurface(context.filename))
+            (!requiresS0RequestObservabilitySurface ||
+              isS0RequestObservabilitySurface(context.filename))
         },
         Program(node: NodeLike) {
           effectFile = hasEffectSignal(node)

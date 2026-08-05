@@ -1,5 +1,5 @@
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import {
   access,
   agentSkills,
@@ -40,7 +40,7 @@ import {
 } from "../handlers/admin"
 import { observeRoute } from "../services/observability"
 
-export const HttpAdminLive = HttpApiBuilder.group(C0Api, "admin", (handlers) =>
+export const HttpAdminLive = HttpApiBuilder.group(S0Api, "admin", (handlers) =>
   handlers
     .handle("summary", () => observeRoute("admin", "summary", summary()))
     .handle("access", () => observeRoute("admin", "access", access()))

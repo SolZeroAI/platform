@@ -1,4 +1,4 @@
-/* oxlint-disable effect/avoid-process-env, c0-lint/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
+/* oxlint-disable effect/avoid-process-env, s0-lint/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
@@ -6,19 +6,19 @@ import { format } from "oxfmt"
 import * as JsonSchema from "effect/JsonSchema"
 import * as Schema from "effect/Schema"
 import {
-  C0_CONFIG_STAGE_NAMES,
-  C0ConfigFileSchema,
-  c0ConfigPathForStage,
-  resolveC0Config,
-} from "@c0-agent/shared"
+  S0_CONFIG_STAGE_NAMES,
+  S0ConfigFileSchema,
+  s0ConfigPathForStage,
+  resolveS0Config,
+} from "@solzero/shared"
 
 const repoRoot = process.cwd()
 const exampleConfigPath = resolve(repoRoot, "config/example.config.jsonc")
-const schemaPath = resolve(repoRoot, "config/c0.config.schema.json")
+const schemaPath = resolve(repoRoot, "config/s0.config.schema.json")
 
 function readConfigPath(configPath: string): unknown {
   if (!existsSync(configPath)) {
-    throw new Error(`Missing c0 configuration file: ${configPath}`)
+    throw new Error(`Missing s0 configuration file: ${configPath}`)
   }
   const errors: ParseError[] = []
   const parsed = parse(readFileSync(configPath, "utf8"), errors, { allowTrailingComma: true })
@@ -32,11 +32,11 @@ function readConfigPath(configPath: string): unknown {
 }
 
 function readConfigFile(stage: string): unknown {
-  return readConfigPath(resolve(repoRoot, c0ConfigPathForStage(stage)))
+  return readConfigPath(resolve(repoRoot, s0ConfigPathForStage(stage)))
 }
 
 async function generatedSchema(): Promise<string> {
-  const document = Schema.toJsonSchemaDocument(C0ConfigFileSchema)
+  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema)
   const schema = {
     $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
     ...document.schema,
@@ -50,21 +50,21 @@ async function generatedSchema(): Promise<string> {
 }
 
 async function checkConfig(): Promise<void> {
-  resolveC0Config(readConfigPath(exampleConfigPath))
-  for (const stage of C0_CONFIG_STAGE_NAMES) {
-    resolveC0Config(readConfigFile(stage))
+  resolveS0Config(readConfigPath(exampleConfigPath))
+  for (const stage of S0_CONFIG_STAGE_NAMES) {
+    resolveS0Config(readConfigFile(stage))
   }
   if (readFileSync(schemaPath, "utf8") !== (await generatedSchema())) {
-    throw new Error("config/c0.config.schema.json is stale. Run `nub run config:schema`.")
+    throw new Error("config/s0.config.schema.json is stale. Run `nub run config:schema`.")
   }
   process.stdout.write(
-    `Validated c0 config files: config/example.config.jsonc, ${C0_CONFIG_STAGE_NAMES.map(c0ConfigPathForStage).join(", ")}\n`,
+    `Validated s0 config files: config/example.config.jsonc, ${S0_CONFIG_STAGE_NAMES.map(s0ConfigPathForStage).join(", ")}\n`,
   )
 }
 
 async function writeSchema(): Promise<void> {
   writeFileSync(schemaPath, await generatedSchema())
-  process.stdout.write("Updated config/c0.config.schema.json\n")
+  process.stdout.write("Updated config/s0.config.schema.json\n")
 }
 
 const [command] = process.argv.slice(2).filter((argument) => argument !== "--")
@@ -73,5 +73,5 @@ if (command === "check") {
 } else if (command === "schema") {
   await writeSchema()
 } else {
-  throw new Error("Usage: c0-config.ts check | schema")
+  throw new Error("Usage: s0-config.ts check | schema")
 }

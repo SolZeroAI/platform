@@ -3,10 +3,10 @@
 import type { PaperShaderElement } from "@paper-design/shaders-react"
 import { GemSmoke } from "@paper-design/shaders-react"
 import { useCallback, useEffect, useState } from "react"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 import { useTheme } from "@/lib/theme"
 
-interface C0AnimatedIconProps {
+interface S0AnimatedIconProps {
   size?: number
   className?: string
 }
@@ -28,10 +28,8 @@ function usePrefersReducedMotion() {
 }
 
 /**
- * The shader library exposes no "ready" callback, but the shader mount
- * prepends a <canvas> into its container only after the texture image has
- * loaded and WebGL is initialized. Watch for that insertion, then wait two
- * frames so the first shader frame has actually painted before crossfading.
+ * The shader mounts its canvas asynchronously after the texture has loaded.
+ * Keep the real logo visible until that first shader frame has painted.
  */
 function useShaderReady() {
   const [shaderReady, setShaderReady] = useState(false)
@@ -68,7 +66,7 @@ function useShaderReady() {
   return { shaderReady, shaderRef }
 }
 
-export function C0AnimatedIcon({ size = 20, className = "" }: C0AnimatedIconProps) {
+export function S0AnimatedIcon({ size = 20, className = "" }: S0AnimatedIconProps) {
   const prefersReducedMotion = usePrefersReducedMotion()
   const { isDark } = useTheme()
   const { shaderReady, shaderRef } = useShaderReady()
@@ -83,8 +81,7 @@ export function C0AnimatedIcon({ size = 20, className = "" }: C0AnimatedIconProp
       className={`relative isolate block shrink-0 ${className}`.trim()}
       style={{ width: size, height: size }}
     >
-      <C0LogoSvg
-        color="#0078d7"
+      <S0LogoSvg
         className={`pointer-events-none absolute inset-0 z-0 h-full w-full ${transitionClass} ${
           shaderReady ? "opacity-0 blur-[2px]" : "opacity-100 blur-0"
         }`}
@@ -99,7 +96,7 @@ export function C0AnimatedIcon({ size = 20, className = "" }: C0AnimatedIconProp
         }`}
         width={size}
         height={size}
-        image="/images/c0-logo.svg"
+        image="/images/solzero-logo.svg"
         colors={["#0078d7", "#4da6e8", "#ffffff"]}
         colorBack="rgba(0, 0, 0, 0)"
         colorInner={isDark ? "#000000" : "#FFFFFF"}

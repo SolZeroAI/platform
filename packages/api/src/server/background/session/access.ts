@@ -13,7 +13,7 @@ export interface SessionAccessGrant {
 }
 
 export interface SessionAccessStore {
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Minimal store contract (decoupled from SessionIndexStore so tests can supply a fake); the D1Error channel must be named explicitly here.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Minimal store contract (decoupled from SessionIndexStore so tests can supply a fake); the D1Error channel must be named explicitly here.
   getById(id: string): Effect.Effect<Option.Option<SessionIndexRecord>, D1Error>
 }
 

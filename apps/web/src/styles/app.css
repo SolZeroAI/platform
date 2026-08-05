@@ -21,8 +21,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html:has([data-c0-admin-page]),
-body:has([data-c0-admin-page]) {
+html:has([data-s0-admin-page]),
+body:has([data-s0-admin-page]) {
   overflow: hidden;
 }
 
@@ -553,7 +553,7 @@ table:has(thead[data-compact]) tbody :is(td).sticky.left-0::before {
 
 .workflow-cat-icon-notification {
   background-color: rgb(217 70 239 / 10%);
-  color: #c026d3;
+  color: #s026d3;
 }
 
 .workflow-cat-icon-storage {

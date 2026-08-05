@@ -1,18 +1,20 @@
 import { resolve } from "node:path"
+import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
-import type { StageMetadata } from "@c0-agent/shared"
+import type { StageMetadata } from "@solzero/shared"
 import {
   createAgentContainerApplications,
   createAgentContainerNamespaces,
   createAgentResources,
   createApi,
   createDynamicWorkflowResource,
+  type ApiAiGatewayBinding,
   type ApiInfraEnv,
 } from "../../../apps/api/infra/index"
 import type { DeploymentMetadata } from "./deploymentMetadata"
 import { createWeb } from "./web"
 
-export interface CreateC0Options {
+export interface CreateS0Options {
   appName: string
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
@@ -23,9 +25,9 @@ export interface CreateC0Options {
   apiEnv: ApiInfraEnv
 }
 
-export type CreateC0ApiOptions = CreateC0Options
+export type CreateS0ApiOptions = CreateS0Options
 
-export interface CreateC0WebOptions {
+export interface CreateS0WebOptions {
   appName: string
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
@@ -33,7 +35,52 @@ export interface CreateC0WebOptions {
   dev: boolean
 }
 
-export function createC0Api(options: CreateC0ApiOptions) {
+function createCloudflareAiGateway(input: {
+  appName: string
+  stageMetadata: StageMetadata
+  apiEnv: ApiInfraEnv
+  cloudflareAccountId: string
+}) {
+  const config = input.apiEnv.S0_CONFIG_CLOUDFLARE_AI_GATEWAY
+  return Effect.gen(function* () {
+    // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and mock stacks never call the Cloudflare Gateway API.
+    if (!config.enabled) return undefined
+    // oxlint-disable-next-line s0-lint/no-if-statement -- Alchemy stack tests need the native binding shape without provisioning an account resource.
+    if (input.apiEnv.S0_PROVIDER_LAYER === "mock") {
+      return {
+        resource: Cloudflare.Workers.AI("AI_GATEWAY"),
+        gatewayId: `${input.appName}-${input.stageMetadata.name}-ai-gateway`,
+        runToken: "local-ai-gateway-run-token",
+      } satisfies ApiAiGatewayBinding
+    }
+
+    const resource = yield* Cloudflare.AI.Gateway("ai-gateway", {
+      authentication: true,
+      cacheTtl: config.cacheTtl,
+      collectLogs: config.collectLogs,
+    })
+    const runToken = yield* Cloudflare.ApiToken.AccountApiToken("ai-gateway-run-token", {
+      accountId: input.cloudflareAccountId,
+      name: `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
+      policies: [
+        {
+          effect: "allow",
+          permissionGroups: ["AI Gateway Run"],
+          resources: {
+            [`com.cloudflare.api.account.${input.cloudflareAccountId}`]: "*",
+          },
+        },
+      ],
+    })
+    return {
+      resource,
+      gatewayId: resource.gatewayId,
+      runToken: runToken.value,
+    } satisfies ApiAiGatewayBinding
+  })
+}
+
+export function createS0Api(options: CreateS0ApiOptions) {
   return Effect.gen(function* () {
     const {
       appName,
@@ -47,6 +94,12 @@ export function createC0Api(options: CreateC0ApiOptions) {
     } = options
     const migrationsDir = resolve(infraDir, "d1-migrations")
 
+    const aiGateway = yield* createCloudflareAiGateway({
+      appName,
+      stageMetadata,
+      apiEnv,
+      cloudflareAccountId,
+    })
     const agentContainers = createAgentContainerNamespaces()
     const agentContainerApplications = createAgentContainerApplications({
       appName,
@@ -69,6 +122,7 @@ export function createC0Api(options: CreateC0ApiOptions) {
       agentContainers,
       agentContainerApplications,
       agentResources,
+      aiGateway,
       env: apiEnv,
     })
     const dynamicWorkflow = yield* createDynamicWorkflowResource({
@@ -93,7 +147,7 @@ export function createC0Api(options: CreateC0ApiOptions) {
   })
 }
 
-export function createC0Web(options: CreateC0WebOptions) {
+export function createS0Web(options: CreateS0WebOptions) {
   return createWeb({
     appName: options.appName,
     stageMetadata: options.stageMetadata,
@@ -103,10 +157,10 @@ export function createC0Web(options: CreateC0WebOptions) {
   })
 }
 
-export function createC0(options: CreateC0Options) {
+export function createS0(options: CreateS0Options) {
   return Effect.gen(function* () {
-    const api = yield* createC0Api(options)
-    const web = yield* createC0Web(options)
+    const api = yield* createS0Api(options)
+    const web = yield* createS0Web(options)
 
     return { ...api, web }
   })

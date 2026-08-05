@@ -1,7 +1,7 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/no-ternary, c0-lint/prefer-option-over-null, effect/effect-run-in-body -- Worker entrypoint and container outbound handlers are imperative runtime boundaries around Effect-based services. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/effect-run-in-body -- Worker entrypoint and container outbound handlers are imperative runtime boundaries around Effect-based services. */
 import { WorkerEntrypoint, tracing } from "cloudflare:workers"
 import { Container, ContainerProxy, type OutboundHandler } from "@cloudflare/containers"
-import { getStageMetadataSync } from "@c0-agent/shared"
+import { getStageMetadataSync } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import {
@@ -28,17 +28,17 @@ import {
   handleWorkflowPublicRequest,
   isMcpPath,
   requestWithSharedProviderCredential,
+  resolveSharedProviderCredential,
   resolveSharedProviderApiKey,
-  resolveSharedProviderOutboundHost,
+  resolveSharedProviderOutboundHosts,
   SessionDO,
   sharedProviderPathClass,
   sharedProviderRequestModel,
-  sharedProviderSecretName,
   SHARED_PROVIDER_OUTBOUND_HANDLER,
   shouldDispatchMcpRequest,
   WorkflowActionExecutor,
   WorkflowAlarmDO,
-} from "@c0/api/server"
+} from "@solzero/api/server"
 import type { ApiEnv } from "infra/types/env"
 
 export {
@@ -90,31 +90,49 @@ const internalMcpOutbound: OutboundHandler<ApiEnv> = (request, env) => {
   })
 }
 
-const sharedProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
+const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
   const observer = createApiRequestObserver(request, env, noopCtx)
   return observer.run(async ({ setRouteBranch, log }) => {
-    setRouteBranch("agent-shared-provider-outbound")
+    setRouteBranch("agent-container-ai-provider-outbound")
     const url = new URL(request.url)
-    const secretName = sharedProviderSecretName(url)
-    const apiKeyOption = resolveSharedProviderApiKey(env, secretName)
+    const credential = resolveSharedProviderCredential(env, url)
+    const apiKeyOption = credential.pipe(
+      Option.flatMap(({ secretName }) => resolveSharedProviderApiKey(env, secretName)),
+    )
     const requestedModel = await sharedProviderRequestModel(request)
+    const providerCredential = Option.match(credential, {
+      onNone: () => null,
+      onSome: ({ secretName }) => secretName,
+    })
     log.set({
       outboundHost: url.hostname,
-      providerCredential: secretName,
+      providerCredential,
       pathClass: sharedProviderPathClass(url),
       hasCredential: Option.isSome(apiKeyOption),
       requestedModel,
     })
 
-    return Option.match(apiKeyOption, {
-      onNone: () =>
-        Response.json({ error: "Shared provider credential is not configured" }, { status: 502 }),
-      onSome: async (apiKey) => {
-        // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
-        const response = await fetch(requestWithSharedProviderCredential(request, apiKey))
-        log.set({ upstreamStatus: response.status })
-        return response
+    return Option.match(credential, {
+      onNone: async () => {
+        // oxlint-disable-next-line effect/avoid-native-fetch -- Non-AI Cloudflare API traffic must pass through without receiving the scoped AI Gateway credential.
+        return fetch(request)
       },
+      onSome: ({ headers }) =>
+        Option.match(apiKeyOption, {
+          onNone: () =>
+            Response.json(
+              { error: "Shared provider credential is not configured" },
+              { status: 502 },
+            ),
+          onSome: async (apiKey) => {
+            // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
+            const response = await fetch(
+              requestWithSharedProviderCredential(request, apiKey, headers),
+            )
+            log.set({ upstreamStatus: response.status })
+            return response
+          },
+        }),
     })
   })
 }
@@ -136,13 +154,14 @@ abstract class AgentContainerBase extends Container<ApiEnv> {
       : {}
 
     this.ctx.blockConcurrencyWhile(async () => {
-      const litellmOutboundHost = await Effect.runPromise(resolveSharedProviderOutboundHost(env))
+      const sharedProviderOutboundHosts = await Effect.runPromise(
+        resolveSharedProviderOutboundHosts(env),
+      )
       await this.setOutboundByHosts({
         ...outboundByHost,
-        ...Option.match(litellmOutboundHost, {
-          onNone: () => ({}),
-          onSome: (host) => ({ [host]: SHARED_PROVIDER_OUTBOUND_HANDLER }),
-        }),
+        ...Object.fromEntries(
+          sharedProviderOutboundHosts.map((host) => [host, SHARED_PROVIDER_OUTBOUND_HANDLER]),
+        ),
       })
     })
   }
@@ -154,7 +173,7 @@ export class ClaudeCodeAgentContainer extends AgentContainerBase {}
 
 const agentContainerOutboundHandlers = {
   [INTERNAL_MCP_OUTBOUND_HANDLER]: internalMcpOutbound,
-  [SHARED_PROVIDER_OUTBOUND_HANDLER]: sharedProviderOutbound,
+  [SHARED_PROVIDER_OUTBOUND_HANDLER]: containerAiProviderOutbound,
 }
 
 OpenCodeAgentContainer.outboundHandlers = agentContainerOutboundHandlers

@@ -114,9 +114,9 @@ describe("D1 migrations", () => {
           .prepare(
             "SELECT slug, runtime_scope, origin, default_enabled FROM agent_skills WHERE id = ?",
           )
-          .get("skill_c0_create_pr"),
+          .get("skill_s0_create_pr"),
       ).toEqual({
-        slug: "c0-create-pr",
+        slug: "s0-create-pr",
         runtime_scope: "harness",
         origin: "built-in",
         default_enabled: 1,

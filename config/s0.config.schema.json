@@ -230,6 +230,132 @@
     "aiProviders": {
       "type": "object",
       "properties": {
+        "cloudflareAiGateway": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "cacheTtl": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    { "type": "number" },
+                    { "type": "string", "enum": ["NaN"] },
+                    { "type": "string", "enum": ["Infinity"] },
+                    { "type": "string", "enum": ["-Infinity"] }
+                  ]
+                },
+                { "type": "null" }
+              ]
+            },
+            "collectLogs": { "type": "boolean" },
+            "defaultModel": { "type": "string" },
+            "models": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                  "options": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                  "limit": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "context": {
+                            "anyOf": [
+                              { "type": "number" },
+                              { "type": "string", "enum": ["NaN"] },
+                              { "type": "string", "enum": ["Infinity"] },
+                              { "type": "string", "enum": ["-Infinity"] }
+                            ]
+                          },
+                          "output": {
+                            "anyOf": [
+                              { "type": "number" },
+                              { "type": "string", "enum": ["NaN"] },
+                              { "type": "string", "enum": ["Infinity"] },
+                              { "type": "string", "enum": ["-Infinity"] }
+                            ]
+                          }
+                        },
+                        "required": ["context", "output"],
+                        "additionalProperties": false
+                      },
+                      { "type": "null" }
+                    ]
+                  },
+                  "reasoning": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "efforts": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                            }
+                          },
+                          "default": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                              },
+                              { "type": "null" }
+                            ]
+                          }
+                        },
+                        "required": ["efforts"],
+                        "additionalProperties": false
+                      },
+                      { "type": "null" }
+                    ]
+                  },
+                  "interleaved": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          { "type": "boolean", "enum": [true] },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "field": {
+                                "type": "string",
+                                "enum": ["reasoning_content", "reasoning_details"]
+                              }
+                            },
+                            "required": ["field"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      { "type": "null" }
+                    ]
+                  },
+                  "provider": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "npm": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                          "api": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                        },
+                        "additionalProperties": false
+                      },
+                      { "type": "null" }
+                    ]
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["enabled", "cacheTtl", "collectLogs", "defaultModel", "models"],
+          "additionalProperties": false
+        },
         "litellm": {
           "anyOf": [
             {
@@ -281,6 +407,7 @@
           ]
         }
       },
+      "required": ["cloudflareAiGateway"],
       "additionalProperties": false
     },
     "mcpcf": {

@@ -1,15 +1,15 @@
 import { skills, type SkillSource } from "@cloudflare/think"
-import type { SessionToolSpec } from "@c0-agent/shared"
+import type { SessionToolSpec } from "@solzero/shared"
 import { listIsolateGlobalSkillNames } from "../skills/catalog"
 
-const WORKFLOW_BUILDER_SKILL_NAME = "c0.workflow-builder"
+const WORKFLOW_BUILDER_SKILL_NAME = "s0.workflow-builder"
 const GLOBAL_SKILLS_PREFIX = "global/"
 const USER_SKILLS_PREFIX = "user"
 
 const WORKFLOW_BUILDER_SKILL_BODY = [
-  "# c0 Workflow Builder",
+  "# SolZero Workflow Builder",
   "",
-  "Use this skill when a user asks you to build, edit, repair, or explain a c0 Workflow draft.",
+  "Use this skill when a user asks you to build, edit, repair, or explain a SolZero Workflow draft.",
   "",
   "## Process",
   "",
@@ -44,14 +44,14 @@ const WORKFLOW_BUILDER_MANIFEST_REFERENCE = [
   "- Re-run validation after each material manifest change.",
 ].join("\n")
 
-const c0BuiltInSkillSource = skills.fromManifest({
-  id: "c0-built-in-skills",
-  fingerprint: "c0-built-in-skills:v1",
+const s0BuiltInSkillSource = skills.fromManifest({
+  id: "s0-built-in-skills",
+  fingerprint: "s0-built-in-skills:v1",
   skills: [
     {
       name: WORKFLOW_BUILDER_SKILL_NAME,
       description:
-        "Build, edit, validate, and submit c0 Workflow manifests using the workflow builder tools.",
+        "Build, edit, validate, and submit SolZero Workflow manifests using the workflow builder tools.",
       body: WORKFLOW_BUILDER_SKILL_BODY,
       resources: [
         {
@@ -77,7 +77,7 @@ export function buildIsolateSkillSources(input: {
 }): SkillSource[] {
   const sources: SkillSource[] = []
   if (hasWorkflowBuilderTool(input.tools)) {
-    sources.push(c0BuiltInSkillSource)
+    sources.push(s0BuiltInSkillSource)
   }
   if (input.skillsBucket && (input.globalSkillNames?.length ?? 0) > 0) {
     sources.push(

@@ -1,14 +1,14 @@
-![c0 Agent landing page](docs/c0-landing.jpg)
+![SolZero Agent landing page](docs/solzero-landing.jpg)
 
-# c0
+# SolZero
 
-c0 is an open-source AI platform built for enterprise work, tools, and context.
+SolZero is an open-source AI platform built for enterprise work, tools, and context.
 
-## What Makes c0 Compelling?
+## What Makes SolZero Compelling?
 
-### c0 Agent Harness
+### SolZero Agent Harness
 
-c0 Agent is a custom harness built on Cloudflare Workers and Durable Objects. It is the default
+SolZero Agent is a custom harness built on Cloudflare Workers and Durable Objects. It is the default
 runtime for everyday work, with low startup overhead and no container to provision for each
 session. [Cloudflare Workers](https://developers.cloudflare.com/workers/reference/how-workers-works/)
 run globally and bill for requests and active CPU time rather than wall-clock duration, which makes
@@ -16,37 +16,38 @@ the Isolate harness a strong fit for interactive and event-driven agent work.
 
 Built-in context compaction and searchable durable conversation history keep long-running sessions
 focused and efficient. Skills and MCP tools bring organizational context into the agent when it is
-needed. Sub-agents scale out dynamically as independent, durable c0 Agent instances without
+needed. Sub-agents scale out dynamically as independent, durable SolZero Agent instances without
 provisioning another container.
 
 ### Full sandboxes for deeper work
 
-Some tasks need a complete development environment. c0 also supports sandboxed OpenCode, Codex,
+Some tasks need a complete development environment. SolZero also supports sandboxed OpenCode, Codex,
 and Claude Code agents with a full Linux filesystem and shell. These runtimes have more startup and
-resource overhead than c0 Agent, but they are a better fit for deep coding and other work that needs
+resource overhead than SolZero Agent, but they are a better fit for deep coding and other work that needs
 full system access.
 
 ### Workflows for deterministic and agentic automation
 
-Workflows are one of our favorite parts of c0. They are fast to build, easy to adapt to a team's
+Workflows are one of our favorite parts of SolZero. They are fast to build, easy to adapt to a team's
 processes, and useful for weekly reports, day-to-day operations, proactive automation, and reactive
 incident workflows.
 
-c0 Workflows combine deterministic nodes with non-deterministic agent steps. They run on Cloudflare
+SolZero Workflows combine deterministic nodes with non-deterministic agent steps. They run on Cloudflare
 Workflows and support durable execution, schedules, webhooks, human-in-the-loop approvals, session
 reuse, and response caching. Reusing a session or cached response can reduce repeat model calls,
 latency, and token spend.
 
 ## Integrations
 
-c0 includes integration code for:
+SolZero includes integration code for:
 
 - Credential, social, and generic OIDC authentication through Better Auth, including Okta through
   OIDC.
-- LiteLLM as the model gateway.
+- Cloudflare AI Gateway with GPT 5.6 Luna by default and GPT 5.6 Sol, Claude Opus 5, and Grok 4.5
+  as options, plus optional LiteLLM providers.
 - MCP servers, skills, and MCP Context Forge.
 - GitHub Apps and Slack.
-- Cloudflare AI Search for built-in, R2, and website data sources. c0 can create and manage these
+- Cloudflare AI Search for built-in, R2, and website data sources. SolZero can create and manage these
   sources from the Admin dashboard, so teams do not have to manually provision and integrate a
   separate vector database themselves.
 
@@ -55,10 +56,15 @@ Integrations that are not deployment-managed can be configured at runtime throug
 dashboard. Deployment-managed values take precedence, which keeps an organization's required
 configuration explicit and reviewable.
 
-The source code for these integrations is included, but the external services, accounts, and
-credentials are not. A model gateway must be configured before an agent can make model calls. MCP
-Context Forge, GitHub, Slack, AI Search, and external identity providers are optional. Contributions
-for other integrations used by your organization are welcome.
+The source code for these integrations is included, but external services, accounts, and credentials
+are not. Alchemy provisions the default Cloudflare AI Gateway, enables gateway authentication, and
+mints a least-privilege `AI Gateway Run` token. Isolates use the native AI binding; compatible
+Container harnesses use Cloudflare Containers outbound interception to inject the token in trusted
+Worker code without exposing it inside the container. OpenCode supports all configured gateway
+protocols, Codex supports OpenAI Responses models such as Luna and Sol, and Claude Code requires an
+Anthropic Messages model.
+LiteLLM, MCP Context Forge, GitHub, Slack, AI Search, and external identity providers are optional.
+Contributions for other integrations used by your organization are welcome.
 
 ## Tech Stack
 
@@ -78,7 +84,7 @@ See [docs/system-diagram.md](docs/system-diagram.md) for the system architecture
 - Node.js 24.15.x. The repository's `.nvmrc` and package metadata are the source of truth
 - [Nub](https://nubjs.com/) 0.4.11
 - A Docker-compatible CLI and running engine
-- A Cloudflare account. Deploying this complete stack requires the Workers Paid plan because c0
+- A Cloudflare account. Deploying this complete stack requires the Workers Paid plan because SolZero
   provisions Cloudflare Containers
 
 ### Local setup
@@ -101,11 +107,15 @@ Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in `config/.env`. The fil
 infrastructure tooling and must remain untracked. `config/.dev.vars` contains only secret values
 referenced by the dev profile.
 
+The deployment token needs account `API Tokens > Write` permission so Alchemy can create the scoped
+AI Gateway runtime token, in addition to the permissions needed to provision the rest of c0.
+
 Update `config/dev.config.jsonc` before signing in:
 
 1. Replace `admin@example.com` in `admins.adminEmails` with your email address.
 2. Keep `deployment.zone` as `localhost` for local development.
-3. Leave optional LiteLLM, MCP Context Forge, GitHub, Slack, and external auth blocks disabled until
+3. Review the enabled Cloudflare AI Gateway model allowlist and default model.
+4. Leave optional LiteLLM, MCP Context Forge, GitHub, Slack, and external auth blocks disabled until
    you intend to configure them.
 
 Every stage has a complete, independent non-secret profile:
@@ -121,10 +131,10 @@ nub run config:check
 
 The default security keys and administrator password are marked `generateIfMissing`; Alchemy creates
 and persists them when their entries in `config/.dev.vars` are omitted or empty. When you enable an
-integration, uncomment and populate each secret it references in `config/.dev.vars`. c0 fails before
+integration, uncomment and populate each secret it references in `config/.dev.vars`. SolZero fails before
 startup with the missing environment variable name when a required secret is absent.
 
-Confirm that the credentials resolve to the intended Cloudflare account, then start c0:
+Confirm that the credentials resolve to the intended Cloudflare account, then start SolZero:
 
 ```sh
 set -a
@@ -144,8 +154,9 @@ nub run auth:admin-password -- dev --local
 ```
 
 Sign in at <http://localhost:3000> with an email from `admins.adminEmails` and the retrieved
-password. Configure a LiteLLM-compatible gateway in Admin, synchronize its model list, then create an
-Isolate session and send a prompt. GitHub linking is required only for repository-backed sessions.
+password. Create an Isolate, OpenCode, or Codex session with a compatible Cloudflare AI Gateway
+model and send a prompt. Configure LiteLLM in Admin only if you want additional models. GitHub
+linking is required only for repository-backed sessions.
 
 ### Deploy to Cloudflare
 
@@ -215,7 +226,7 @@ nub run format              # formatting check
 Run the local API-key e2e test after creating a user API key:
 
 ```sh
-C0_API_KEY="<user API key>" \
+S0_API_KEY="<user API key>" \
 BACKGROUND_BASE_URL=http://localhost:1337 \
 nub run test:e2e
 ```

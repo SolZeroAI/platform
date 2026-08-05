@@ -39,7 +39,7 @@ SOFTWARE.
 
 ### `@paper-design/shaders-react@0.0.76`
 
-This dependency is used by `apps/web/src/components/c0-animated-icon.tsx`.
+This dependency is used by `apps/web/src/components/s0-animated-icon.tsx`.
 The published package includes the PolyForm Shield License. See the license
 terms at https://polyformproject.org/licenses/shield/1.0.0/.
 

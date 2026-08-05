@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { ApiEnv } from "infra/types/env"
-import type { SlackCreateSessionPayload } from "@c0/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@c0-agent/shared"
+import type { SlackCreateSessionPayload } from "@solzero/api"
+import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   type AuthPrincipal,
   ControlPlaneFailure,

@@ -10,9 +10,9 @@ import {
   type RuntimeProviderModelOption,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
-import { C0Loader } from "@/components/c0-loader"
-import { C0AnimatedIcon } from "@/components/c0-animated-icon"
+} from "@solzero/shared"
+import { S0Loader } from "@/components/s0-loader"
+import { S0AnimatedIcon } from "@/components/s0-animated-icon"
 import {
   HomeToolbarIconButton,
   TOOLS_TOOLBAR_CLASS_NAME,
@@ -34,6 +34,7 @@ import { fetchSyncedSecretKeysForRepo } from "@/lib/repo-secret-selection"
 import { PageHeader } from "@/components/page-header"
 import { useSidebarContext } from "@/components/sidebar-layout"
 import { manrope } from "@/lib/fonts"
+import { getS0Brand } from "@/lib/brand"
 import { isHomeNewAgentHash, isHomePreviousSessionsHash } from "@/lib/home-route-search"
 import { appToastManager } from "@/lib/toast-manager"
 import {
@@ -133,6 +134,7 @@ export function HomeContent({
   providerError,
   handleSubmit,
 }: HomeContentProps) {
+  const brand = getS0Brand()
   const [repoDialogOpen, setRepoDialogOpen] = useState(false)
   const [secretsDialogOpen, setSecretsDialogOpen] = useState(false)
   const [toolsDialogOpen, setToolsDialogOpen] = useState(false)
@@ -310,11 +312,11 @@ export function HomeContent({
         <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center px-6 pt-20 pb-32 sm:px-8">
           <div className="mx-auto w-full max-w-2xl">
             <div className="text-center mb-8">
-              <C0AnimatedIcon size={96} className="mx-auto mb-4" />
+              <S0AnimatedIcon size={96} className="mx-auto mb-4" />
               <h1
                 className={`${manrope.className} mb-2 text-3xl font-normal leading-9 text-kumo-default`}
               >
-                Welcome to c0 Agent
+                Welcome to {brand.name}
               </h1>
               {!isAuthenticated ? (
                 <p className="text-kumo-subtle">Sign in to start a new agent</p>
@@ -548,7 +550,7 @@ export function HomeContent({
                         title="Send"
                         icon={
                           creating ? (
-                            <C0Loader size={32} />
+                            <S0Loader size={32} />
                           ) : (
                             <ArrowUp className="h-5 w-5" aria-hidden />
                           )

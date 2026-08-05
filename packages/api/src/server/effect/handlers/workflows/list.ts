@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import { getInfraServerUrl } from "@c0-agent/shared"
+import { getInfraServerUrl } from "@solzero/shared"
 import { WorkflowStore } from "../../../background/db/workflows"
 import { json, requirePrincipalUserId, runControlPlane } from "../shared/control-plane"
 import { formatWorkflow, parseListNumber } from "./shared"

@@ -1,18 +1,18 @@
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { getApiInfraEnv } from "../../apps/api/infra"
-import { loadC0ConfigFile } from "../../packages/infra/src/stacks/runtime"
+import { loadS0ConfigFile } from "../../packages/infra/src/stacks/runtime"
 import {
   MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH,
-  c0ActiveSecretReferences,
+  s0ActiveSecretReferences,
 } from "../../packages/shared/src"
 
-const config = loadC0ConfigFile(resolve(import.meta.dirname, "../.."), "test")
+const config = loadS0ConfigFile(resolve(import.meta.dirname, "../.."), "test")
 const mcpcfSigningSecretEnv = config.security.mcpcfProxySigningSecret.env
 
 function loadTestApiEnv(mcpcfProxySigningSecret?: string) {
   const secretBindings = Object.fromEntries(
-    c0ActiveSecretReferences(config).flatMap((reference) =>
+    s0ActiveSecretReferences(config).flatMap((reference) =>
       reference.env === mcpcfSigningSecretEnv
         ? mcpcfProxySigningSecret === undefined
           ? []
@@ -36,6 +36,9 @@ describe("API infrastructure environment", () => {
 
   it("accepts a valid MCPCF proxy signing secret", () => {
     const secret = "a".repeat(MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH)
-    expect(loadTestApiEnv(secret).MCPCF_PROXY_SIGNING_SECRET).toBe(secret)
+    const env = loadTestApiEnv(secret)
+
+    expect(env.MCPCF_PROXY_SIGNING_SECRET).toBe(secret)
+    expect(env.S0_CONFIG_CLOUDFLARE_AI_GATEWAY).toEqual(config.aiProviders.cloudflareAiGateway)
   })
 })

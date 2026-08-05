@@ -1,4 +1,4 @@
-import { DEFAULT_ISOLATE_STEP_LIMIT } from "@c0-agent/shared"
+import { DEFAULT_ISOLATE_STEP_LIMIT } from "@solzero/shared"
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS session (

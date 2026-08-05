@@ -3,7 +3,7 @@ import {
   type WorkflowManifest,
   type WorkflowManifestNode,
   type WorkflowNodeType,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export const WORKFLOW_RUNTIME_KERNEL_V1_MODULE_NAME = "workflow-runtime-kernel.v1.js"
 export const WORKFLOW_RUNTIME_KERNEL_V2_MODULE_NAME = "workflow-runtime-kernel.v2.js"

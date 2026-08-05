@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, relative, resolve } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { c0RuleNames } from "../src/index"
+import { s0RuleNames } from "../src/index"
 
 const packageRoot = process.cwd()
 const repoRoot = resolve(packageRoot, "../..")
@@ -17,8 +17,8 @@ afterEach(() => {
 })
 
 describe("oxlint plugin integration", () => {
-  it("loads C0 lint rules as error rules", () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "c0-lint-integration-"))
+  it("loads S0 lint rules as error rules", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "s0-lint-integration-"))
     tempDirs.push(tempDir)
 
     const sourcePath = join(tempDir, "fixture.ts")
@@ -39,9 +39,9 @@ export const value = Effect.as(Effect.succeed(1), 2);
       JSON.stringify(
         {
           plugins: [],
-          jsPlugins: [{ name: "c0-lint", specifier: pluginSpecifier }],
+          jsPlugins: [{ name: "s0-lint", specifier: pluginSpecifier }],
           rules: Object.fromEntries(
-            c0RuleNames.map((ruleName) => [`c0-lint/${ruleName}`, "error"]),
+            s0RuleNames.map((ruleName) => [`s0-lint/${ruleName}`, "error"]),
           ),
         },
         null,
@@ -68,7 +68,7 @@ export const value = Effect.as(Effect.succeed(1), 2);
     }
 
     expect(status).toBe("failed")
-    expect(output).toContain("c0-lint(no-effect-as)")
-    expect(output).toContain("[Error/c0-lint(no-effect-as)]")
+    expect(output).toContain("s0-lint(no-effect-as)")
+    expect(output).toContain("[Error/s0-lint(no-effect-as)]")
   })
 })

@@ -53,7 +53,7 @@ function waitForDelay(milliseconds: number, signal: AbortSignal | undefined): Pr
 function createDeterministicModel(response: string, delayMs: number): LanguageModel {
   return {
     specificationVersion: "v3",
-    provider: "c0-test",
+    provider: "s0-test",
     modelId: "isolate-facet-test-model",
     supportedUrls: {},
     doGenerate() {

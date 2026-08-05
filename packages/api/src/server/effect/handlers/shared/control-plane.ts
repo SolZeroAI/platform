@@ -11,9 +11,9 @@ import {
   InternalServerError,
   UnauthorizedError,
   type AuthPrincipal,
-} from "@c0/api"
-import type { EnrichedRepository, InstallationRepository, RepoMetadata } from "@c0-agent/shared"
-import { getWebUrl } from "@c0-agent/shared"
+} from "@solzero/api"
+import type { EnrichedRepository, InstallationRepository, RepoMetadata } from "@solzero/shared"
+import { getWebUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -56,7 +56,7 @@ export type {
   CreateSessionResponse,
   SlackCreateSessionRequest,
   UpdateSessionToolsRequest,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 export type { RunSessionPromptRequest, RunSessionPromptResponse }
 
 export interface ResolvedUserIdentity {
@@ -510,12 +510,12 @@ export interface InternalRequestsService {
     stub: DurableObjectStub,
     url: string,
     init?: RequestInit,
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Service method exposes an Effectful Durable Object fetch.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Service method exposes an Effectful Durable Object fetch.
   ) => Effect.Effect<Response, unknown>
 }
 
 export class InternalRequests extends Context.Service<InternalRequests, InternalRequestsService>()(
-  "c0/api/InternalRequests",
+  "s0/api/InternalRequests",
 ) {}
 
 export function makeInternalRequests(localSpanContext?: LocalSpanContext): InternalRequestsService {
@@ -543,7 +543,7 @@ export {
   waitForPromptResult,
 } from "./control-plane/sessions"
 export { resolveSessionListToolAvailability } from "./control-plane/session-tool-availability"
-export type { AuthPrincipal } from "@c0/api"
+export type { AuthPrincipal } from "@solzero/api"
 
 export interface ControlPlaneContext {
   request: Request
@@ -557,7 +557,7 @@ export interface ControlPlaneContext {
   githubProvider: GitHubProviderShape
 }
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic handler contract: A/E/R are the parameters, so the channels must be named explicitly here.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic handler contract: A/E/R are the parameters, so the channels must be named explicitly here.
 type ControlPlaneHandler<A, E, R> = (context: ControlPlaneContext) => Effect.Effect<A, E, R>
 
 export function toEffectResponse(response: Response) {

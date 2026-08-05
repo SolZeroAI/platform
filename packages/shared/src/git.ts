@@ -7,7 +7,7 @@ import type { GitUser } from "./types"
 /**
  * Branch naming convention for sessions.
  */
-export const BRANCH_PREFIX = "c0-agent"
+export const BRANCH_PREFIX = "s0-agent"
 
 /**
  * Generate a branch name for a session.
@@ -28,7 +28,7 @@ export function extractSessionIdFromBranch(branchName: string): string | null {
 }
 
 /**
- * Check if a branch name is an c0 Agent branch.
+ * Check if a branch name is a SolZero Agent branch.
  */
 export function isInspectBranch(branchName: string): boolean {
   return branchName.startsWith(`${BRANCH_PREFIX}/`)
@@ -42,7 +42,7 @@ export function generateCommitMessage(
   description: string,
   sessionId: string,
 ): string {
-  return `${action}: ${description}\n\nCo-authored-by: c0 Agent <c0-agent@noreply.github.com>\nSession-ID: ${sessionId}`
+  return `${action}: ${description}\n\nCo-authored-by: SolZero Agent <s0-agent@noreply.github.com>\nSession-ID: ${sessionId}`
 }
 
 /**

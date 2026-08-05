@@ -3,7 +3,7 @@ import {
   validateWorkflowDraft,
   type WorkflowManifest,
   type WorkflowManifestNode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export type WorkflowManifestAuditSeverity = "info" | "warning" | "error"
 
@@ -299,7 +299,7 @@ export function auditWorkflowManifestRuntimeCompatibility(input: {
   const findings: WorkflowManifestAuditFinding[] = []
   let migration: WorkflowManifestMigrationResult | null = null
 
-  // oxlint-disable-next-line effect/avoid-try-catch -- Synchronous, non-Effect boundary that must capture throws from the injected `normalizeManifest` validator (and migration invariant checks) as audit findings. This module is intentionally kept Effect-free so the c0 control-flow rules stay inactive; wrapping in Effect would force an effect import across the whole file and change the migration ABI surface.
+  // oxlint-disable-next-line effect/avoid-try-catch -- Synchronous, non-Effect boundary that must capture throws from the injected `normalizeManifest` validator (and migration invariant checks) as audit findings. This module is intentionally kept Effect-free so the s0 control-flow rules stay inactive; wrapping in Effect would force an effect import across the whole file and change the migration ABI surface.
   try {
     migration = migrateWorkflowManifestForSave(
       input.manifest,

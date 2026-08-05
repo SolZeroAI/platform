@@ -7,7 +7,7 @@ import {
   type SessionToolSpec,
   type SubagentMode,
   type SubagentRunSummary,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { LocalSpanContext } from "../../observability/tracing"
 import type { IsolateMcpcfMcpPromptServer } from "../../session/isolate/system"
 import type { IsolateModelContext } from "../model"

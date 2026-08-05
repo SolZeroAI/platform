@@ -1,5 +1,5 @@
-import { parseMcpcfProxyToolName, parseCustomMcpToolKey, type SandboxEvent } from "@c0-agent/shared"
-export type { SandboxEvent } from "@c0-agent/shared"
+import { parseMcpcfProxyToolName, parseCustomMcpToolKey, type SandboxEvent } from "@solzero/shared"
+export type { SandboxEvent } from "@solzero/shared"
 
 function basename(filePath: string | undefined): string {
   if (!filePath) return "unknown"

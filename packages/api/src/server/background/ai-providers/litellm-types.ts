@@ -2,7 +2,7 @@ import {
   type ProviderModelDefinition,
   type ReasoningEffort,
   type SharedProviderDefinition,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Option from "effect/Option"
 import type { CronJobStatus, CronRunRecord } from "../db/cron-runs"
 

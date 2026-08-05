@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/avoid-untagged-errors, c0-lint/no-if-statement, c0-lint/no-ternary -- Secret references are synchronously validated while compiling deployment configuration. */
+/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-if-statement, s0-lint/no-ternary -- Secret references are synchronously validated while compiling deployment configuration. */
 import * as Schema from "effect/Schema"
 
 export const ENVIRONMENT_BINDING_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/
@@ -14,7 +14,7 @@ export function normalizeSecretReference(value: SecretReference, path: string): 
   const env = value.env.trim()
   if (!ENVIRONMENT_BINDING_NAME_PATTERN.test(env)) {
     throw new Error(
-      `Invalid c0 configuration: ${path}.env must match ${ENVIRONMENT_BINDING_NAME_PATTERN}`,
+      `Invalid s0 configuration: ${path}.env must match ${ENVIRONMENT_BINDING_NAME_PATTERN}`,
     )
   }
   return {

@@ -30,28 +30,28 @@ export interface BackgroundTracingService {
   readonly withSpan: <A, E, R>(
     name: string,
     attributes: Record<string, unknown>,
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span service method forwards the caller's Effect channels unchanged.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span service method forwards the caller's Effect channels unchanged.
     effect: Effect.Effect<A, E, R>,
     options?: BackgroundSpanOptions,
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span service method returns the caller's Effect channels unchanged.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span service method returns the caller's Effect channels unchanged.
   ) => Effect.Effect<A, E, R>
 }
 
 const HEX_16_BYTES = /^[a-f0-9]{32}$/
 const HEX_8_BYTES = /^[a-f0-9]{16}$/
 const CurrentLocalSpanContext = Context.Reference<Option.Option<ActiveLocalSpanContext>>(
-  "c0/api/CurrentLocalSpanContext",
+  "s0/api/CurrentLocalSpanContext",
   {
     defaultValue: () => Option.none(),
   },
 )
 
-export const LOCAL_TRACE_ID_HEADER = "x-c0-local-trace-id"
-export const LOCAL_PARENT_SPAN_ID_HEADER = "x-c0-local-parent-span-id"
+export const LOCAL_TRACE_ID_HEADER = "x-s0-local-trace-id"
+export const LOCAL_PARENT_SPAN_ID_HEADER = "x-s0-local-parent-span-id"
 export class BackgroundTracing extends Context.Service<
   BackgroundTracing,
   BackgroundTracingService
->()("c0/api/BackgroundTracing") {}
+>()("s0/api/BackgroundTracing") {}
 
 export function createLocalSpanContext(): LocalSpanContext {
   return {
@@ -62,17 +62,17 @@ export function createLocalSpanContext(): LocalSpanContext {
 
 export function localSpanLogAnnotations(
   context: LocalSpanContext,
-): Record<"c0.local_trace_id" | "c0.local_span_id" | "trace.id" | "span.id", string> {
+): Record<"s0.local_trace_id" | "s0.local_span_id" | "trace.id" | "span.id", string> {
   // Cloudflare custom spans do not expose spanContext() yet, so application logs
-  // carry c0-local correlation ids instead of claiming native OTEL trace/span ids.
+  // carry s0-local correlation ids instead of claiming native OTEL trace/span ids.
   // The trace.id/span.id aliases make Cloudflare Logs queries line up with the
-  // same attributes on our custom spans while the explicit c0.* fields document
+  // same attributes on our custom spans while the explicit s0.* fields document
   // that these are application-managed ids.
   // Remove these fields when native spanContext is available:
   // https://developers.cloudflare.com/workers/observability/traces/custom-spans/#spancontext
   return {
-    "c0.local_trace_id": context.traceId,
-    "c0.local_span_id": context.spanId,
+    "s0.local_trace_id": context.traceId,
+    "s0.local_span_id": context.spanId,
     "trace.id": context.traceId,
     "span.id": context.spanId,
   }
@@ -115,7 +115,7 @@ export function localSpanHeaders(context: LocalSpanContext): Record<string, stri
   }
 }
 
-// oxlint-disable-next-line c0-lint/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
+// oxlint-disable-next-line s0-lint/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
 export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext | undefined {
   const traceId = headers.get(LOCAL_TRACE_ID_HEADER)?.trim().toLowerCase()
   const spanId = headers.get(LOCAL_PARENT_SPAN_ID_HEADER)?.trim().toLowerCase()
@@ -132,7 +132,7 @@ export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext 
 const runBackgroundSpan = <A, E, R>(
   name: string,
   attributes: Record<string, unknown>,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
   effect: Effect.Effect<A, E, R>,
   options: BackgroundSpanOptions & { readonly tracing?: CloudflareTracing } = {},
 ) =>

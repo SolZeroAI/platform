@@ -1,4 +1,4 @@
-import type { OpenCodeInteractionResponse } from "@c0-agent/shared"
+import type { OpenCodeInteractionResponse } from "@solzero/shared"
 import { type ClientInfo, type ClientMessage } from "../../types"
 import { type ParticipantRow, type SandboxRow } from "../types"
 import { type ParsedTags } from "../websocket-manager"

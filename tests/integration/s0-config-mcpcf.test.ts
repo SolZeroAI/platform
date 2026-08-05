@@ -3,11 +3,11 @@ import * as Option from "effect/Option"
 import { describe, expect, it, vi } from "vitest"
 import { getMcpcfAdminResponse } from "../../packages/api/src/server/effect/handlers/admin/mcpcf"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-  C0_CONFIG_LOCATIONS,
-  C0ConfigStore,
-} from "../../packages/api/src/server/background/db/c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+  S0_CONFIG_LOCATIONS,
+  S0ConfigStore,
+} from "../../packages/api/src/server/background/db/s0-config"
 import {
   McpcfRegistryStore,
   type McpcfConfigRecord,
@@ -24,17 +24,17 @@ const encryptionKey = "test-repo-secrets-key-32-chars"
 const adminApiTokenEnv = "TEST_MCPCF_ADMIN_API_TOKEN"
 
 function createEnv(overrides: Record<string, unknown> = {}) {
-  const { sqlite, db, c0Config } = createResolverStore()
+  const { sqlite, db, s0Config } = createResolverStore()
   const env = {
-    C0_CONFIG: c0Config,
+    S0_CONFIG: s0Config,
     DB: db,
     REPO_SECRETS_ENCRYPTION_KEY: encryptionKey,
     ...overrides,
   } as unknown as Env
-  return { sqlite, db, c0Config, env }
+  return { sqlite, db, s0Config, env }
 }
 
-describe("C0_CONFIG and MCP Context Forge", () => {
+describe("S0_CONFIG and MCP Context Forge", () => {
   it("uses deployment config and admin token with KV-backed registry state", async () => {
     const envConfig = {
       ...config,
@@ -43,7 +43,7 @@ describe("C0_CONFIG and MCP Context Forge", () => {
       updatedAt: 2,
     } satisfies McpcfConfigRecord
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.mcpcf]: {
+      [S0_CONFIG_BINDINGS.mcpcf]: {
         ...envConfig,
         adminApiToken: { env: adminApiTokenEnv },
       },
@@ -77,14 +77,14 @@ describe("C0_CONFIG and MCP Context Forge", () => {
         configured: true,
         source: "deployment",
         locked: true,
-        envVarName: C0_CONFIG_LOCATIONS.mcpcf,
+        envVarName: S0_CONFIG_LOCATIONS.mcpcf,
       })
       expect(configPresence.config.baseUrl).toBe("https://env-mcpcf.example.com")
       expect(tokenPresence).toMatchObject({
         configured: true,
         source: "deployment",
         locked: true,
-        envVarName: `${C0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
+        envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
       })
       expect(tokenPresence.adminApiToken).toEqual(Option.some("env-mcpcf-token"))
       expect(indexPresence).toMatchObject({
@@ -118,7 +118,7 @@ describe("C0_CONFIG and MCP Context Forge", () => {
       baseUrl: "https://env-mcpcf.example.com",
     } satisfies McpcfConfigRecord
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.mcpcf]: envConfig,
+      [S0_CONFIG_BINDINGS.mcpcf]: envConfig,
     })
     try {
       const registry = new McpcfRegistryStore(env)
@@ -131,19 +131,19 @@ describe("C0_CONFIG and MCP Context Forge", () => {
             userOauthProviderId: "okta",
           }),
         ),
-      ).rejects.toThrow(C0_CONFIG_LOCATIONS.mcpcf)
+      ).rejects.toThrow(S0_CONFIG_LOCATIONS.mcpcf)
     } finally {
       sqlite.close()
     }
   })
 
   it("writes discovered server records and index entries to KV during refresh", async () => {
-    const { env, sqlite, c0Config } = createEnv({
-      [C0_CONFIG_BINDINGS.mcpcf]: config,
+    const { env, sqlite, s0Config } = createEnv({
+      [S0_CONFIG_BINDINGS.mcpcf]: config,
     })
     try {
       const registry = new McpcfRegistryStore(env)
-      const putSpy = vi.spyOn(c0Config, "put")
+      const putSpy = vi.spyOn(s0Config, "put")
       await Effect.runPromise(
         registry.refresh({
           adminApiToken: "env-mcpcf-token",
@@ -170,15 +170,15 @@ describe("C0_CONFIG and MCP Context Forge", () => {
         }),
       )
 
-      expect(JSON.parse(c0Config.values.get(C0_CONFIG_KEYS.mcpcf.serverIndex) ?? "[]")).toEqual([
+      expect(JSON.parse(s0Config.values.get(S0_CONFIG_KEYS.mcpcf.serverIndex) ?? "[]")).toEqual([
         "server_grafana",
         "server_not_indexed",
       ])
       expect(
-        putSpy.mock.calls.filter(([key]) => key === C0_CONFIG_KEYS.mcpcf.serverIndex),
+        putSpy.mock.calls.filter(([key]) => key === S0_CONFIG_KEYS.mcpcf.serverIndex),
       ).toHaveLength(1)
-      expect(c0Config.values.get(C0_CONFIG_KEYS.mcpcf.server("server_grafana"))).toBeDefined()
-      expect(c0Config.values.get(C0_CONFIG_KEYS.mcpcf.server("server_not_indexed"))).toBeDefined()
+      expect(s0Config.values.get(S0_CONFIG_KEYS.mcpcf.server("server_grafana"))).toBeDefined()
+      expect(s0Config.values.get(S0_CONFIG_KEYS.mcpcf.server("server_not_indexed"))).toBeDefined()
     } finally {
       sqlite.close()
     }
@@ -188,7 +188,7 @@ describe("C0_CONFIG and MCP Context Forge", () => {
     const { env, sqlite } = createEnv()
     try {
       const registry = new McpcfRegistryStore(env)
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
         registry.upsertConfig({
           enabled: true,
@@ -200,7 +200,7 @@ describe("C0_CONFIG and MCP Context Forge", () => {
         }),
       )
       await Effect.runPromise(
-        store.setEncryptedSecret(C0_CONFIG_KEYS.mcpcf.adminApiToken, "mcpcf-secret"),
+        store.setEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken, "mcpcf-secret"),
       )
       seedMcpcfServer(sqlite, {
         id: "server_grafana",
@@ -218,8 +218,8 @@ describe("C0_CONFIG and MCP Context Forge", () => {
         serverCount: 0,
       })
       expect(result.dotenv).toContain('"mcpcf":{"enabled":true')
-      expect(result.dotenv).toContain('"adminApiToken":{"env":"C0_MCPCF_ADMIN_API_TOKEN"}')
-      expect(result.dotenv).toContain("C0_MCPCF_ADMIN_API_TOKEN='mcpcf-secret'")
+      expect(result.dotenv).toContain('"adminApiToken":{"env":"S0_MCPCF_ADMIN_API_TOKEN"}')
+      expect(result.dotenv).toContain("S0_MCPCF_ADMIN_API_TOKEN='mcpcf-secret'")
       expect(result.dotenv).not.toContain("createdAt")
       expect(result.dotenv).not.toContain("updatedAt")
     } finally {
@@ -232,20 +232,20 @@ describe("C0_CONFIG and MCP Context Forge", () => {
       ...config,
       baseUrl: "https://env-mcpcf.example.com",
     } satisfies McpcfConfigRecord
-    const { env, sqlite, c0Config } = createEnv({
-      [C0_CONFIG_BINDINGS.mcpcf]: envConfig,
+    const { env, sqlite, s0Config } = createEnv({
+      [S0_CONFIG_BINDINGS.mcpcf]: envConfig,
     })
     try {
       const registry = new McpcfRegistryStore(env)
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.mcpcf.config, {
+        store.putJson(S0_CONFIG_KEYS.mcpcf.config, {
           ...config,
           baseUrl: "https://kv-mcpcf.example.com",
         }),
       )
       await Effect.runPromise(
-        store.setEncryptedSecret(C0_CONFIG_KEYS.mcpcf.adminApiToken, "kv-mcpcf-secret"),
+        store.setEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken, "kv-mcpcf-secret"),
       )
       seedMcpcfServer(sqlite, {
         id: "server_grafana",
@@ -259,15 +259,15 @@ describe("C0_CONFIG and MCP Context Forge", () => {
       const serverIndexPresence = await Effect.runPromise(registry.getServerIndexWithPresence())
 
       expect(result.deletedKeys).toEqual([
-        C0_CONFIG_KEYS.mcpcf.config,
-        C0_CONFIG_KEYS.mcpcf.adminApiToken,
-        C0_CONFIG_KEYS.mcpcf.serverIndex,
-        C0_CONFIG_KEYS.mcpcf.server("server_grafana"),
+        S0_CONFIG_KEYS.mcpcf.config,
+        S0_CONFIG_KEYS.mcpcf.adminApiToken,
+        S0_CONFIG_KEYS.mcpcf.serverIndex,
+        S0_CONFIG_KEYS.mcpcf.server("server_grafana"),
       ])
-      expect(c0Config.values.has(C0_CONFIG_KEYS.mcpcf.config)).toBe(false)
-      expect(c0Config.values.has(C0_CONFIG_KEYS.mcpcf.adminApiToken)).toBe(false)
-      expect(c0Config.values.has(C0_CONFIG_KEYS.mcpcf.serverIndex)).toBe(false)
-      expect(c0Config.values.has(C0_CONFIG_KEYS.mcpcf.server("server_grafana"))).toBe(false)
+      expect(s0Config.values.has(S0_CONFIG_KEYS.mcpcf.config)).toBe(false)
+      expect(s0Config.values.has(S0_CONFIG_KEYS.mcpcf.adminApiToken)).toBe(false)
+      expect(s0Config.values.has(S0_CONFIG_KEYS.mcpcf.serverIndex)).toBe(false)
+      expect(s0Config.values.has(S0_CONFIG_KEYS.mcpcf.server("server_grafana"))).toBe(false)
       expect(configPresence.source).toBe("deployment")
       expect(configPresence.config.baseUrl).toBe("https://env-mcpcf.example.com")
       expect(serverIndexPresence.source).toBe("none")

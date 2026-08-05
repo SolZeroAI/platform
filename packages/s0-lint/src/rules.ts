@@ -35,10 +35,10 @@ import {
   returnStatements,
   typeNameText,
 } from "./ast.ts"
-import { isC0AllowedDynamicImportBoundary } from "./c0-boundaries.ts"
+import { isS0AllowedDynamicImportBoundary } from "./s0-boundaries.ts"
 import { makeRule } from "./make-rule.ts"
 import { messages } from "./messages.ts"
-import type { C0RuleName } from "./rule-names.ts"
+import type { S0RuleName } from "./rule-names.ts"
 import type { NodeLike } from "./types.ts"
 
 const MAX_AUTHORED_FILE_LINES = 1000
@@ -54,7 +54,7 @@ function programEndLine(node: NodeLike) {
   return loc?.end?.line ?? 0
 }
 
-export const rules: Record<C0RuleName, Rule> = {
+export const rules: Record<S0RuleName, Rule> = {
   "max-file-lines": defineRule({
     meta: {
       type: "suggestion",
@@ -408,7 +408,7 @@ export const rules: Record<C0RuleName, Rule> = {
     "prevent-dynamic-imports",
     ({ report }, context) => ({
       ImportExpression(node) {
-        if (isC0AllowedDynamicImportBoundary(context.filename)) {
+        if (isS0AllowedDynamicImportBoundary(context.filename)) {
           return
         }
         report(node)
@@ -484,7 +484,7 @@ export const rules: Record<C0RuleName, Rule> = {
         if (isConsoleAccess(node)) {
           report(
             node,
-            "Rule: avoid console.* in C0 API/Worker/server observability surfaces. Why: it bypasses Effect logs, spans, and Cloudflare Observability collection. Fix: use Effect.log*, Effect.withSpan, or request telemetry helpers.",
+            "Rule: avoid console.* in S0 API/Worker/server observability surfaces. Why: it bypasses Effect logs, spans, and Cloudflare Observability collection. Fix: use Effect.log*, Effect.withSpan, or request telemetry helpers.",
           )
         }
       }
@@ -495,6 +495,6 @@ export const rules: Record<C0RuleName, Rule> = {
         StaticMemberExpression: reportAccess,
       }
     },
-    { requiresEffectFile: false, requiresC0RequestObservabilitySurface: true },
+    { requiresEffectFile: false, requiresS0RequestObservabilitySurface: true },
   ),
 }

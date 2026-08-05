@@ -1,6 +1,6 @@
 "use client"
 
-import type { SandboxEvent } from "@c0-agent/shared"
+import type { SandboxEvent } from "@solzero/shared"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { formatExecutionDuration } from "@/lib/session-events"
 import { showWarningToast } from "@/lib/toast-manager"

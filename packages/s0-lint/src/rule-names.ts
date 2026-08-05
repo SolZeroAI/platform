@@ -28,7 +28,7 @@ const compositionRuleNames = [
   "prevent-dynamic-imports",
 ] as const
 
-export const c0RuleNames = [
+export const s0RuleNames = [
   ...compositionRuleNames,
   "max-file-lines",
   "prefer-option-over-null",
@@ -36,4 +36,4 @@ export const c0RuleNames = [
   "use-effect-otel",
 ] as const
 
-export type C0RuleName = (typeof c0RuleNames)[number]
+export type S0RuleName = (typeof s0RuleNames)[number]

@@ -10,7 +10,7 @@ import {
   type StageMetadataInput,
   type SessionToolRuntimePlan,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export const INTERNAL_AI_SEARCH_MCP_SERVER_NAME = "ai_search"
 export const INTERNAL_AI_SEARCH_MCP_ROUTE = "/mcp"
@@ -18,10 +18,10 @@ export const INTERNAL_WORKFLOW_BUILDER_MCP_SERVER_NAME = "workflow_builder"
 export const INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE = "/mcp/workflows"
 export const INTERNAL_MCPCF_MCP_SERVER_NAME = "mcpcf"
 export const MCPCF_PROXY_MCP_ROUTE = "/integrations/mcpcf/mcp"
-export const AI_SEARCH_SOURCE_HEADER = "x-c0-ai-search-sources"
-export const AI_SEARCH_SESSION_HEADER = "x-c0-session-id"
+export const AI_SEARCH_SOURCE_HEADER = "x-s0-ai-search-sources"
+export const AI_SEARCH_SESSION_HEADER = "x-s0-session-id"
 export const WORKFLOW_BUILDER_SESSION_HEADER = AI_SEARCH_SESSION_HEADER
-export const MCPCF_SERVER_HEADER = "x-c0-mcpcf-servers"
+export const MCPCF_SERVER_HEADER = "x-s0-mcpcf-servers"
 export const MCPCF_MCP_TIMEOUT_MS = 120_000
 
 export function getMcpcfMcpServerName(server: Pick<McpcfServerDefinition, "slug">): string {
@@ -84,7 +84,7 @@ export function buildSessionMcpServersFromPlan(input: {
   )
   if (collidingServerName) {
     throw new Error(
-      `Custom MCP server name '${collidingServerName}' is reserved for internal c0 tools`,
+      `Custom MCP server name '${collidingServerName}' is reserved for internal s0 tools`,
     )
   }
 

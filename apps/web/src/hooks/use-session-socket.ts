@@ -7,7 +7,7 @@ import type {
   SandboxEvent,
   ServerMessage,
   SessionState,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { getWebSocketOrigin } from "@/lib/runtime-config"
 import { shouldClearProcessingForRuntimeStatus } from "@/lib/runtime-status"

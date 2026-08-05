@@ -29,7 +29,7 @@ export interface GitHubAppUserToken {
   readonly accessTokenExpiresAt: number | null
 }
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Service method signatures need the broad GitHub provider contract shared by live and mock implementations.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Service method signatures need the broad GitHub provider contract shared by live and mock implementations.
 type GitHubProviderEffect<A> = Effect.Effect<A, GitHubAppError>
 
 export interface IdentityProviderShape {
@@ -59,11 +59,11 @@ export interface GitHubProviderShape {
 }
 
 export class IdentityProvider extends Context.Service<IdentityProvider, IdentityProviderShape>()(
-  "c0/api/IdentityProvider",
+  "s0/api/IdentityProvider",
 ) {}
 
 export class GitHubProvider extends Context.Service<GitHubProvider, GitHubProviderShape>()(
-  "c0/api/GitHubProvider",
+  "s0/api/GitHubProvider",
 ) {}
 
 export const LiveIdentityProvider: IdentityProviderShape = {
@@ -95,9 +95,9 @@ const mockRepositories = [
   {
     id: 1,
     owner: "example-org",
-    name: "c0",
-    fullName: "example-org/c0",
-    description: "Example c0 repository",
+    name: "s0",
+    fullName: "example-org/s0",
+    description: "Example s0 repository",
     private: false,
     defaultBranch: "main",
     installationId: 1001,
@@ -227,7 +227,7 @@ export const MockProviderLayer = Layer.mergeAll(
 )
 
 export function providerServicesForEnv(env: ApiEnv) {
-  return Match.value(env.C0_PROVIDER_LAYER === "mock").pipe(
+  return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
     Match.when(true, () => ({
       identityProvider: MockIdentityProvider,
       githubProvider: MockGitHubProvider,
@@ -240,7 +240,7 @@ export function providerServicesForEnv(env: ApiEnv) {
 }
 
 export function providerLayerForEnv(env: ApiEnv) {
-  return Match.value(env.C0_PROVIDER_LAYER === "mock").pipe(
+  return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
     Match.when(true, () => MockProviderLayer),
     Match.orElse(() => LiveProviderLayer),
   )

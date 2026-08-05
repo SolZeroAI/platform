@@ -1,5 +1,5 @@
-import { type AdminSessionRecord, type AdminWorkflowRecord } from "@c0/api"
-import { formatAgentRuntimeLabel, resolveAgentRuntime } from "@c0-agent/shared"
+import { type AdminSessionRecord, type AdminWorkflowRecord } from "@solzero/api"
+import { formatAgentRuntimeLabel, resolveAgentRuntime } from "@solzero/shared"
 import {
   type ColumnDef,
   type ColumnFiltersState,

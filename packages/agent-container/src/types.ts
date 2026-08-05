@@ -15,13 +15,19 @@ export interface RuntimeAuthAnthropic {
 export type RuntimeProviderConfig =
   | {
       kind: "openai-compatible"
-      providerId: "litellm"
+      providerId: "litellm" | "cloudflare-ai-gateway"
+      modelId: string
+      auth: RuntimeAuthOpenAICompatible
+    }
+  | {
+      kind: "openai-responses"
+      providerId: "cloudflare-ai-gateway"
       modelId: string
       auth: RuntimeAuthOpenAICompatible
     }
   | {
       kind: "anthropic"
-      providerId: "litellm-anthropic"
+      providerId: "litellm-anthropic" | "cloudflare-ai-gateway"
       modelId: string
       auth: RuntimeAuthAnthropic
     }

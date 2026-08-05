@@ -13,10 +13,10 @@
     "paths": {
       "@/*": ["./src/server/*"],
       "infra/*": ["../infra/src/*"],
-      "@c0-agent/shared": ["../shared/src/index.ts"],
-      "@c0-agent/shared/*": ["../shared/src/*"],
-      "@c0/api": ["./src/index.ts"],
-      "@c0/api/*": ["./src/*"]
+      "@solzero/shared": ["../shared/src/index.ts"],
+      "@solzero/shared/*": ["../shared/src/*"],
+      "@solzero/api": ["./src/index.ts"],
+      "@solzero/api/*": ["./src/*"]
     },
     "types": ["@cloudflare/workers-types", "node"]
   },

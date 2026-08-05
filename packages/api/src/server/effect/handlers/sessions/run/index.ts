@@ -1,4 +1,4 @@
-import type { RunSessionPayload } from "@c0/api"
+import type { RunSessionPayload } from "@solzero/api"
 import { runSessionHttp } from "../../../../application/session-run"
 
 export type { RunSessionPayload }

@@ -2,7 +2,7 @@ import { Button } from "@cloudflare/kumo/components/button"
 import { Label } from "@cloudflare/kumo/components/label"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
 import { MultiFileDiff } from "@pierre/diffs/react"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 import {
   AlertTriangle,
   ArrowRightToLine,
@@ -14,7 +14,7 @@ import {
   Undo2,
 } from "lucide-react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { AnimatedLayerCardPrimary } from "@/components/expandable-layer-card"
 import { CODE_THEME } from "@/components/code/highlighter"
 import { copyToClipboard } from "@/lib/format"
@@ -81,7 +81,7 @@ export function WorkflowSaveDialog({
             disabled={saving}
             className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-kumo-brand px-3 py-2 text-sm font-medium text-white transition-[transform,opacity] hover:opacity-90 active:scale-[0.96] disabled:opacity-60"
           >
-            {saving ? <C0Loader size={16} /> : <Save className="h-4 w-4" aria-hidden />}
+            {saving ? <S0Loader size={16} /> : <Save className="h-4 w-4" aria-hidden />}
             {saving ? "Saving" : failure ? "Try again" : "Save"}
           </button>
         </div>
@@ -119,7 +119,7 @@ export function WorkflowSaveDialogIcon({ phase }: { phase: WorkflowSaveDialogSta
   if (phase === "saving") {
     return (
       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kumo-tint ring-1 ring-kumo-brand/30">
-        <C0Loader size={16} />
+        <S0Loader size={16} />
       </span>
     )
   }
@@ -204,7 +204,7 @@ export function WorkflowSystemUpgradeCard({
           aria-hidden
         />
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-kumo-tint ring-1 ring-kumo-brand">
-          <C0LogoSvg className="h-4 w-4 opacity-90" />
+          <S0LogoSvg className="h-4 w-4 opacity-90" />
         </span>
         <span className="min-w-0 flex-1 truncate font-medium">Workflow Runtime</span>
         <span className="ml-auto inline-flex shrink-0 items-center rounded-full bg-kumo-tint px-1.5 py-0.5 font-mono text-[11px] leading-none text-kumo-brand ring-1 ring-kumo-brand tabular-nums">

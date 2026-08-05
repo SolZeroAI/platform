@@ -1,5 +1,5 @@
 import { type ColumnFiltersState, type Table, type Updater } from "@tanstack/react-table"
-import { formatAgentRuntimeLabel, resolveAgentRuntime } from "@c0-agent/shared"
+import { formatAgentRuntimeLabel, resolveAgentRuntime } from "@solzero/shared"
 import { type SessionTableState, type WorkflowTableState } from "@/lib/admin-console"
 import { SharedTableState } from "./tables"
 

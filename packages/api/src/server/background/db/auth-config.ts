@@ -1,23 +1,23 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
 import {
-  c0ConfigPathForStage,
+  s0ConfigPathForStage,
   normalizeAuthProviderRegistry,
   publicAuthProviderRegistry,
   type AuthProviderConfig,
-  type C0AuthConfig,
+  type S0AuthConfig,
   type CredentialAuthProviderConfig,
   type OidcAuthProviderConfig,
   type PublicAuthProviderRegistry,
   type SocialAuthProviderConfig,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_LOCATIONS,
-  getC0DeploymentConfig,
-  getC0DeploymentSecret,
-} from "./c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_LOCATIONS,
+  getS0DeploymentConfig,
+  getS0DeploymentSecret,
+} from "./s0-config"
 import type { Env } from "../types"
 
 export type ResolvedAuthProviderConfig =
@@ -33,11 +33,11 @@ export interface ResolvedAuthProviderRegistry {
 const getStoredAuthProviderRegistry = Effect.fn("authConfig.getStoredRegistry")(function* (
   env: Env,
 ) {
-  const value = yield* getC0DeploymentConfig<C0AuthConfig>(env, C0_CONFIG_BINDINGS.auth).pipe(
+  const value = yield* getS0DeploymentConfig<S0AuthConfig>(env, S0_CONFIG_BINDINGS.auth).pipe(
     Option.match({
       onNone: () =>
         Effect.die(
-          new Error(`Auth provider registry is not configured at ${C0_CONFIG_LOCATIONS.auth}`),
+          new Error(`Auth provider registry is not configured at ${S0_CONFIG_LOCATIONS.auth}`),
         ),
       onSome: Effect.succeed,
     }),
@@ -50,7 +50,7 @@ const resolveProviderClientSecret = Effect.fn("authConfig.resolveProviderClientS
   providerId: string,
   provider: SocialAuthProviderConfig | OidcAuthProviderConfig,
 ) {
-  return yield* Option.match(getC0DeploymentSecret(env, provider.clientSecret), {
+  return yield* Option.match(getS0DeploymentSecret(env, provider.clientSecret), {
     onNone: () =>
       Effect.die(
         new Error(
@@ -99,7 +99,7 @@ export const getPublicAuthProviderRegistry = Effect.fn("authConfig.getPublicAuth
     const registry = yield* getStoredAuthProviderRegistry(env)
     return publicAuthProviderRegistry(
       registry,
-      c0ConfigPathForStage(env.STAGE),
+      s0ConfigPathForStage(env.STAGE),
     ) satisfies PublicAuthProviderRegistry
   },
 )

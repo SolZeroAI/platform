@@ -31,34 +31,34 @@ export const OpenCodeInterleavedReasoningSchema = Schema.Union([
 ])
 export type OpenCodeInterleavedReasoning = typeof OpenCodeInterleavedReasoningSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const ModelReasoningConfigSchema = Schema.Struct({
   efforts: Schema.Array(ReasoningEffortSchema),
   default: Schema.optional(ReasoningEffortSchema),
 })
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const ModelProviderOverrideSchema = Schema.Struct({
   npm: Schema.optional(Schema.String),
   api: Schema.optional(Schema.String),
 })
 export type ModelProviderOverride = typeof ModelProviderOverrideSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const ProviderSecretRefSchema = Schema.Struct({
   kind: Schema.Literal("env"),
   name: Schema.String,
 })
 export type ProviderSecretRef = typeof ProviderSecretRefSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const ProviderModelLimitSchema = Schema.Struct({
   context: Schema.Number,
   output: Schema.Number,
 })
 export type ProviderModelLimit = typeof ProviderModelLimitSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const ProviderModelDefinitionSchema = Schema.Struct({
   name: Schema.String,
   description: Schema.optional(Schema.String),
@@ -70,7 +70,7 @@ export const ProviderModelDefinitionSchema = Schema.Struct({
 })
 export type ProviderModelDefinition = typeof ProviderModelDefinitionSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const SharedProviderDefinitionSchema = Schema.Struct({
   providerId: Schema.String,
   name: Schema.String,
@@ -84,7 +84,7 @@ export type SharedProviderDefinition = typeof SharedProviderDefinitionSchema.Typ
 export const SharedProviderCatalogSchema = Schema.Array(SharedProviderDefinitionSchema)
 export type SharedProviderCatalog = typeof SharedProviderCatalogSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const CompiledOpenCodeProviderModelSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   description: Schema.optional(Schema.String),
@@ -96,7 +96,7 @@ export const CompiledOpenCodeProviderModelSchema = Schema.Struct({
 })
 export type CompiledOpenCodeProviderModel = typeof CompiledOpenCodeProviderModelSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const CompiledOpenCodeProviderSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   npm: Schema.optional(Schema.String),
@@ -110,7 +110,7 @@ export type OpenCodeMcpHeaders = typeof OpenCodeMcpHeadersSchema.Type
 
 export const OpenCodeMcpOAuthSchema = Schema.Union([
   Schema.Literal(false),
-  // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+  // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
   Schema.Struct({
     clientId: Schema.optional(Schema.String),
     clientSecret: Schema.optional(Schema.String),
@@ -119,7 +119,7 @@ export const OpenCodeMcpOAuthSchema = Schema.Union([
 ])
 export type OpenCodeMcpOAuth = typeof OpenCodeMcpOAuthSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const OpenCodeRemoteMcpServerSchema = Schema.Struct({
   type: Schema.Literal("remote"),
   url: Schema.String,
@@ -130,7 +130,7 @@ export const OpenCodeRemoteMcpServerSchema = Schema.Struct({
 })
 export type OpenCodeRemoteMcpServer = typeof OpenCodeRemoteMcpServerSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const OpenCodeLocalMcpServerSchema = Schema.Struct({
   type: Schema.Literal("local"),
   command: Schema.Array(Schema.String),
@@ -191,7 +191,7 @@ export function parseStoredOpenCodePermission(
   )
 }
 
-// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @c0/api; a Schema.Class instance type would break those consumers
+// oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
 export const CompiledOpenCodeConfigSchema = Schema.Struct({
   model: Schema.optional(Schema.String),
   small_model: Schema.optional(Schema.String),
@@ -277,6 +277,7 @@ export interface RuntimeProviderModelOption {
   name: string
   description: string
   reasoning?: ModelReasoningConfig
+  providerApi?: string
 }
 
 export interface RuntimeModelCategory {
@@ -293,7 +294,7 @@ export interface RuntimeProviderCatalogEntry {
   source: "shared" | "custom"
   hasApiKey: boolean
   globalCredentialConfigured: boolean
-  credentialSource: "shared" | "user_override" | "user_custom" | "missing"
+  credentialSource: "binding" | "shared" | "user_override" | "user_custom" | "missing"
   models: RuntimeProviderModelOption[]
 }
 
@@ -466,6 +467,7 @@ export function buildRuntimeModelOptions(
       name: model.name,
       description: model.description ?? "",
       reasoning: model.reasoning,
+      providerApi: model.provider?.api,
     })),
   }))
 }

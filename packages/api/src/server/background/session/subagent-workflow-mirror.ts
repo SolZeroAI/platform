@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- This is a redaction boundary from full child replay events to compact workflow disclosures; explicit guards make every allowed field visible. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- This is a redaction boundary from full child replay events to compact workflow disclosures; explicit guards make every allowed field visible. */
 import {
   sanitizeSubagentCompactError,
   sanitizeSubagentCompactLabel,
@@ -10,7 +10,7 @@ import {
   type SubagentRunSummary,
   type SubagentSessionEvent,
   type WorkflowCallbackContext,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { decodeJsonRecord, parseJson } from "../../lib/json"
 import { createWorkflowStoreFromD1, type WorkflowStorePromise } from "../db/workflows"
 import { parseSubagentChunkActivity } from "../isolate/agent/delegation"

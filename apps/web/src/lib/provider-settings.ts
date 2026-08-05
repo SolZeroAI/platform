@@ -1,4 +1,4 @@
-import type { ProviderSettingsResponse, ProviderSettingsUpdatePayload } from "@c0-agent/shared"
+import type { ProviderSettingsResponse, ProviderSettingsUpdatePayload } from "@solzero/shared"
 
 type ProviderSettingsErrorPayload = {
   error?: unknown

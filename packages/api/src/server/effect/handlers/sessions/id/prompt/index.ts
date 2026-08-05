@@ -1,5 +1,5 @@
 import type { ApiEnv } from "infra/types/env"
-import type { IdParams, PromptPayload } from "@c0/api"
+import type { IdParams, PromptPayload } from "@solzero/api"
 import {
   isAgentRuntimeCompatibleWithProvider,
   normalizeModelId,
@@ -8,7 +8,7 @@ import {
   splitModelId,
   summarizeSessionTools,
   type AgentRuntime,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { buildRuntimeProviderCatalog } from "../../../../../background/provider-catalog"
@@ -41,9 +41,12 @@ const validatePromptModel = Effect.fn("sessions.prompt.validateModel")(function*
     `Model '${requestedModel}' is not configured for this user`,
     400,
   )
+  const selectedModel = providerCatalog.modelOptions
+    .flatMap((group) => group.models)
+    .find((item) => item.id === requestedModel)
   const { providerId } = splitModelId(requestedModel)
   yield* failUnless(
-    isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId),
+    isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId, selectedModel?.providerApi),
     `Model '${requestedModel}' is not compatible with ${agentRuntime} runtime`,
     400,
   )

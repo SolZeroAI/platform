@@ -146,7 +146,7 @@ describe("UserProviderConfigsStore", () => {
 
     const response = await buildProviderSettingsResponse(
       {
-        C0_CONFIG: new MemoryKVNamespace() as unknown as KVNamespace,
+        S0_CONFIG: new MemoryKVNamespace() as unknown as KVNamespace,
         DB: db,
         REPO_SECRETS_ENCRYPTION_KEY: ENCRYPTION_KEY,
         TOKEN_ENCRYPTION_KEY: ENCRYPTION_KEY,

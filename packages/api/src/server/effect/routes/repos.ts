@@ -1,11 +1,11 @@
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import { list } from "../handlers/repos/list"
 import { getMetadata } from "../handlers/repos/repo/metadata/get"
 import { upsertMetadata } from "../handlers/repos/repo/metadata/upsert"
 import { observeRoute } from "../services/observability"
 
-export const HttpReposLive = HttpApiBuilder.group(C0Api, "repos", (handlers) =>
+export const HttpReposLive = HttpApiBuilder.group(S0Api, "repos", (handlers) =>
   handlers
     .handle("list", () => observeRoute("repos", "list", list()))
     .handle("upsertMetadata", (input) =>

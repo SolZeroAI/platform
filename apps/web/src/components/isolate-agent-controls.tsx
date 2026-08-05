@@ -1,5 +1,5 @@
 import { Input } from "@cloudflare/kumo/components/input"
-import { MAX_ISOLATE_STEP_LIMIT, MIN_ISOLATE_STEP_LIMIT, type SubagentMode } from "@c0-agent/shared"
+import { MAX_ISOLATE_STEP_LIMIT, MIN_ISOLATE_STEP_LIMIT, type SubagentMode } from "@solzero/shared"
 import type { Ref } from "react"
 import { SubagentModeField } from "@/components/subagent-mode-field"
 

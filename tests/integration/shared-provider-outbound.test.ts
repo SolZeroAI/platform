@@ -1,33 +1,65 @@
 import * as Option from "effect/Option"
 import { describe, expect, it } from "vitest"
 import {
-  C0_CONFIG_LITELLM_API_KEY_SECRET,
+  S0_CONFIG_LITELLM_API_KEY_SECRET,
   requestWithSharedProviderCredential,
+  resolveSharedProviderCredential,
   resolveSharedProviderApiKey,
   sharedProviderPathClass,
   sharedProviderRequestModel,
-  sharedProviderSecretName,
 } from "../../packages/api/src/server/background/sandbox/providers/shared-provider-outbound"
+import { CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET } from "../../packages/api/src/server/background/ai-providers/cloudflare-ai-gateway"
 
 describe("shared provider outbound helpers", () => {
-  it("selects LiteLLM credentials by outbound path", () => {
+  it("selects LiteLLM credentials and classifies its outbound paths", () => {
     const defaultUrl = new URL("https://litellm.example.com/v1/chat/completions")
     const anthropicUrl = new URL("https://litellm.example.com/anthropic/v1/messages")
 
-    expect(sharedProviderSecretName(defaultUrl)).toBe(C0_CONFIG_LITELLM_API_KEY_SECRET)
+    expect(Option.getOrThrow(resolveSharedProviderCredential({}, defaultUrl)).secretName).toBe(
+      S0_CONFIG_LITELLM_API_KEY_SECRET,
+    )
     expect(sharedProviderPathClass(defaultUrl)).toBe("default")
-    expect(sharedProviderSecretName(anthropicUrl)).toBe(C0_CONFIG_LITELLM_API_KEY_SECRET)
+    expect(Option.getOrThrow(resolveSharedProviderCredential({}, anthropicUrl)).secretName).toBe(
+      S0_CONFIG_LITELLM_API_KEY_SECRET,
+    )
     expect(sharedProviderPathClass(anthropicUrl)).toBe("anthropic")
   })
 
-  it("resolves canonical C0 config shared provider keys", () => {
+  it("limits the Cloudflare credential to the account-scoped AI inference path", () => {
+    const env = {
+      CLOUDFLARE_ACCOUNT_ID: "account-1",
+      AI_GATEWAY_ID: "gateway-1",
+    }
+    const inferenceUrl = new URL(
+      "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1/responses",
+    )
+    const messagesUrl = new URL(
+      "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1/messages",
+    )
+    const unrelatedUrl = new URL(
+      "https://api.cloudflare.com/client/v4/accounts/account-1/workers/scripts",
+    )
+
+    expect(Option.getOrThrow(resolveSharedProviderCredential(env, inferenceUrl))).toEqual({
+      secretName: CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+      headers: { "cf-aig-gateway-id": "gateway-1" },
+    })
+    expect(Option.getOrThrow(resolveSharedProviderCredential(env, messagesUrl))).toEqual({
+      secretName: CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+      headers: { "cf-aig-gateway-id": "gateway-1" },
+    })
+    expect(Option.isNone(resolveSharedProviderCredential(env, unrelatedUrl))).toBe(true)
+    expect(sharedProviderPathClass(inferenceUrl)).toBe("cloudflare-ai-gateway")
+  })
+
+  it("resolves canonical S0 config shared provider keys", () => {
     expect(
       Option.getOrNull(
         resolveSharedProviderApiKey(
           {
-            [C0_CONFIG_LITELLM_API_KEY_SECRET]: " direct-key ",
+            [S0_CONFIG_LITELLM_API_KEY_SECRET]: " direct-key ",
           },
-          C0_CONFIG_LITELLM_API_KEY_SECRET,
+          S0_CONFIG_LITELLM_API_KEY_SECRET,
         ),
       ),
     ).toBe("direct-key")
@@ -38,7 +70,7 @@ describe("shared provider outbound helpers", () => {
           {
             LITELLM_API_KEY: "legacy-key",
           },
-          C0_CONFIG_LITELLM_API_KEY_SECRET,
+          S0_CONFIG_LITELLM_API_KEY_SECRET,
         ),
       ),
     ).toBeNull()
@@ -60,10 +92,13 @@ describe("shared provider outbound helpers", () => {
         cookie: "session=secret",
       },
     })
-    const forwarded = requestWithSharedProviderCredential(request, "real-key")
+    const forwarded = requestWithSharedProviderCredential(request, "real-key", {
+      "cf-aig-gateway-id": "gateway-1",
+    })
 
     expect(forwarded.url).toBe("https://litellm.example.com/v1/responses")
     expect(forwarded.headers.get("authorization")).toBe("Bearer real-key")
+    expect(forwarded.headers.get("cf-aig-gateway-id")).toBe("gateway-1")
     expect(forwarded.headers.has("cookie")).toBe(false)
   })
 })

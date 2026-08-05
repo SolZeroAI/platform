@@ -1,12 +1,12 @@
 "use client"
 
-import type { AgentSkillItem, AgentSkillsResponse } from "@c0/api"
+import type { AgentSkillItem, AgentSkillsResponse } from "@solzero/api"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Switch } from "@cloudflare/kumo/components/switch"
 import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { getErrorMessage, requestJson } from "@/lib/admin-console-actions"
 import { showErrorToast } from "@/lib/toast-manager"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
@@ -80,7 +80,7 @@ export function AgentSkillsSettings() {
 
         {loading ? (
           <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-elevated/80">
-            <C0Loader size={32} />
+            <S0Loader size={32} />
           </div>
         ) : skills.length === 0 ? (
           <p className="rounded-lg bg-kumo-elevated/80 px-4 py-8 text-center text-sm text-kumo-subtle">

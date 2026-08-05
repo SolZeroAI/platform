@@ -1,4 +1,4 @@
-import { getInfraServerUrl } from "@c0-agent/shared"
+import { getInfraServerUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -12,7 +12,7 @@ import type {
   AdminRunWorkflowPayload,
   AdminWorkflowListQuery,
   AdminWorkflowRunParams,
-} from "@c0/api"
+} from "@solzero/api"
 import {
   AdminStore,
   type AdminSessionRecord,

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm"
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
-import { DEFAULT_ISOLATE_STEP_LIMIT, DEFAULT_SUBAGENT_MODE } from "@c0-agent/shared"
+import { DEFAULT_ISOLATE_STEP_LIMIT, DEFAULT_SUBAGENT_MODE } from "@solzero/shared"
 
 export const repoSecrets = sqliteTable(
   "repo_secrets",

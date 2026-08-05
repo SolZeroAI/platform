@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { IdParams } from "@c0/api"
+import type { IdParams } from "@solzero/api"
 import { SessionIndexStore } from "../../../../background/db/session-index"
 import { IsolateSessionRuntime } from "../../../../background/isolate/runtime"
 import { resolveCloudflareTracing } from "../../../services/observability"

@@ -1,5 +1,5 @@
 import { WebClient } from "@slack/web-api"
-import { getStageMetadataSync } from "@c0-agent/shared"
+import { getStageMetadataSync } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { ApiEnv } from "infra/types/env"

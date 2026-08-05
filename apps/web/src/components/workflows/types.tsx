@@ -9,7 +9,7 @@ import {
   type WorkflowNodeDefinition,
   type WorkflowNodeType,
   type WorkflowPortDefinition,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { WorkflowCanvasNodeView } from "./builder-canvas"
 import { parseWorkflowHeaderDraftRows, parseWorkflowHeaderOption } from "./header-utils"
 
@@ -650,7 +650,7 @@ export const WORKFLOW_CREATION_DIALOG_CONFIG: Record<
   },
   import: {
     title: "Import",
-    description: "Load a c0 workflow YAML export as an editable draft.",
+    description: "Load a SolZero workflow YAML export as an editable draft.",
     size: "lg",
     className: "flex max-h-[85vh] w-full max-w-xl flex-col p-0",
   },
@@ -675,7 +675,7 @@ export const CATALOG_PREVIEW_ESTIMATED_HEIGHT = 220
 
 export const WORKFLOW_LEFT_PANEL_WIDTH = 360
 
-export const WORKFLOW_NODE_DRAG_MIME_TYPE = "application/x-c0-workflow-node"
+export const WORKFLOW_NODE_DRAG_MIME_TYPE = "application/x-s0-workflow-node"
 
 export const WORKFLOW_NODE_ESTIMATED_SIZE = { width: 192, height: 112 }
 

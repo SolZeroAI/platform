@@ -1,4 +1,4 @@
-import { isOktaReconnectMcpDiscoveryError } from "@c0-agent/shared"
+import { isOktaReconnectMcpDiscoveryError } from "@solzero/shared"
 import * as Arr from "effect/Array"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"

@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { parse } from "jsonc-parser"
 import { describe, expect, it } from "vitest"
-import { loadC0ConfigFile } from "../../packages/infra/src/stacks/runtime"
+import { loadS0ConfigFile } from "../../packages/infra/src/stacks/runtime"
 import {
-  c0ActiveSecretReferences,
-  c0ConfigFileNameForStage,
-  c0ConfigPathForStage,
-  c0ConfigStageForStage,
-  canonicalC0ConfigJson,
-  resolveC0Config,
+  s0ActiveSecretReferences,
+  s0ConfigFileNameForStage,
+  s0ConfigPathForStage,
+  s0ConfigStageForStage,
+  canonicalS0ConfigJson,
+  resolveS0Config,
 } from "../../packages/shared/src"
 
 const repoRoot = resolve(import.meta.dirname, "../..")
@@ -34,26 +34,45 @@ function configWithEnabledGitHubApp() {
     enabled: true,
     appId: "github-app-id",
     clientId: validGitHubLinkProvider.clientId,
-    slug: "c0-example",
+    slug: "s0-example",
   }
   return config
 }
 
-describe("canonical c0 configuration", () => {
+describe("canonical s0 configuration", () => {
   it("uses credential sign-in as the enabled OSS default", () => {
-    const config = resolveC0Config(loadExampleConfigSource())
+    const config = resolveS0Config(loadExampleConfigSource())
     const enabledSignInProviders = Object.entries(config.auth.providers)
       .filter(([, provider]) => provider.enabled && provider.capabilities.signIn)
       .map(([providerId]) => providerId)
 
     expect(config.auth.defaultSignInProviderId).toBe("credential")
     expect(enabledSignInProviders).toEqual(["credential"])
+    expect(config.aiProviders.cloudflareAiGateway.enabled).toBe(true)
+    expect(config.aiProviders.cloudflareAiGateway.collectLogs).toBe(true)
+    expect(config.aiProviders.cloudflareAiGateway.cacheTtl).toBeNull()
+    expect(config.aiProviders.cloudflareAiGateway.defaultModel).toBe("openai/gpt-5.6-luna")
+    expect(Object.keys(config.aiProviders.cloudflareAiGateway.models)).toEqual([
+      "openai/gpt-5.6-luna",
+      "openai/gpt-5.6-sol",
+      "anthropic/claude-opus-5",
+      "xai/grok-4.5",
+    ])
     expect(config.aiProviders.litellm).toBeUndefined()
     expect(config.mcpcf).toBeUndefined()
     expect(config.integrations.githubApp.enabled).toBe(false)
     expect(config.integrations.slack.enabled).toBe(false)
-    expect(c0ActiveSecretReferences(config).every((reference) => reference.generateIfMissing)).toBe(
+    expect(s0ActiveSecretReferences(config).every((reference) => reference.generateIfMissing)).toBe(
       true,
+    )
+  })
+
+  it("rejects an enabled Cloudflare AI Gateway without its configured default model", () => {
+    const config = loadExampleConfigSource()
+    config.aiProviders.cloudflareAiGateway.defaultModel = "@cf/example/missing"
+
+    expect(() => resolveS0Config(config)).toThrow(
+      "aiProviders.cloudflareAiGateway.defaultModel '@cf/example/missing' is not in models",
     )
   })
 
@@ -63,7 +82,7 @@ describe("canonical c0 configuration", () => {
     )
     delete credentialConfig.auth.adminPassword
 
-    expect(() => resolveC0Config(credentialConfig)).toThrow(
+    expect(() => resolveS0Config(credentialConfig)).toThrow(
       "auth.adminPassword is required when credential sign-in is enabled",
     )
 
@@ -82,27 +101,27 @@ describe("canonical c0 configuration", () => {
       },
     }
 
-    const oidcConfig = resolveC0Config(credentialConfig)
+    const oidcConfig = resolveS0Config(credentialConfig)
     expect(oidcConfig.auth.adminPassword).toBeUndefined()
-    expect(c0ActiveSecretReferences(oidcConfig).map((reference) => reference.env)).toContain(
+    expect(s0ActiveSecretReferences(oidcConfig).map((reference) => reference.env)).toContain(
       "COMPANY_OIDC_CLIENT_SECRET",
     )
   })
 
   it("maps named preview stages to the shared pre config file", () => {
-    const pre = loadC0ConfigFile(repoRoot, "pre")
-    const preview = loadC0ConfigFile(repoRoot, "pre-123")
+    const pre = loadS0ConfigFile(repoRoot, "pre")
+    const preview = loadS0ConfigFile(repoRoot, "pre-123")
 
-    expect(c0ConfigStageForStage("pre-123")).toBe("pre")
-    expect(c0ConfigFileNameForStage("pre-123")).toBe("pre.config.jsonc")
-    expect(c0ConfigPathForStage("pre-123")).toBe("config/pre.config.jsonc")
-    expect(canonicalC0ConfigJson(preview)).toBe(canonicalC0ConfigJson(pre))
+    expect(s0ConfigStageForStage("pre-123")).toBe("pre")
+    expect(s0ConfigFileNameForStage("pre-123")).toBe("pre.config.jsonc")
+    expect(s0ConfigPathForStage("pre-123")).toBe("config/pre.config.jsonc")
+    expect(canonicalS0ConfigJson(preview)).toBe(canonicalS0ConfigJson(pre))
   })
 
   it.each(["dev", "pre", "prod"])(
     "keeps the optional GitHub App disabled in the shipped %s profile",
     (stage) => {
-      const config = loadC0ConfigFile(repoRoot, stage)
+      const config = loadS0ConfigFile(repoRoot, stage)
 
       expect(config.integrations.githubApp.enabled).toBe(false)
       expect(config.auth.providers.github).toBeUndefined()
@@ -154,14 +173,14 @@ describe("canonical c0 configuration", () => {
     const config = configWithEnabledGitHubApp()
     Object.assign(config.auth.providers, provider ? { github: provider } : {})
 
-    expect(() => resolveC0Config(config)).toThrow(expectedError)
+    expect(() => resolveS0Config(config)).toThrow(expectedError)
   })
 
   it("requires only secrets active in the selected stage config", () => {
-    const testConfig = loadC0ConfigFile(repoRoot, "test")
-    const secretNames = c0ActiveSecretReferences(testConfig).map((reference) => reference.env)
+    const testConfig = loadS0ConfigFile(repoRoot, "test")
+    const secretNames = s0ActiveSecretReferences(testConfig).map((reference) => reference.env)
 
-    expect(secretNames).not.toContain("C0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET")
+    expect(secretNames).not.toContain("S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET")
     expect(secretNames).not.toContain("GITHUB_APP_CLIENT_SECRET")
     expect(secretNames).not.toContain("SLACK_TOKEN")
     expect(secretNames).not.toContain("CF_AI_SEARCH_SERVICE_TOKEN_ID")
@@ -169,17 +188,17 @@ describe("canonical c0 configuration", () => {
   })
 
   it("rejects stages without an explicit config mapping", () => {
-    expect(() => c0ConfigFileNameForStage("staging")).toThrow("Invalid stage 'staging'")
+    expect(() => s0ConfigFileNameForStage("staging")).toThrow("Invalid stage 'staging'")
   })
 
   it("fails before deployment when the selected config file is missing", () => {
-    expect(() => loadC0ConfigFile(resolve(repoRoot, "tests/fixtures"), "prod")).toThrow(
-      "Missing c0 configuration file for stage 'prod'",
+    expect(() => loadS0ConfigFile(resolve(repoRoot, "tests/fixtures"), "prod")).toThrow(
+      "Missing s0 configuration file for stage 'prod'",
     )
   })
 
   it("publishes an editor-compatible JSON Schema document", () => {
-    const schema = parse(readFileSync(resolve(repoRoot, "config/c0.config.schema.json"), "utf8"))
+    const schema = parse(readFileSync(resolve(repoRoot, "config/s0.config.schema.json"), "utf8"))
 
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema")
     expect(schema.type).toBe("object")

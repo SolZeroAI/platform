@@ -333,7 +333,7 @@ function setupRequiredRuns(input: {
     workflowId: registration.workflow_id,
     nodeId: registration.node_id,
     status: "setup_required",
-    error: "Slack user is not linked to a c0 account",
+    error: "Slack user is not linked to a SolZero account",
     slackUserId: input.slackUserId,
     setupUrl: input.setupUrl,
   }))
@@ -454,11 +454,12 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
 function buildSlackResponse(surface: SlackSurface, runs: SlackRunResult[]): Response {
   const setupRequired = Arr.findFirst(runs, (run) => run.status === "setup_required")
   const matchedText = Option.match(setupRequired, {
-    onSome: (run) => `Link your Slack account to c0 before using this workflow: ${run.setupUrl}`,
+    onSome: (run) =>
+      `Link your Slack account to SolZero before using this workflow: ${run.setupUrl}`,
     onNone: () =>
       Match.value(runs.length > 0).pipe(
-        Match.when(true, () => "Queued c0 workflow run."),
-        Match.orElse(() => "No c0 workflow matched this request."),
+        Match.when(true, () => "Queued SolZero workflow run."),
+        Match.orElse(() => "No SolZero workflow matched this request."),
       ),
   })
   const setupFields = Option.match(setupRequired, {

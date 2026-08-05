@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { SecretKeyParams } from "@c0/api"
+import type { SecretKeyParams } from "@solzero/api"
 import {
   failUnless,
   json,

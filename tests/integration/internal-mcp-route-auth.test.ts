@@ -9,7 +9,7 @@ import {
   MCPCF_PROXY_MCP_ROUTE,
 } from "../../packages/api/src/server/background/session/mcp-config"
 import {
-  isC0McpPath,
+  isS0McpPath,
   isMcpcfProxyMcpPath,
   isMcpPath,
   shouldDispatchMcpRequest,
@@ -18,16 +18,16 @@ import {
 const SIGNING_SECRET = "test-mcpcf-proxy-signing-secret-at-least-32-bytes"
 
 function requestFor(pathname: string, token?: string): Request {
-  return new Request(`https://api.c0.example.com${pathname}`, {
+  return new Request(`https://api.s0.example.com${pathname}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
 }
 
 describe("MCP route auth", () => {
-  it("classifies c0 MCP and MCPCF proxy routes separately", () => {
-    expect(isC0McpPath(INTERNAL_AI_SEARCH_MCP_ROUTE)).toBe(true)
-    expect(isC0McpPath(`${INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE}/`)).toBe(true)
-    expect(isC0McpPath(MCPCF_PROXY_MCP_ROUTE)).toBe(false)
+  it("classifies s0 MCP and MCPCF proxy routes separately", () => {
+    expect(isS0McpPath(INTERNAL_AI_SEARCH_MCP_ROUTE)).toBe(true)
+    expect(isS0McpPath(`${INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE}/`)).toBe(true)
+    expect(isS0McpPath(MCPCF_PROXY_MCP_ROUTE)).toBe(false)
     expect(isMcpcfProxyMcpPath(MCPCF_PROXY_MCP_ROUTE)).toBe(true)
     expect(isMcpcfProxyMcpPath(`${MCPCF_PROXY_MCP_ROUTE}/`)).toBe(true)
     expect(isMcpPath(MCPCF_PROXY_MCP_ROUTE)).toBe(true)
@@ -35,7 +35,7 @@ describe("MCP route auth", () => {
     expect(isMcpPath("/mcp/unknown")).toBe(false)
   })
 
-  it("dispatches c0 MCP only when its worker route is enabled", async () => {
+  it("dispatches s0 MCP only when its worker route is enabled", async () => {
     for (const route of [INTERNAL_AI_SEARCH_MCP_ROUTE, INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE]) {
       await expect(
         shouldDispatchMcpRequest({

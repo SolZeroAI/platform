@@ -1,1 +1,1 @@
-export { getErrorMessage, getErrorStack } from "@c0-agent/shared"
+export { getErrorMessage, getErrorStack } from "@solzero/shared"

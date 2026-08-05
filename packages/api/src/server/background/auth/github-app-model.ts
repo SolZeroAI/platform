@@ -1,9 +1,9 @@
-import type { InstallationRepository, PullRequest } from "@c0-agent/shared"
+import type { InstallationRepository, PullRequest } from "@solzero/shared"
 
 export const GITHUB_FETCH_TIMEOUT_MS = 30_000
 export const GITHUB_API_BASE = "https://api.github.com"
 export const GITHUB_API_VERSION = "2022-11-28"
-export const GITHUB_USER_AGENT = "c0-agent"
+export const GITHUB_USER_AGENT = "s0-agent"
 
 export type GitHubAppPermissionLevel = "read" | "write"
 

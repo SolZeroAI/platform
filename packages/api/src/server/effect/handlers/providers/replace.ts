@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { ProviderSettingsPayload } from "@c0/api"
+import type { ProviderSettingsPayload } from "@solzero/api"
 import {
   buildProviderSettingsResponse,
   parseProviderSettingsUpdate,

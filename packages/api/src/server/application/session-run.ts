@@ -2,8 +2,8 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { ApiEnv } from "infra/types/env"
-import type { AgentRuntime, AuthPrincipal, RunSessionPayload, SessionKind } from "@c0/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@c0-agent/shared"
+import type { AgentRuntime, AuthPrincipal, RunSessionPayload, SessionKind } from "@solzero/api"
+import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   parseStoredOpenCodeMcpServers,
   parseStoredSessionTools,
@@ -12,7 +12,7 @@ import {
   type SessionInitiationSource,
   type SessionToolSpec,
   type WorkflowCallbackContext,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { EffectRequestLogger } from "../effect/services/observability"
 import type { RunSessionPromptResponse } from "../effect/handlers/shared/control-plane"
 import {

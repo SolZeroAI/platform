@@ -1,4 +1,4 @@
-import { normalizeMcpcfServerSlug } from "@c0-agent/shared"
+import { normalizeMcpcfServerSlug } from "@solzero/shared"
 
 export interface McpcfToolPreview {
   name: string

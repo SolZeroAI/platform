@@ -8,7 +8,7 @@ import type {
   TimelineEvent,
   UpdateSessionToolsRequest,
   WsSubscribePayload,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export type BackgroundClientAuth =
   | {

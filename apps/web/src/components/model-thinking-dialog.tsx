@@ -3,7 +3,7 @@
 import { Button } from "@cloudflare/kumo/components/button"
 import { InputGroup } from "@cloudflare/kumo/components/input-group"
 import { Select } from "@cloudflare/kumo/components/select"
-import type { RuntimeModelCategory, RuntimeProviderModelOption } from "@c0-agent/shared"
+import type { RuntimeModelCategory, RuntimeProviderModelOption } from "@solzero/shared"
 import { Link } from "@tanstack/react-router"
 import { Check, ChevronRight, Search, ShieldCheck, UserRound, X } from "lucide-react"
 import {

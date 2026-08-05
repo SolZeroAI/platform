@@ -1,10 +1,10 @@
 export {
-  createC0,
-  createC0Api,
-  createC0Web,
-  type CreateC0ApiOptions,
-  type CreateC0Options,
-  type CreateC0WebOptions,
-} from "./c0"
+  createS0,
+  createS0Api,
+  createS0Web,
+  type CreateS0ApiOptions,
+  type CreateS0Options,
+  type CreateS0WebOptions,
+} from "./s0"
 export { createDeploymentMetadata, type DeploymentMetadata } from "./deploymentMetadata"
 export { stackOptions, type StackOptionsInput } from "./stack"

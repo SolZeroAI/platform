@@ -52,7 +52,7 @@ describe("workflow authoring helpers", () => {
       sourceManifestVersion: 7,
     })
 
-    expect(yaml).toContain("kind: c0.workflow")
+    expect(yaml).toContain("kind: s0.workflow")
     expect(yaml).toContain("executionOrder:")
     expect(yaml).toContain("workflow-outputs/{{workflowId}}/{{runId}}/save.json")
     expect(yaml).not.toContain("userId")
@@ -429,7 +429,7 @@ describe("workflow authoring helpers", () => {
         (node) =>
           node.id === "ack_incident_question" &&
           node.type === "slack-add-reaction" &&
-          node.options.name === "c0-thinking",
+          node.options.name === "s0-thinking",
       ),
     ).toBe(true)
     expect(
@@ -446,7 +446,7 @@ describe("workflow authoring helpers", () => {
         (node) =>
           node.id === "clear_incident_question_ack" &&
           node.type === "slack-remove-reaction" &&
-          node.options.name === "c0-thinking",
+          node.options.name === "s0-thinking",
       ),
     ).toBe(true)
     expect(
@@ -463,7 +463,7 @@ describe("workflow authoring helpers", () => {
         (node) =>
           node.id === "ack_incident_keyword" &&
           node.type === "slack-add-reaction" &&
-          node.options.name === "c0-thinking",
+          node.options.name === "s0-thinking",
       ),
     ).toBe(true)
     expect(
@@ -480,7 +480,7 @@ describe("workflow authoring helpers", () => {
         (node) =>
           node.id === "clear_incident_keyword_ack" &&
           node.type === "slack-remove-reaction" &&
-          node.options.name === "c0-thinking",
+          node.options.name === "s0-thinking",
       ),
     ).toBe(true)
     expect(

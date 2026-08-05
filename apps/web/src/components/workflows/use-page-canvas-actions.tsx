@@ -6,7 +6,7 @@ import {
   getWorkflowNodeDefinition,
   type WorkflowManifestNode,
   type WorkflowNodeType,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { WorkflowCanvasEdge } from "./types"
 import {
   clearManualInputValue,

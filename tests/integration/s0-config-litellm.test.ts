@@ -7,11 +7,11 @@ import * as Option from "effect/Option"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { verifyPassword } from "../../packages/api/node_modules/better-auth/dist/crypto/index.mjs"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-  C0_CONFIG_LOCATIONS,
-  C0ConfigStore,
-} from "../../packages/api/src/server/background/db/c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+  S0_CONFIG_LOCATIONS,
+  S0ConfigStore,
+} from "../../packages/api/src/server/background/db/s0-config"
 import { getAuthProviderRegistry } from "../../packages/api/src/server/background/db/auth-config"
 import { reconcileManagedAdminCredentialsUncached } from "../../packages/api/src/server/background/db/admin-credentials"
 import {
@@ -155,7 +155,7 @@ function createEnv(overrides: Record<string, unknown> = {}) {
   }
   const kv = new MemoryKV()
   const env = {
-    C0_CONFIG: kv,
+    S0_CONFIG: kv,
     DB: new SqliteD1Database(sqlite),
     REPO_SECRETS_ENCRYPTION_KEY: encryptionKey,
     ...overrides,
@@ -171,7 +171,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   })
 }
 
-describe("C0_CONFIG and LiteLLM model sync", () => {
+describe("S0_CONFIG and LiteLLM model sync", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
@@ -179,7 +179,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
   it("reads JSON values and stores encrypted secrets in KV", async () => {
     const { env, sqlite } = createEnv()
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       const missing = await Effect.runPromise(store.getJson("missing"))
       expect(Option.isNone(missing)).toBe(true)
 
@@ -189,10 +189,10 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       )
 
       await Effect.runPromise(
-        store.setEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey, "litellm-secret"),
+        store.setEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey, "litellm-secret"),
       )
       await expect(
-        Effect.runPromise(store.getEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey)),
+        Effect.runPromise(store.getEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey)),
       ).resolves.toEqual(Option.some("litellm-secret"))
     } finally {
       sqlite.close()
@@ -200,20 +200,21 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
   })
 
   it("uses explicit compiled bindings while runtime registries remain KV-only", () => {
-    expect(C0_CONFIG_BINDINGS).toEqual({
-      admin: "C0_CONFIG_ADMIN",
-      auth: "C0_CONFIG_AUTH",
-      litellm: "C0_CONFIG_LITELLM",
-      mcpcf: "C0_CONFIG_MCPCF",
+    expect(S0_CONFIG_BINDINGS).toEqual({
+      admin: "S0_CONFIG_ADMIN",
+      auth: "S0_CONFIG_AUTH",
+      cloudflareAiGateway: "S0_CONFIG_CLOUDFLARE_AI_GATEWAY",
+      litellm: "S0_CONFIG_LITELLM",
+      mcpcf: "S0_CONFIG_MCPCF",
     })
-    expect(C0_CONFIG_KEYS.aiProviders.litellmModels).toBe("registry/ai-providers/litellm/models")
-    expect(C0_CONFIG_KEYS.mcpcf.serverIndex).toBe("registry/mcpcf/server-index")
+    expect(S0_CONFIG_KEYS.aiProviders.litellmModels).toBe("registry/ai-providers/litellm/models")
+    expect(S0_CONFIG_KEYS.mcpcf.serverIndex).toBe("registry/mcpcf/server-index")
   })
 
   it("uses the deployment auth registry and its explicit secret reference", async () => {
     const providerSecretEnv = "TEST_EXAMPLE_OIDC_CLIENT_SECRET"
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.auth]: {
+      [S0_CONFIG_BINDINGS.auth]: {
         defaultSignInProviderId: "example-oidc",
         adminPassword: { env: adminPasswordEnv },
         providers: {
@@ -232,9 +233,9 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       [providerSecretEnv]: "env-client-secret",
     })
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.auth.config, {
+        store.putJson(S0_CONFIG_KEYS.auth.config, {
           defaultSignInProviderId: "kv-oidc",
           providers: {
             "kv-oidc": {
@@ -250,7 +251,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       )
       await Effect.runPromise(
         store.setEncryptedSecret(
-          C0_CONFIG_KEYS.auth.providerClientSecret("kv-oidc"),
+          S0_CONFIG_KEYS.auth.providerClientSecret("kv-oidc"),
           "kv-client-secret",
         ),
       )
@@ -277,11 +278,11 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
 
   it("provisions explicit admins and rotates deployment-managed credential hashes", async () => {
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.admin]: {
+      [S0_CONFIG_BINDINGS.admin]: {
         adminEmails: ["admin@example.test"],
         adminDomains: ["example.test"],
       },
-      [C0_CONFIG_BINDINGS.auth]: credentialAuthConfig(),
+      [S0_CONFIG_BINDINGS.auth]: credentialAuthConfig(),
       [adminPasswordEnv]: "first-deployment-password",
     })
     try {
@@ -330,8 +331,8 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
 
   it("does not provision credential users from admin domains", async () => {
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.admin]: { adminEmails: [], adminDomains: ["example.test"] },
-      [C0_CONFIG_BINDINGS.auth]: credentialAuthConfig(),
+      [S0_CONFIG_BINDINGS.admin]: { adminEmails: [], adminDomains: ["example.test"] },
+      [S0_CONFIG_BINDINGS.auth]: credentialAuthConfig(),
       [adminPasswordEnv]: "deployment-password",
     })
     try {
@@ -369,7 +370,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       updatedAt: 123,
     }
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.litellm]: {
+      [S0_CONFIG_BINDINGS.litellm]: {
         enabled: true,
         baseUrl: "https://env-litellm.example.com",
         defaultModel: "env-model",
@@ -380,17 +381,17 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       [litellmApiKeyEnv]: "env-litellm-secret",
     })
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.aiProviders.litellmConfig, {
+        store.putJson(S0_CONFIG_KEYS.aiProviders.litellmConfig, {
           enabled: false,
           baseUrl: "https://kv-litellm.example.com",
         }),
       )
       await Effect.runPromise(
-        store.setEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey, "kv-secret"),
+        store.setEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey, "kv-secret"),
       )
-      await Effect.runPromise(store.putJson(C0_CONFIG_KEYS.aiProviders.litellmModels, envRegistry))
+      await Effect.runPromise(store.putJson(S0_CONFIG_KEYS.aiProviders.litellmModels, envRegistry))
 
       const snapshot = await Effect.runPromise(getLitellmProviderSnapshot(env))
       const registry = await Effect.runPromise(getLitellmModelRegistry(env))
@@ -416,9 +417,9 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
   it("uses KV when the deployment omits LiteLLM", async () => {
     const { env, sqlite } = createEnv()
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.aiProviders.litellmConfig, {
+        store.putJson(S0_CONFIG_KEYS.aiProviders.litellmConfig, {
           enabled: true,
           baseUrl: "https://kv-litellm.example.com",
         }),
@@ -433,7 +434,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
 
   it("rejects admin LiteLLM updates when config is deployment-managed", async () => {
     const { env, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.litellm]: {
+      [S0_CONFIG_BINDINGS.litellm]: {
         enabled: true,
         baseUrl: "https://env-litellm.example.com",
         defaultModel: null,
@@ -449,7 +450,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
             baseUrl: "https://admin-litellm.example.com",
           }),
         ),
-      ).rejects.toThrow(C0_CONFIG_LOCATIONS.litellm)
+      ).rejects.toThrow(S0_CONFIG_LOCATIONS.litellm)
     } finally {
       sqlite.close()
     }
@@ -458,7 +459,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
   it("exports KV-backed LiteLLM values as a JSONC fragment plus a secret assignment", async () => {
     const { env, sqlite } = createEnv()
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
         updateLitellmProviderConfig(env, {
           enabled: true,
@@ -470,7 +471,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
         }),
       )
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.aiProviders.litellmModels, {
+        store.putJson(S0_CONFIG_KEYS.aiProviders.litellmModels, {
           providerId: "litellm",
           baseUrl: "https://litellm.example.com",
           models: {},
@@ -486,8 +487,8 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
         includesRegistry: false,
       })
       expect(result.dotenv).toContain('"aiProviders":{"litellm"')
-      expect(result.dotenv).toContain('"apiKey":{"env":"C0_LITELLM_API_KEY"}')
-      expect(result.dotenv).toContain("C0_LITELLM_API_KEY='sk-test'")
+      expect(result.dotenv).toContain('"apiKey":{"env":"S0_LITELLM_API_KEY"}')
+      expect(result.dotenv).toContain("S0_LITELLM_API_KEY='sk-test'")
       expect(result.dotenv).not.toContain("createdAt")
     } finally {
       sqlite.close()
@@ -496,7 +497,7 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
 
   it("resets only KV-backed LiteLLM values", async () => {
     const { env, kv, sqlite } = createEnv({
-      [C0_CONFIG_BINDINGS.litellm]: {
+      [S0_CONFIG_BINDINGS.litellm]: {
         enabled: true,
         baseUrl: "https://env-litellm.example.com",
         defaultModel: null,
@@ -505,18 +506,18 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       },
     })
     try {
-      const store = new C0ConfigStore(env.C0_CONFIG, encryptionKey)
+      const store = new S0ConfigStore(env.S0_CONFIG, encryptionKey)
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.aiProviders.litellmConfig, {
+        store.putJson(S0_CONFIG_KEYS.aiProviders.litellmConfig, {
           enabled: true,
           baseUrl: "https://kv-litellm.example.com",
         }),
       )
       await Effect.runPromise(
-        store.setEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey, "kv-secret"),
+        store.setEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey, "kv-secret"),
       )
       await Effect.runPromise(
-        store.putJson(C0_CONFIG_KEYS.aiProviders.litellmModels, {
+        store.putJson(S0_CONFIG_KEYS.aiProviders.litellmModels, {
           providerId: "litellm",
           baseUrl: "https://kv-litellm.example.com",
           models: {},
@@ -528,13 +529,13 @@ describe("C0_CONFIG and LiteLLM model sync", () => {
       const snapshot = await Effect.runPromise(getLitellmProviderSnapshot(env))
 
       expect(result.deletedKeys).toEqual([
-        C0_CONFIG_KEYS.aiProviders.litellmConfig,
-        C0_CONFIG_KEYS.aiProviders.litellmApiKey,
-        C0_CONFIG_KEYS.aiProviders.litellmModels,
+        S0_CONFIG_KEYS.aiProviders.litellmConfig,
+        S0_CONFIG_KEYS.aiProviders.litellmApiKey,
+        S0_CONFIG_KEYS.aiProviders.litellmModels,
       ])
-      expect(kv.values.has(C0_CONFIG_KEYS.aiProviders.litellmConfig)).toBe(false)
-      expect(kv.values.has(C0_CONFIG_KEYS.aiProviders.litellmApiKey)).toBe(false)
-      expect(kv.values.has(C0_CONFIG_KEYS.aiProviders.litellmModels)).toBe(false)
+      expect(kv.values.has(S0_CONFIG_KEYS.aiProviders.litellmConfig)).toBe(false)
+      expect(kv.values.has(S0_CONFIG_KEYS.aiProviders.litellmApiKey)).toBe(false)
+      expect(kv.values.has(S0_CONFIG_KEYS.aiProviders.litellmModels)).toBe(false)
       expect(snapshot.configSource).toBe("deployment")
       expect(snapshot.config.baseUrl).toBe("https://env-litellm.example.com")
     } finally {

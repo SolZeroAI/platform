@@ -21,7 +21,7 @@ import type {
   AdminWorkflowRunEventsResponse,
   AdminWorkflowRunRecord,
   AdminWorkflowRunsResponse,
-} from "@c0/api"
+} from "@solzero/api"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { McpcfRefreshState } from "@/components/admin-mcpcf-panel"
 import {

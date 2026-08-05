@@ -3,7 +3,7 @@ import {
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
   type WorkflowStorageEncoding,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { parseJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"

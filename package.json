@@ -1,8 +1,8 @@
 {
-  "name": "c0-agent",
+  "name": "s0-agent",
   "version": "1.4.4",
   "private": true,
-  "description": "c0 is an open-source AI platform built for organizational work, tools, and context. A single deployment to Cloudflare to get started.",
+  "description": "SolZero is an open-source AI platform built for organizational work, tools, and context. A single deployment to Cloudflare to get started.",
   "homepage": "https://github.com/Consensys/c0#readme",
   "bugs": {
     "url": "https://github.com/Consensys/c0/issues"
@@ -19,8 +19,8 @@
   "type": "module",
   "scripts": {
     "dev": "nub run dev:app",
-    "dev:api": "nub run --filter @c0/background-api dev",
-    "dev:web": "nub run --filter @c0/background-web dev",
+    "dev:api": "nub run --filter @solzero/background-api dev",
+    "dev:web": "nub run --filter @solzero/background-web dev",
     "dev:app": "nub run --cwd packages/infra dev",
     "dev:apps": "nub run dev:app",
     "dev:logs": "./scripts/watch-logs.sh",
@@ -38,8 +38,8 @@
     "alchemy:state:resources": "CI=true nub run --cwd packages/infra alchemy state resources alchemy.state.run.ts",
     "alchemy:state:get": "CI=true nub run --cwd packages/infra alchemy state get alchemy.state.run.ts",
     "auth:admin-password": "tsx scripts/print-admin-password.ts",
-    "config:check": "tsx scripts/c0-config.ts check",
-    "config:schema": "tsx scripts/c0-config.ts schema",
+    "config:check": "tsx scripts/s0-config.ts check",
+    "config:schema": "tsx scripts/s0-config.ts schema",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "workflow:runtime:audit": "tsx scripts/workflows/audit-runtime-abi.ts",
     "clean": "turbo run clean",

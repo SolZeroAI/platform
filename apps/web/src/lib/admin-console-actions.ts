@@ -1,4 +1,4 @@
-import type { AdminWorkflowRecord } from "@c0/api"
+import type { AdminWorkflowRecord } from "@solzero/api"
 
 export async function runSessionAction(
   id: string,

@@ -20,7 +20,7 @@ import type {
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronsUpDown, Pencil, Save } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { Dialog } from "@/components/ui/dialog"
 
 interface McpToolPreview {
@@ -648,7 +648,7 @@ export function McpSettings({
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty
                         title="No MCP servers found"

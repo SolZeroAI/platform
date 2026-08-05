@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { SandboxEvent, ServerMessage } from "@c0-agent/shared"
+import type { SandboxEvent, ServerMessage } from "@solzero/shared"
 import {
   buildToolCallDiscoveryErrorMap,
   collapseTimelineEvents,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { SandboxEvent, SubagentSessionEvent } from "@c0-agent/shared"
+import type { SandboxEvent, SubagentSessionEvent } from "@solzero/shared"
 import { groupEvents } from "@/components/session-page/events"
 import { reduceSubagentEvents } from "./subagent-events"
 

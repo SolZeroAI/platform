@@ -63,6 +63,7 @@ export const RuntimeModelOption = Schema.Struct({
   name: Schema.String,
   description: Schema.String,
   reasoning: Schema.optionalKey(ModelReasoningConfig),
+  providerApi: Schema.optionalKey(Schema.String),
 })
 
 export const RuntimeModelGroup = Schema.Struct({
@@ -79,7 +80,13 @@ export const RuntimeProvider = Schema.Struct({
   source: Schema.Literals(["shared", "custom"]),
   hasApiKey: Schema.Boolean,
   globalCredentialConfigured: Schema.Boolean,
-  credentialSource: Schema.Literals(["shared", "user_override", "user_custom", "missing"]),
+  credentialSource: Schema.Literals([
+    "binding",
+    "shared",
+    "user_override",
+    "user_custom",
+    "missing",
+  ]),
   models: Schema.Array(RuntimeModelOption),
 })
 

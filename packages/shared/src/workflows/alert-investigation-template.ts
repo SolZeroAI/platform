@@ -57,7 +57,7 @@ const orchestrateInvestigationPrompt = prompt([
   "- Make supporting evidence quick to scan",
   "",
   "Output format:",
-  "c0 alert investigation",
+  "SolZero alert investigation",
   "Summary: one or two direct sentences.",
   'Root cause: include the directly supported cause; otherwise write "not identified after exhausting available investigation paths".',
   "Evidence:",

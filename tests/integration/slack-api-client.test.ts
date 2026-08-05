@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { Effect } from "effect"
-import { makeC0ApiClient } from "../../packages/api/src/client"
+import { makeS0ApiClient } from "../../packages/api/src/client"
 
 const textDecoder = new TextDecoder()
 let fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -38,7 +38,7 @@ describe("Slack API client", () => {
 
   async function createClient() {
     return Effect.runPromise(
-      makeC0ApiClient({
+      makeS0ApiClient({
         baseUrl: "http://localhost:1337/",
         bearerToken: "oiak_test_user-secret",
       }),
@@ -68,7 +68,7 @@ describe("Slack API client", () => {
     const callbackContext = {
       channel: "C123",
       threadTs: "1710000000.000100",
-      repoFullName: "example-org/c0",
+      repoFullName: "example-org/s0",
       model: "litellm/gpt-5.4-mini",
     }
     const client = await createClient()
@@ -130,7 +130,7 @@ describe("Slack API client", () => {
     fetchHandler = async () => {
       return new Response(
         JSON.stringify({
-          error: "Slack user is not linked to a c0 account",
+          error: "Slack user is not linked to a SolZero account",
           setupUrl: "http://localhost:3000/settings?slackUserId=U123",
         }),
         { status: 403, headers: { "Content-Type": "application/json" } },
@@ -149,7 +149,7 @@ describe("Slack API client", () => {
         }),
       ),
     ).rejects.toMatchObject({
-      error: "Slack user is not linked to a c0 account",
+      error: "Slack user is not linked to a SolZero account",
       setupUrl: "http://localhost:3000/settings?slackUserId=U123",
     })
     expect(fetchSpy).toHaveBeenCalledTimes(1)

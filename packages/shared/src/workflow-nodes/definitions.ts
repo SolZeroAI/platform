@@ -294,8 +294,8 @@ export const WORKFLOW_NODE_CATALOG = [
         keywordRules: [],
         cooldownSeconds: 0,
         dedupeWindowSeconds: 300,
-        command: "/c0",
-        commandDescription: "Ask c0",
+        command: "/s0",
+        commandDescription: "Ask SolZero",
         actionIds: [],
       },
     },
@@ -402,7 +402,7 @@ export const WORKFLOW_NODE_CATALOG = [
   {
     type: "isolate-session",
     label: "Isolate Agent",
-    description: "Run a lightweight c0 isolate agent with model, prompt, and tool options.",
+    description: "Run a lightweight SolZero isolate agent with model, prompt, and tool options.",
     category: "session",
     inputs: [
       { id: "context", type: "string" },
@@ -449,7 +449,7 @@ export const WORKFLOW_NODE_CATALOG = [
   {
     type: "sandbox-session",
     label: "Sandbox Agent",
-    description: "Run a c0 sandbox agent with model, prompt, and tool options.",
+    description: "Run a SolZero sandbox agent with model, prompt, and tool options.",
     category: "session",
     inputs: [
       { id: "context", type: "string" },

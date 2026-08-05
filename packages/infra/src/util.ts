@@ -1,7 +1,7 @@
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import type { StageMetadata } from "@c0-agent/shared"
+import type { StageMetadata } from "@solzero/shared"
 import { getAiSearchInstanceName } from "./aiSearch"
 
 export interface CreateAiSearchR2Options {

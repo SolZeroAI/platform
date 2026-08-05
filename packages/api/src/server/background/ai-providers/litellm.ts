@@ -1,16 +1,16 @@
-/* oxlint-disable c0-lint/avoid-untagged-errors, c0-lint/no-call-tower, c0-lint/no-effect-call-in-effect-arg, c0-lint/no-if-statement, c0-lint/no-match-effect-branch, c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/no-ternary, c0-lint/prefer-option-over-null -- LiteLLM model-info normalization is a defensive external JSON boundary with compact heuristics; keeping the parser local is clearer than splitting every guard into Effect-style combinators. */
-import type { C0LitellmConfig, ReasoningEffort } from "@c0-agent/shared"
+/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-call-tower, s0-lint/no-effect-call-in-effect-arg, s0-lint/no-if-statement, s0-lint/no-match-effect-branch, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- LiteLLM model-info normalization is a defensive external JSON boundary with compact heuristics; keeping the parser local is clearer than splitting every guard into Effect-style combinators. */
+import type { S0LitellmConfig, ReasoningEffort } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-  C0_CONFIG_LOCATIONS,
-  C0ConfigStore,
-  getC0DeploymentConfig,
-  getC0DeploymentSecret,
-} from "../db/c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+  S0_CONFIG_LOCATIONS,
+  S0ConfigStore,
+  getS0DeploymentConfig,
+  getS0DeploymentSecret,
+} from "../db/s0-config"
 import { CronRunsStore, sanitizeCronErrorMessage, type CronRunTrigger } from "../db/cron-runs"
 import {
   LITELLM_AI_SDK_ADAPTERS,
@@ -92,8 +92,8 @@ function normalizeBaseUrl(value: string): string {
   )
 }
 
-function getStore(env: Env): C0ConfigStore {
-  return new C0ConfigStore(env.C0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
+function getStore(env: Env): S0ConfigStore {
+  return new S0ConfigStore(env.S0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
 }
 
 function defaultConfig(now = Date.now()): LitellmProviderConfig {
@@ -474,19 +474,19 @@ function buildModelDefinition(model: LitellmModelRecord): LitellmModelDefinition
 export const getLitellmConfigWithPresence = Effect.fn("aiProviders.litellm.getConfig")(function* (
   env: Env,
 ) {
-  const deploymentValue = getC0DeploymentConfig<C0LitellmConfig>(env, C0_CONFIG_BINDINGS.litellm)
+  const deploymentValue = getS0DeploymentConfig<S0LitellmConfig>(env, S0_CONFIG_BINDINGS.litellm)
   if (Option.isSome(deploymentValue)) {
     return {
       configured: true,
       source: "deployment" as const,
       locked: true,
-      envVarName: C0_CONFIG_LOCATIONS.litellm,
+      envVarName: S0_CONFIG_LOCATIONS.litellm,
       config: readConfig(deploymentValue),
     } satisfies LitellmProviderConfigPresence
   }
 
   const store = getStore(env)
-  const value = yield* store.getJson(C0_CONFIG_KEYS.aiProviders.litellmConfig)
+  const value = yield* store.getJson(S0_CONFIG_KEYS.aiProviders.litellmConfig)
   return {
     configured: Option.isSome(value),
     source: Option.isSome(value) ? ("kv" as const) : ("default" as const),
@@ -499,7 +499,7 @@ export const getLitellmConfigWithPresence = Effect.fn("aiProviders.litellm.getCo
 export const getLitellmModelRegistryWithPresence = Effect.fn(
   "aiProviders.litellm.getModelRegistryWithPresence",
 )(function* (env: Env) {
-  const value = yield* getStore(env).getJson(C0_CONFIG_KEYS.aiProviders.litellmModels)
+  const value = yield* getStore(env).getJson(S0_CONFIG_KEYS.aiProviders.litellmModels)
   return {
     registry: readRegistry(value),
     source: Option.isSome(value) ? ("kv" as const) : ("none" as const),
@@ -518,16 +518,16 @@ export const getLitellmModelRegistry = Effect.fn("aiProviders.litellm.getModelRe
 export const getLitellmApiKeyStatus = Effect.fn("aiProviders.litellm.getApiKeyStatus")(function* (
   env: Env,
 ) {
-  const deploymentConfig = getC0DeploymentConfig<C0LitellmConfig>(env, C0_CONFIG_BINDINGS.litellm)
+  const deploymentConfig = getS0DeploymentConfig<S0LitellmConfig>(env, S0_CONFIG_BINDINGS.litellm)
   const deploymentApiKeyReference = Option.flatMap(deploymentConfig, (config) =>
     Option.fromNullishOr(config.apiKey),
   )
   if (Option.isSome(deploymentApiKeyReference)) {
-    const deploymentApiKey = getC0DeploymentSecret(env, deploymentApiKeyReference.value)
+    const deploymentApiKey = getS0DeploymentSecret(env, deploymentApiKeyReference.value)
     if (Option.isNone(deploymentApiKey)) {
       return yield* Effect.die(
         new Error(
-          `${deploymentApiKeyReference.value.env} is required by ${C0_CONFIG_LOCATIONS.litellm}`,
+          `${deploymentApiKeyReference.value.env} is required by ${S0_CONFIG_LOCATIONS.litellm}`,
         ),
       )
     }
@@ -535,14 +535,14 @@ export const getLitellmApiKeyStatus = Effect.fn("aiProviders.litellm.getApiKeySt
       configured: true,
       source: "deployment" as const,
       locked: true,
-      envVarName: `${C0_CONFIG_LOCATIONS.litellm}.apiKey`,
+      envVarName: `${S0_CONFIG_LOCATIONS.litellm}.apiKey`,
       apiKey: Option.none<string>(),
     } satisfies LitellmApiKeyPresence
   }
 
   const store = getStore(env)
   const configured = yield* store.encryptedSecretConfigured(
-    C0_CONFIG_KEYS.aiProviders.litellmApiKey,
+    S0_CONFIG_KEYS.aiProviders.litellmApiKey,
   )
   return {
     configured,
@@ -555,16 +555,16 @@ export const getLitellmApiKeyStatus = Effect.fn("aiProviders.litellm.getApiKeySt
 
 export const getLitellmApiKeyWithPresence = Effect.fn("aiProviders.litellm.getApiKeyWithPresence")(
   function* (env: Env) {
-    const deploymentConfig = getC0DeploymentConfig<C0LitellmConfig>(env, C0_CONFIG_BINDINGS.litellm)
+    const deploymentConfig = getS0DeploymentConfig<S0LitellmConfig>(env, S0_CONFIG_BINDINGS.litellm)
     const deploymentApiKeyReference = Option.flatMap(deploymentConfig, (config) =>
       Option.fromNullishOr(config.apiKey),
     )
     if (Option.isSome(deploymentApiKeyReference)) {
-      const deploymentApiKey = getC0DeploymentSecret(env, deploymentApiKeyReference.value)
+      const deploymentApiKey = getS0DeploymentSecret(env, deploymentApiKeyReference.value)
       if (Option.isNone(deploymentApiKey)) {
         return yield* Effect.die(
           new Error(
-            `${deploymentApiKeyReference.value.env} is required by ${C0_CONFIG_LOCATIONS.litellm}`,
+            `${deploymentApiKeyReference.value.env} is required by ${S0_CONFIG_LOCATIONS.litellm}`,
           ),
         )
       }
@@ -572,14 +572,14 @@ export const getLitellmApiKeyWithPresence = Effect.fn("aiProviders.litellm.getAp
         configured: true,
         source: "deployment" as const,
         locked: true,
-        envVarName: `${C0_CONFIG_LOCATIONS.litellm}.apiKey`,
+        envVarName: `${S0_CONFIG_LOCATIONS.litellm}.apiKey`,
         apiKey: deploymentApiKey,
       } satisfies LitellmApiKeyPresence
     }
 
     const store = getStore(env)
     const configured = yield* store.encryptedSecretConfigured(
-      C0_CONFIG_KEYS.aiProviders.litellmApiKey,
+      S0_CONFIG_KEYS.aiProviders.litellmApiKey,
     )
     if (!configured) {
       return {
@@ -591,7 +591,7 @@ export const getLitellmApiKeyWithPresence = Effect.fn("aiProviders.litellm.getAp
       } satisfies LitellmApiKeyPresence
     }
 
-    const apiKey = yield* store.getEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey)
+    const apiKey = yield* store.getEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey)
     return {
       configured: Option.isSome(apiKey),
       source: "kv" as const,
@@ -647,9 +647,9 @@ export const updateLitellmProviderConfig = Effect.fn("aiProviders.litellm.update
       },
       catch: toError,
     })
-    yield* store.putJson(C0_CONFIG_KEYS.aiProviders.litellmConfig, config)
+    yield* store.putJson(S0_CONFIG_KEYS.aiProviders.litellmConfig, config)
     yield* Effect.when(
-      store.setEncryptedSecret(C0_CONFIG_KEYS.aiProviders.litellmApiKey, apiKey ?? ""),
+      store.setEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey, apiKey ?? ""),
       Effect.succeed(Boolean(apiKey)),
     )
     return config
@@ -755,7 +755,7 @@ export const syncLitellmModels = Effect.fn("aiProviders.litellm.syncModels")(fun
     const body = yield* fetchLitellmModelInfo(config, resolvedApiKey)
     const now = Date.now()
     const registry = normalizeModelInfoResponse(body, config, now)
-    yield* getStore(env).putJson(C0_CONFIG_KEYS.aiProviders.litellmModels, registry)
+    yield* getStore(env).putJson(S0_CONFIG_KEYS.aiProviders.litellmModels, registry)
     const run = yield* insertSyncRun(env, {
       ...input,
       startedAt,

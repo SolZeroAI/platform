@@ -1,5 +1,5 @@
 import type { ApiEnv } from "infra/types/env"
-import { getStageMetadataSync, type StageMetadataInput } from "@c0-agent/shared"
+import { getStageMetadataSync, type StageMetadataInput } from "@solzero/shared"
 import * as Cause from "effect/Cause"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -97,7 +97,7 @@ export interface EffectRequestLoggerService {
 export class EffectRequestLogger extends Context.Service<
   EffectRequestLogger,
   EffectRequestLoggerService
->()("c0/api/EffectRequestLogger") {}
+>()("s0/api/EffectRequestLogger") {}
 
 export interface RequestObservabilityService {
   readonly context: RequestObservabilityShape
@@ -116,7 +116,7 @@ export interface RequestObservabilityService {
 export class RequestObservability extends Context.Service<
   RequestObservability,
   RequestObservabilityService
->()("c0/api/RequestObservability") {}
+>()("s0/api/RequestObservability") {}
 
 export function makeRequestObservability(
   request: Request,
@@ -328,7 +328,7 @@ export function withApiSurfaceSpan<A>(
 }
 
 export function observeEffectHttpApi<A extends HttpServerResponse.HttpServerResponse, E, R>(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Effect HTTP middleware preserves the generated router's native A/E/R channels.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Effect HTTP middleware preserves the generated router's native A/E/R channels.
   effect: Effect.Effect<A, E, R>,
 ) {
   return Effect.gen(function* () {
@@ -358,7 +358,7 @@ export function observeEffectHttpApi<A extends HttpServerResponse.HttpServerResp
 export function observeRoute<A, E, R>(
   group: string,
   endpoint: string,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic route combinator: the `Effect<A, E, R>` parameter channel is intrinsic to forwarding the caller's route effect into withObservedSpan.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic route combinator: the `Effect<A, E, R>` parameter channel is intrinsic to forwarding the caller's route effect into withObservedSpan.
   effect: Effect.Effect<A, E, R>,
 ) {
   const spanName = `http.${group}.${endpoint}`
@@ -377,7 +377,7 @@ export function observeRoute<A, E, R>(
         }),
       ),
     )
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Exported channel boundary: the gen requires RequestObservability (yielded above), but that service is satisfied by the request-scoped layer, so the public channel intentionally stays `R`.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Exported channel boundary: the gen requires RequestObservability (yielded above), but that service is satisfied by the request-scoped layer, so the public channel intentionally stays `R`.
   }) as Effect.Effect<A, E, R>
 }
 
@@ -393,7 +393,7 @@ function annotateCauseFailure(
 export function withObservedSpan<A, E, R>(
   name: string,
   attributes: Record<string, unknown>,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
   effect: Effect.Effect<A, E, R>,
   options: {
     readonly completedAttributes?: (
@@ -540,7 +540,7 @@ export function createApiRequestObserver(
   let activeSpan: Option.Option<CloudflareSpan> = Option.none()
 
   function scheduleRequestEffect(
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Telemetry scheduler accepts an already-built observability Effect; the `Effect<void>` channel is intrinsic to forwarding it to the boundary runner.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Telemetry scheduler accepts an already-built observability Effect; the `Effect<void>` channel is intrinsic to forwarding it to the boundary runner.
     effect: Effect.Effect<void>,
   ): Promise<void> {
     const promise = runRequestEffect(env, effect)
@@ -632,7 +632,7 @@ export function createApiRequestObserver(
 
 export function runRequestEffect(
   env: ApiEnv,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Request/telemetry boundary-runner accepts a fully self-contained observability Effect; the `Effect<void>` channel is intrinsic to the runner contract.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Request/telemetry boundary-runner accepts a fully self-contained observability Effect; the `Effect<void>` channel is intrinsic to the runner contract.
   effect: Effect.Effect<void>,
 ): Promise<void> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Request/telemetry boundary-runner; runs the observability Effect at the Worker edge.
@@ -762,7 +762,7 @@ function createEffectRequestLogger(core: RequestLogCore): EffectRequestLoggerSer
 }
 
 function createRequestLogger(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Logger sink accepts an already-built log Effect; the `Effect<void>` channel is intrinsic to forwarding it to the scheduler.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Logger sink accepts an already-built log Effect; the `Effect<void>` channel is intrinsic to forwarding it to the scheduler.
   run: (effect: Effect.Effect<void>) => Promise<void>,
   core: RequestLogCore,
   effectLog: EffectRequestLoggerService,
@@ -856,8 +856,8 @@ interface RequestLogAnnotations {
   readonly routeBranch: string
   readonly stage: string
   readonly workerName: string
-  readonly "c0.local_trace_id": string
-  readonly "c0.local_span_id": string
+  readonly "s0.local_trace_id": string
+  readonly "s0.local_span_id": string
   readonly "trace.id": string
   readonly "span.id": string
   readonly cfRay?: string

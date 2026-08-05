@@ -14,7 +14,7 @@ import {
   AiSearchRegistryStore,
   type AiSearchSourceRecord,
 } from "../../packages/api/src/server/background/db/ai-search"
-import { C0_CONFIG_KEYS } from "../../packages/api/src/server/background/db/c0-config"
+import { S0_CONFIG_KEYS } from "../../packages/api/src/server/background/db/s0-config"
 import {
   createAiSearchMcpServer,
   resolveAllowedAiSearchSources,
@@ -121,7 +121,7 @@ function createTestEnv(options?: {
 }) {
   const sources = options?.sources ?? [PRODUCT_DOCS_SOURCE]
   const kvValues = new Map(
-    sources.map((source) => [C0_CONFIG_KEYS.aiSearch.source(source.id), JSON.stringify(source)]),
+    sources.map((source) => [S0_CONFIG_KEYS.aiSearch.source(source.id), JSON.stringify(source)]),
   )
   const toBindingChunks = (response: AiSearchAiSearchResponse | AiSearchSearchResponse) =>
     (response.data ?? []).map((item, index) => ({
@@ -170,7 +170,7 @@ function createTestEnv(options?: {
       }),
     })),
   }))
-  const c0Config = {
+  const s0Config = {
     get: vi.fn(async (key: string) => kvValues.get(key) ?? null),
     put: vi.fn(async (key: string, value: string) => {
       kvValues.set(key, value)
@@ -195,7 +195,7 @@ function createTestEnv(options?: {
 
   const env = {
     AI_SEARCH: { get },
-    C0_CONFIG: c0Config,
+    S0_CONFIG: s0Config,
     DB: { prepare },
     REPO_SECRETS_ENCRYPTION_KEY: "test-key",
   } as unknown as Env
@@ -414,7 +414,7 @@ describe("AI Search MCP server", () => {
         tools: expect.any(Object),
       }),
       serverInfo: expect.objectContaining({
-        name: "c0-ai-search",
+        name: "s0-ai-search",
       }),
     })
 

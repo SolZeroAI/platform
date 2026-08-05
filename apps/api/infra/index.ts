@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary, effect/avoid-direct-json, effect/imperative-loops -- Cloudflare binding compilation is a synchronous deployment boundary; direct guards and size scans keep failures adjacent to the invalid binding. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, effect/avoid-direct-json, effect/imperative-loops -- Cloudflare binding compilation is a synchronous deployment boundary; direct guards and size scans keep failures adjacent to the invalid binding. */
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Cloudflare from "alchemy/Cloudflare"
@@ -10,15 +10,16 @@ import * as Redacted from "effect/Redacted"
 import type * as Schema from "effect/Schema"
 import {
   MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH,
-  c0RuntimeSecretReferences,
-  type C0AuthConfig,
-  type C0LitellmConfig,
-  type C0McpcfConfig,
-  type C0ResolvedConfig,
+  s0RuntimeSecretReferences,
+  type S0AuthConfig,
+  type S0CloudflareAiGatewayConfig,
+  type S0LitellmConfig,
+  type S0McpcfConfig,
+  type S0ResolvedConfig,
   type AdminConfig,
   type SecretReference,
   type StageMetadata,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { WorkflowActionsEntrypoint } from "../../../packages/api/src/server/background/workflows/runner"
 import type { DeploymentMetadata } from "../../../packages/infra/src/deploymentMetadata"
 import type {} from "../env"
@@ -47,12 +48,13 @@ export type {
 export type ApiSecretInput = string | Output.Output<Redacted.Redacted<string>>
 
 export interface ApiInfraEnv {
-  readonly C0_PROVIDER_LAYER: "live" | "mock"
-  readonly C0_CONFIG_ADMIN: AdminConfig
-  readonly C0_CONFIG_AUTH: C0AuthConfig
-  readonly C0_CONFIG_LITELLM?: C0LitellmConfig
-  readonly C0_CONFIG_MCPCF?: C0McpcfConfig
-  readonly C0_DEPLOYMENT_CONFIG_DIGEST: string
+  readonly S0_PROVIDER_LAYER: "live" | "mock"
+  readonly S0_CONFIG_ADMIN: AdminConfig
+  readonly S0_CONFIG_AUTH: S0AuthConfig
+  readonly S0_CONFIG_CLOUDFLARE_AI_GATEWAY: S0CloudflareAiGatewayConfig
+  readonly S0_CONFIG_LITELLM?: S0LitellmConfig
+  readonly S0_CONFIG_MCPCF?: S0McpcfConfig
+  readonly S0_DEPLOYMENT_CONFIG_DIGEST: string
   readonly configSecretBindings: Readonly<Record<string, ApiSecretInput>>
   readonly MCPCF_PROXY_SIGNING_SECRET: ApiSecretInput
   readonly TOKEN_ENCRYPTION_KEY: ApiSecretInput
@@ -87,7 +89,7 @@ function configuredStringSecretValue(
 }
 
 export function getApiInfraEnv(
-  config: C0ResolvedConfig,
+  config: S0ResolvedConfig,
   deploymentConfigDigest: string,
   secretBindings: Readonly<Record<string, ApiSecretInput>>,
 ): ApiInfraEnv {
@@ -125,18 +127,19 @@ export function getApiInfraEnv(
   const githubApp = config.integrations.githubApp
   const slack = config.integrations.slack
   const configSecretBindings = Object.fromEntries(
-    c0RuntimeSecretReferences(config).map((reference) => [
+    s0RuntimeSecretReferences(config).map((reference) => [
       reference.env,
       secretValue(secretBindings, reference),
     ]),
   )
   return {
-    C0_PROVIDER_LAYER: "live",
-    C0_CONFIG_ADMIN: config.admins,
-    C0_CONFIG_AUTH: config.auth,
-    ...(config.aiProviders.litellm ? { C0_CONFIG_LITELLM: config.aiProviders.litellm } : {}),
-    ...(config.mcpcf ? { C0_CONFIG_MCPCF: config.mcpcf } : {}),
-    C0_DEPLOYMENT_CONFIG_DIGEST: deploymentConfigDigest,
+    S0_PROVIDER_LAYER: "live",
+    S0_CONFIG_ADMIN: config.admins,
+    S0_CONFIG_AUTH: config.auth,
+    S0_CONFIG_CLOUDFLARE_AI_GATEWAY: config.aiProviders.cloudflareAiGateway,
+    ...(config.aiProviders.litellm ? { S0_CONFIG_LITELLM: config.aiProviders.litellm } : {}),
+    ...(config.mcpcf ? { S0_CONFIG_MCPCF: config.mcpcf } : {}),
+    S0_DEPLOYMENT_CONFIG_DIGEST: deploymentConfigDigest,
     configSecretBindings,
     MCPCF_PROXY_SIGNING_SECRET: mcpcfProxySigningSecret,
     TOKEN_ENCRYPTION_KEY: secretValue(secretBindings, config.security.tokenEncryptionKey),
@@ -175,7 +178,14 @@ export interface CreateApiOptions {
   agentResources: AgentResources
   agentContainers: AgentContainerNamespaces
   agentContainerApplications: AgentContainerApplications
+  aiGateway?: ApiAiGatewayBinding
   env: ApiInfraEnv
+}
+
+export interface ApiAiGatewayBinding {
+  readonly resource: Cloudflare.AI.Gateway | Cloudflare.AIBinding
+  readonly gatewayId: string | Output.Output<string>
+  readonly runToken: ApiSecretInput
 }
 
 interface CreateApiBindingsOptions {
@@ -186,6 +196,7 @@ interface CreateApiBindingsOptions {
   cloudflareAccountId: string
   agentResources: AgentResources
   agentContainers: AgentContainerNamespaces
+  aiGateway?: ApiAiGatewayBinding
   env: ApiInfraEnv
   workerName: string
 }
@@ -239,14 +250,14 @@ function validateApiVariableBindings(
   const bindingNames = new Set([...Object.keys(variables), ...Object.keys(secrets)])
   if (bindingNames.size > MAX_USER_VARIABLE_BINDINGS) {
     throw new Error(
-      `API Worker configuration defines ${bindingNames.size} variables and secrets; the c0 deployment budget is ${MAX_USER_VARIABLE_BINDINGS} to reserve capacity for Alchemy-managed bindings`,
+      `API Worker configuration defines ${bindingNames.size} variables and secrets; the s0 deployment budget is ${MAX_USER_VARIABLE_BINDINGS} to reserve capacity for Alchemy-managed bindings`,
     )
   }
   for (const [name, value] of Object.entries(variables)) {
     const size = bindingSize(value)
     if (size > MAX_VARIABLE_BINDING_BYTES) {
       throw new Error(
-        `API Worker variable ${name} is ${size} bytes; split it before the ${MAX_VARIABLE_BINDING_BYTES}-byte c0 deployment budget`,
+        `API Worker variable ${name} is ${size} bytes; split it before the ${MAX_VARIABLE_BINDING_BYTES}-byte s0 deployment budget`,
       )
     }
   }
@@ -269,6 +280,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     cloudflareAccountId,
     agentResources,
     agentContainers,
+    aiGateway,
     env,
     workerName,
   } = options
@@ -278,18 +290,19 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     WORKER_NAME: workerName,
     APP_VERSION: deploymentMetadata.appVersion,
     COMMIT_SHA: deploymentMetadata.commitSha,
-    C0_PROVIDER_LAYER: env.C0_PROVIDER_LAYER,
-    C0_STAGE_METADATA: jsonBinding({
+    S0_PROVIDER_LAYER: env.S0_PROVIDER_LAYER,
+    S0_STAGE_METADATA: jsonBinding({
       _tag: stageMetadata._tag,
       name: stageMetadata.name,
       app: stageMetadata.app,
       infra: stageMetadata.infra,
     }),
-    C0_CONFIG_ADMIN: jsonBinding(env.C0_CONFIG_ADMIN),
-    C0_CONFIG_AUTH: jsonBinding(env.C0_CONFIG_AUTH),
-    ...(env.C0_CONFIG_LITELLM ? { C0_CONFIG_LITELLM: jsonBinding(env.C0_CONFIG_LITELLM) } : {}),
-    ...(env.C0_CONFIG_MCPCF ? { C0_CONFIG_MCPCF: jsonBinding(env.C0_CONFIG_MCPCF) } : {}),
-    C0_DEPLOYMENT_CONFIG_DIGEST: env.C0_DEPLOYMENT_CONFIG_DIGEST,
+    S0_CONFIG_ADMIN: jsonBinding(env.S0_CONFIG_ADMIN),
+    S0_CONFIG_AUTH: jsonBinding(env.S0_CONFIG_AUTH),
+    S0_CONFIG_CLOUDFLARE_AI_GATEWAY: jsonBinding(env.S0_CONFIG_CLOUDFLARE_AI_GATEWAY),
+    ...(env.S0_CONFIG_LITELLM ? { S0_CONFIG_LITELLM: jsonBinding(env.S0_CONFIG_LITELLM) } : {}),
+    ...(env.S0_CONFIG_MCPCF ? { S0_CONFIG_MCPCF: jsonBinding(env.S0_CONFIG_MCPCF) } : {}),
+    S0_DEPLOYMENT_CONFIG_DIGEST: env.S0_DEPLOYMENT_CONFIG_DIGEST,
     CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId,
     GITHUB_APP_CLIENT_ID: env.GITHUB_APP_CLIENT_ID,
     GITHUB_APP_ID: env.GITHUB_APP_ID,
@@ -305,12 +318,20 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     GITHUB_APP_PRIVATE_KEY: env.GITHUB_APP_PRIVATE_KEY,
     GITHUB_APP_WEBHOOK_SECRET: env.GITHUB_APP_WEBHOOK_SECRET,
     SLACK_TOKEN: env.SLACK_TOKEN,
+    ...(aiGateway ? { CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: aiGateway.runToken } : {}),
   }
   const secrets = { ...env.configSecretBindings, ...fixedSecrets }
   validateApiVariableBindings(variables, secrets)
 
   return {
     ...variables,
+
+    ...(aiGateway
+      ? {
+          AI_GATEWAY: aiGateway.resource,
+          AI_GATEWAY_ID: aiGateway.gatewayId,
+        }
+      : {}),
 
     // Worker bindings
     WORKFLOW_LOADER: Cloudflare.WorkerLoader(),
@@ -327,7 +348,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     WORKFLOW_BUCKET: agentResources.workflowBucket,
     AI_SEARCH_CONTENT_BUCKET: agentResources.aiSearchContentBucket,
     DB: agentResources.db,
-    C0_CONFIG: agentResources.c0Config,
+    S0_CONFIG: agentResources.s0Config,
     REPOS_CACHE: agentResources.repoCache,
     USER_WORKFLOW_KV: agentResources.userWorkflowKv,
     WORKFLOW_SESSION_RESPONSE_CACHE: agentResources.workflowSessionResponseCache,
@@ -351,6 +372,11 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     GITHUB_APP_PRIVATE_KEY: secretInput(fixedSecrets.GITHUB_APP_PRIVATE_KEY),
     GITHUB_APP_WEBHOOK_SECRET: secretInput(fixedSecrets.GITHUB_APP_WEBHOOK_SECRET),
     SLACK_TOKEN: secretInput(fixedSecrets.SLACK_TOKEN),
+    ...(aiGateway
+      ? {
+          CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: secretInput(aiGateway.runToken),
+        }
+      : {}),
   }
 }
 
@@ -366,6 +392,7 @@ export function createApi(options: CreateApiOptions) {
     agentResources,
     agentContainers,
     agentContainerApplications,
+    aiGateway,
     env,
   } = options
 
@@ -426,6 +453,7 @@ export function createApi(options: CreateApiOptions) {
       cloudflareAccountId,
       agentResources,
       agentContainers,
+      aiGateway,
       env,
       workerName,
     }),

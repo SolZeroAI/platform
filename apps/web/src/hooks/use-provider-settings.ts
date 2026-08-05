@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, createElement, useCallback, useContext, useEffect, useState } from "react"
-import type { ProviderSettingsResponse, ProviderSettingsUpdatePayload } from "@c0-agent/shared"
+import type { ProviderSettingsResponse, ProviderSettingsUpdatePayload } from "@solzero/shared"
 import { fetchProviderSettings, saveProviderSettings } from "@/lib/provider-settings"
 
 type ProviderSettingsListener = (data: ProviderSettingsResponse) => void

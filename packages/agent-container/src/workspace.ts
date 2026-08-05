@@ -2,9 +2,9 @@ import { chmod, mkdir, writeFile } from "node:fs/promises"
 import { WORKSPACE_ROOT } from "./local-sandbox"
 import type { RuntimeInitRequest } from "./types"
 
-const GIT_ASKPASS_PATH = "/root/.c0-git-askpass.sh"
-const GIT_TOKEN_PATH = "/root/.c0-git-token"
-const CREATE_PR_SCRIPT_PATH = "/usr/local/bin/c0-create-pr"
+const GIT_ASKPASS_PATH = "/root/.s0-git-askpass.sh"
+const GIT_TOKEN_PATH = "/root/.s0-git-token"
+const CREATE_PR_SCRIPT_PATH = "/usr/local/bin/s0-create-pr"
 
 interface CommandResult {
   exitCode: number
@@ -158,7 +158,7 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
     return
   }
   const baseBranch = input.repoDefaultBranch?.trim() || "main"
-  const defaultBranch = input.branchName?.trim() || `c0-agent/${input.sessionId}`
+  const defaultBranch = input.branchName?.trim() || `s0-agent/${input.sessionId}`
   await writeFile(
     CREATE_PR_SCRIPT_PATH,
     [
@@ -169,8 +169,8 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
       `BASE_BRANCH=${shellQuote(baseBranch)}`,
       `DEFAULT_BRANCH=${shellQuote(defaultBranch)}`,
       `TOKEN_FILE=${shellQuote(GIT_TOKEN_PATH)}`,
-      'TITLE="${1:-c0 agent changes}"',
-      'BODY="${2:-Created by c0 agent.}"',
+      'TITLE="${1:-SolZero agent changes}"',
+      'BODY="${2:-Created by SolZero agent.}"',
       'BRANCH="$(git branch --show-current 2>/dev/null || true)"',
       'if [ -z "$BRANCH" ]; then BRANCH="$DEFAULT_BRANCH"; fi',
       'if [ "$BRANCH" = "$BASE_BRANCH" ]; then',
@@ -187,7 +187,7 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
       "    Authorization: `Bearer ${process.env.TOKEN}` ,",
       "    Accept: 'application/vnd.github+json',",
       "    'X-GitHub-Api-Version': '2022-11-28',",
-      "    'User-Agent': 'c0-agent',",
+      "    'User-Agent': 's0-agent',",
       "    'Content-Type': 'application/json',",
       "  },",
       "  body: JSON.stringify({",

@@ -3,7 +3,7 @@ import {
   serializeWorkflowExport,
   type WorkflowManifest,
   type WorkflowNodeType,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   SlackTestTrigger,
   WebhookTestPayload,
@@ -43,9 +43,9 @@ export function sanitizeFilename(value: string): string {
 
 export function buildWorkflowBuilderPrompt(userPrompt: string): string {
   return [
-    "Build a c0 workflow draft from the user's request.",
+    "Build a SolZero workflow draft from the user's request.",
     "",
-    "Activate the c0.workflow-builder skill before editing the manifest.",
+    "Activate the s0.workflow-builder skill before editing the manifest.",
     "",
     "Use the workflow builder tools directly. First inspect get_workflow_node_catalog, then create a manifest using only supported node types, options, handles, and bindings. Validate the manifest with validate_workflow_manifest. When the draft is valid, call submit_workflow_draft with the final manifest.",
     "",
@@ -65,9 +65,9 @@ export function buildWorkflowEditorPrompt(input: {
   runEventsById?: Readonly<Record<string, WorkflowRunEvent[]>>
 }): string {
   const promptParts = [
-    "Edit the current c0 workflow draft according to the requested change.",
+    "Edit the current SolZero workflow draft according to the requested change.",
     "",
-    "Activate the c0.workflow-builder skill before editing the manifest.",
+    "Activate the s0.workflow-builder skill before editing the manifest.",
     "",
     "Use the workflow builder tools directly. Inspect get_workflow_node_catalog, preserve compatible node ids and edges, validate the edited manifest with validate_workflow_manifest, and call submit_workflow_draft with the final valid manifest.",
     "",
@@ -130,7 +130,7 @@ export function serializeWorkflowContextYaml(manifest: WorkflowManifest): string
     return serializeWorkflowExport({ manifest }).trim()
   } catch {
     return [
-      "kind: c0.workflow.draft",
+      "kind: s0.workflow.draft",
       "exportVersion: 1",
       `name: ${JSON.stringify(manifest.name)}`,
       "manifestJson: |",

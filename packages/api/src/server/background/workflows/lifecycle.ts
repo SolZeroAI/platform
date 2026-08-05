@@ -1,4 +1,4 @@
-import type { WorkflowManifest } from "@c0-agent/shared"
+import type { WorkflowManifest } from "@solzero/shared"
 import { generateId } from "../auth/crypto"
 import {
   createWorkflowStoreFromD1,

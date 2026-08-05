@@ -18,7 +18,7 @@ import {
   Wrench,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
-import type { SandboxEvent } from "@c0-agent/shared"
+import type { SandboxEvent } from "@solzero/shared"
 import {
   CodeSurface,
   getCodeLanguageForValue,

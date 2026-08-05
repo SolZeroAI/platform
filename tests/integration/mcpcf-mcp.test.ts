@@ -43,7 +43,7 @@ describe("MCP Context Forge MCP server", () => {
   })
 
   it("uses the gateway token for token-auth registry servers without upstream auth", async () => {
-    const { sqlite, db, c0Config } = createResolverStore()
+    const { sqlite, db, s0Config } = createResolverStore()
     try {
       seedSession(sqlite, { sessionId: "session-token", serverId: "server_runbooks" })
       seedMcpcfConfig(sqlite)
@@ -66,7 +66,7 @@ describe("MCP Context Forge MCP server", () => {
         resolveMcpcfMcpContext(
           createResolverRequest("server_runbooks"),
           {
-            C0_CONFIG: c0Config,
+            S0_CONFIG: s0Config,
             DB: db,
             REPO_SECRETS_ENCRYPTION_KEY: "test-repo-secrets-key-32-chars",
           } as Env,
@@ -91,7 +91,7 @@ describe("MCP Context Forge MCP server", () => {
   })
 
   it("forwards a user token only when upstream token auth is explicit", async () => {
-    const { sqlite, db, c0Config } = createResolverStore()
+    const { sqlite, db, s0Config } = createResolverStore()
     try {
       seedSession(sqlite, { sessionId: "session-upstream-token", serverId: "server_runbooks" })
       seedMcpcfConfig(sqlite)
@@ -124,7 +124,7 @@ describe("MCP Context Forge MCP server", () => {
         resolveMcpcfMcpContext(
           createResolverRequest("server_runbooks"),
           {
-            C0_CONFIG: c0Config,
+            S0_CONFIG: s0Config,
             DB: db,
             REPO_SECRETS_ENCRYPTION_KEY: "test-repo-secrets-key-32-chars",
           } as Env,
@@ -149,7 +149,7 @@ describe("MCP Context Forge MCP server", () => {
   })
 
   it("uses the linked user OAuth token for OAuth registry servers", async () => {
-    const { sqlite, db, c0Config } = createResolverStore()
+    const { sqlite, db, s0Config } = createResolverStore()
     try {
       seedSession(sqlite, { sessionId: "session-oauth", serverId: "server_grafana" })
       seedMcpcfConfig(sqlite)
@@ -165,8 +165,8 @@ describe("MCP Context Forge MCP server", () => {
         resolveMcpcfMcpContext(
           createResolverRequest("server_grafana"),
           {
-            C0_CONFIG: c0Config,
-            C0_CONFIG_AUTH: {
+            S0_CONFIG: s0Config,
+            S0_CONFIG_AUTH: {
               defaultSignInProviderId: "okta",
               adminPassword: { env: "TEST_ADMIN_PASSWORD" },
               providers: {
@@ -606,7 +606,7 @@ describe("MCP Context Forge MCP server", () => {
   it("preserves JSON-RPC request ids in error responses", async () => {
     const response = await Effect.runPromise(
       createJsonRpcErrorResponse(
-        new Request("https://api.c0.example.com/integrations/mcpcf/mcp", {
+        new Request("https://api.s0.example.com/integrations/mcpcf/mcp", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -636,7 +636,7 @@ describe("MCP Context Forge MCP server", () => {
   it("includes structured JSON-RPC error data when provided", async () => {
     const response = await Effect.runPromise(
       createJsonRpcErrorResponse(
-        new Request("https://api.c0.example.com/integrations/mcpcf/mcp", {
+        new Request("https://api.s0.example.com/integrations/mcpcf/mcp", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

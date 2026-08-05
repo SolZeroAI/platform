@@ -4,7 +4,7 @@ import {
   type OpenCodeMcpServers,
   type SessionCallbackContext,
   type SessionKind,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { type PromptExecutionMode, type SessionState } from "../../types"
 import { type LocalSpanContext } from "../../observability/tracing"
 import type { UpdateToolsBody } from "../durable-object"

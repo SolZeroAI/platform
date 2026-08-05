@@ -2,7 +2,7 @@ import {
   getSelectedAiSearchSourceIds,
   parseStoredSessionTools,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
   CallToolRequestSchema,
@@ -135,7 +135,7 @@ export function createAiSearchMcpServer(
 ): McpServer {
   const server = new McpServer(
     {
-      name: "c0-ai-search",
+      name: "s0-ai-search",
       version: "1.0.0",
     },
     {

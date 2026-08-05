@@ -5,11 +5,11 @@
 # them in its state. Uncomment integration secrets only when enabling their config.
 
 # Credential and external sign-in providers
-# C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD=
+# S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD=
 
 # AI providers and MCP Context Forge
-# C0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY=
-# C0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN=
+# S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY=
+# S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN=
 
 # Internal security keys
 # MCPCF_PROXY_SIGNING_SECRET=

@@ -60,7 +60,7 @@ describe("session runtime contract", () => {
     const legacySlackContext = {
       channel: "C123",
       threadTs: "1712345678.000100",
-      repoFullName: "example-org/c0",
+      repoFullName: "example-org/s0",
       model: "litellm/gpt-5.4-mini",
     }
     expect(

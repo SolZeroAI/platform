@@ -1,39 +1,39 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { Providers } from "@/providers"
+import { getS0Brand } from "@/lib/brand"
 import appCss from "@/styles/app.css?url"
 import manropeLatin400 from "@fontsource/manrope/files/manrope-latin-400-normal.woff2?url"
 
 const appStylesheetHref = import.meta.env.DEV ? `${appCss}?direct` : appCss
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      {
-        charSet: "utf-8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "c0 Agent",
-      },
-      {
-        name: "description",
-        content: "AI agent platform for software engineering workflows",
-      },
-    ],
-    links: [
-      { rel: "icon", href: "/favicon.ico", sizes: "any" },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
-      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
-      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
-      { rel: "preload", href: manropeLatin400, as: "font", type: "font/woff2", crossOrigin: "" },
-      { rel: "stylesheet", href: appStylesheetHref },
-    ],
-  }),
+  head: () => {
+    const brand = getS0Brand()
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: `${brand.name} Agent` },
+        {
+          name: "description",
+          content: "AI agent platform for software engineering workflows",
+        },
+      ],
+      links: [
+        { rel: "icon", href: brand.faviconPath },
+        { rel: "apple-touch-icon", sizes: "180x180", href: brand.appleTouchIconPath },
+        {
+          rel: "preload",
+          href: manropeLatin400,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "",
+        },
+        { rel: "stylesheet", href: appStylesheetHref },
+      ],
+    }
+  },
   notFoundComponent: NotFound,
   component: RootComponent,
 })

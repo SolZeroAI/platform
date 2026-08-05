@@ -6,7 +6,7 @@ import {
   getWorkflowNodeDefinitionForNode,
   type WorkflowManifest,
   type WorkflowManifestNode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   WorkflowRuntimeVersionChange,
   WorkflowSaveChangeBadge,

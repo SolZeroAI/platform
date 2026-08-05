@@ -1,6 +1,6 @@
-import type { C0RuleName } from "./rule-names.ts"
+import type { S0RuleName } from "./rule-names.ts"
 
-export const messages: Record<C0RuleName, string> = {
+export const messages: Record<S0RuleName, string> = {
   "max-file-lines":
     "Rule: keep authored files at or below 1000 lines. Why: oversized files hide ownership boundaries and slow review. Fix: split the file into logical modules, components, services, or utilities.",
   "no-if-statement":
@@ -62,5 +62,5 @@ export const messages: Record<C0RuleName, string> = {
   "avoid-untagged-errors":
     "Rule: avoid bare Error values in recoverable Effect failure channels. Why: untagged errors cannot be handled precisely with catchTag/catchTags. Fix: use Schema.TaggedErrorClass for API errors, Data.TaggedError for internal Effect errors, or Effect.die for unrecoverable defects.",
   "use-effect-otel":
-    "Rule: use Effect OTEL-aware logging for C0 API/Worker/server observability. Why: raw console bypasses Effect logs, spans, and Cloudflare Observability collection. Fix: use Effect.log*, Effect.withSpan, or request telemetry helpers.",
+    "Rule: use Effect OTEL-aware logging for S0 API/Worker/server observability. Why: raw console bypasses Effect logs, spans, and Cloudflare Observability collection. Fix: use Effect.log*, Effect.withSpan, or request telemetry helpers.",
 }

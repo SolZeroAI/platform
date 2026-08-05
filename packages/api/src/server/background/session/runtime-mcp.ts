@@ -5,7 +5,7 @@ import {
   type OpenCodeMcpServers,
   type StageMetadataInput,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { issueMcpcfProxyCapability } from "../auth/mcpcf-capability"

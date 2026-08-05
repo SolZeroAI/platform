@@ -6,9 +6,9 @@ const TEST_USER_ID = process.env.E2E_USER_ID ?? "user-session-run"
 const TEST_MODEL = "litellm/gpt-5.4-mini"
 
 function buildHeaders(): HeadersInit {
-  const apiKey = process.env.C0_API_KEY?.trim()
+  const apiKey = process.env.S0_API_KEY?.trim()
   if (!apiKey) {
-    throw new Error("C0_API_KEY must be set to run the OpenCode harness e2e test")
+    throw new Error("S0_API_KEY must be set to run the OpenCode harness e2e test")
   }
 
   return {

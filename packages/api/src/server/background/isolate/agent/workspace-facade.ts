@@ -3,7 +3,7 @@ import { createGit } from "@cloudflare/shell/git"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { getGitHubRepoTool, type PullRequest } from "@c0-agent/shared"
+import { getGitHubRepoTool, type PullRequest } from "@solzero/shared"
 import { createPullRequestWithInstallationToken } from "../../auth/github-app"
 import { checkoutIsolateBranch, hasBranchCommitsBeyondBase } from "../git-branch"
 import { buildGitHubAppGitCredentials } from "../git-auth"
@@ -223,7 +223,7 @@ export class IsolateAgentWorkspace {
     )
 
     const git = this.createRepoGit()
-    const branchName = state.branchName?.trim() || `c0-agent/${state.sessionId}`
+    const branchName = state.branchName?.trim() || `s0-agent/${state.sessionId}`
     const baseBranch = state.repoDefaultBranch?.trim() || "main"
     Option.getOrThrowWith(
       Option.liftPredicate(branchName, (value) => value !== baseBranch),
@@ -306,7 +306,7 @@ export class IsolateAgentWorkspace {
       message: input.commitMessage?.trim() || input.title.trim(),
       author: {
         name: state.githubName?.trim() || state.userId,
-        email: state.githubEmail?.trim() || "c0-agent@noreply.github.com",
+        email: state.githubEmail?.trim() || "s0-agent@noreply.github.com",
       },
     })
   }

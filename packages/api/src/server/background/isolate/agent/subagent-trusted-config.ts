@@ -38,7 +38,7 @@ export function registerSubagentTrustedConfig(
 ): void {
   ensureTrustedConfigTable(sql)
   sql.exec(
-    `INSERT OR REPLACE INTO c0_isolate_subagent_trusted_config
+    `INSERT OR REPLACE INTO s0_isolate_subagent_trusted_config
        (run_id, config_json, created_at)
      VALUES (?1, ?2, ?3)`,
     runId,
@@ -55,7 +55,7 @@ export function readSubagentTrustedConfig(
   const rows = sql
     .exec(
       `SELECT config_json
-       FROM c0_isolate_subagent_trusted_config
+       FROM s0_isolate_subagent_trusted_config
        WHERE run_id = ?1
        LIMIT 1`,
       runId,
@@ -67,16 +67,16 @@ export function readSubagentTrustedConfig(
 
 export function releaseSubagentTrustedConfig(sql: SubagentTrustedConfigSql, runId: string): void {
   ensureTrustedConfigTable(sql)
-  sql.exec("DELETE FROM c0_isolate_subagent_trusted_config WHERE run_id = ?1", runId)
+  sql.exec("DELETE FROM s0_isolate_subagent_trusted_config WHERE run_id = ?1", runId)
 }
 
 export function clearSubagentTrustedConfigs(sql: SubagentTrustedConfigSql): void {
   ensureTrustedConfigTable(sql)
-  sql.exec("DELETE FROM c0_isolate_subagent_trusted_config")
+  sql.exec("DELETE FROM s0_isolate_subagent_trusted_config")
 }
 
 function ensureTrustedConfigTable(sql: SubagentTrustedConfigSql): void {
-  sql.exec(`CREATE TABLE IF NOT EXISTS c0_isolate_subagent_trusted_config (
+  sql.exec(`CREATE TABLE IF NOT EXISTS s0_isolate_subagent_trusted_config (
     run_id TEXT PRIMARY KEY,
     config_json TEXT NOT NULL,
     created_at INTEGER NOT NULL

@@ -3,9 +3,9 @@ import type {
   LitellmProviderConfig,
 } from "../../packages/api/src/server/background/ai-providers/litellm-types"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-} from "../../packages/api/src/server/background/db/c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+} from "../../packages/api/src/server/background/db/s0-config"
 
 const FIXTURE_NOW = 123
 const DEFAULT_BASE_URL = "https://litellm.example.com"
@@ -38,15 +38,15 @@ export function createLitellmDeploymentEnv(
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL
   const defaultModel = options.defaultModel === undefined ? "gpt-5.4-mini" : options.defaultModel
   const apiKeyEnv = "TEST_LITELLM_API_KEY"
-  const c0Config = new MemoryLitellmKVNamespace()
-  c0Config.values.set(
-    C0_CONFIG_KEYS.aiProviders.litellmModels,
+  const s0Config = new MemoryLitellmKVNamespace()
+  s0Config.values.set(
+    S0_CONFIG_KEYS.aiProviders.litellmModels,
     JSON.stringify(createLitellmModelRegistry({ baseUrl })),
   )
 
   return {
-    C0_CONFIG: c0Config,
-    [C0_CONFIG_BINDINGS.litellm]: {
+    S0_CONFIG: s0Config,
+    [S0_CONFIG_BINDINGS.litellm]: {
       ...createLitellmProviderConfig({ baseUrl, defaultModel }),
       apiKey: { env: apiKeyEnv },
     },

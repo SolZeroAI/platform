@@ -114,9 +114,9 @@ describe.each<HarnessRuntime>(["opencode", "codex", "claude-code"])(
       resolveRuntimeSkillPackages.mockReset()
       resolveRuntimeSkillPackages.mockResolvedValue([
         {
-          id: "skill_c0_create_pr",
+          id: "skill_s0_create_pr",
           contentHash: "skill-hash",
-          name: "c0-create-pr",
+          name: "s0-create-pr",
           description: "Create a pull request when requested.",
           content: "Run the helper.",
           files: [],
@@ -160,9 +160,9 @@ describe.each<HarnessRuntime>(["opencode", "codex", "claude-code"])(
           content: "hello",
           skills: [
             {
-              id: "skill_c0_create_pr",
+              id: "skill_s0_create_pr",
               contentHash: "skill-hash",
-              name: "c0-create-pr",
+              name: "s0-create-pr",
               description: "Create a pull request when requested.",
               content: "Run the helper.",
               files: [],
@@ -199,3 +199,82 @@ describe.each<HarnessRuntime>(["opencode", "codex", "claude-code"])(
     })
   },
 )
+
+describe("Cloudflare AI Gateway harness container models", () => {
+  beforeEach(() => {
+    compileOpenCodeConfigForModel.mockReset()
+    resolveRuntimeSkillPackages.mockReset()
+    resolveRuntimeSkillPackages.mockResolvedValue([])
+  })
+
+  it.each([
+    {
+      runtime: "opencode" as const,
+      modelId: "xai/grok-4.5",
+      api: "chat_completions",
+      kind: "openai-compatible",
+    },
+    {
+      runtime: "codex" as const,
+      modelId: "openai/gpt-5.6-luna",
+      api: "responses",
+      kind: "openai-responses",
+    },
+    {
+      runtime: "claude-code" as const,
+      modelId: "anthropic/claude-opus-5",
+      api: "messages",
+      kind: "anthropic",
+    },
+  ])("passes a $api model to the $runtime container", async ({ runtime, modelId, api, kind }) => {
+    const runtimeModelId = `cloudflare-ai-gateway/${modelId}`
+    compileOpenCodeConfigForModel.mockResolvedValue({
+      runtimeModelId,
+      providerId: "cloudflare-ai-gateway",
+      modelId,
+      config: {
+        provider: {
+          "cloudflare-ai-gateway": {
+            options: {
+              apiKey: "container-proxy",
+              baseURL: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+            },
+            models: {
+              [modelId]: { provider: { api } },
+            },
+          },
+        },
+      },
+    })
+    const requests: RecordedRequest[] = []
+    const provider = new HarnessContainerProvider(fakeEnv(requests) as never)
+
+    await Effect.runPromise(
+      provider.runPrompt(
+        "session-1",
+        "sandbox-1",
+        {
+          messageId: "message-1",
+          agentRuntime: runtime,
+          content: "hello",
+          model: runtimeModelId,
+          author: { userId: "user-1", githubName: null, githubEmail: null },
+        },
+        async () => {},
+      ),
+    )
+
+    expect(requests).toContainEqual({
+      runtime,
+      path: "/send",
+      body: expect.objectContaining({
+        model: expect.objectContaining({
+          kind,
+          providerId: "cloudflare-ai-gateway",
+          modelId,
+          auth: expect.objectContaining({ apiKey: "container-proxy" }),
+        }),
+      }),
+    })
+  })
+})

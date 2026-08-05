@@ -1,6 +1,6 @@
 # Security Policy
 
-Security is a core requirement for c0. If you believe you have found a vulnerability, please report
+Security is a core requirement for SolZero. If you believe you have found a vulnerability, please report
 it privately so we can investigate before details are made public.
 
 ## Reporting a vulnerability
@@ -30,6 +30,6 @@ this section will identify the release lines receiving security updates.
 
 ## Scope
 
-Reports about c0 source code and the default deployment architecture are in scope. Reports about a
+Reports about SolZero source code and the default deployment architecture are in scope. Reports about a
 third-party service or an organization's deployment should be sent to that service or organization
-unless the issue is caused by c0.
+unless the issue is caused by SolZero.

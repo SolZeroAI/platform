@@ -5,7 +5,7 @@ import {
   WORKFLOW_TEMPLATES,
   type WorkflowManifest,
   type WorkflowManifestNode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   DEFAULT_SOURCE_HANDLE,
   DEFAULT_TARGET_HANDLE,

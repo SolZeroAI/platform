@@ -6,7 +6,7 @@ import {
   stringifyOpenCodePermission,
   type OpenCodePermission,
   type ProviderModelDefinition,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { asc, and, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -651,7 +651,7 @@ type UserProviderRuntimeConfigs = Effect.Success<
   ReturnType<UserProviderConfigsStore["listRuntimeConfigs"]>
 >
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the DB error channel must be named explicitly here.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the DB error channel must be named explicitly here.
 function runUserProviderConfigsEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect UserProviderConfigsStore to the non-Effect provider catalog module.
   return Effect.runPromise(effect).catch((errorValue: unknown) => {

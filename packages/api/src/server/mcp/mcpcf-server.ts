@@ -3,7 +3,7 @@ import {
   getMcpcfProxyServerAlias,
   getMcpcfProxyToolName,
   parseMcpcfProxyToolName,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
   CallToolRequestSchema,
@@ -65,9 +65,9 @@ function prefixMcpcfTool(context: McpcfMcpContext, server: McpcfServerRecord, to
     inputSchema: tool.inputSchema ?? { type: "object", properties: {} },
     _meta: {
       ...tool._meta,
-      "c0/mcpcfServerId": server.id,
-      "c0/mcpcfServerSlug": server.slug,
-      "c0/mcpcfUpstreamToolName": tool.name,
+      "s0/mcpcfServerId": server.id,
+      "s0/mcpcfServerSlug": server.slug,
+      "s0/mcpcfUpstreamToolName": tool.name,
     },
   }
 }

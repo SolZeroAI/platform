@@ -7,14 +7,14 @@ import {
   normalizeOpenCodeMcpServers,
   normalizeSessionTools,
   WORKFLOW_SUBAGENTS_MANIFEST_VERSION,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type {
   OpenCodeMcpServers,
   SessionKind,
   SessionToolSpec,
   SubagentMode,
   SubagentRunSummary,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   createSessionIndexStoreFromD1,
   type SessionIndexStorePromise,

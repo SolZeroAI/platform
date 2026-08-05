@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 import { JsonRecord, StringMap } from "./common"
-import { SUBAGENT_MODES } from "@c0-agent/shared"
+import { SUBAGENT_MODES } from "@solzero/shared"
 
 export const SessionKind = Schema.Literals(["isolate", "sandbox"])
 export type SessionKind = typeof SessionKind.Type

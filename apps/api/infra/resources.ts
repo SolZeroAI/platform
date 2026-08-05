@@ -6,7 +6,7 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
-import type { StageMetadata } from "@c0-agent/shared"
+import type { StageMetadata } from "@solzero/shared"
 import {
   getAiSearchNamespaceName,
   getWorkflowAiSearchNamespaceName,
@@ -149,8 +149,8 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
     const repoCache = yield* Cloudflare.KV.Namespace("repo-cache", {
       title: `${appName}-repo-cache-${stageMetadata.name}`,
     })
-    const c0Config = yield* Cloudflare.KV.Namespace("c0-config", {
-      title: `${appName}-c0-config-${stageMetadata.name}`,
+    const s0Config = yield* Cloudflare.KV.Namespace("s0-config", {
+      title: `${appName}-s0-config-${stageMetadata.name}`,
     })
     const userWorkflowKv = yield* Cloudflare.KV.Namespace("user-workflow-kv", {
       title: `${appName}-user-workflow-kv-${stageMetadata.name}`,
@@ -201,7 +201,7 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
       workflowAlarmNamespace,
       db,
       repoCache,
-      c0Config,
+      s0Config,
       userWorkflowKv,
       workflowSessionResponseCache,
       workflowBucket,

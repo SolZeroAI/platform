@@ -4,7 +4,8 @@
 
 export * from "./admin"
 export * from "./auth"
-export * from "./c0-config"
+export * from "./s0-config"
+export * from "./s0-brand"
 export * from "./env"
 export * from "./errors"
 export * from "./git"

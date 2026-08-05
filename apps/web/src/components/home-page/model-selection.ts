@@ -1,4 +1,4 @@
-import type { RuntimeProviderCatalog } from "@c0-agent/shared"
+import type { RuntimeProviderCatalog } from "@solzero/shared"
 
 export function getDefaultVisibleModel(
   catalog: Pick<RuntimeProviderCatalog, "defaultModel" | "modelOptions"> | null,

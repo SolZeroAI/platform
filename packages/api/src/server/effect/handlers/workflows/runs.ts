@@ -1,4 +1,4 @@
-import type { WorkflowApprovalPayload, WorkflowRunListQuery } from "@c0/api"
+import type { WorkflowApprovalPayload, WorkflowRunListQuery } from "@solzero/api"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"

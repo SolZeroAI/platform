@@ -8,7 +8,7 @@ function createEnv(): ApiEnv {
     GITHUB_APP_CLIENT_ID: "Iv1.test",
     GITHUB_APP_CLIENT_SECRET: "client-secret",
     GITHUB_APP_PRIVATE_KEY: "unused-for-webhook-test",
-    GITHUB_APP_SLUG: "c0-test",
+    GITHUB_APP_SLUG: "s0-test",
     GITHUB_APP_WEBHOOK_SECRET: "webhook-secret",
   } as ApiEnv
 }
