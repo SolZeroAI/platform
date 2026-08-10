@@ -1,10 +1,13 @@
 export { handleGitHubAppWebhookRequest } from "./background/auth/github-webhook"
 export { getAuthProviderRegistry, getPublicAuthProviderRegistry } from "./background/db/auth-config"
+export { normalizeCloudflareAiGatewayResponse } from "./background/ai-providers/cloudflare-ai-gateway"
 export { reconcileManagedAdminCredentials } from "./background/db/admin-credentials"
 export { IsolateSessionAgent } from "./background/isolate/agent"
 export { IsolateSubAgent } from "./background/isolate/subagent"
 export { handleSessionWebSocketRequest } from "./background/router"
 export {
+  decryptCloudflareAiGatewayByokProxyCredential,
+  requestWithCloudflareProviderNativeCredential,
   requestWithSharedProviderCredential,
   resolveSharedProviderCredential,
   resolveSharedProviderApiKey,

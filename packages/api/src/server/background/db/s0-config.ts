@@ -17,6 +17,8 @@ export const S0_CONFIG_KEYS = {
       `secrets/auth/providers/${encodeURIComponent(providerId)}/client-secret`,
   },
   aiProviders: {
+    cloudflareAiGatewayProviderKey: (providerId: string) =>
+      `secrets/ai-providers/cloudflare-ai-gateway/${encodeURIComponent(providerId)}/api-key`,
     litellmConfig: "config/ai-providers/litellm",
     litellmApiKey: "secrets/ai-providers/litellm/api-key",
     litellmModels: "registry/ai-providers/litellm/models",

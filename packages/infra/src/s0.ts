@@ -1,7 +1,10 @@
 import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
-import type { StageMetadata } from "@solzero/shared"
+import * as Match from "effect/Match"
+import * as Option from "effect/Option"
+import * as Redacted from "effect/Redacted"
+import { CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS, type StageMetadata } from "@solzero/shared"
 import {
   createAgentContainerApplications,
   createAgentContainerNamespaces,
@@ -10,6 +13,7 @@ import {
   createDynamicWorkflowResource,
   type ApiAiGatewayBinding,
   type ApiInfraEnv,
+  type ApiSecretInput,
 } from "../../../apps/api/infra/index"
 import type { DeploymentMetadata } from "./deploymentMetadata"
 import { createWeb } from "./web"
@@ -35,6 +39,13 @@ export interface CreateS0WebOptions {
   dev: boolean
 }
 
+function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
+  return Match.value(value).pipe(
+    Match.when(Match.string, Redacted.make),
+    Match.orElse((output) => output),
+  ) as Redacted.Redacted<string>
+}
+
 function createCloudflareAiGateway(input: {
   appName: string
   stageMetadata: StageMetadata
@@ -51,21 +62,44 @@ function createCloudflareAiGateway(input: {
         resource: Cloudflare.Workers.AI("AI_GATEWAY"),
         gatewayId: `${input.appName}-${input.stageMetadata.name}-ai-gateway`,
         runToken: "local-ai-gateway-run-token",
+        secretsStoreId: "local-ai-gateway-secrets-store",
       } satisfies ApiAiGatewayBinding
     }
 
+    const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
     const resource = yield* Cloudflare.AI.Gateway("ai-gateway", {
       authentication: true,
       cacheTtl: config.cacheTtl,
       collectLogs: config.collectLogs,
+      storeId: secretsStore.storeId,
     })
+    yield* Effect.forEach(
+      CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
+      (provider) =>
+        Option.match(
+          Option.fromNullishOr(input.apiEnv.cloudflareAiGatewayProviderKeySecrets[provider.id]),
+          {
+            onNone: () => Effect.void,
+            onSome: (value) =>
+              Cloudflare.AI.ProviderKey(`ai-gateway-${provider.id}-key`, {
+                store: secretsStore,
+                gatewayId: resource.gatewayId,
+                providerSlug: provider.providerSlug,
+                value: redactedSecret(value),
+                defaultConfig: true,
+                comment: `${input.appName} ${input.stageMetadata.name} ${provider.name} default key`,
+              }).pipe(Effect.asVoid),
+          },
+        ),
+      { concurrency: "unbounded" },
+    )
     const runToken = yield* Cloudflare.ApiToken.AccountApiToken("ai-gateway-run-token", {
       accountId: input.cloudflareAccountId,
       name: `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
       policies: [
         {
           effect: "allow",
-          permissionGroups: ["AI Gateway Run"],
+          permissionGroups: ["AI Gateway Run", "Workers AI Read"],
           resources: {
             [`com.cloudflare.api.account.${input.cloudflareAccountId}`]: "*",
           },
@@ -76,6 +110,7 @@ function createCloudflareAiGateway(input: {
       resource,
       gatewayId: resource.gatewayId,
       runToken: runToken.value,
+      secretsStoreId: secretsStore.storeId,
     } satisfies ApiAiGatewayBinding
   })
 }

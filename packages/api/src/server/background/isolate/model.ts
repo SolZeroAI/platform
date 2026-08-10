@@ -7,7 +7,11 @@ import type { CompiledOpenCodeConfig } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { CLOUDFLARE_AI_GATEWAY_PROVIDER_ID } from "../ai-providers/cloudflare-ai-gateway"
+import {
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+  CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+  normalizeCloudflareAiGatewayResponse,
+} from "../ai-providers/cloudflare-ai-gateway"
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
 import {
   BackgroundTracing,
@@ -44,11 +48,6 @@ type SupportedProviderPackage =
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 type JsonObject = { [key: string]: JsonValue }
-type AiGatewayBindingModel = {
-  inputs: Record<string, unknown>
-  postProcessedOutputs: Record<string, unknown>
-}
-
 function toSupportedProviderPackage(value: string | undefined): SupportedProviderPackage {
   return Match.value(value).pipe(
     Match.whenOr(
@@ -173,6 +172,25 @@ function requireAiGatewayId(env: Env): string {
   )
 }
 
+async function executeProviderFetch(
+  input: {
+    providerId: string
+    fetchImplementation?: typeof fetch
+  },
+  request: Parameters<typeof fetch>[0],
+  init?: Parameters<typeof fetch>[1],
+): Promise<Response> {
+  const response = await Option.match(Option.fromNullishOr(input.fetchImplementation), {
+    // oxlint-disable-next-line effect/avoid-native-fetch -- This IS the AI provider HTTP passthrough being traced; the AI SDK requires a native fetch implementation and no HttpClient layer is provisioned on this path.
+    onNone: () => fetch(request, init),
+    onSome: (fetchImplementation) => fetchImplementation(request, init),
+  })
+  return Match.value(input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID).pipe(
+    Match.when(true, () => normalizeCloudflareAiGatewayResponse(response)),
+    Match.orElse(() => response),
+  )
+}
+
 function createProviderFetch(input: {
   env: Env
   providerId: string
@@ -209,12 +227,7 @@ function createProviderFetch(input: {
           "url.path": parsed.pathname,
         },
         Effect.tryPromise({
-          try: () =>
-            Option.match(Option.fromNullishOr(input.fetchImplementation), {
-              // oxlint-disable-next-line effect/avoid-native-fetch -- This IS the AI provider HTTP passthrough being traced; the AI SDK requires a native fetch implementation and no HttpClient layer is provisioned on this path.
-              onNone: () => fetch(request, init),
-              onSome: (fetchImplementation) => fetchImplementation(request, init),
-            }),
+          try: () => executeProviderFetch(input, request, init),
           catch: (cause) => cause,
         }),
       )
@@ -225,20 +238,29 @@ function createProviderFetch(input: {
   return tracedFetch
 }
 
-function createCloudflareAiGatewayBindingFetch(input: { env: Env; modelId: string }): typeof fetch {
-  return async function cloudflareAiGatewayBindingFetch(request, init) {
+function createCloudflareAiGatewayProviderNativeFetch(input: {
+  env: Env
+  storedKey: boolean
+}): typeof fetch {
+  return async function cloudflareAiGatewayProviderNativeFetch(request, init) {
     const providerRequest = new Request(request, init)
-    const body = await providerRequest.clone().json<Record<string, unknown>>()
-    Reflect.deleteProperty(body, "model")
-    // oxlint-disable-next-line effect/avoid-any -- Cloudflare's fallback accepts third-party model names but omits the raw-response overload; narrow the generated binding only at this adapter boundary.
-    const binding = requireAiGatewayBinding(input.env) as unknown as Ai<
-      Record<string, AiGatewayBindingModel>
-    >
-    return binding.run(input.modelId, body, {
-      gateway: { id: requireAiGatewayId(input.env) },
-      returnRawResponse: true,
-      signal: providerRequest.signal,
-    })
+    const headers = new Headers(providerRequest.headers)
+    const runToken = Option.getOrThrowWith(
+      stringOption(Reflect.get(input.env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET)).pipe(
+        Option.filter((value) => value.trim().length > 0),
+      ),
+      () => new Error("Cloudflare AI Gateway run token is missing"),
+    )
+    headers.set("cf-aig-authorization", `Bearer ${runToken}`)
+    Match.value(input.storedKey).pipe(
+      Match.when(true, () => {
+        headers.delete("authorization")
+        headers.delete("x-api-key")
+      }),
+      Match.orElse(() => undefined),
+    )
+    // oxlint-disable-next-line effect/avoid-native-fetch -- Provider-native AI Gateway execution is the outbound AI provider boundary required for stored and per-request BYOK.
+    return fetch(new Request(providerRequest, { headers }))
   }
 }
 
@@ -247,13 +269,16 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   const apiKey = stringOption(providerOptions.apiKey)
   const baseURL = stringOption(providerOptions.baseURL)
   const headers = toStringRecord(providerOptions.headers)
-  const bindingFetch = Match.value(
+  const cloudflareProviderNativeFetch = Match.value(
     input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID &&
       providerPackage !== "workers-ai-provider",
   ).pipe(
     Match.when(true, () =>
       Option.some(
-        createCloudflareAiGatewayBindingFetch({ env: input.env, modelId: input.modelId }),
+        createCloudflareAiGatewayProviderNativeFetch({
+          env: input.env,
+          storedKey: providerOptions.s0CloudflareStoredKey === true,
+        }),
       ),
     ),
     Match.orElse(() => Option.none<typeof fetch>()),
@@ -264,17 +289,10 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
     providerPackage,
     modelId: input.modelId,
     observability: input.observability,
-    fetchImplementation: Option.getOrUndefined(bindingFetch),
+    fetchImplementation: Option.getOrUndefined(cloudflareProviderNativeFetch),
   })
-  const resolvedApiKey = Option.match(bindingFetch, {
-    onNone: () => Option.getOrUndefined(apiKey),
-    onSome: () => "cloudflare-ai-gateway-binding",
-  })
-  const resolvedBaseUrl = Option.match(bindingFetch, {
-    onNone: () => baseURL,
-    onSome: () =>
-      Option.some(Option.getOrElse(baseURL, () => "https://workers-binding.invalid/v1")),
-  })
+  const resolvedApiKey = Option.getOrUndefined(apiKey)
+  const resolvedBaseUrl = baseURL
 
   return Match.value(providerPackage).pipe(
     Match.when("workers-ai-provider", () =>

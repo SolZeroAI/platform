@@ -37,7 +37,7 @@ import { PageHeader } from "@/components/page-header"
 import { SafeMarkdown } from "@/components/safe-markdown"
 import { ToolCallGroup } from "@/components/tool-call-group"
 import { useSessionSocket } from "@/hooks/use-session-socket"
-import { showErrorToast } from "@/lib/toast-manager"
+import { showActionableErrorToast, showErrorToast } from "@/lib/toast-manager"
 import {
   buildToolCallDiscoveryErrorMap,
   collapseTimelineEvents,
@@ -232,14 +232,14 @@ export function SessionContent({
     if (!runtimeError) {
       return
     }
-    showErrorToast(runtimeError)
+    showActionableErrorToast(runtimeError)
   }, [runtimeError])
 
   useEffect(() => {
     if (!promptError) {
       return
     }
-    showErrorToast(promptError)
+    showActionableErrorToast(promptError)
     setPromptError(null)
   }, [promptError, setPromptError])
 

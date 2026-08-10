@@ -68,8 +68,10 @@ describe("isolate model config", () => {
     )
   })
 
-  it("uses the deployment-managed AI Gateway binding for a Responses API model", async () => {
+  it("uses the provider-native AI Gateway endpoint with a deployment-stored OpenAI key", async () => {
     const run = vi.fn(async () => eventStreamResponse())
+    const fetchMock = vi.fn(async () => eventStreamResponse())
+    vi.stubGlobal("fetch", fetchMock)
     const context = await Effect.runPromise(
       compileIsolateModelContext({
         env: {
@@ -94,6 +96,7 @@ describe("isolate model config", () => {
           AI_GATEWAY: { run },
           AI_GATEWAY_ID: "s0-dev-ai-gateway",
           CLOUDFLARE_ACCOUNT_ID: "account-1",
+          CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: "gateway-run-token",
         } as never,
         userId: "user-1",
         model: "cloudflare-ai-gateway/openai/gpt-5.6-luna",
@@ -116,18 +119,59 @@ describe("isolate model config", () => {
       ],
       providerOptions: context.providerOptions,
     })
-    expect(run).toHaveBeenCalledWith(
-      "openai/gpt-5.6-luna",
-      expect.objectContaining({ input: expect.any(Array) }),
-      expect.objectContaining({
-        gateway: { id: "s0-dev-ai-gateway" },
-        returnRawResponse: true,
-      }),
+    const [input, init] = fetchMock.mock.calls[0]!
+    const request = toRequest(input, init)
+    expect(request.url).toBe(
+      "https://gateway.ai.cloudflare.com/v1/account-1/s0-dev-ai-gateway/openai/responses",
     )
+    expect(request.headers.get("cf-aig-authorization")).toBe("Bearer gateway-run-token")
+    expect(request.headers.has("authorization")).toBe(false)
+    expect(run).not.toHaveBeenCalled()
   })
 
-  it("uses the gateway binding and chat-completions wire format for Grok", async () => {
+  it("uses the native Workers AI provider for the Starter model", async () => {
+    const context = await Effect.runPromise(
+      compileIsolateModelContext({
+        env: {
+          STAGE: "dev",
+          S0_CONFIG: { get: async () => null },
+          S0_CONFIG_CLOUDFLARE_AI_GATEWAY: {
+            enabled: true,
+            cacheTtl: null,
+            collectLogs: true,
+            defaultModel: "@cf/openai/gpt-oss-120b",
+            models: {
+              "@cf/openai/gpt-oss-120b": {
+                name: "GPT OSS 120B Starter",
+                provider: { api: "responses" },
+                reasoning: {
+                  efforts: ["low", "medium", "high"],
+                  default: "medium",
+                },
+              },
+            },
+          },
+          AI_GATEWAY: { run: vi.fn() },
+          AI_GATEWAY_ID: "s0-dev-ai-gateway",
+          CLOUDFLARE_ACCOUNT_ID: "account-1",
+        } as never,
+        userId: "user-1",
+        model: "cloudflare-ai-gateway/@cf/openai/gpt-oss-120b",
+        reasoningEffort: "medium",
+      }),
+    )
+
+    expect(context.model.modelId).toBe("@cf/openai/gpt-oss-120b")
+    expect(context.model.provider).toBe("workersai.chat")
+    expect(context.providerOptions).toEqual({
+      "workers-ai": { reasoning_effort: "medium" },
+    })
+  })
+
+  it("uses the provider-native Gateway chat-completions endpoint for Grok", async () => {
     const run = vi.fn(async () => eventStreamResponse())
+    const fetchMock = vi.fn(async () => eventStreamResponse())
+    vi.stubGlobal("fetch", fetchMock)
     const context = await Effect.runPromise(
       compileIsolateModelContext({
         env: {
@@ -152,6 +196,7 @@ describe("isolate model config", () => {
           AI_GATEWAY: { run },
           AI_GATEWAY_ID: "s0-dev-ai-gateway",
           CLOUDFLARE_ACCOUNT_ID: "account-1",
+          CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: "gateway-run-token",
         } as never,
         userId: "user-1",
         model: "cloudflare-ai-gateway/xai/grok-4.5",
@@ -173,16 +218,13 @@ describe("isolate model config", () => {
       ],
       providerOptions: context.providerOptions,
     })
-    expect(run).toHaveBeenCalledWith(
-      "xai/grok-4.5",
-      expect.objectContaining({
-        messages: expect.any(Array),
-        reasoning_effort: "high",
-      }),
-      expect.objectContaining({
-        gateway: { id: "s0-dev-ai-gateway" },
-        returnRawResponse: true,
-      }),
+    const [input, init] = fetchMock.mock.calls[0]!
+    const request = toRequest(input, init)
+    expect(request.url).toBe(
+      "https://gateway.ai.cloudflare.com/v1/account-1/s0-dev-ai-gateway/grok/chat/completions",
     )
+    expect(request.headers.get("cf-aig-authorization")).toBe("Bearer gateway-run-token")
+    expect(request.headers.has("authorization")).toBe(false)
+    expect(run).not.toHaveBeenCalled()
   })
 })

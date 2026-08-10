@@ -3,11 +3,14 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import {
   CLOUDFLARE_AI_GATEWAY_API_HOST,
+  CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX,
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
   CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
   cloudflareAiGatewayRestBaseUrl,
   getCloudflareAiGatewaySnapshot,
 } from "../../ai-providers/cloudflare-ai-gateway"
 import { getLitellmConfigWithPresence } from "../../ai-providers/litellm"
+import { decryptSecret } from "../../auth/crypto"
 import type { Env } from "../../types"
 
 export const SHARED_PROVIDER_OUTBOUND_HANDLER = "sharedProvider"
@@ -38,12 +41,17 @@ export const resolveSharedProviderOutboundHosts = Effect.fn(
     ),
     Option.map(() => CLOUDFLARE_AI_GATEWAY_API_HOST),
   )
-  return [litellmHost, cloudflareHost].flatMap((host) =>
+  const cloudflareProviderNativeHost = Option.map(
+    cloudflareHost,
+    () => CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
+  )
+  return [litellmHost, cloudflareHost, cloudflareProviderNativeHost].flatMap((host) =>
     Option.match(host, { onNone: () => [], onSome: (value) => [value] }),
   )
 })
 
 export interface SharedProviderCredential {
+  readonly kind: "bearer" | "cloudflare-rest" | "cloudflare-provider-native"
   readonly secretName: string
   readonly headers?: Readonly<Record<string, string>>
 }
@@ -54,21 +62,45 @@ function cloudflareAiGatewayPathPrefix(env: Record<string, unknown>): Option.Opt
   )
 }
 
+function cloudflareAiGatewayProviderNativePathPrefix(
+  env: Record<string, unknown>,
+): Option.Option<string> {
+  return Option.all({
+    accountId: stringEnvValue(env, "CLOUDFLARE_ACCOUNT_ID"),
+    gatewayId: stringEnvValue(env, "AI_GATEWAY_ID"),
+  }).pipe(Option.map(({ accountId, gatewayId }) => `/v1/${accountId}/${gatewayId}/`))
+}
+
 export function resolveSharedProviderCredential(
   env: Record<string, unknown>,
   url: URL,
 ): Option.Option<SharedProviderCredential> {
-  return Match.value(url.hostname === CLOUDFLARE_AI_GATEWAY_API_HOST).pipe(
-    Match.when(false, () => Option.some({ secretName: S0_CONFIG_LITELLM_API_KEY_SECRET })),
-    Match.orElse(() =>
+  return Match.value(url.hostname).pipe(
+    Match.when(CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST, () =>
+      cloudflareAiGatewayProviderNativePathPrefix(env).pipe(
+        Option.filter((pathPrefix) => url.pathname.startsWith(pathPrefix)),
+        Option.map(() => ({
+          kind: "cloudflare-provider-native" as const,
+          secretName: CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+        })),
+      ),
+    ),
+    Match.when(CLOUDFLARE_AI_GATEWAY_API_HOST, () =>
       cloudflareAiGatewayPathPrefix(env).pipe(
         Option.filter((pathPrefix) => url.pathname.startsWith(pathPrefix)),
         Option.flatMap(() => stringEnvValue(env, "AI_GATEWAY_ID")),
         Option.map((gatewayId) => ({
+          kind: "cloudflare-rest" as const,
           secretName: CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
           headers: { "cf-aig-gateway-id": gatewayId },
         })),
       ),
+    ),
+    Match.orElse(() =>
+      Option.some({
+        kind: "bearer" as const,
+        secretName: S0_CONFIG_LITELLM_API_KEY_SECRET,
+      }),
     ),
   )
 }
@@ -76,7 +108,10 @@ export function resolveSharedProviderCredential(
 export function sharedProviderPathClass(
   url: URL,
 ): "anthropic" | "cloudflare-ai-gateway" | "default" {
-  return Match.value(url.hostname === CLOUDFLARE_AI_GATEWAY_API_HOST).pipe(
+  return Match.value(
+    url.hostname === CLOUDFLARE_AI_GATEWAY_API_HOST ||
+      url.hostname === CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
+  ).pipe(
     Match.when(true, () => "cloudflare-ai-gateway" as const),
     Match.orElse(() =>
       Match.value(url.pathname.startsWith("/anthropic/")).pipe(
@@ -86,6 +121,26 @@ export function sharedProviderPathClass(
     ),
   )
 }
+
+export function cloudflareAiGatewayByokProxyCiphertext(request: Request): Option.Option<string> {
+  const authorization = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
+  const credential = authorization ?? request.headers.get("x-api-key") ?? ""
+  return Option.liftPredicate(credential, (value) =>
+    value.startsWith(CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX),
+  ).pipe(Option.map((value) => value.slice(CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX.length)))
+}
+
+export const decryptCloudflareAiGatewayByokProxyCredential = Effect.fn(
+  "sandbox.sharedProvider.decryptCloudflareAiGatewayByokProxyCredential",
+)(function* (request: Request, encryptionKey: string) {
+  const ciphertext = cloudflareAiGatewayByokProxyCiphertext(request)
+  const decryptCredential = decryptSecret(
+    Option.getOrElse(ciphertext, () => ""),
+    encryptionKey,
+  )
+  const hasCiphertext = Effect.succeed(Option.isSome(ciphertext))
+  return yield* decryptCredential.pipe(Effect.when(hasCiphertext))
+})
 
 export function resolveSharedProviderApiKey(
   env: Record<string, unknown>,
@@ -131,6 +186,27 @@ export function requestWithSharedProviderCredential(
   const headers = new Headers(request.headers)
   headers.set("authorization", `Bearer ${apiKey}`)
   Object.entries(extraHeaders ?? {}).forEach(([name, value]) => headers.set(name, value))
+  headers.delete("cookie")
+  return new Request(sharedProviderTargetUrl(request), sharedProviderRequestInit(request, headers))
+}
+
+export function requestWithCloudflareProviderNativeCredential(
+  request: Request,
+  runToken: string,
+  providerApiKey: Option.Option<string>,
+): Request {
+  const headers = new Headers(request.headers)
+  headers.set("cf-aig-authorization", `Bearer ${runToken}`)
+  headers.delete("authorization")
+  headers.delete("x-api-key")
+  Option.match(providerApiKey, {
+    onNone: () => undefined,
+    onSome: (apiKey) =>
+      Match.value(new URL(request.url).pathname.split("/")[4] === "anthropic").pipe(
+        Match.when(true, () => headers.set("x-api-key", apiKey)),
+        Match.orElse(() => headers.set("authorization", `Bearer ${apiKey}`)),
+      ),
+  })
   headers.delete("cookie")
   return new Request(sharedProviderTargetUrl(request), sharedProviderRequestInit(request, headers))
 }

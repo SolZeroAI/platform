@@ -5,6 +5,7 @@ import {
   getGitHubRepoTool,
   getSelectedMcpcfServerIds,
   getStageMetadataSync,
+  humanizeCloudflareAiGatewayError,
   normalizeIsolateStepLimit,
   normalizeOpenCodeMcpServers,
   normalizeSessionTools,
@@ -522,7 +523,7 @@ export function promptFailureMessage(
 ): string {
   return Match.value(isArchived).pipe(
     Match.when(true, () => "Session archived"),
-    Match.orElse(() => toError(errorValue).message),
+    Match.orElse(() => humanizeCloudflareAiGatewayError(toError(errorValue).message)),
   )
 }
 

@@ -1,11 +1,13 @@
 "use client"
 
-import type {
-  ProviderModelDefinition,
-  ProviderSettingsUpdatePayload,
-  ProviderSettingsSnapshot,
-  RuntimeProviderModelOption,
-  UserCustomProviderUpdate,
+import {
+  cloudflareAiGatewayByokProviderForOverrideId,
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+  type ProviderModelDefinition,
+  type ProviderSettingsUpdatePayload,
+  type ProviderSettingsSnapshot,
+  type RuntimeProviderModelOption,
+  type UserCustomProviderUpdate,
 } from "@solzero/shared"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Input } from "@cloudflare/kumo/components/input"
@@ -293,7 +295,11 @@ export function ProvidersSettings({
   const globalProviderDrafts = useMemo(
     () =>
       sharedDrafts.filter((draft) => {
-        const provider = providersById.get(draft.providerId)
+        const provider = providersById.get(
+          cloudflareAiGatewayByokProviderForOverrideId(draft.providerId)
+            ? CLOUDFLARE_AI_GATEWAY_PROVIDER_ID
+            : draft.providerId,
+        )
         return (
           provider?.source === "shared" && (provider.globalCredentialConfigured || draft.enabled)
         )
@@ -467,8 +473,8 @@ export function ProvidersSettings({
       <section className="space-y-4">
         <SettingsDocsSectionHeading id="global-providers" level="h2" title="Global Providers">
           <p className="text-sm text-kumo-subtle">
-            Global providers are configured by your admin. Use your personal API keys when for
-            improved rate limits and quotas.
+            Global providers are configured by your admin. Personal BYOK keys override the global
+            key for your requests and can provide separate rate limits and quotas.
           </p>
         </SettingsDocsSectionHeading>
         {globalProviderDrafts.length === 0 ? (
@@ -476,8 +482,13 @@ export function ProvidersSettings({
         ) : (
           <div className="space-y-3">
             {globalProviderDrafts.map((draft) => {
+              const catalogProviderId = cloudflareAiGatewayByokProviderForOverrideId(
+                draft.providerId,
+              )
+                ? CLOUDFLARE_AI_GATEWAY_PROVIDER_ID
+                : draft.providerId
               const provider = catalog.providers.find(
-                (item) => item.providerId === draft.providerId,
+                (item) => item.providerId === catalogProviderId,
               )
               return (
                 <LayerCard key={draft.providerId} className="overflow-hidden rounded-xl">

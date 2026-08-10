@@ -11,9 +11,12 @@ import {
   normalizeModelId,
   OpenCodePermissionSchema,
   ProviderModelDefinitionSchema,
+  CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   SHARED_PROVIDER_CATALOG,
   type CompiledOpenCodeConfig,
   type CompiledOpenCodeProviderModel,
+  type CloudflareAiGatewayByokKeyMap,
   type OpenCodeInterleavedReasoning,
   type OpenCodeMcpServers,
   type OpenCodePermission,
@@ -32,8 +35,9 @@ import * as Schema from "effect/Schema"
 import type { Env } from "./types"
 import {
   buildCloudflareAiGatewayCatalogProvider,
-  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+  getCloudflareAiGatewayRuntimeProviderKeys,
 } from "./ai-providers/cloudflare-ai-gateway"
+import { compileCloudflareAiGatewayProviderOptions } from "./ai-providers/cloudflare-ai-gateway-compiled-options"
 import {
   createUserProviderConfigsStoreFromD1,
   type RuntimeUserProviderRecord,
@@ -110,6 +114,7 @@ interface ResolvedProviderRecord {
   apiKey: string | null
   globalCredentialConfigured: boolean
   credentialSource: "binding" | "shared" | "user_override" | "user_custom" | "missing"
+  cloudflareAiGatewayByokKeys?: CloudflareAiGatewayByokKeyMap
 }
 
 interface SharedProviderBuildResult {
@@ -141,6 +146,7 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
   const sharedProviderIds = new Set([
     ...SHARED_PROVIDER_CATALOG.map((provider) => provider.providerId),
     CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+    ...CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS.map((provider) => provider.userOverrideProviderId),
   ])
 
   const seenSharedProviderIds = new Set<string>()
@@ -176,7 +182,7 @@ function normalizeSharedOverride(
   assertCondition(sharedProviderIds.has(providerId), `Unknown shared provider '${providerId}'`)
   assertCondition(
     providerId !== CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
-    `Shared provider '${providerId}' uses a Worker binding and does not accept personal API keys`,
+    `Use a vendor-specific Cloudflare AI Gateway key slot instead of '${providerId}'`,
   )
   assertCondition(
     !seenSharedProviderIds.has(providerId),
@@ -329,28 +335,36 @@ export async function compileOpenCodeConfigForModel(
       hasAiSearchMcp,
     }),
   )
+  const compiledProviders = await Promise.all(
+    availableProviders.map(
+      async (currentProvider) =>
+        [
+          currentProvider.providerId,
+          {
+            name: currentProvider.name,
+            npm: currentProvider.npm,
+            options: await compiledProviderOptions(currentProvider, credentialMode, {
+              env,
+              selectedModelId: modelId,
+              selectedProviderId: providerId,
+            }),
+            models: Object.fromEntries(
+              Object.entries(currentProvider.models).map(([currentModelId, model]) => [
+                currentModelId,
+                compileOpenCodeProviderModel(currentProvider, model),
+              ]),
+            ),
+          },
+        ] as const,
+    ),
+  )
   const config = Schema.decodeUnknownSync(CompiledOpenCodeConfigSchema)({
     model: runtimeModelId,
     small_model: runtimeModelId,
     enabled_providers: availableProviders.map((currentProvider) => currentProvider.providerId),
     ...(normalizedMcp && { mcp: normalizedMcp }),
     ...(permission && { permission }),
-    provider: Object.fromEntries(
-      availableProviders.map((currentProvider) => [
-        currentProvider.providerId,
-        {
-          name: currentProvider.name,
-          npm: currentProvider.npm,
-          options: compiledProviderOptions(currentProvider, credentialMode),
-          models: Object.fromEntries(
-            Object.entries(currentProvider.models).map(([currentModelId, model]) => [
-              currentModelId,
-              compileOpenCodeProviderModel(currentProvider, model),
-            ]),
-          ),
-        },
-      ]),
-    ),
+    provider: Object.fromEntries(compiledProviders),
   })
 
   return {
@@ -457,7 +471,31 @@ function compiledProviderApiKey(
   )
 }
 
-function compiledProviderOptions(
+async function compiledProviderOptions(
+  provider: ResolvedProviderRecord,
+  sharedProviderCredentialMode: SharedProviderCredentialMode,
+  selection: {
+    env: Env
+    selectedProviderId: string
+    selectedModelId: string
+  },
+): Promise<Record<string, unknown>> {
+  const cloudflareOptions = await compileCloudflareAiGatewayProviderOptions({
+    env: selection.env,
+    providerId: provider.providerId,
+    providerOptions: provider.options,
+    providerKeys: provider.cloudflareAiGatewayByokKeys,
+    selectedProviderId: selection.selectedProviderId,
+    selectedModelId: selection.selectedModelId,
+    credentialMode: sharedProviderCredentialMode,
+    storedProxyCredential: OPENCODE_SHARED_PROVIDER_CREDENTIAL_PROXY_API_KEY,
+  })
+  return Option.getOrElse(cloudflareOptions, () =>
+    defaultCompiledProviderOptions(provider, sharedProviderCredentialMode),
+  )
+}
+
+function defaultCompiledProviderOptions(
   provider: ResolvedProviderRecord,
   sharedProviderCredentialMode: SharedProviderCredentialMode,
 ): Record<string, unknown> {
@@ -538,10 +576,12 @@ export function replaceUserProviderSettings(
 }
 
 function getUserProviderConfigsStore(env: Env): Option.Option<UserProviderConfigsStorePromise> {
-  return Option.fromNullishOr(env.TOKEN_ENCRYPTION_KEY).pipe(
-    Option.filter((key) => key.length > 0),
-    Option.map((key) => createUserProviderConfigsStoreFromD1(env.DB, key)),
-  )
+  return Option.all({
+    db: Option.fromNullishOr(env.DB),
+    key: Option.fromNullishOr(env.TOKEN_ENCRYPTION_KEY).pipe(
+      Option.filter((value) => value.length > 0),
+    ),
+  }).pipe(Option.map(({ db, key }) => createUserProviderConfigsStoreFromD1(db, key)))
 }
 
 function getUserDefaultModel(env: Env, userId: string): Promise<string | null> {
@@ -592,10 +632,38 @@ async function mergeUserProviders(
     Arr.getSomes(userSettings.providers.map(toSharedOverrideEntry)),
   )
   const mergedShared = sharedProviders.map((shared) =>
-    applySharedOverride(shared, overrideByProviderId),
+    applyCloudflareAiGatewayOverrides(
+      applySharedOverride(shared, overrideByProviderId),
+      overrideByProviderId,
+    ),
   )
   const customProviders = Arr.getSomes(userSettings.providers.map(toCustomProviderRecord))
   return sortProviders([...mergedShared, ...customProviders])
+}
+
+function applyCloudflareAiGatewayOverrides(
+  shared: ResolvedProviderRecord,
+  overrideByProviderId: ReadonlyMap<string, string>,
+): ResolvedProviderRecord {
+  const overrides = Object.fromEntries(
+    Arr.getSomes(
+      CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS.map((provider) =>
+        trimmedNonEmpty(overrideByProviderId.get(provider.userOverrideProviderId)).pipe(
+          Option.map((apiKey) => [provider.id, apiKey] as const),
+        ),
+      ),
+    ),
+  )
+  return Match.value(shared.providerId).pipe(
+    Match.when(CLOUDFLARE_AI_GATEWAY_PROVIDER_ID, () => ({
+      ...shared,
+      cloudflareAiGatewayByokKeys: {
+        ...shared.cloudflareAiGatewayByokKeys,
+        ...overrides,
+      },
+    })),
+    Match.orElse(() => shared),
+  )
 }
 
 function toSharedOverrideEntry(
@@ -674,13 +742,10 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
   const staticProviders = SHARED_PROVIDER_CATALOG.filter(
     (provider) => provider.providerId !== "litellm" && provider.providerId !== "litellm-anthropic",
   ).map((provider) => toSharedProviderRecord(env, provider))
-  const cloudflareAiGateway = Option.match(buildCloudflareAiGatewayCatalogProvider(env), {
-    onNone: () => ({ providers: [] as ResolvedProviderRecord[], defaultModel: null }),
-    onSome: ({ provider, defaultModel }) => ({
-      providers: [toResolvedBindingProviderRecord(provider)],
-      defaultModel,
-    }),
-  })
+  const cloudflareAiGateway = yieldCloudflareAiGatewayProvider(
+    buildCloudflareAiGatewayCatalogProvider(env),
+    await runProviderCatalogEffect(getCloudflareAiGatewayRuntimeProviderKeys(env)),
+  )
   const deploymentProviders = [...staticProviders, ...cloudflareAiGateway.providers]
   const litellmConfig = await runProviderCatalogEffect(getLitellmConfigWithPresence(env))
   return Match.value(litellmConfig.configured).pipe(
@@ -710,8 +775,22 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
   )
 }
 
+function yieldCloudflareAiGatewayProvider(
+  provider: ReturnType<typeof buildCloudflareAiGatewayCatalogProvider>,
+  providerKeys: CloudflareAiGatewayByokKeyMap,
+) {
+  return Option.match(provider, {
+    onNone: () => ({ providers: [] as ResolvedProviderRecord[], defaultModel: null }),
+    onSome: ({ provider: definition, defaultModel }) => ({
+      providers: [toResolvedBindingProviderRecord(definition, providerKeys)],
+      defaultModel,
+    }),
+  })
+}
+
 function toResolvedBindingProviderRecord(
   provider: SharedProviderDefinition,
+  providerKeys: CloudflareAiGatewayByokKeyMap,
 ): ResolvedProviderRecord {
   return {
     providerId: provider.providerId,
@@ -723,6 +802,7 @@ function toResolvedBindingProviderRecord(
     apiKey: null,
     globalCredentialConfigured: true,
     credentialSource: "binding",
+    cloudflareAiGatewayByokKeys: providerKeys,
   }
 }
 

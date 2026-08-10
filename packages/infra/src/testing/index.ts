@@ -22,8 +22,17 @@ const S0_ALCHEMY_TEST_CLOUDFLARE_AI_GATEWAY_CONFIG = {
   enabled: true,
   cacheTtl: null,
   collectLogs: true,
-  defaultModel: "openai/gpt-5.6-luna",
+  defaultModel: "@cf/openai/gpt-oss-120b",
+  providerKeys: {},
   models: {
+    "@cf/openai/gpt-oss-120b": {
+      name: "GPT OSS 120B Starter",
+      provider: { api: "responses" },
+      reasoning: {
+        efforts: ["low", "medium", "high"],
+        default: "medium",
+      },
+    },
     "openai/gpt-5.6-luna": {
       name: "GPT 5.6 Luna",
       provider: { npm: "@ai-sdk/openai", api: "responses" },
@@ -70,6 +79,7 @@ const S0_ALCHEMY_TEST_API_ENV_DEFAULTS = {
     S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: "test-admin-password-at-least-32-bytes",
     S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY: "test-litellm-api-key",
   },
+  cloudflareAiGatewayProviderKeySecrets: {},
   BETTER_AUTH_SECRET: "u7Qm9Kx2Vp8Ls4Nr6Tb1Wd5Yc3Hf0ZaE",
   CF_AI_SEARCH_SERVICE_TOKEN_ID: "",
   GITHUB_APP_CLIENT_ID: "test-github-client-id",

@@ -1,5 +1,6 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/prefer-option-over-null, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/avoid-untagged-errors -- Container HTTP and AI SDK event adapters validate untrusted JSON at an imperative boundary before entering the Effect lifecycle. */
 import {
+  humanizeCloudflareAiGatewayError,
   resolveAgentRuntime,
   type AgentRuntime,
   type CompiledOpenCodeConfig,
@@ -355,7 +356,7 @@ export function mapRuntimeEvent(
         type: "error",
         messageId: event.messageId,
         sandboxId,
-        error: event.error,
+        error: humanizeCloudflareAiGatewayError(event.error),
         timestamp: timestampSeconds(event),
       }
     case "finish":
@@ -363,7 +364,7 @@ export function mapRuntimeEvent(
         type: "execution_complete",
         messageId: event.messageId,
         success: event.success,
-        error: event.error,
+        error: event.error ? humanizeCloudflareAiGatewayError(event.error) : event.error,
         sandboxId,
         timestamp: timestampSeconds(event),
       }

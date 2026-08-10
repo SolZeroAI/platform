@@ -43,8 +43,8 @@ SolZero includes integration code for:
 
 - Credential, social, and generic OIDC authentication through Better Auth, including Okta through
   OIDC.
-- Cloudflare AI Gateway with GPT 5.6 Luna by default and GPT 5.6 Sol, Claude Opus 5, and Grok 4.5
-  as options, plus optional LiteLLM providers.
+- Cloudflare AI Gateway with GPT OSS 120B Starter by default and GPT 5.6 Luna, GPT 5.6 Sol,
+  Claude Opus 5, and Grok 4.5 as options, plus optional LiteLLM providers.
 - MCP servers, skills, and MCP Context Forge.
 - GitHub Apps and Slack.
 - Cloudflare AI Search for built-in, R2, and website data sources. SolZero can create and manage these
@@ -57,12 +57,21 @@ dashboard. Deployment-managed values take precedence, which keeps an organizatio
 configuration explicit and reviewable.
 
 The source code for these integrations is included, but external services, accounts, and credentials
-are not. Alchemy provisions the default Cloudflare AI Gateway, enables gateway authentication, and
-mints a least-privilege `AI Gateway Run` token. Isolates use the native AI binding; compatible
-Container harnesses use Cloudflare Containers outbound interception to inject the token in trusted
-Worker code without exposing it inside the container. OpenCode supports all configured gateway
-protocols, Codex supports OpenAI Responses models such as Luna and Sol, and Claude Code requires an
-Anthropic Messages model.
+are not. Alchemy provisions the default Cloudflare AI Gateway, attaches the account Secrets Store,
+configures deployment-referenced provider keys as Cloudflare BYOK defaults, enables gateway
+authentication, and mints a least-privilege runtime token with `Workers AI Read` and
+`AI Gateway Run`. Isolates use the native AI binding for Workers AI and provider-native Gateway
+endpoints for third-party BYOK models.
+Compatible Container harnesses use Cloudflare Containers outbound interception to inject gateway
+and provider credentials in trusted Worker code without exposing raw keys inside the container.
+OpenCode supports all configured gateway protocols, Codex supports OpenAI Responses models such as
+GPT OSS 120B Starter, Luna, and Sol, and Claude Code requires an Anthropic Messages model.
+GPT OSS 120B Starter uses standard Workers AI billing and its daily free allocation by default.
+Deployment owners can optionally enable Unified Billing for the gateway in Cloudflare to charge
+Workers AI requests to prepaid AI Gateway credits and let third-party requests without a BYOK key
+fall back to those credits. When the free allocation or AI Gateway credits are exhausted, SolZero
+returns an actionable API error and displays links to the relevant Cloudflare documentation and AI
+Gateway top-up page.
 LiteLLM, MCP Context Forge, GitHub, Slack, AI Search, and external identity providers are optional.
 Contributions for other integrations used by your organization are welcome.
 
@@ -107,8 +116,9 @@ Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in `config/.env`. The fil
 infrastructure tooling and must remain untracked. `config/.dev.vars` contains only secret values
 referenced by the dev profile.
 
-The deployment token needs account `API Tokens > Write` permission so Alchemy can create the scoped
-AI Gateway runtime token, in addition to the permissions needed to provision the rest of c0.
+The deployment token needs account `API Tokens > Write`, AI Gateway edit, and Secrets Store edit
+permissions so Alchemy can create the scoped runtime token and BYOK resources, in addition to the
+permissions needed to provision the rest of SolZero.
 
 Update `config/dev.config.jsonc` before signing in:
 
@@ -122,6 +132,14 @@ Every stage has a complete, independent non-secret profile:
 `config/dev.config.jsonc`, `config/test.config.jsonc`, `config/pre.config.jsonc`, and
 `config/prod.config.jsonc`. An ephemeral `pre-*` stage uses the pre profile. Profiles are not merged.
 Secret fields contain explicit environment references rather than secret values.
+
+To provision a provider key in Cloudflare Secrets Store, uncomment its `providerKeys` reference in
+the stage JSONC file and set the matching `S0_CONFIG_SECRETS_CF_AI_GATEWAY_*_API_KEY` value in the
+stage vars file. A deployment reference locks that provider in Admin. Without a deployment
+reference, an administrator can store an encrypted global key in Admin, and each user can
+optionally override OpenAI, Anthropic, or xAI from Settings > AI Providers. Cloudflare resolves
+credentials in this order: the per-request user or global Admin key, the gateway's default BYOK
+key, then Unified Billing credits when that billing mode is enabled.
 
 Validate the profiles:
 

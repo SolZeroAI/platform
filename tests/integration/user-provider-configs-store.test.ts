@@ -7,7 +7,10 @@ import {
   createUserProviderConfigsStoreFromD1,
   type UserProviderConfigsStorePromise,
 } from "../../packages/api/src/server/background/db/user-provider-configs"
-import { buildProviderSettingsResponse } from "../../packages/api/src/server/background/provider-catalog"
+import {
+  buildProviderSettingsResponse,
+  compileOpenCodeConfigForModel,
+} from "../../packages/api/src/server/background/provider-catalog"
 import type { Env } from "../../packages/api/src/server/background/types"
 import { MemoryKVNamespace } from "./mcpcf-mcp/fixtures"
 
@@ -168,5 +171,55 @@ describe("UserProviderConfigsStore", () => {
         customProviders: [],
       }),
     ).rejects.toThrow(/0024_opencode_permission_preferences\.sql/)
+  })
+
+  it("uses a vendor-specific personal Cloudflare AI Gateway key", async () => {
+    const db = new SqliteD1Database(sqlite)
+    await store.replaceSettings("user_1", {
+      defaultModel: null,
+      defaultIsolateStepLimit: 7,
+      opencodePermission: null,
+      sharedOverrides: [
+        {
+          providerId: "cloudflare-ai-gateway-byok-openai",
+          displayName: "Cloudflare AI Gateway — OpenAI",
+          apiKey: "personal-openai-key",
+        },
+      ],
+      customProviders: [],
+    })
+    const env = {
+      STAGE: "dev",
+      S0_CONFIG: new MemoryKVNamespace() as unknown as KVNamespace,
+      DB: db,
+      REPO_SECRETS_ENCRYPTION_KEY: ENCRYPTION_KEY,
+      TOKEN_ENCRYPTION_KEY: ENCRYPTION_KEY,
+      S0_CONFIG_CLOUDFLARE_AI_GATEWAY: {
+        enabled: true,
+        cacheTtl: null,
+        collectLogs: true,
+        defaultModel: "openai/gpt-5.6-luna",
+        models: {
+          "openai/gpt-5.6-luna": {
+            name: "GPT 5.6 Luna",
+            provider: { npm: "@ai-sdk/openai", api: "responses" },
+          },
+        },
+      },
+      AI_GATEWAY: {},
+      AI_GATEWAY_ID: "gateway-1",
+      CLOUDFLARE_ACCOUNT_ID: "account-1",
+    } as unknown as Env
+
+    const compiled = await compileOpenCodeConfigForModel(
+      env,
+      "user_1",
+      "cloudflare-ai-gateway/openai/gpt-5.6-luna",
+      { sharedProviderCredentialMode: "direct" },
+    )
+    expect(compiled.config.provider["cloudflare-ai-gateway"]?.options).toMatchObject({
+      apiKey: "personal-openai-key",
+      baseURL: "https://gateway.ai.cloudflare.com/v1/account-1/gateway-1/openai",
+    })
   })
 })

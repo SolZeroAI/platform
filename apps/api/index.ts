@@ -20,13 +20,16 @@ import {
   IsolateSessionAgent,
   IsolateSubAgent,
   makeCloudflareContext,
+  normalizeCloudflareAiGatewayResponse,
   createApiRequestObserver,
+  decryptCloudflareAiGatewayByokProxyCredential,
   withApiSurfaceSpan,
   DynamicUserWorkflow,
   DynamicWorkflowBinding,
   handleGitHubAppWebhookRequest,
   handleWorkflowPublicRequest,
   isMcpPath,
+  requestWithCloudflareProviderNativeCredential,
   requestWithSharedProviderCredential,
   resolveSharedProviderCredential,
   resolveSharedProviderApiKey,
@@ -117,7 +120,7 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
         // oxlint-disable-next-line effect/avoid-native-fetch -- Non-AI Cloudflare API traffic must pass through without receiving the scoped AI Gateway credential.
         return fetch(request)
       },
-      onSome: ({ headers }) =>
+      onSome: ({ kind, headers }) =>
         Option.match(apiKeyOption, {
           onNone: () =>
             Response.json(
@@ -125,12 +128,25 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
               { status: 502 },
             ),
           onSome: async (apiKey) => {
+            const providerApiKey =
+              kind === "cloudflare-provider-native"
+                ? await Effect.runPromise(
+                    decryptCloudflareAiGatewayByokProxyCredential(
+                      request,
+                      env.TOKEN_ENCRYPTION_KEY,
+                    ),
+                  )
+                : Option.none<string>()
+            const authenticatedRequest =
+              kind === "cloudflare-provider-native"
+                ? requestWithCloudflareProviderNativeCredential(request, apiKey, providerApiKey)
+                : requestWithSharedProviderCredential(request, apiKey, headers)
             // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
-            const response = await fetch(
-              requestWithSharedProviderCredential(request, apiKey, headers),
-            )
+            const response = await fetch(authenticatedRequest)
             log.set({ upstreamStatus: response.status })
-            return response
+            return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
+              ? normalizeCloudflareAiGatewayResponse(response)
+              : response
           },
         }),
     })

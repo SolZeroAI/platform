@@ -116,6 +116,7 @@ export function AdminContent({
     runDetail,
     saveAiSearchSource,
     saveLitellmConfig,
+    saveCloudflareAiGatewayProviderKeys,
     saveMcpcfConfig,
     selectWorkflowRun,
     sessionDetail,
@@ -241,6 +242,7 @@ export function AdminContent({
                   loading={loading}
                   busy={actionBusy}
                   onSave={saveLitellmConfig}
+                  onSaveCloudflareKeys={saveCloudflareAiGatewayProviderKeys}
                   onSync={() => void syncLitellmModels()}
                   onReset={resetLitellmConfig}
                   onExport={exportLitellmConfig}

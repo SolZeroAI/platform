@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { loadS0ConfigFile } from "../../packages/infra/src/stacks/runtime"
 import {
   s0ActiveSecretReferences,
+  s0RuntimeSecretReferences,
   s0ConfigFileNameForStage,
   s0ConfigPathForStage,
   s0ConfigStageForStage,
@@ -51,8 +52,9 @@ describe("canonical s0 configuration", () => {
     expect(config.aiProviders.cloudflareAiGateway.enabled).toBe(true)
     expect(config.aiProviders.cloudflareAiGateway.collectLogs).toBe(true)
     expect(config.aiProviders.cloudflareAiGateway.cacheTtl).toBeNull()
-    expect(config.aiProviders.cloudflareAiGateway.defaultModel).toBe("openai/gpt-5.6-luna")
+    expect(config.aiProviders.cloudflareAiGateway.defaultModel).toBe("@cf/openai/gpt-oss-120b")
     expect(Object.keys(config.aiProviders.cloudflareAiGateway.models)).toEqual([
+      "@cf/openai/gpt-oss-120b",
       "openai/gpt-5.6-luna",
       "openai/gpt-5.6-sol",
       "anthropic/claude-opus-5",
@@ -74,6 +76,19 @@ describe("canonical s0 configuration", () => {
     expect(() => resolveS0Config(config)).toThrow(
       "aiProviders.cloudflareAiGateway.defaultModel '@cf/example/missing' is not in models",
     )
+  })
+
+  it("keeps deployment BYOK keys in Secrets Store instead of Worker secret bindings", () => {
+    const source = loadExampleConfigSource()
+    source.aiProviders.cloudflareAiGateway.providerKeys.openai = {
+      env: "S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY",
+    }
+    const config = resolveS0Config(source)
+    const activeSecrets = s0ActiveSecretReferences(config).map((reference) => reference.env)
+    const runtimeSecrets = s0RuntimeSecretReferences(config).map((reference) => reference.env)
+
+    expect(activeSecrets).toContain("S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY")
+    expect(runtimeSecrets).not.toContain("S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY")
   })
 
   it("requires an admin password only when credential sign-in is enabled", () => {

@@ -11,6 +11,7 @@ import type * as Schema from "effect/Schema"
 import {
   MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH,
   s0RuntimeSecretReferences,
+  type CloudflareAiGatewayByokProvider,
   type S0AuthConfig,
   type S0CloudflareAiGatewayConfig,
   type S0LitellmConfig,
@@ -56,6 +57,9 @@ export interface ApiInfraEnv {
   readonly S0_CONFIG_MCPCF?: S0McpcfConfig
   readonly S0_DEPLOYMENT_CONFIG_DIGEST: string
   readonly configSecretBindings: Readonly<Record<string, ApiSecretInput>>
+  readonly cloudflareAiGatewayProviderKeySecrets: Readonly<
+    Partial<Record<CloudflareAiGatewayByokProvider, ApiSecretInput>>
+  >
   readonly MCPCF_PROXY_SIGNING_SECRET: ApiSecretInput
   readonly TOKEN_ENCRYPTION_KEY: ApiSecretInput
   readonly REPO_SECRETS_ENCRYPTION_KEY: ApiSecretInput
@@ -132,6 +136,11 @@ export function getApiInfraEnv(
       secretValue(secretBindings, reference),
     ]),
   )
+  const cloudflareAiGatewayProviderKeySecrets = Object.fromEntries(
+    Object.entries(config.aiProviders.cloudflareAiGateway.providerKeys ?? {}).map(
+      ([providerId, reference]) => [providerId, secretValue(secretBindings, reference)],
+    ),
+  )
   return {
     S0_PROVIDER_LAYER: "live",
     S0_CONFIG_ADMIN: config.admins,
@@ -141,6 +150,7 @@ export function getApiInfraEnv(
     ...(config.mcpcf ? { S0_CONFIG_MCPCF: config.mcpcf } : {}),
     S0_DEPLOYMENT_CONFIG_DIGEST: deploymentConfigDigest,
     configSecretBindings,
+    cloudflareAiGatewayProviderKeySecrets,
     MCPCF_PROXY_SIGNING_SECRET: mcpcfProxySigningSecret,
     TOKEN_ENCRYPTION_KEY: secretValue(secretBindings, config.security.tokenEncryptionKey),
     REPO_SECRETS_ENCRYPTION_KEY: secretValue(
@@ -186,6 +196,7 @@ export interface ApiAiGatewayBinding {
   readonly resource: Cloudflare.AI.Gateway | Cloudflare.AIBinding
   readonly gatewayId: string | Output.Output<string>
   readonly runToken: ApiSecretInput
+  readonly secretsStoreId: string | Output.Output<string>
 }
 
 interface CreateApiBindingsOptions {
@@ -330,6 +341,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
       ? {
           AI_GATEWAY: aiGateway.resource,
           AI_GATEWAY_ID: aiGateway.gatewayId,
+          AI_GATEWAY_SECRETS_STORE_ID: aiGateway.secretsStoreId,
         }
       : {}),
 

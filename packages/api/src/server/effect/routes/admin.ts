@@ -31,6 +31,7 @@ import {
   unarchiveSession,
   unarchiveWorkflow,
   updateLitellmProvider,
+  updateCloudflareAiGatewayProviderKeys,
   updateAiSearchSource,
   updateAgentSkill,
   updateMcpcfConfig,
@@ -102,6 +103,13 @@ export const HttpAdminLive = HttpApiBuilder.group(S0Api, "admin", (handlers) =>
     )
     .handle("updateLitellmProvider", (input) =>
       observeRoute("admin", "updateLitellmProvider", updateLitellmProvider(input)),
+    )
+    .handle("updateCloudflareAiGatewayProviderKeys", (input) =>
+      observeRoute(
+        "admin",
+        "updateCloudflareAiGatewayProviderKeys",
+        updateCloudflareAiGatewayProviderKeys(input),
+      ),
     )
     .handle("resetLitellmProvider", () =>
       observeRoute("admin", "resetLitellmProvider", resetLitellmProvider()),

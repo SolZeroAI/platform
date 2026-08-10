@@ -351,6 +351,65 @@
                 "required": ["name"],
                 "additionalProperties": false
               }
+            },
+            "providerKeys": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "openai": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": false
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "anthropic": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": false
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "xai": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": false
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                { "type": "null" }
+              ]
             }
           },
           "required": ["enabled", "cacheTtl", "collectLogs", "defaultModel", "models"],

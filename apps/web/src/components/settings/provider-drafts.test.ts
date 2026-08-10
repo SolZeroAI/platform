@@ -42,7 +42,7 @@ describe("provider settings drafts", () => {
     ).toBe(true)
   })
 
-  it("does not offer personal API key overrides for binding-backed providers", () => {
+  it("offers vendor-specific personal BYOK slots for Cloudflare AI Gateway", () => {
     const drafts = buildSharedProviderDrafts(
       [
         {
@@ -55,6 +55,10 @@ describe("provider settings drafts", () => {
       [],
     )
 
-    expect(drafts).toEqual([])
+    expect(drafts.map((draft) => draft.providerId)).toEqual([
+      "cloudflare-ai-gateway-byok-openai",
+      "cloudflare-ai-gateway-byok-anthropic",
+      "cloudflare-ai-gateway-byok-xai",
+    ])
   })
 })

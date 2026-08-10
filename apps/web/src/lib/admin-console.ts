@@ -5,6 +5,7 @@ import type {
   AdminAiSearchExportResponse,
   AdminAiSearchResponse,
   AdminAiSearchSourcePayload,
+  AdminCloudflareAiGatewayProviderKeysPayload,
   AdminLitellmConfigPayload,
   AdminLitellmExportResponse,
   AdminLitellmSyncResponse,
@@ -381,6 +382,24 @@ export function useAdminConsole({
     [runAction],
   )
 
+  const saveCloudflareAiGatewayProviderKeys = useCallback(
+    async (payload: AdminCloudflareAiGatewayProviderKeysPayload) => {
+      return await runAction("cloudflare-ai-gateway-keys-save", async () => {
+        const next = await requestJson<AdminAiProvidersResponse>(
+          "/api/admin/ai-providers/cloudflare-ai-gateway/keys",
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        )
+        setAiProviders(next)
+        setNotice("Cloudflare AI Gateway provider keys saved.")
+      })
+    },
+    [runAction],
+  )
+
   const saveAiSearchSource = useCallback(
     async (payload: AdminAiSearchSourcePayload, mode: "create" | "update") => {
       return await runAction(`ai-search-source-${mode}-${payload.id}`, async () => {
@@ -645,6 +664,7 @@ export function useAdminConsole({
     workflowTableState,
     updateSearch,
     saveLitellmConfig,
+    saveCloudflareAiGatewayProviderKeys,
     syncLitellmModels,
     resetLitellmConfig,
     exportLitellmConfig,

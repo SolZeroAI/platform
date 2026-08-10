@@ -2,6 +2,7 @@
 
 import type {
   AdminAiProvidersResponse,
+  AdminCloudflareAiGatewayProviderKeysPayload,
   AdminLitellmConfigPayload,
   AdminLitellmModel,
 } from "@solzero/api"
@@ -154,6 +155,7 @@ export function AdminAiProviderPanel({
   loading,
   busy,
   onSave,
+  onSaveCloudflareKeys,
   onSync,
   onReset,
   onExport,
@@ -163,6 +165,7 @@ export function AdminAiProviderPanel({
   loading: boolean
   busy: string | null
   onSave: (payload: AdminLitellmConfigPayload) => Promise<boolean>
+  onSaveCloudflareKeys: (payload: AdminCloudflareAiGatewayProviderKeysPayload) => Promise<boolean>
   onSync: () => void
   onReset: () => Promise<boolean>
   onExport: () => Promise<string | null>
@@ -813,7 +816,11 @@ export function AdminAiProviderPanel({
               </div>
             </section>
 
-            <AdminCloudflareAiGatewayPanel data={data?.cloudflareAiGateway} />
+            <AdminCloudflareAiGatewayPanel
+              data={data?.cloudflareAiGateway}
+              saving={busy === "cloudflare-ai-gateway-keys-save"}
+              onSave={onSaveCloudflareKeys}
+            />
           </div>
 
           <TableOfContents className="hidden xl:sticky xl:top-4 xl:block xl:self-start xl:pl-6">

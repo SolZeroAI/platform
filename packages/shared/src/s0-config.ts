@@ -68,6 +68,13 @@ export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
   collectLogs: Schema.Boolean,
   defaultModel: Schema.String,
   models: Schema.Record(Schema.String, ProviderModelDefinitionSchema),
+  providerKeys: Schema.optional(
+    Schema.Struct({
+      openai: Schema.optional(SecretReferenceSchema),
+      anthropic: Schema.optional(SecretReferenceSchema),
+      xai: Schema.optional(SecretReferenceSchema),
+    }),
+  ),
 })
 export type S0CloudflareAiGatewayConfig = typeof S0CloudflareAiGatewayConfigSchema.Type
 
@@ -494,8 +501,12 @@ export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretRefer
 
 export function s0ActiveSecretReferences(config: S0ResolvedConfig): SecretReference[] {
   const githubApp = config.integrations.githubApp
+  const cloudflareAiGatewayProviderKeys = config.aiProviders.cloudflareAiGateway.enabled
+    ? Object.values(config.aiProviders.cloudflareAiGateway.providerKeys ?? {})
+    : []
   return [
     ...s0RuntimeSecretReferences(config),
+    ...cloudflareAiGatewayProviderKeys,
     ...(githubApp.enabled
       ? [
           githubApp.clientSecret,
