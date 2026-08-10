@@ -435,7 +435,6 @@ function compileOpenCodeProviderModel(
 
   return {
     name: model.name,
-    description: model.description,
     options: model.options,
     limit: model.limit,
     provider: model.provider,

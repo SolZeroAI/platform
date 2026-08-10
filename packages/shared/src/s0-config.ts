@@ -220,7 +220,6 @@ function normalizeCloudflareAiGatewayConfig(
     models[modelId] = {
       ...model,
       name: model.name.trim(),
-      ...(model.description === undefined ? {} : { description: model.description.trim() }),
     }
   }
 

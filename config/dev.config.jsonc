@@ -100,31 +100,26 @@
       "models": {
         "@cf/openai/gpt-oss-120b": {
           "name": "GPT OSS 120B Starter",
-          "description": "Cloudflare Workers AI model eligible for the daily free allocation",
           "provider": { "api": "responses" },
           "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
         },
         "openai/gpt-5.6-luna": {
           "name": "GPT 5.6 Luna",
-          "description": "Cost-sensitive GPT 5.6 model for coding and agentic work",
           "provider": { "npm": "@ai-sdk/openai", "api": "responses" },
           "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
         },
         "openai/gpt-5.6-sol": {
           "name": "GPT 5.6 Sol",
-          "description": "Frontier GPT 5.6 model for complex professional work",
           "provider": { "npm": "@ai-sdk/openai", "api": "responses" },
           "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
         },
         "anthropic/claude-opus-5": {
           "name": "Claude Opus 5",
-          "description": "Anthropic model for complex agentic coding and enterprise work",
           "provider": { "npm": "@ai-sdk/anthropic", "api": "messages" },
           "reasoning": { "efforts": ["medium", "high", "max"], "default": "medium" },
         },
         "xai/grok-4.5": {
           "name": "Grok 4.5",
-          "description": "xAI model for coding, agentic tasks, and knowledge work",
           "provider": { "npm": "@ai-sdk/openai-compatible", "api": "chat_completions" },
           "reasoning": { "efforts": ["low", "medium", "high"], "default": "medium" },
         },

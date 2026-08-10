@@ -37,7 +37,6 @@ export const MODEL_REASONING_CONFIG: Partial<Record<string, ModelReasoningConfig
 export interface ModelDisplayInfo {
   id: string
   name: string
-  description: string
 }
 
 export interface ModelCategory {
@@ -54,7 +53,6 @@ export const MODEL_OPTIONS: ModelCategory[] = buildRuntimeModelOptions(SHARED_PR
     models: group.models.map((model) => ({
       id: model.id,
       name: model.name,
-      description: model.description,
     })),
   }),
 )

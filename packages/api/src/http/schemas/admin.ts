@@ -486,7 +486,6 @@ export class AdminCloudflareAiGatewayModel extends Schema.Class<AdminCloudflareA
 )({
   id: Schema.String,
   name: Schema.String,
-  description: Schema.String,
   reasoningEfforts: Schema.Array(Schema.String),
   defaultReasoningEffort: Schema.NullOr(Schema.String),
 }) {}

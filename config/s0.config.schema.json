@@ -255,7 +255,6 @@
                 "type": "object",
                 "properties": {
                   "name": { "type": "string" },
-                  "description": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
                   "options": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
                   "limit": {
                     "anyOf": [

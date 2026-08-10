@@ -463,7 +463,6 @@ function buildModelDefinition(model: LitellmModelRecord): LitellmModelDefinition
       : undefined
   return {
     name: model.id,
-    description: model.provider ? `${model.provider} via LiteLLM` : "LiteLLM model",
     ...(options && { options }),
     ...(limit && { limit }),
     ...(reasoning && { reasoning }),

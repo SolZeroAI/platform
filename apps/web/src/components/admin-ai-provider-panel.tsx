@@ -970,7 +970,6 @@ function buildLitellmDialogModelOptions(
       providerName: group.category,
       modelId: model.id,
       name: model.id,
-      description: model.provider ? `${model.provider} via LiteLLM` : "LiteLLM model",
       ...(reasoning ? { reasoning } : {}),
     })
   }

@@ -89,7 +89,6 @@ const formatCloudflareAiGateway = Effect.fn("admin.formatCloudflareAiGateway")(f
           {
             id,
             name: model.name,
-            description: model.description ?? "",
             reasoningEfforts: [...(model.reasoning?.efforts ?? [])],
             defaultReasoningEffort: model.reasoning?.default ?? null,
           },

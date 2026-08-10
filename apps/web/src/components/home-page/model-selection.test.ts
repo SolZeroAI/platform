@@ -15,7 +15,6 @@ const catalog: Pick<RuntimeProviderCatalog, "defaultModel" | "modelOptions"> = {
           providerName: "OpenAI",
           modelId: "gpt-5.5",
           name: "gpt-5.5",
-          description: "",
         },
       ],
     },
