@@ -1,6 +1,6 @@
-# Contributing to c0
+# Contributing to SolZero
 
-Thank you for helping improve c0. Contributions from organizations and individual users are welcome.
+Thank you for helping improve SolZero. Contributions from organizations and individual users are welcome.
 
 ## Before you start
 
@@ -12,7 +12,7 @@ Thank you for helping improve c0. Contributions from organizations and individua
 
 ## Development setup
 
-c0 requires Node.js 24.15 and Nub 0.4.11. Follow the complete onboarding instructions in the
+SolZero requires Node.js 24.15 and Nub 0.4.11. Follow the complete onboarding instructions in the
 [README](README.md#getting-started), then install dependencies from the repository root:
 
 ```sh

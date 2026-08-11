@@ -1,6 +1,6 @@
 import { Workspace, WorkspaceFileSystem } from "@cloudflare/shell"
 import { createGit } from "@cloudflare/shell/git"
-import { getGitHubRepoTool } from "@c0-agent/shared"
+import { getGitHubRepoTool } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { errorMessageOr } from "../../../lib/effect-errors"
@@ -51,7 +51,7 @@ function runRepositoryWorkspacePreparation(input: {
   return Effect.gen(function* () {
     const filesystem = new WorkspaceFileSystem(input.workspace)
     const git = createGit(filesystem, REPO_ROOT)
-    const branchName = input.state.branchName?.trim() || `c0-agent/${input.state.sessionId}`
+    const branchName = input.state.branchName?.trim() || `s0-agent/${input.state.sessionId}`
     const baseBranch = Option.getOrUndefined(
       getCloneBaseBranch({
         repoDefaultBranch: input.state.repoDefaultBranch,

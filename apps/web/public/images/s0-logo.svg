@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="150" height="150" role="img" aria-labelledby="s0-logo">
+  <title id="s0-logo">s0 logo</title>
+  <path
+    d="M57.81 48.97
+       A28.3 28.3 0 1 0 75 75
+       A28.3 28.3 0 0 1 131.6 75
+       A28.3 28.3 0 0 1 75 75"
+    fill="none"
+    stroke="#fff"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+</svg>

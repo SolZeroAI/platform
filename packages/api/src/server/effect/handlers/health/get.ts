@@ -6,9 +6,9 @@ export function get() {
     Effect.succeed(
       json({
         status: "healthy",
-        service: "c0-agent-control-plane",
+        service: "s0-agent-control-plane",
         version: env.APP_VERSION || "v0.0.0-unknown",
-        configDigest: env.C0_DEPLOYMENT_CONFIG_DIGEST,
+        configDigest: env.S0_DEPLOYMENT_CONFIG_DIGEST,
       }),
     ),
   )

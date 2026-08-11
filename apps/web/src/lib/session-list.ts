@@ -7,7 +7,7 @@ import {
   type SessionStatus,
   type SessionToolSpec,
   type UnavailableSessionTool,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { isInactiveSession } from "@/lib/time"
 
 export interface SessionItem {

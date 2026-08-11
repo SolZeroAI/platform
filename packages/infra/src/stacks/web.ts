@@ -1,18 +1,18 @@
 import * as Alchemy from "alchemy"
 import * as Effect from "effect/Effect"
-import { createC0Web } from "../c0"
+import { createS0Web } from "../s0"
 import { stackOptions, type StackOptionsInput } from "../stack"
-import { c0StackRuntime } from "./runtime"
+import { s0StackRuntime } from "./runtime"
 
-export type C0WebStackOutput = Effect.Success<ReturnType<typeof createC0Web>>
-type C0WebStackServices = Effect.Services<typeof C0WebProgram>
+export type S0WebStackOutput = Effect.Success<ReturnType<typeof createS0Web>>
+type S0WebStackServices = Effect.Services<typeof S0WebProgram>
 
-export class C0Web extends Alchemy.Stack<C0Web, C0WebStackOutput>()("C0Web") {}
+export class S0Web extends Alchemy.Stack<S0Web, S0WebStackOutput>()("S0Web") {}
 
 // oxlint-disable-next-line effect/prefer-effect-fn -- Alchemy Stack.make expects an Effect value; Effect.fn changes inference here.
-export const C0WebProgram = Effect.gen(function* () {
-  const runtime = yield* c0StackRuntime()
-  return yield* createC0Web({
+export const S0WebProgram = Effect.gen(function* () {
+  const runtime = yield* s0StackRuntime()
+  return yield* createS0Web({
     appName: runtime.appName,
     deploymentMetadata: runtime.deploymentMetadata,
     dev: runtime.dev,
@@ -21,8 +21,8 @@ export const C0WebProgram = Effect.gen(function* () {
   })
 })
 
-export function makeC0WebStack(input: StackOptionsInput = {}) {
-  return C0Web.make(stackOptions<C0WebStackServices>(input), C0WebProgram)
+export function makeS0WebStack(input: StackOptionsInput = {}) {
+  return S0Web.make(stackOptions<S0WebStackServices>(input), S0WebProgram)
 }
 
-export default makeC0WebStack()
+export default makeS0WebStack()

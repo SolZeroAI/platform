@@ -18,7 +18,6 @@ export const ModelProviderOverride = Schema.Struct({
 
 export const ProviderModelDefinition = Schema.Struct({
   name: Schema.String,
-  description: Schema.optionalKey(Schema.String),
   options: Schema.optionalKey(JsonRecord),
   limit: Schema.optionalKey(ProviderModelLimit),
   reasoning: Schema.optionalKey(ModelReasoningConfig),
@@ -61,8 +60,8 @@ export const RuntimeModelOption = Schema.Struct({
   providerName: Schema.String,
   modelId: Schema.String,
   name: Schema.String,
-  description: Schema.String,
   reasoning: Schema.optionalKey(ModelReasoningConfig),
+  providerApi: Schema.optionalKey(Schema.String),
 })
 
 export const RuntimeModelGroup = Schema.Struct({
@@ -79,7 +78,13 @@ export const RuntimeProvider = Schema.Struct({
   source: Schema.Literals(["shared", "custom"]),
   hasApiKey: Schema.Boolean,
   globalCredentialConfigured: Schema.Boolean,
-  credentialSource: Schema.Literals(["shared", "user_override", "user_custom", "missing"]),
+  credentialSource: Schema.Literals([
+    "binding",
+    "shared",
+    "user_override",
+    "user_custom",
+    "missing",
+  ]),
   models: Schema.Array(RuntimeModelOption),
 })
 

@@ -14,7 +14,7 @@ import type {
   McpcfConfigRecord,
   McpcfServerRecord,
 } from "../../../packages/api/src/server/background/db/mcpcf"
-import { C0_CONFIG_KEYS } from "../../../packages/api/src/server/background/db/c0-config"
+import { S0_CONFIG_KEYS } from "../../../packages/api/src/server/background/db/s0-config"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -303,9 +303,9 @@ export function createResolverStore() {
   const sqlite = new DatabaseSync(":memory:")
   applyMigrations(sqlite)
   const db = new SqliteD1Database(sqlite)
-  const c0Config = new MemoryKVNamespace()
-  kvBySqlite.set(sqlite, c0Config)
-  return { sqlite, db, c0Config }
+  const s0Config = new MemoryKVNamespace()
+  kvBySqlite.set(sqlite, s0Config)
+  return { sqlite, db, s0Config }
 }
 
 export function seedSession(sqlite: DatabaseSync, input: { sessionId: string; serverId: string }) {
@@ -348,8 +348,8 @@ export function seedMcpcfConfig(sqlite: DatabaseSync) {
       1,
       1,
     )
-  const c0Config = kvBySqlite.get(sqlite)
-  c0Config?.values.set(C0_CONFIG_KEYS.mcpcf.config, JSON.stringify(config))
+  const s0Config = kvBySqlite.get(sqlite)
+  s0Config?.values.set(S0_CONFIG_KEYS.mcpcf.config, JSON.stringify(config))
 }
 
 export function seedMcpcfServer(
@@ -387,8 +387,8 @@ export function seedMcpcfServer(
       1,
       1,
     )
-  const c0Config = kvBySqlite.get(sqlite)
-  if (c0Config) {
+  const s0Config = kvBySqlite.get(sqlite)
+  if (s0Config) {
     const server = {
       ...grafana,
       id: input.id,
@@ -399,12 +399,12 @@ export function seedMcpcfServer(
       tools: [{ name: "list_runbooks" }],
       rawMetadata: input.rawMetadata ?? {},
     } satisfies McpcfServerRecord
-    c0Config.values.set(C0_CONFIG_KEYS.mcpcf.server(input.id), JSON.stringify(server))
+    s0Config.values.set(S0_CONFIG_KEYS.mcpcf.server(input.id), JSON.stringify(server))
     const currentIndex = JSON.parse(
-      c0Config.values.get(C0_CONFIG_KEYS.mcpcf.serverIndex) ?? "[]",
+      s0Config.values.get(S0_CONFIG_KEYS.mcpcf.serverIndex) ?? "[]",
     ) as string[]
-    c0Config.values.set(
-      C0_CONFIG_KEYS.mcpcf.serverIndex,
+    s0Config.values.set(
+      S0_CONFIG_KEYS.mcpcf.serverIndex,
       JSON.stringify([...new Set([...currentIndex, input.id])].sort()),
     )
   }
@@ -434,7 +434,7 @@ export function seedOktaAccount(sqlite: DatabaseSync) {
 }
 
 export function createResolverRequest(serverId: string) {
-  return new Request("https://api.c0.example.com/integrations/mcpcf/mcp", {
+  return new Request("https://api.s0.example.com/integrations/mcpcf/mcp", {
     headers: {
       [MCPCF_SERVER_HEADER]: serverId,
     },

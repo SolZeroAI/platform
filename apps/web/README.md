@@ -1,12 +1,12 @@
-# c0 Web Client
+# SolZero Web Client
 
-The c0 web client is the shared interface for agents, Workflows, organizational context, and
+The SolZero web client is the shared interface for agents, Workflows, organizational context, and
 administration. It is a TanStack Start and Kumo application deployed to Cloudflare Workers through
 Alchemy v2.
 
 ## Features
 
-- c0 Agent sessions on the fast, Worker-native Isolate harness.
+- SolZero Agent sessions on the fast, Worker-native Isolate harness.
 - Sandboxed OpenCode, Codex, and Claude Code sessions for deeper work.
 - Durable deterministic and agentic Workflows, including approvals, session reuse, and response
   caching.
@@ -42,8 +42,8 @@ through Alchemy.
 integrations. These may include:
 
 - `BETTER_AUTH_SECRET` (optional; Alchemy generates it when absent)
-- `C0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD` (optional; Alchemy generates it when absent)
-- `C0_CONFIG_SECRETS_AUTH_PROVIDERS_<PROVIDER_ID>_CLIENT_SECRET` for each enabled external provider
+- `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD` (optional; Alchemy generates it when absent)
+- `S0_CONFIG_SECRETS_AUTH_PROVIDERS_<PROVIDER_ID>_CLIENT_SECRET` for each enabled external provider
 - `GITHUB_APP_CLIENT_SECRET`
 - `GITHUB_APP_PRIVATE_KEY`
 - `GITHUB_APP_WEBHOOK_SECRET`
@@ -52,7 +52,7 @@ integrations. These may include:
 Run `nub run config:check` after changing JSONC. Retrieve the Alchemy-generated admin password for
 local development with `nub run auth:admin-password -- dev --local`, or for a deployed stage with
 `nub run auth:admin-password -- <stage>`. Change the password by setting the
-environment variable named by `auth.adminPassword.env` and restarting or redeploying the stack; c0
+environment variable named by `auth.adminPassword.env` and restarting or redeploying the stack; SolZero
 updates the Better Auth hash and revokes existing managed-credential sessions. MCP Context Forge
 may separately use a linked provider configured for its OAuth integration.
 
@@ -68,6 +68,22 @@ Alchemy compiles the browser-safe subset of the selected stage config into expli
 the web build. The web app does not parse JSONC at runtime and never receives server secrets or the
 full server configuration. Authentication providers are configured in the API worker, not in the
 TanStack app.
+
+### Brand Configuration
+
+The browser defaults to the SolZero name and supplied SolZero assets. Override them at build time
+with these public browser values:
+
+- `VITE_S0_BRAND_NAME`
+- `VITE_S0_BRAND_LOGO_PATH` (one logo path for both themes)
+- `VITE_S0_BRAND_LOGO_LIGHT_PATH`
+- `VITE_S0_BRAND_LOGO_DARK_PATH`
+- `VITE_S0_BRAND_FAVICON_PATH`
+- `VITE_S0_BRAND_APPLE_TOUCH_ICON_PATH`
+
+Use a public URL or a path to a file copied under `apps/web/public`, such as
+`/images/custom-logo.svg`. The shared logo override takes precedence over the theme-specific
+values. These values are intentionally browser-visible and must not contain secrets.
 
 ### Local Run
 
@@ -110,9 +126,9 @@ For headless or script usage, the `BackgroundSessionsClient` is available:
 ```ts
 import { BackgroundSessionsClient } from "./src/session-client"
 
-const apiKey = process.env.C0_API_KEY
+const apiKey = process.env.S0_API_KEY
 if (!apiKey) {
-  throw new Error("C0_API_KEY is required")
+  throw new Error("S0_API_KEY is required")
 }
 
 const client = new BackgroundSessionsClient({

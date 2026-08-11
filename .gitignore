@@ -22,6 +22,11 @@ node_modules/
 .pre.vars
 .prod.vars
 
+# Local deployment config profiles
+config/s0-dev.config.jsonc
+config/s0-pre.config.jsonc
+config/s0-prod.config.jsonc
+
 # misc
 .DS_Store
 

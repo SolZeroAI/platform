@@ -25,7 +25,7 @@ import {
   type WorkflowManifestNode,
   type WorkflowNodeDefinition,
   type WorkflowPortDefinition,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { filterSecretsByTags, SecretTagFilter } from "@/components/secret-selector"
 import { useSecrets } from "@/hooks/use-secrets"
 import { copyToClipboard } from "@/lib/format"

@@ -12,14 +12,14 @@ describe("Isolate sub-agent trusted configuration", () => {
       },
       parentSessionId: "session-1",
       userId: "user with spaces",
-      repoOwner: "Consensys",
+      repoOwner: "SolZero",
       repoName: "ai",
       model: "test/provider-model",
       reasoningEffort: "high",
       stepLimit: 8,
       selectedTools: [
         { kind: "workflow_builder" },
-        { kind: "github_repo", repoOwner: "Consensys", repoName: "ai" },
+        { kind: "github_repo", repoOwner: "SolZero", repoName: "ai" },
       ],
       customMcpServers: {
         observability: {

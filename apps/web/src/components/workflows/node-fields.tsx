@@ -4,7 +4,7 @@ import { Label } from "@cloudflare/kumo/components/label"
 import { Select } from "@cloudflare/kumo/components/select"
 import { ChevronDown, ChevronRight, Copy, KeyRound, Plus, Trash2 } from "lucide-react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { type RuntimeModelCategory, validateWorkflowJsonObjectFieldName } from "@c0-agent/shared"
+import { type RuntimeModelCategory, validateWorkflowJsonObjectFieldName } from "@solzero/shared"
 import {
   AiProviderLoadingButton,
   AiProviderRequiredButton,

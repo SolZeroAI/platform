@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { RuntimeProviderCatalog } from "@c0-agent/shared"
+import type { RuntimeProviderCatalog } from "@solzero/shared"
 import { getDefaultVisibleModel } from "./model-selection"
 
 const catalog: Pick<RuntimeProviderCatalog, "defaultModel" | "modelOptions"> = {
@@ -15,7 +15,6 @@ const catalog: Pick<RuntimeProviderCatalog, "defaultModel" | "modelOptions"> = {
           providerName: "OpenAI",
           modelId: "gpt-5.5",
           name: "gpt-5.5",
-          description: "",
         },
       ],
     },

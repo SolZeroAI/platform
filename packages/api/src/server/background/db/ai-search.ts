@@ -1,17 +1,17 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary, c0-lint/prefer-option-over-null, c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/no-branch-in-object -- AI Search registry is a low-level C0_CONFIG and Cloudflare namespace boundary with compact JSON decoders and request builders. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/prefer-option-over-null, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-branch-in-object -- AI Search registry is a low-level S0_CONFIG and Cloudflare namespace boundary with compact JSON decoders and request builders. */
 import {
   AI_SEARCH_SESSION_TOOL_KIND,
   getSelectedAiSearchSourceIds,
   normalizeAiSearchSourceId,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { describeError, toError } from "../../lib/effect-errors"
 import type { Env } from "../types"
-import { C0_CONFIG_KEYS, C0ConfigStore } from "./c0-config"
+import { S0_CONFIG_KEYS, S0ConfigStore } from "./s0-config"
 
 export const DEFAULT_AI_SEARCH_MAX_RESULTS = 5
 
@@ -384,10 +384,10 @@ function sourcePresenceOption(
 }
 
 export class AiSearchRegistryStore {
-  readonly c0Config: C0ConfigStore
+  readonly s0Config: S0ConfigStore
 
   constructor(readonly env: Env) {
-    this.c0Config = new C0ConfigStore(env.C0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
+    this.s0Config = new S0ConfigStore(env.S0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
   }
 
   getSourceWithPresence = Effect.fn("db.aiSearch.getSourceWithPresence")(function* (
@@ -395,7 +395,7 @@ export class AiSearchRegistryStore {
     sourceId: string,
   ) {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
-    const value = yield* this.c0Config.getJson(C0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
+    const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
     return Option.flatMap(value, (resolved) =>
       sourcePresenceOption(resolved, {
         recordSource: "kv" as const,
@@ -407,11 +407,11 @@ export class AiSearchRegistryStore {
 
   listSourcesWithPresence = Effect.fn("db.aiSearch.listSourcesWithPresence")(
     function* (this: AiSearchRegistryStore) {
-      const kvKeys = yield* this.c0Config.listKeys(C0_CONFIG_KEYS.aiSearch.sourcePrefix)
+      const kvKeys = yield* this.s0Config.listKeys(S0_CONFIG_KEYS.aiSearch.sourcePrefix)
       const kvSourceOptions = yield* Effect.forEach(
         kvKeys,
         (key) =>
-          this.c0Config.getJson(key).pipe(
+          this.s0Config.getJson(key).pipe(
             Effect.map((value) =>
               Option.flatMap(value, (resolved) =>
                 sourcePresenceOption(resolved, {
@@ -550,7 +550,7 @@ export class AiSearchRegistryStore {
       onSome: (resolved) => Effect.succeed(resolved),
     })
     yield* this.deleteCloudflareInstance(existing.source.id)
-    yield* this.c0Config.delete(C0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
+    yield* this.s0Config.delete(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
   })
 
   listCloudflareInstances = Effect.fn("db.aiSearch.listCloudflareInstances")(
@@ -642,7 +642,7 @@ export class AiSearchRegistryStore {
       ...existingSources.filter((existing) => existing.id !== source.id),
       source,
     ])
-    yield* this.c0Config.putJson(C0_CONFIG_KEYS.aiSearch.source(source.id), source)
+    yield* this.s0Config.putJson(S0_CONFIG_KEYS.aiSearch.source(source.id), source)
   })
 }
 

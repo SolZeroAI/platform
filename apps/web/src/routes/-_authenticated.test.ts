@@ -1,15 +1,15 @@
 import { createElement } from "react"
 import { renderToString } from "react-dom/server"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { PublicAuthProviderRegistry } from "@c0-agent/shared"
+import type { PublicAuthProviderRegistry } from "@solzero/shared"
 import { SignInPage } from "./_authenticated"
 
 vi.mock("@/lib/authenticated-shell.functions", () => ({
   loadAuthenticatedShellForRoute: vi.fn(),
 }))
 
-vi.mock("@/components/c0-animated-icon", () => ({
-  C0AnimatedIcon: () => null,
+vi.mock("@/components/s0-animated-icon", () => ({
+  S0AnimatedIcon: () => null,
 }))
 
 const authProviderConfig: PublicAuthProviderRegistry = {

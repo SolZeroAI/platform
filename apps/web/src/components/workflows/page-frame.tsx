@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Save } from "lucide-react"
-import { getWorkflowNodeDefinitionForNode } from "@c0-agent/shared"
+import { getWorkflowNodeDefinitionForNode } from "@solzero/shared"
 import { PageHeader } from "@/components/page-header"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
 import { SidebarLayout } from "@/components/sidebar-layout"

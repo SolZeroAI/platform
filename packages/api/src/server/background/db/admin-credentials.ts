@@ -1,11 +1,11 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary -- Idempotent D1 reconciliation is an imperative persistence boundary; explicit existence and rotation branches mirror the SQL operations. */
-import { CREDENTIAL_AUTH_PROVIDER_ID, type C0AuthConfig } from "@c0-agent/shared"
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Idempotent D1 reconciliation is an imperative persistence boundary; explicit existence and rotation branches mirror the SQL operations. */
+import { CREDENTIAL_AUTH_PROVIDER_ID, type S0AuthConfig } from "@solzero/shared"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { toError } from "../../lib/effect-errors"
 import { getAdminConfig } from "./admin-config"
-import { C0_CONFIG_BINDINGS, getC0DeploymentConfig, getC0DeploymentSecret } from "./c0-config"
+import { S0_CONFIG_BINDINGS, getS0DeploymentConfig, getS0DeploymentSecret } from "./s0-config"
 import type { Env } from "../types"
 
 interface ManagedAdminCredentialRow {
@@ -36,8 +36,8 @@ function queryableEnv(env: Env): QueryableEnv {
 }
 
 function adminPassword(env: Env): string {
-  return getC0DeploymentConfig<C0AuthConfig>(env, C0_CONFIG_BINDINGS.auth).pipe(
-    Option.flatMap((config) => getC0DeploymentSecret(env, config.adminPassword)),
+  return getS0DeploymentConfig<S0AuthConfig>(env, S0_CONFIG_BINDINGS.auth).pipe(
+    Option.flatMap((config) => getS0DeploymentSecret(env, config.adminPassword)),
     Option.getOrThrowWith(
       () => new Error("auth.adminPassword is required when credential sign-in is enabled"),
     ),

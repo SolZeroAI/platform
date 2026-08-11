@@ -1,4 +1,4 @@
-import { getSelectedMcpcfServerIds, parseStoredSessionTools } from "@c0-agent/shared"
+import { getSelectedMcpcfServerIds, parseStoredSessionTools } from "@solzero/shared"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { CallToolResultSchema, type CallToolResult } from "@modelcontextprotocol/sdk/types.js"
@@ -120,7 +120,7 @@ const withMcpcfClient = <A>(input: {
   Effect.gen(function* () {
     const client = new Client(
       {
-        name: "c0-mcpcf-proxy",
+        name: "s0-mcpcf-proxy",
         version: "1.0.0",
       },
       {

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { c0ConfigPathForStage, c0ConfigStageForStage } from "@c0-agent/shared"
+import { s0ConfigPathForStage, s0ConfigStageForStage } from "@solzero/shared"
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)))
 
@@ -9,8 +9,8 @@ function usage(): string {
   return "Usage: nub run auth:admin-password -- <stage> [--local]"
 }
 
-function stateCommand(stack: "C0" | "C0Api" | "C0Web", stage: string, localArgs: string[]) {
-  const stageTag = c0ConfigStageForStage(stage)
+function stateCommand(stack: "S0" | "S0Api" | "S0Web", stage: string, localArgs: string[]) {
+  const stageTag = s0ConfigStageForStage(stage)
   return execFileSync(
     "nub",
     [
@@ -36,7 +36,7 @@ function stateCommand(stack: "C0" | "C0Api" | "C0Web", stage: string, localArgs:
 }
 
 function tryStateCommand(
-  stack: "C0" | "C0Api" | "C0Web",
+  stack: "S0" | "S0Api" | "S0Web",
   stage: string,
   localArgs: string[],
 ): string | undefined {
@@ -65,13 +65,14 @@ if (!stage || args.some((arg) => arg.startsWith("--") && arg !== "--local")) {
   throw new Error(usage())
 }
 const localArgs = args.includes("--local") ? ["--local"] : []
-const rawState = (["C0", "C0Api", "C0Web"] as const).reduce<string | undefined>(
+const rawState = (["S0", "S0Api", "S0Web"] as const).reduce<string | undefined>(
   (state, stack) => state ?? tryStateCommand(stack, stage, localArgs),
   undefined,
 )
 if (!rawState) {
+  const configProfile = process.env.S0_CONFIG_PROFILE
   throw new Error(
-    `No generated admin password exists for stage '${stage}'. Deploy the stack first, or configure the secret referenced by ${c0ConfigPathForStage(stage)}:auth.adminPassword.`,
+    `No generated admin password exists for stage '${stage}'. Deploy the stack first, or configure the secret referenced by ${s0ConfigPathForStage(stage, configProfile)}:auth.adminPassword.`,
   )
 }
 

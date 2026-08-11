@@ -1,0 +1,22 @@
+{
+  "name": "@solzero/s0-lint",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@oxlint/plugins": "1.66.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.6"
+  }
+}

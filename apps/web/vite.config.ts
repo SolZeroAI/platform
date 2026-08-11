@@ -18,7 +18,7 @@ export default defineConfig(async () => {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
-        "@c0-agent/shared": resolve(__dirname, "../../packages/shared/src/index.ts"),
+        "@solzero/shared": resolve(__dirname, "../../packages/shared/src/index.ts"),
       },
     },
     build: {

@@ -8,7 +8,7 @@ import type {
   SessionToolSpec,
   StoredSessionToolResolution,
   SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import {
   createGitUser,
   generateBranchName,
@@ -29,7 +29,7 @@ import {
   sessionKindForAgentRuntime,
   splitModelId,
   summarizeSubagentRuns,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -348,6 +348,17 @@ function getVisibleModelIds(
   return new Set(catalog.modelOptions.flatMap((group) => group.models.map((model) => model.id)))
 }
 
+function getProviderApiForModel(
+  catalog: Awaited<ReturnType<typeof buildRuntimeProviderCatalog>>,
+  runtimeModelId: string,
+): Option.Option<string> {
+  return Option.fromNullishOr(
+    catalog.modelOptions
+      .flatMap((group) => group.models)
+      .find((model) => model.id === runtimeModelId)?.providerApi,
+  )
+}
+
 const resolveSessionRepo = Effect.fn("controlPlane.resolveSessionRepo")(function* (input: {
   env: ApiEnv
   identity: ResolvedUserIdentity
@@ -408,6 +419,7 @@ const resolveSessionModel = Effect.fn("controlPlane.resolveSessionModel")(functi
   env: ApiEnv,
   userId: string,
   requestedModelInput: string | undefined,
+  agentRuntime: AgentRuntime,
 ) {
   const providerCatalog = yield* Effect.tryPromise(() => buildRuntimeProviderCatalog(env, userId))
   const visibleModelIds = getVisibleModelIds(providerCatalog)
@@ -428,6 +440,11 @@ const resolveSessionModel = Effect.fn("controlPlane.resolveSessionModel")(functi
     visibleModelIds.has(requestedModel),
     `Model '${requestedModel}' is not configured for this user`,
     400,
+  )
+  yield* validateAgentRuntimeModel(
+    agentRuntime,
+    requestedModel,
+    getProviderApiForModel(providerCatalog, requestedModel),
   )
   return requestedModel
 })
@@ -494,8 +511,12 @@ export const createSessionWithIdentity = Effect.fn("controlPlane.createSessionWi
     })
     const sessionKind = sessionKindForAgentRuntime(agentRuntime)
     const resolvedRepoOption = yield* resolveSessionRepo(input)
-    const requestedModel = yield* resolveSessionModel(input.env, input.identity.userId, input.model)
-    yield* validateAgentRuntimeModel(agentRuntime, requestedModel)
+    const requestedModel = yield* resolveSessionModel(
+      input.env,
+      input.identity.userId,
+      input.model,
+      agentRuntime,
+    )
 
     const sessionId = generateId()
     const now = Date.now()
@@ -591,10 +612,14 @@ export const createSessionWithIdentity = Effect.fn("controlPlane.createSessionWi
 const validateAgentRuntimeModel = Effect.fn("controlPlane.validateAgentRuntimeModel")(function* (
   agentRuntime: AgentRuntime,
   requestedModel: string,
+  providerApi: Option.Option<string>,
 ) {
   const { providerId } = splitModelId(requestedModel)
   yield* failUnless(
-    isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId),
+    Option.match(providerApi, {
+      onNone: () => isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId),
+      onSome: (api) => isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId, api),
+    }),
     `Model '${requestedModel}' is not compatible with ${agentRuntime} runtime`,
     400,
   )
@@ -687,7 +712,11 @@ const resolvePromptModel = Effect.fn("controlPlane.resolvePromptModel")(function
     `Model '${requestedModel}' is not configured for this user`,
     400,
   )
-  yield* validateAgentRuntimeModel(agentRuntime ?? "isolate", requestedModel)
+  yield* validateAgentRuntimeModel(
+    agentRuntime ?? "isolate",
+    requestedModel,
+    getProviderApiForModel(providerCatalog, requestedModel),
+  )
   return requestedModel
 })
 
@@ -913,7 +942,7 @@ export const resolveSlackLinkedUserId = Effect.fn("controlPlane.resolveSlackLink
       {
         onSome: (userId) => Effect.succeed(userId),
         onNone: () =>
-          failSetup(env, "Slack user is not linked to a c0 account", 403, { slackUserId }),
+          failSetup(env, "Slack user is not linked to a SolZero account", 403, { slackUserId }),
       },
     )
     return linkedUserId

@@ -5,7 +5,7 @@ import type {
   AdminMcpcfRefreshResponse,
   AdminMcpcfResponse,
   AdminMcpcfServer,
-} from "@c0/api"
+} from "@solzero/api"
 import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown"
@@ -33,7 +33,7 @@ import {
   getPendingAdminSectionHash,
   navigateToAdminSection,
 } from "@/components/admin-ai-provider-panel-ui"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { McpcfResetConfigDialog } from "@/components/admin-mcpcf-reset-config-dialog"
 import { Dialog } from "@/components/ui/dialog"
@@ -551,7 +551,7 @@ export function McpcfAdminPanel({
                           <KumoTable.Cell colSpan={5} className="h-32 text-kumo-subtle">
                             <TableCellState className="h-full">
                               {loading ? (
-                                <C0Loader size={32} />
+                                <S0Loader size={32} />
                               ) : (
                                 "No MCP Context Forge servers discovered."
                               )}

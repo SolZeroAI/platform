@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { SecretsPayload } from "@c0/api"
+import type { SecretsPayload } from "@solzero/api"
 import {
   json,
   requireGlobalSecretsStore,

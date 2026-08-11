@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-switch-statement, c0-lint/no-ternary -- This module is a strict validation/redaction boundary for untrusted model and SDK wire values; direct discriminant guards keep rejected shapes adjacent to the contract. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-switch-statement, s0-lint/no-ternary -- This module is a strict validation/redaction boundary for untrusted model and SDK wire values; direct discriminant guards keep rejected shapes adjacent to the contract. */
 import { jsonSchema, type Tool } from "ai"
 import type {
   AgentToolEventMessage,
@@ -6,7 +6,7 @@ import type {
   AgentToolProgressSnapshot,
   RunAgentToolResult,
 } from "agents"
-import { sanitizeSubagentTaskPreview } from "@c0-agent/shared"
+import { sanitizeSubagentTaskPreview } from "@solzero/shared"
 import type { IsolateSubagentDelegation } from "../subagent"
 
 const TASK_INPUT_LIMIT = 16_000

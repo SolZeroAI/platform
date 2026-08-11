@@ -27,10 +27,10 @@
       "infra/*": [
         "../../packages/infra/src/*"
       ],
-      "@c0-agent/shared": [
+      "@solzero/shared": [
         "../../packages/shared/src/index.ts"
       ],
-      "@c0-agent/shared/*": [
+      "@solzero/shared/*": [
         "../../packages/shared/src/*"
       ]
     }

@@ -1,10 +1,11 @@
-import { getInfraServerUrl } from "@c0-agent/shared"
+import { getInfraServerUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type {
   AdminActionPayload,
   AdminAiSearchSourcePayload,
+  AdminCloudflareAiGatewayProviderKeysPayload,
   AdminIdParams,
   AdminLitellmConfigPayload,
   AdminListQuery,
@@ -12,7 +13,7 @@ import type {
   AdminRunWorkflowPayload,
   AdminWorkflowListQuery,
   AdminWorkflowRunParams,
-} from "@c0/api"
+} from "@solzero/api"
 import {
   AdminStore,
   type AdminSessionRecord,
@@ -33,6 +34,7 @@ import {
   performExportLitellmProvider,
   performResetLitellmProvider,
   performSyncLitellmModels,
+  performUpdateCloudflareAiGatewayProviderKeys,
   performUpdateLitellmProvider,
 } from "./ai-providers"
 import {
@@ -734,6 +736,30 @@ export function updateLitellmProvider({ payload }: { payload: AdminLitellmConfig
           action: "update_config",
         },
         performUpdateLitellmProvider(context, admin, payload),
+      )
+    }),
+  )
+}
+
+export function updateCloudflareAiGatewayProviderKeys({
+  payload,
+}: {
+  payload: AdminCloudflareAiGatewayProviderKeysPayload
+}) {
+  return runControlPlane(
+    Effect.fn("admin.updateCloudflareAiGatewayProviderKeys")(function* (
+      context: ControlPlaneContext,
+    ) {
+      const admin = yield* requireAdmin(context)
+      return yield* withAudit(
+        {
+          context,
+          admin,
+          targetType: "ai_provider",
+          targetId: "cloudflare-ai-gateway",
+          action: "update_provider_keys",
+        },
+        performUpdateCloudflareAiGatewayProviderKeys(context, admin, payload),
       )
     }),
   )

@@ -1,6 +1,6 @@
 import type { ApiEnv } from "infra/types/env"
-import type { IdParams, UpdateSessionToolsPayload } from "@c0/api"
-import type { OpenCodeMcpServers, SessionToolSpec, SubagentMode } from "@c0-agent/shared"
+import type { IdParams, UpdateSessionToolsPayload } from "@solzero/api"
+import type { OpenCodeMcpServers, SessionToolSpec, SubagentMode } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { SessionIndexStore } from "../../../../../background/db/session-index"

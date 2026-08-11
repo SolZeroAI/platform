@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { CreateApiKeyPayload } from "@c0/api"
+import type { CreateApiKeyPayload } from "@solzero/api"
 import { UserApiKeyStore } from "../../../../background/db/user-api-keys"
 import {
   json,

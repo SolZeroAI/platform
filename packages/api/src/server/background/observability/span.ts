@@ -114,7 +114,7 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
   readonly tracing?: CloudflareTracing
   readonly attributes: Record<string, unknown>
   readonly context: Context.Context<R>
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span bridge: A/E/R are intrinsic to running the caller's effect inside Cloudflare's imperative span callback.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span bridge: A/E/R are intrinsic to running the caller's effect inside Cloudflare's imperative span callback.
   readonly effect: Effect.Effect<A, E, R>
   readonly completedAttributes?: (
     exit: Exit.Exit<A, E>,
@@ -125,7 +125,7 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
 }) {
   return Effect.callback<A, E>((resume, signal) => {
     const startedAt = Date.now()
-    // oxlint-disable-next-line c0-lint/prefer-option-over-null -- Mutable interrupt handle assigned by the Effect.runCallbackWith bridge; it is a low-level imperative finalizer.
+    // oxlint-disable-next-line s0-lint/prefer-option-over-null -- Mutable interrupt handle assigned by the Effect.runCallbackWith bridge; it is a low-level imperative finalizer.
     let interrupt: ((interruptor?: number | undefined) => void) | undefined
     const interruptChild = () => {
       interrupt?.()
@@ -183,7 +183,7 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
       },
     )
 
-    // oxlint-disable-next-line c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback -- Effect.callback register returns its interrupt finalizer for Cloudflare span interop.
+    // oxlint-disable-next-line s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Effect.callback register returns its interrupt finalizer for Cloudflare span interop.
     return Effect.sync(() => {
       signal.removeEventListener("abort", interruptChild)
       interruptChild()

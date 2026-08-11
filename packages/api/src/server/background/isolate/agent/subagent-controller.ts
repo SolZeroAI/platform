@@ -22,7 +22,7 @@ import {
   summarizeSubagentRuns,
   type SubagentRunSummary,
   type SubagentSessionEvent,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { describeError } from "../../../lib/effect-errors"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
 import { BackgroundTracing, makeBackgroundTracingLayer } from "../../observability/tracing"

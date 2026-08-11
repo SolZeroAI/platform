@@ -6,7 +6,7 @@ import type {
 } from "agents"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { sanitizeSubagentCompactSummary, type SubagentSessionEvent } from "@c0-agent/shared"
+import { sanitizeSubagentCompactSummary, type SubagentSessionEvent } from "@solzero/shared"
 
 export interface SubagentSessionEventProjectionInput {
   message: AgentToolEventMessage

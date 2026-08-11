@@ -7,7 +7,7 @@ import type {
   SessionToolSpec,
   SubagentMode,
   SubagentRunSummary,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export type {
   ClientMessage,
@@ -17,7 +17,7 @@ export type {
   ServerMessage,
   SessionEvent,
   SessionState,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export interface AiSearchResultContentItem {
   id?: string

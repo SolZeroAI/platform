@@ -1,9 +1,9 @@
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import { createSession, prompt, queuePrompt, run, stop } from "../handlers/slack"
 import { observeRoute } from "../services/observability"
 
-export const HttpSlackLive = HttpApiBuilder.group(C0Api, "slack", (handlers) =>
+export const HttpSlackLive = HttpApiBuilder.group(S0Api, "slack", (handlers) =>
   handlers
     .handle("createSession", (input) =>
       observeRoute("slack", "createSession", createSession(input)),

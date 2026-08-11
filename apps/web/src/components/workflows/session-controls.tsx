@@ -41,7 +41,7 @@ import {
   type WorkflowNodeCategory,
   type WorkflowNodeEditorIcon,
   type WorkflowNodeType,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { HomeGitRepoDialog, HomeSessionToolsDialog } from "@/components/home-session-tools-dialog"
 import { useGitHubRepos } from "@/hooks/use-github-repos"
 import { recessedInputClassName } from "@/lib/recessed-field"

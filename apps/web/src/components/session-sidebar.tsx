@@ -17,7 +17,7 @@ import {
   Sun,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 import {
   ADMIN_SIDEBAR_ITEMS,
   getAdminViewFromLocation,
@@ -33,6 +33,7 @@ import {
   isHomePreviousSessionsHash,
 } from "@/lib/home-route-search"
 import { getAppVersion } from "@/lib/runtime-config"
+import { getS0Brand } from "@/lib/brand"
 import { useTheme } from "@/lib/theme"
 
 interface SessionSidebarProps {
@@ -41,6 +42,7 @@ interface SessionSidebarProps {
 }
 
 export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
+  const brand = getS0Brand()
   const { data: authSession } = useAuthSession()
   const isAdmin = authSession?.isAdmin === true
   const pathname = useLocation({ select: (location) => location.pathname })
@@ -101,8 +103,8 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
   return (
     <aside className="flex h-screen w-72 flex-col overflow-hidden border-r border-kumo-hairline bg-kumo-canvas">
       <div className="flex h-[53px] shrink-0 items-center justify-end border-b border-kumo-hairline px-4">
-        <Link to="/" className="flex h-10 w-10 items-center justify-center" aria-label="c0 Agent">
-          <C0LogoSvg className="shrink-0 text-kumo-default" height={34} width={34} />
+        <Link to="/" className="flex h-10 w-10 items-center justify-center" aria-label={brand.name}>
+          <S0LogoSvg className="shrink-0 text-kumo-default" height={34} width={34} />
         </Link>
       </div>
 

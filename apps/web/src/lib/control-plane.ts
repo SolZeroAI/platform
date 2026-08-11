@@ -5,7 +5,7 @@
  */
 
 import { env } from "cloudflare:workers"
-import { getStageMetadataSync } from "@c0-agent/shared"
+import { getStageMetadataSync } from "@solzero/shared"
 
 function getWebStageMetadata() {
   return getStageMetadataSync(env)

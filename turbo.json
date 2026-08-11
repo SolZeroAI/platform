@@ -8,21 +8,21 @@
     "config/.pre.vars",
     "config/.prod.vars",
     "config/*.config.jsonc",
-    "config/c0.config.schema.json",
-    "packages/c0-lint/src/**"
+    "config/s0.config.schema.json",
+    "packages/s0-lint/src/**"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".output/**"]
     },
-    "@c0/background-api#build": {
+    "@solzero/background-api#build": {
       "outputs": []
     },
-    "@c0/sandbox#build": {
+    "@solzero/sandbox#build": {
       "outputs": []
     },
-    "@c0-agent/shared#build": {
+    "@solzero/shared#build": {
       "outputs": []
     },
     "dev": {

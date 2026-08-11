@@ -203,7 +203,7 @@ describe("compileWorkflowToJavaScript", () => {
     new Script(`
       ${createTestableWorkflowRuntime(manifest)}
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           recordWorkflowEvent: async () => ({ ok: true }),
           completeWorkflowRun: async (result) => {
             completions.push(result);
@@ -275,7 +275,7 @@ describe("compileWorkflowToJavaScript", () => {
     new Script(`
       ${createTestableWorkflowRuntime(manifest)}
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           recordWorkflowEvent: async () => ({ ok: true }),
           completeWorkflowRun: async () => ({ ok: true }),
         },
@@ -326,7 +326,7 @@ describe("compileWorkflowToJavaScript", () => {
         };
       }
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           dup: () => {
             dupCount += 1;
             throw new Error("'dup' is a reserved method and cannot be called over RPC.");
@@ -437,7 +437,7 @@ describe("compileWorkflowToJavaScript", () => {
     new Script(`
       ${createTestableWorkflowRuntime(manifest)}
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           recordWorkflowEvent: async (event) => {
             events.push(event);
             return { ok: true };
@@ -536,7 +536,7 @@ describe("compileWorkflowToJavaScript", () => {
     new Script(`
       ${createTestableWorkflowRuntime(manifest)}
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           recordWorkflowEvent: async (event) => {
             events.push(event);
             return { ok: true };
@@ -682,7 +682,7 @@ describe("compileWorkflowToJavaScript", () => {
     new Script(`
       ${createTestableWorkflowRuntime(manifest)}
       const env = {
-        C0_WORKFLOW_ACTIONS: {
+        S0_WORKFLOW_ACTIONS: {
           recordWorkflowEvent: async (event) => {
             events.push(event);
             return { ok: true };

@@ -93,8 +93,8 @@ describe("session MCP config", () => {
 
   it("getAiSearchMcpUrl derives URL from stage metadata", () => {
     expect(getAiSearchMcpUrl("dev")).toBe("http://host.docker.internal:1337/mcp")
-    expect(getAiSearchMcpUrl(PROD_STAGE_ENV)).toBe("http://c0-ai-search.internal/mcp")
-    expect(getAiSearchMcpUrl(PRE_STAGE_ENV)).toBe("http://c0-ai-search.internal/mcp")
+    expect(getAiSearchMcpUrl(PROD_STAGE_ENV)).toBe("http://s0-ai-search.internal/mcp")
+    expect(getAiSearchMcpUrl(PRE_STAGE_ENV)).toBe("http://s0-ai-search.internal/mcp")
   })
 
   it("generates the internal workflow builder MCP server from the hidden builder tool", () => {
@@ -164,10 +164,10 @@ describe("session MCP config", () => {
   it("getMcpcfMcpUrl derives URL from stage metadata", () => {
     expect(getMcpcfMcpUrl("dev")).toBe("http://host.docker.internal:1337/integrations/mcpcf/mcp")
     expect(getMcpcfMcpUrl(PROD_STAGE_ENV)).toBe(
-      "http://c0-ai-search.internal/integrations/mcpcf/mcp",
+      "http://s0-ai-search.internal/integrations/mcpcf/mcp",
     )
     expect(getMcpcfMcpUrl(PRE_STAGE_ENV)).toBe(
-      "http://c0-ai-search.internal/integrations/mcpcf/mcp",
+      "http://s0-ai-search.internal/integrations/mcpcf/mcp",
     )
   })
 
@@ -194,12 +194,12 @@ describe("session MCP config", () => {
     expect(getStageMetadataSync("dev").infra.internalMcpWorkerRouteEnabled).toBe(true)
 
     expect(getStageMetadataSync(PRE_STAGE_ENV).infra.internalMcpOutboundHost).toBe(
-      "c0-ai-search.internal",
+      "s0-ai-search.internal",
     )
     expect(getStageMetadataSync(PRE_STAGE_ENV).infra.internalMcpWorkerRouteEnabled).toBe(false)
 
     expect(getStageMetadataSync(PROD_STAGE_ENV).infra.internalMcpOutboundHost).toBe(
-      "c0-ai-search.internal",
+      "s0-ai-search.internal",
     )
     expect(getStageMetadataSync(PROD_STAGE_ENV).infra.internalMcpWorkerRouteEnabled).toBe(false)
   })
@@ -238,7 +238,7 @@ describe("session MCP config", () => {
           },
         },
       }),
-    ).toThrow("reserved for internal c0 tools")
+    ).toThrow("reserved for internal s0 tools")
   })
 
   it("rejects custom MCP servers that collide with the workflow builder name", () => {
@@ -252,7 +252,7 @@ describe("session MCP config", () => {
           },
         },
       }),
-    ).toThrow("reserved for internal c0 tools")
+    ).toThrow("reserved for internal s0 tools")
   })
 
   it("rejects custom MCP servers that collide with the MCP Context Forge name", () => {
@@ -266,7 +266,7 @@ describe("session MCP config", () => {
           },
         },
       }),
-    ).toThrow("reserved for internal c0 tools")
+    ).toThrow("reserved for internal s0 tools")
   })
 
   it("rejects custom MCP servers that collide with MCP Context Forge virtual server names", () => {
@@ -282,7 +282,7 @@ describe("session MCP config", () => {
           },
         },
       }),
-    ).toThrow("reserved for internal c0 tools")
+    ).toThrow("reserved for internal s0 tools")
   })
 
   it("rejects custom MCP servers that collide with unselected MCP Context Forge virtual names", () => {
@@ -298,7 +298,7 @@ describe("session MCP config", () => {
           },
         },
       }),
-    ).toThrow("reserved for internal c0 tools")
+    ).toThrow("reserved for internal s0 tools")
   })
 
   it("renders sandbox and isolate MCP adapters from the same runtime plan", () => {

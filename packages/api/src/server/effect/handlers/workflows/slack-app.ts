@@ -1,4 +1,4 @@
-import type { WorkflowSlackAppCredentialsPayload } from "@c0/api"
+import type { WorkflowSlackAppCredentialsPayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import { readWorkflowManifest } from "../../../background/workflows/artifacts"
 import {

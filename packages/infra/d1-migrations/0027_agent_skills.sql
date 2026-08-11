@@ -81,4 +81,3 @@ INSERT OR IGNORE INTO agent_skills (
   0,
   NULL
 );
-

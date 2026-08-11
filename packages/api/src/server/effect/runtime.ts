@@ -1,4 +1,4 @@
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import * as Context from "effect/Context"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
@@ -10,7 +10,7 @@ import { HttpRoutesLive } from "./routes"
 import { CloudflareContext } from "./services/cloudflare"
 import { makeEffectLoggerLayer, observeEffectHttpApi } from "./services/observability"
 
-const ApiRoutes = HttpApiBuilder.layer(C0Api, {
+const ApiRoutes = HttpApiBuilder.layer(S0Api, {
   openapiPath: "/openapi.json",
 }).pipe(Layer.provide(HttpRoutesLive))
 
@@ -28,7 +28,7 @@ const scalarReferenceConfig = {
   mcp: true,
 } satisfies ScalarReferenceConfig
 
-const DocsRoute = HttpApiScalar.layer(C0Api, {
+const DocsRoute = HttpApiScalar.layer(S0Api, {
   path: "/reference",
   scalar: scalarReferenceConfig,
 })
@@ -57,7 +57,7 @@ const handlerCache = new Map<string, EffectApiWebHandler>()
 
 const defaultTelemetryOptions: TelemetryLayerOptions = {
   stageMetadataInput: "test",
-  workerName: "c0-api",
+  workerName: "s0-api",
 }
 
 function telemetryStageName(input: TelemetryLayerOptions["stageMetadataInput"]): string {

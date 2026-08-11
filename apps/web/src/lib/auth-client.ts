@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, createElement, useContext, useMemo } from "react"
-import type { PublicAuthProviderRegistry } from "@c0-agent/shared"
+import type { PublicAuthProviderRegistry } from "@solzero/shared"
 import { createAuthClient } from "better-auth/react"
 import { genericOAuthClient } from "better-auth/client/plugins"
 import { resolveAppSession, type AppSession } from "@/lib/auth-session-state"

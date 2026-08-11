@@ -11,7 +11,7 @@ import {
   type OpenCodeMcpServers,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type {
   MessageSource,
   MessageStatus,

@@ -204,7 +204,7 @@ describe("workflow Slack nodes", () => {
             id: "remove",
             type: "slack-remove-reaction",
             label: "Remove reaction",
-            options: { channel: "C1", timestamp: "123.456", name: ":c0-thinking:" },
+            options: { channel: "C1", timestamp: "123.456", name: ":s0-thinking:" },
           },
           inputs: {},
         }),
@@ -218,7 +218,7 @@ describe("workflow Slack nodes", () => {
         headers: expect.objectContaining({
           Authorization: "Bearer xoxb-token",
         }),
-        body: JSON.stringify({ channel: "C1", timestamp: "123.456", name: "c0-thinking" }),
+        body: JSON.stringify({ channel: "C1", timestamp: "123.456", name: "s0-thinking" }),
       }),
     )
     expect(result).toEqual({
@@ -226,7 +226,7 @@ describe("workflow Slack nodes", () => {
         ok: true,
         channel: "C1",
         ts: "123.456",
-        name: "c0-thinking",
+        name: "s0-thinking",
       },
     })
   })

@@ -5,7 +5,7 @@ import {
   isOktaReconnectMcpDiscoveryError,
   type OpenCodeInteractionResponse,
   type SandboxEvent,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { AlertCircle, Brain, Check, ChevronRight, Copy, ExternalLink } from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { SafeMarkdown } from "@/components/safe-markdown"
@@ -24,8 +24,8 @@ import {
 import { parseReasoningSummary } from "@/lib/reasoning-summary"
 import { formatExecutionDuration } from "@/lib/session-events"
 import { manrope } from "@/lib/fonts"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
-import { C0Loader } from "@/components/c0-loader"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
+import { S0Loader } from "@/components/s0-loader"
 import { InteractionRequestItem } from "./interaction-request-item"
 
 export function EventItem({
@@ -334,7 +334,7 @@ export function ExecutionCompleteDivider({
             className="session-turn-status-complete-loader absolute inset-0 flex items-center justify-center text-kumo-brand"
             aria-hidden
           >
-            <C0Loader size={18} />
+            <S0Loader size={18} />
           </span>
         )}
         <span
@@ -360,7 +360,7 @@ export function ThinkingIndicator() {
       <span className="h-px min-w-0 flex-1 bg-kumo-hairline" aria-hidden />
       <span className="flex min-h-5 shrink-0 items-center justify-center px-5 text-kumo-brand">
         <span aria-hidden>
-          <C0Loader size={18} />
+          <S0Loader size={18} />
         </span>
       </span>
       <span className="h-px min-w-0 flex-1 bg-kumo-hairline" aria-hidden />
@@ -651,7 +651,7 @@ export function AssistantMessageItem({
               }`}
               aria-hidden
             />
-            <C0LogoSvg className="h-4 w-4 shrink-0 text-kumo-brand" aria-hidden />
+            <S0LogoSvg className="h-4 w-4 shrink-0 text-kumo-brand" aria-hidden />
             <span className="min-w-0 flex-1 truncate">
               <span className="font-medium text-kumo-default">Agent</span>{" "}
               <span className="text-kumo-subtle">{summary}</span>
@@ -788,7 +788,7 @@ export function FinalAssistantMessageItem({
     <div className="group mr-8 rounded-2xl bg-kumo-base p-4 ring-1 ring-kumo-hairline">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-0.5">
-          <C0LogoSvg className="h-4 w-4 shrink-0 text-kumo-brand" aria-hidden />
+          <S0LogoSvg className="h-4 w-4 shrink-0 text-kumo-brand" aria-hidden />
           <span className={`${manrope.className} text-xs font-bold text-kumo-subtle`}>Agent</span>
         </div>
         <div className="flex items-center gap-1.5">

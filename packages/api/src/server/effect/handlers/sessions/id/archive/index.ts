@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import type { IdParams } from "@c0/api"
+import type { IdParams } from "@solzero/api"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
 import {

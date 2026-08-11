@@ -11,7 +11,7 @@ import {
   type OpenCodeMcpServers,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { and, asc, desc, eq, ne, or, sql, type AnyColumn, type SQL } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -490,14 +490,14 @@ function normalizeSessionSource(value: string | null | undefined): SessionInitia
   )
 }
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
 function runSessionIndexEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.
   return Effect.runPromise(effect)
 }
 
 function runSessionIndexOption<A>(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
   effect: Effect.Effect<Option.Option<A>, D1Error>,
 ): Promise<A | null> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.

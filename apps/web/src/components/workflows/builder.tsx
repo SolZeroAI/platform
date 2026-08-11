@@ -23,7 +23,7 @@ import {
   type WorkflowNodeCategory,
   type WorkflowNodeDefinition,
   type WorkflowNodeType,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { useAuthSession } from "@/lib/auth-client"
 import {
   CATALOG_PREVIEW_ESTIMATED_HEIGHT,

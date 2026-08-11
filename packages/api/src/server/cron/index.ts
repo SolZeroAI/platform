@@ -29,7 +29,7 @@ type CronJobEffect = (
   controller: ScheduledController,
   env: ApiEnv,
   ctx: ExecutionContext,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Cron dispatch stores heterogeneous Effect jobs in one static map.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Cron dispatch stores heterogeneous Effect jobs in one static map.
 ) => Effect.Effect<unknown, unknown>
 
 const CRON_JOBS: Record<string, readonly CronJobEffect[]> = {

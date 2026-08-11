@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { C0_CONFIG_KEYS, C0ConfigStore } from "../db/c0-config"
+import { S0_CONFIG_KEYS, S0ConfigStore } from "../db/s0-config"
 import { dotenvAssignment } from "../../lib/dotenv"
 import { stringifyJson } from "../../lib/json"
 import type { Env } from "../types"
@@ -14,8 +14,8 @@ export interface McpcfConfigExport {
   serverCount: number
 }
 
-function getStore(env: Env): C0ConfigStore {
-  return new C0ConfigStore(env.C0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
+function getStore(env: Env): S0ConfigStore {
+  return new S0ConfigStore(env.S0_CONFIG, env.REPO_SECRETS_ENCRYPTION_KEY)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,16 +66,16 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
   const store = getStore(env)
   const [configValue, adminApiTokenConfigured] = yield* Effect.all(
     [
-      store.getJson(C0_CONFIG_KEYS.mcpcf.config),
-      store.encryptedSecretConfigured(C0_CONFIG_KEYS.mcpcf.adminApiToken),
+      store.getJson(S0_CONFIG_KEYS.mcpcf.config),
+      store.encryptedSecretConfigured(S0_CONFIG_KEYS.mcpcf.adminApiToken),
     ],
     { concurrency: "unbounded" },
   )
   const adminApiToken = yield* Match.value(adminApiTokenConfigured).pipe(
-    Match.when(true, () => store.getEncryptedSecret(C0_CONFIG_KEYS.mcpcf.adminApiToken)),
+    Match.when(true, () => store.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken)),
     Match.orElse(() => Effect.succeed(Option.none<string>())),
   )
-  const tokenEnvironmentVariable = "C0_MCPCF_ADMIN_API_TOKEN"
+  const tokenEnvironmentVariable = "S0_MCPCF_ADMIN_API_TOKEN"
   const adminApiTokenValue = Option.filter(adminApiToken, (value) => value.length > 0)
   const configLines = Option.match(configValue, {
     onNone: () => ["// No KV-backed MCP Context Forge configuration is configured."],
@@ -115,16 +115,16 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
 
 export const resetMcpcfConfig = Effect.fn("mcpcf.resetConfig")(function* (env: Env) {
   const store = getStore(env)
-  const serverIndexValue = yield* store.getJson(C0_CONFIG_KEYS.mcpcf.serverIndex)
+  const serverIndexValue = yield* store.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
   const serverIds = Option.match(serverIndexValue, {
     onNone: () => [] as string[],
     onSome: stringArrayValue,
   })
   const deletedKeys = [
-    C0_CONFIG_KEYS.mcpcf.config,
-    C0_CONFIG_KEYS.mcpcf.adminApiToken,
-    C0_CONFIG_KEYS.mcpcf.serverIndex,
-    ...serverIds.map((serverId) => C0_CONFIG_KEYS.mcpcf.server(serverId)),
+    S0_CONFIG_KEYS.mcpcf.config,
+    S0_CONFIG_KEYS.mcpcf.adminApiToken,
+    S0_CONFIG_KEYS.mcpcf.serverIndex,
+    ...serverIds.map((serverId) => S0_CONFIG_KEYS.mcpcf.server(serverId)),
   ]
   yield* Effect.all(
     deletedKeys.map((key) => store.delete(key)),

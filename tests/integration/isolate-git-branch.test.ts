@@ -8,7 +8,7 @@ import {
 } from "../../packages/api/src/server/background/isolate/git-branch"
 
 describe("isolate git branch checkout", () => {
-  it("creates a new c0 branch from the current HEAD without looking for origin branch", async () => {
+  it("creates a new s0 branch from the current HEAD without looking for origin branch", async () => {
     const git = {
       branch: vi.fn().mockResolvedValue({
         branches: ["main"],
@@ -34,28 +34,28 @@ describe("isolate git branch checkout", () => {
         workspace,
         git,
         repoRoot: "/repo",
-        branchName: "c0-agent/session-1",
+        branchName: "s0-agent/session-1",
       }),
     )
 
     expect(git.checkout).not.toHaveBeenCalled()
-    expect(workspace.mkdir).toHaveBeenCalledWith("/repo/.git/refs/heads/c0-agent", {
+    expect(workspace.mkdir).toHaveBeenCalledWith("/repo/.git/refs/heads/s0-agent", {
       recursive: true,
     })
     expect(workspace.writeFile).toHaveBeenCalledWith(
-      "/repo/.git/refs/heads/c0-agent/session-1",
+      "/repo/.git/refs/heads/s0-agent/session-1",
       "abc123\n",
     )
     expect(workspace.writeFile).toHaveBeenCalledWith(
       "/repo/.git/HEAD",
-      "ref: refs/heads/c0-agent/session-1\n",
+      "ref: refs/heads/s0-agent/session-1\n",
     )
   })
 
-  it("checks out an existing local c0 branch by ref", async () => {
+  it("checks out an existing local s0 branch by ref", async () => {
     const git = {
       branch: vi.fn().mockResolvedValue({
-        branches: ["main", "c0-agent/session-1"],
+        branches: ["main", "s0-agent/session-1"],
         current: "main",
       }),
       checkout: vi.fn().mockResolvedValue(undefined),
@@ -71,12 +71,12 @@ describe("isolate git branch checkout", () => {
         workspace,
         git,
         repoRoot: "/repo",
-        branchName: "c0-agent/session-1",
+        branchName: "s0-agent/session-1",
       }),
     )
 
     expect(git.checkout).toHaveBeenCalledWith({
-      ref: "c0-agent/session-1",
+      ref: "s0-agent/session-1",
       dir: "/repo",
     })
     expect(git.log).not.toHaveBeenCalled()
@@ -85,23 +85,23 @@ describe("isolate git branch checkout", () => {
 })
 
 describe("isolate clone base branch", () => {
-  it("does not use the managed c0 branch as the clone base", () => {
+  it("does not use the managed s0 branch as the clone base", () => {
     expect(
       Option.getOrUndefined(
         getCloneBaseBranch({
-          repoDefaultBranch: "c0-agent/session-1",
-          branchName: "c0-agent/session-1",
+          repoDefaultBranch: "s0-agent/session-1",
+          branchName: "s0-agent/session-1",
         }),
       ),
     ).toBeUndefined()
   })
 
-  it("uses the repository default branch when it differs from the c0 branch", () => {
+  it("uses the repository default branch when it differs from the s0 branch", () => {
     expect(
       Option.getOrUndefined(
         getCloneBaseBranch({
           repoDefaultBranch: "main",
-          branchName: "c0-agent/session-1",
+          branchName: "s0-agent/session-1",
         }),
       ),
     ).toBe("main")
@@ -136,7 +136,7 @@ describe("isolate branch PR retry detection", () => {
         hasBranchCommitsBeyondBase({
           git,
           repoRoot: "/repo",
-          branchName: "c0-agent/session-1",
+          branchName: "s0-agent/session-1",
           baseBranch: "main",
         }),
       ),
@@ -160,7 +160,7 @@ describe("isolate branch PR retry detection", () => {
         hasBranchCommitsBeyondBase({
           git,
           repoRoot: "/repo",
-          branchName: "c0-agent/session-1",
+          branchName: "s0-agent/session-1",
           baseBranch: "main",
         }),
       ),

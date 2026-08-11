@@ -1,4 +1,4 @@
-import type { OpenCodeInteractionRequest, OpenCodeInteractionResponse } from "@c0-agent/shared"
+import type { OpenCodeInteractionRequest, OpenCodeInteractionResponse } from "@solzero/shared"
 import { type ClientInfo, type SandboxEvent, type ServerMessage } from "../../types"
 import { type LocalSpanContext } from "../../observability/tracing"
 import type {

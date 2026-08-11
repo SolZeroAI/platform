@@ -5,7 +5,7 @@ import type {
   SubagentRunStatus,
   SubagentRunSummary,
   SubagentSessionEvent,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 
 export interface SubagentRunView extends SubagentRunSummary {
   order: number

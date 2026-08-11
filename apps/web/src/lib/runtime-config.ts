@@ -1,4 +1,4 @@
-import type { AppStageMetadata } from "@c0-agent/shared"
+import type { AppStageMetadata } from "@solzero/shared"
 
 function normalizeNonEmpty(value: string | undefined): string | undefined {
   if (typeof value !== "string") {
@@ -36,9 +36,9 @@ function configuredPositiveNumber(name: string, value: string | undefined): numb
 }
 
 export function getAppStageMetadata(): AppStageMetadata {
-  const logLevel = import.meta.env.VITE_C0_LOG_LEVEL
+  const logLevel = import.meta.env.VITE_S0_LOG_LEVEL
   if (logLevel !== "trace" && logLevel !== "debug") {
-    throw new Error('VITE_C0_LOG_LEVEL must be configured as either "trace" or "debug".')
+    throw new Error('VITE_S0_LOG_LEVEL must be configured as either "trace" or "debug".')
   }
   return {
     name: getAppStage(),
@@ -47,16 +47,16 @@ export function getAppStageMetadata(): AppStageMetadata {
       sendSlackNotifications: false,
       slackChannel: "",
       showTestErrorButton: configuredBoolean(
-        "VITE_C0_SHOW_TEST_ERROR_BUTTON",
-        import.meta.env.VITE_C0_SHOW_TEST_ERROR_BUTTON,
+        "VITE_S0_SHOW_TEST_ERROR_BUTTON",
+        import.meta.env.VITE_S0_SHOW_TEST_ERROR_BUTTON,
       ),
       betterAuthSessionTransferEnabled: configuredBoolean(
-        "VITE_C0_BETTER_AUTH_SESSION_TRANSFER_ENABLED",
-        import.meta.env.VITE_C0_BETTER_AUTH_SESSION_TRANSFER_ENABLED,
+        "VITE_S0_BETTER_AUTH_SESSION_TRANSFER_ENABLED",
+        import.meta.env.VITE_S0_BETTER_AUTH_SESSION_TRANSFER_ENABLED,
       ),
       sandboxInactivityTimeoutMs: configuredPositiveNumber(
-        "VITE_C0_SANDBOX_INACTIVITY_TIMEOUT_MS",
-        import.meta.env.VITE_C0_SANDBOX_INACTIVITY_TIMEOUT_MS,
+        "VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS",
+        import.meta.env.VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS,
       ),
     },
   }

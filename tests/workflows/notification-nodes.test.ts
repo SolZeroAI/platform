@@ -53,7 +53,7 @@ describe("workflow notification node adapter", () => {
               label: "Email",
               options: {
                 to: "ops@example.com",
-                from: "c0@example.com",
+                from: "s0@example.com",
                 subject: "Run {{runId}}",
                 body: "Done",
               },

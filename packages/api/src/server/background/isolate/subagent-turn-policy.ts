@@ -1,7 +1,7 @@
 import type { ModelMessage } from "ai"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { normalizeIsolateStepLimit } from "@c0-agent/shared"
+import { normalizeIsolateStepLimit } from "@solzero/shared"
 
 export const ISOLATE_SUBAGENT_STEP_LIMIT = 8
 export const ISOLATE_SUBAGENT_MAX_STEPS = ISOLATE_SUBAGENT_STEP_LIMIT + 1

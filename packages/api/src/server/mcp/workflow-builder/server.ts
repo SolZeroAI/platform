@@ -90,7 +90,7 @@ export async function resolveWorkflowBuilderContext(
 export function createWorkflowBuilderMcpServer(context: WorkflowBuilderContext): McpServer {
   const server = new McpServer(
     {
-      name: "c0-workflow-builder",
+      name: "s0-workflow-builder",
       version: "1.0.0",
     },
     {

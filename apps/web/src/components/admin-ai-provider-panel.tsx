@@ -2,15 +2,16 @@
 
 import type {
   AdminAiProvidersResponse,
+  AdminCloudflareAiGatewayProviderKeysPayload,
   AdminLitellmConfigPayload,
   AdminLitellmModel,
-} from "@c0/api"
+} from "@solzero/api"
 import {
   buildModelId,
   type ReasoningEffort,
   type RuntimeModelCategory,
   type RuntimeProviderModelOption,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { Button } from "@cloudflare/kumo/components/button"
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown"
 import { Pagination } from "@cloudflare/kumo/components/pagination"
@@ -31,11 +32,23 @@ import {
   useRef,
   useState,
 } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
 import { getStickySelectPortalRoot } from "@/lib/sticky-select-portal"
 import { showErrorToast } from "@/lib/toast-manager"
+import { AdminCloudflareAiGatewayPanel } from "./admin-cloudflare-ai-gateway-panel"
+import {
+  DEFAULT_TOC_SECTION,
+  LITELLM_ANTHROPIC_PROVIDER_ID,
+  LITELLM_ANTHROPIC_PROVIDER_NAME,
+  LITELLM_PROVIDER_ID,
+  LITELLM_PROVIDER_NAME,
+  MODEL_REGISTRY_PAGE_SIZE,
+  REASONING_EFFORT_VALUES,
+  TOC_SECTION_VALUES,
+  type TocSectionValue,
+} from "./admin-ai-provider-panel-constants"
 import {
   DocsSectionHeading,
   EnvLockIcon,
@@ -48,29 +61,6 @@ import {
 } from "./admin-ai-provider-panel-ui"
 import { LitellmResetConfigDialog } from "./admin-litellm-reset-config-dialog"
 import { formatReasoningEffortLabel, ModelThinkingDialog } from "./model-thinking-dialog"
-const DEFAULT_TOC_SECTION = "#litellm-provider"
-const LITELLM_PROVIDER_ID = "litellm"
-const LITELLM_PROVIDER_NAME = "LiteLLM"
-const LITELLM_ANTHROPIC_PROVIDER_ID = "litellm-anthropic"
-const LITELLM_ANTHROPIC_PROVIDER_NAME = "LiteLLM Anthropic"
-const MODEL_REGISTRY_PAGE_SIZE = 10
-const REASONING_EFFORT_VALUES = new Set<string>([
-  "none",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-  "minimal",
-])
-const TOC_SECTION_VALUES = [
-  "#litellm-provider",
-  "#litellm-settings",
-  "#litellm-model-registry",
-  "#cloudflare-ai-gateway-provider",
-] as const
-
-type TocSectionValue = (typeof TOC_SECTION_VALUES)[number]
 
 type LitellmFieldErrors = {
   apiKey?: string
@@ -165,6 +155,7 @@ export function AdminAiProviderPanel({
   loading,
   busy,
   onSave,
+  onSaveCloudflareKeys,
   onSync,
   onReset,
   onExport,
@@ -174,6 +165,7 @@ export function AdminAiProviderPanel({
   loading: boolean
   busy: string | null
   onSave: (payload: AdminLitellmConfigPayload) => Promise<boolean>
+  onSaveCloudflareKeys: (payload: AdminCloudflareAiGatewayProviderKeysPayload) => Promise<boolean>
   onSync: () => void
   onReset: () => Promise<boolean>
   onExport: () => Promise<string | null>
@@ -509,6 +501,8 @@ export function AdminAiProviderPanel({
         label: "Cloudflare AI Gateway",
         depth: 0,
       },
+      { value: "#cloudflare-ai-gateway-settings", label: "Settings", depth: 1 },
+      { value: "#cloudflare-ai-gateway-models", label: "Models", depth: 1 },
     )
     return options
   }, [])
@@ -773,7 +767,7 @@ export function AdminAiProviderPanel({
                         <KumoTable.Row>
                           <KumoTable.Cell colSpan={3} className="h-32 text-kumo-subtle">
                             <TableCellState className="h-full">
-                              {loading ? <C0Loader size={32} /> : "No LiteLLM models synced."}
+                              {loading ? <S0Loader size={32} /> : "No LiteLLM models synced."}
                             </TableCellState>
                           </KumoTable.Cell>
                         </KumoTable.Row>
@@ -822,19 +816,11 @@ export function AdminAiProviderPanel({
               </div>
             </section>
 
-            <section className="border-t border-kumo-hairline py-8 opacity-70">
-              <div className="flex items-center justify-between gap-3">
-                <DocsSectionHeading
-                  id="cloudflare-ai-gateway-provider"
-                  level="h2"
-                  title="Cloudflare AI Gateway"
-                />
-                <span className="rounded-lg border border-kumo-line px-2 py-1 text-xs text-kumo-subtle">
-                  Disabled
-                </span>
-              </div>
-              <p className="pt-2 text-sm text-kumo-subtle">Coming soon</p>
-            </section>
+            <AdminCloudflareAiGatewayPanel
+              data={data?.cloudflareAiGateway}
+              saving={busy === "cloudflare-ai-gateway-keys-save"}
+              onSave={onSaveCloudflareKeys}
+            />
           </div>
 
           <TableOfContents className="hidden xl:sticky xl:top-4 xl:block xl:self-start xl:pl-6">
@@ -861,13 +847,27 @@ export function AdminAiProviderPanel({
                   Model Registry
                 </TableOfContents.Item>
               </TableOfContents.Group>
-              <TableOfContents.Item
+              <TableOfContents.Group
+                label="Cloudflare AI Gateway"
                 href="#cloudflare-ai-gateway-provider"
                 active={selectedTocValue === "#cloudflare-ai-gateway-provider"}
-                onClick={tocItemClickHandler("#cloudflare-ai-gateway-provider")}
+                onClick={tocGroupClickHandler("#cloudflare-ai-gateway-provider")}
               >
-                Cloudflare AI Gateway
-              </TableOfContents.Item>
+                <TableOfContents.Item
+                  href="#cloudflare-ai-gateway-settings"
+                  active={selectedTocValue === "#cloudflare-ai-gateway-settings"}
+                  onClick={tocItemClickHandler("#cloudflare-ai-gateway-settings")}
+                >
+                  Settings
+                </TableOfContents.Item>
+                <TableOfContents.Item
+                  href="#cloudflare-ai-gateway-models"
+                  active={selectedTocValue === "#cloudflare-ai-gateway-models"}
+                  onClick={tocItemClickHandler("#cloudflare-ai-gateway-models")}
+                >
+                  Models
+                </TableOfContents.Item>
+              </TableOfContents.Group>
             </TableOfContents.List>
           </TableOfContents>
         </div>
@@ -970,7 +970,6 @@ function buildLitellmDialogModelOptions(
       providerName: group.category,
       modelId: model.id,
       name: model.id,
-      description: model.provider ? `${model.provider} via LiteLLM` : "LiteLLM model",
       ...(reasoning ? { reasoning } : {}),
     })
   }

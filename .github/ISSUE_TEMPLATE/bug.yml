@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping improve c0. Do not include credentials, private data, or internal URLs.
+        Thank you for helping improve SolZero. Do not include credentials, private data, or internal URLs.
         Report suspected vulnerabilities through private vulnerability reporting instead.
   - type: textarea
     id: description
@@ -34,7 +34,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: c0 version or commit
+      label: SolZero version or commit
       placeholder: v1.0.0 or commit SHA
     validations:
       required: true

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { SandboxEvent } from "@c0-agent/shared"
+import type { SandboxEvent } from "@solzero/shared"
 import {
   collapseTimelineEvents,
   getAssistantTimelineKey,

@@ -7,9 +7,9 @@ import {
   type RuntimeActivityEvent,
   type SessionKind,
   type SessionRuntimeCapabilities,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { Activity, Clock, Server, Zap } from "lucide-react"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { AgentRuntimeIcon } from "@/components/home-page/session-kind"
 
 export function getRuntimeStatusPresentation(
@@ -175,7 +175,7 @@ export function RuntimeActivityTimeline({
   if (loading && activity.length === 0) {
     return (
       <div className="px-4 py-8 text-sm text-kumo-subtle">
-        <C0Loader size={16} />
+        <S0Loader size={16} />
       </div>
     )
   }

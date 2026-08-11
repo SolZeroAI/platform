@@ -19,7 +19,7 @@ import {
   type WorkflowManifestNode,
   type WorkflowNodeType,
   type WorkflowTemplate,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { PageHeader } from "@/components/page-header"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
 import { SidebarLayout } from "@/components/sidebar-layout"

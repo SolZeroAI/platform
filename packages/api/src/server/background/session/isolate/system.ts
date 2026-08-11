@@ -2,7 +2,7 @@ import {
   buildSessionToolRuntimePlan,
   type OpenCodeMcpServers,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import PROMPT_ANTHROPIC from "./prompt/anthropic"
 import PROMPT_DEFAULT from "./prompt/default"
 import PROMPT_BEAST from "./prompt/beast"
@@ -61,7 +61,7 @@ function buildEnvironmentPrompt(input: {
         `  Repository workspace root: ${REPO_ROOT}`,
         "  Structured repository tools: read_file, write_file, glob_files, search_files",
         "  Structured git tools: git_status, git_diff, git_log, git_create_pull_request",
-        "  Pull requests: use git_create_pull_request after making repository changes; it commits, pushes the c0-managed branch, and opens a PR against the default branch.",
+        "  Pull requests: use git_create_pull_request after making repository changes; it commits, pushes the s0-managed branch, and opens a PR against the default branch.",
       ]
     : [
         "  Repository workspace: not attached",
@@ -75,7 +75,7 @@ function buildEnvironmentPrompt(input: {
   const workflowBuilderLines = hasWorkflowBuilder
     ? [
         "  Workflow builder tools: get_workflow_node_catalog, validate_workflow_manifest, submit_workflow_draft",
-        "  Workflow builder skill: activate c0.workflow-builder before building or editing workflow manifests",
+        "  Workflow builder skill: activate s0.workflow-builder before building or editing workflow manifests",
       ]
     : ["  Workflow builder tools: unavailable"]
   const customMcpLines = customMcpServerNames.length
@@ -92,7 +92,7 @@ function buildEnvironmentPrompt(input: {
     : "  External network access: unavailable except for configured internal docs search"
 
   return [
-    "You are a helpful c0 assistant for software engineering tasks.",
+    "You are a helpful s0 assistant for software engineering tasks.",
     `You are powered by the model named ${input.modelId}. The exact model ID is ${input.runtimeModelId}.`,
     "If the user asks what model you are, answer with the exact model ID above.",
     "Here is useful information about the environment you are running in:",

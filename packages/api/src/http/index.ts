@@ -10,7 +10,7 @@ import { SkillsGroup } from "./groups/skills"
 import { SlackGroup } from "./groups/slack"
 import { WorkflowsGroup } from "./groups/workflows"
 
-export class C0Api extends HttpApi.make("C0Api")
+export class S0Api extends HttpApi.make("S0Api")
   .add(HealthGroup)
   .add(AdminGroup)
   .add(AuthGroup)
@@ -23,8 +23,8 @@ export class C0Api extends HttpApi.make("C0Api")
   .add(SecretsGroup)
   .annotateMerge(
     OpenApi.annotations({
-      title: "c0 Agent API",
-      description: "API for c0 Agent",
+      title: "SolZero Agent API",
+      description: "API for SolZero Agent",
       version: "0.1.0",
     }),
   ) {}

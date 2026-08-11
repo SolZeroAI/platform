@@ -1,4 +1,4 @@
-import type { IdParams, ResumeSessionPayload } from "@c0/api"
+import type { IdParams, ResumeSessionPayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import { stringifyJson } from "../../../../../lib/json"
 import { EffectRequestLogger } from "../../../../services/observability"

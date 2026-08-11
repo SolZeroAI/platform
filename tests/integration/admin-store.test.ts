@@ -419,7 +419,7 @@ describe("AdminStore", () => {
       request: new Request("https://api.example/api/admin/skills"),
       env: {
         DB: new SqliteD1Database(sqlite),
-        C0_CONFIG_ADMIN: { adminEmails: ["admin@example.test"], adminDomains: [] },
+        S0_CONFIG_ADMIN: { adminEmails: ["admin@example.test"], adminDomains: [] },
       },
       principal: { kind: "api_key", keyId: "key_1", userId: "admin_1" },
       identityProvider,
@@ -434,7 +434,7 @@ describe("AdminStore", () => {
       ...context,
       env: {
         ...context.env,
-        C0_CONFIG_ADMIN: { adminEmails: ["other@example.test"], adminDomains: [] },
+        S0_CONFIG_ADMIN: { adminEmails: ["other@example.test"], adminDomains: [] },
       },
     }
     await expect(

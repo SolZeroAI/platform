@@ -6,13 +6,13 @@ import {
 
 describe("AI Search namespace names", () => {
   it.each([
-    ["dev", "c0-dev", "c0-user-workflow-dev"],
-    ["test", "c0-test", "c0-user-workflow-test"],
-    ["pre", "c0-pre", "c0-user-workflow-pre"],
-    ["prod", "c0-prod", "c0-user-workflow-prod"],
-    ["pre-pr-123", "c0-pre-pr-123", "c0-user-workflow-pre-pr-123"],
+    ["dev", "s0-dev", "s0-user-workflow-dev"],
+    ["test", "s0-test", "s0-user-workflow-test"],
+    ["pre", "s0-pre", "s0-user-workflow-pre"],
+    ["prod", "s0-prod", "s0-user-workflow-prod"],
+    ["pre-pr-123", "s0-pre-pr-123", "s0-user-workflow-pre-pr-123"],
   ])("qualifies the %s namespaces by stage", (stageName, globalName, workflowName) => {
-    const options = { appName: "c0", stageName }
+    const options = { appName: "s0", stageName }
 
     expect(getAiSearchNamespaceName(options)).toBe(globalName)
     expect(getWorkflowAiSearchNamespaceName(options)).toBe(workflowName)
@@ -20,7 +20,7 @@ describe("AI Search namespace names", () => {
 
   it("keeps long stage names deterministic and within Cloudflare limits", () => {
     const options = {
-      appName: "c0",
+      appName: "s0",
       stageName: "pre-feature-with-a-very-long-environment-name",
     }
     const globalName = getAiSearchNamespaceName(options)
@@ -39,9 +39,9 @@ describe("AI Search namespace names", () => {
 
     expect(
       getAiSearchNamespaceName({
-        appName: `${separators}C0${separators}`,
+        appName: `${separators}S0${separators}`,
         stageName: `${separators}PRE${separators}`,
       }),
-    ).toBe("c0-pre")
+    ).toBe("s0-pre")
   })
 })

@@ -57,7 +57,7 @@ describe("stage auth metadata", () => {
     ).toThrow("deployment.zone is required")
   })
 
-  it("derives deployed infra from compiled c0 configuration", () => {
+  it("derives deployed infra from compiled s0 configuration", () => {
     const infra = getStageMetadataSync(
       compiledStageEnv("pre-42", {
         ...TEST_DEPLOYMENT_CONFIG,
@@ -84,7 +84,7 @@ describe("stage auth metadata", () => {
     expect(infra.apiObservabilityTracesHeadSamplingRate).toBe(0.5)
   })
 
-  it("uses exact FQDN overrides from c0 configuration", () => {
+  it("uses exact FQDN overrides from SolZero configuration", () => {
     const infra = getStageMetadataSync(
       compiledStageEnv("prod", {
         ...TEST_DEPLOYMENT_CONFIG,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { WORKFLOW_MANIFEST_VERSION, type WorkflowManifest } from "@c0-agent/shared"
+import { WORKFLOW_MANIFEST_VERSION, type WorkflowManifest } from "@solzero/shared"
 import { migrateWorkflowManifestForBuilder } from "./manifest-utils"
 
 function legacyManifest(version: number): WorkflowManifest {

@@ -10,7 +10,7 @@ import {
   InternalServerError,
   UnauthorizedError,
   type AuthPrincipal,
-} from "@c0/api"
+} from "@solzero/api"
 import { UserApiKeyStore } from "../../background/db/user-api-keys"
 import { getSessionContextFromHeaders } from "../../lib/better-auth"
 import { CloudflareContext } from "./cloudflare"

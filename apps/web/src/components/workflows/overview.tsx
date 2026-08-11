@@ -13,7 +13,7 @@ import {
   type Table,
   useReactTable,
 } from "@tanstack/react-table"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 import {
   Activity,
   AlertCircle,
@@ -26,8 +26,8 @@ import {
   Trash2,
 } from "lucide-react"
 import { useId, useMemo, useState } from "react"
-import { type WorkflowManifest } from "@c0-agent/shared"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { type WorkflowManifest } from "@solzero/shared"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface, getCodeLanguageForValue, getCodeTextForValue } from "@/components/code"
 import {
   WORKFLOW_CREATION_DIALOG_CONFIG,
@@ -223,7 +223,7 @@ export function WorkflowOverviewHeader({
         />
         <LayerCard className="h-full overflow-hidden rounded-xl">
           <LayerCard.Secondary className="my-0 flex items-center gap-1.5 px-3 py-2">
-            <C0LogoSvg className="relative top-px h-3.5 w-3.5 shrink-0 text-kumo-brand" />
+            <S0LogoSvg className="relative top-px h-3.5 w-3.5 shrink-0 text-kumo-brand" />
             <dt className="text-xs font-medium leading-4 text-kumo-subtle">Assist</dt>
           </LayerCard.Secondary>
           <LayerCard.Primary className="flex flex-1 items-start rounded-lg px-3 py-3">
@@ -388,7 +388,7 @@ export function RunHistoryTable({
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty
                         title="No workflow runs found."

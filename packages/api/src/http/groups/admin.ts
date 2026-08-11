@@ -8,6 +8,7 @@ import {
   AdminAiSearchResponse,
   AdminAiSearchSourcePayload,
   AdminAiProvidersResponse,
+  AdminCloudflareAiGatewayProviderKeysPayload,
   AdminGitHubAccountCleanupPreviewResponse,
   AdminGitHubAccountCleanupResponse,
   AdminIdParams,
@@ -164,6 +165,17 @@ export class AdminGroup extends HttpApiGroup.make("admin")
       success: AdminAiProvidersResponse,
       error: CommonErrors,
     }).annotateMerge(OpenApi.annotations({ summary: "Update LiteLLM provider configuration" })),
+    HttpApiEndpoint.put(
+      "updateCloudflareAiGatewayProviderKeys",
+      "/ai-providers/cloudflare-ai-gateway/keys",
+      {
+        payload: AdminCloudflareAiGatewayProviderKeysPayload,
+        success: AdminAiProvidersResponse,
+        error: CommonErrors,
+      },
+    ).annotateMerge(
+      OpenApi.annotations({ summary: "Update global Cloudflare AI Gateway BYOK keys" }),
+    ),
     HttpApiEndpoint.delete("resetLitellmProvider", "/ai-providers/litellm", {
       success: AdminAiProvidersResponse,
       error: CommonErrors,

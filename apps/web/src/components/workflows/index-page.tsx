@@ -28,8 +28,8 @@ import {
   WORKFLOW_TEMPLATES,
   type ProviderSettingsResponse,
   type WorkflowTemplate,
-} from "@c0-agent/shared"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+} from "@solzero/shared"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import {
   getRouteWorkflowId,
   WORKFLOW_PAGE_SIZE_OPTIONS,
@@ -120,7 +120,7 @@ export function WorkflowCreationModePanel({
         <FileUp className="h-7 w-7 text-kumo-subtle" aria-hidden />
         <span className="mt-3 text-sm font-medium text-kumo-default">Choose YAML file</span>
         <span className="mt-1 text-sm text-kumo-subtle">
-          Portable c0 workflow exports load as unsaved drafts.
+          Portable SolZero workflow exports load as unsaved drafts.
         </span>
         <input
           type="file"
@@ -289,7 +289,7 @@ export function WorkflowIndexLanding({
             <WorkflowCreationCard
               icon={FileUp}
               title="Import"
-              description="Load a c0 workflow YAML export as an editable draft."
+              description="Load a SolZero workflow YAML export as an editable draft."
               iconClassName="workflow-icon-sky"
               onClick={() => onOpenCreationMode("import")}
             />
@@ -513,7 +513,7 @@ export function WorkflowIndexTable({
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty
                         title="No workflows found."

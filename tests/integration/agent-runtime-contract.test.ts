@@ -26,11 +26,28 @@ describe("agent runtime contract", () => {
     expect(isAgentRuntimeCompatibleWithProvider("codex", "litellm-anthropic")).toBe(false)
     expect(isAgentRuntimeCompatibleWithProvider("claude-code", "litellm-anthropic")).toBe(true)
     expect(isAgentRuntimeCompatibleWithProvider("claude-code", "litellm")).toBe(false)
+    expect(
+      isAgentRuntimeCompatibleWithProvider("opencode", "cloudflare-ai-gateway", "chat_completions"),
+    ).toBe(true)
+    expect(
+      isAgentRuntimeCompatibleWithProvider("codex", "cloudflare-ai-gateway", "responses"),
+    ).toBe(true)
+    expect(
+      isAgentRuntimeCompatibleWithProvider("codex", "cloudflare-ai-gateway", "chat_completions"),
+    ).toBe(false)
+    expect(
+      isAgentRuntimeCompatibleWithProvider("claude-code", "cloudflare-ai-gateway", "responses"),
+    ).toBe(false)
+    expect(
+      isAgentRuntimeCompatibleWithProvider("claude-code", "cloudflare-ai-gateway", "messages"),
+    ).toBe(true)
     expect(isAgentRuntimeCompatibleWithProvider("isolate", "openai")).toBe(true)
   })
 
   it("describes runtime compatibility for API validation errors", () => {
-    expect(describeAgentRuntimeModelCompatibility("codex")).toContain("LiteLLM OpenAI-compatible")
-    expect(describeAgentRuntimeModelCompatibility("claude-code")).toContain("LiteLLM Anthropic")
+    expect(describeAgentRuntimeModelCompatibility("codex")).toContain(
+      "Cloudflare AI Gateway OpenAI Responses",
+    )
+    expect(describeAgentRuntimeModelCompatibility("claude-code")).toContain("Anthropic Messages")
   })
 })

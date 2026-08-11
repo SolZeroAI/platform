@@ -1,4 +1,4 @@
-import type { IdParams } from "@c0/api"
+import type { IdParams } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import {
   getSessionStub,

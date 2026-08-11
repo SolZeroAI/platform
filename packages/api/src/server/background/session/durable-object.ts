@@ -20,7 +20,7 @@ import {
   type OpenCodeMcpServers,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { generateId, hashToken } from "../auth/crypto"
 import {
   resolveGitHubCloneCredentials,

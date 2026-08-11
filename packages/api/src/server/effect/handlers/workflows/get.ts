@@ -1,4 +1,4 @@
-import { getInfraServerUrl } from "@c0-agent/shared"
+import { getInfraServerUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import { readWorkflowManifest } from "../../../background/workflows/artifacts"
 import { json, runControlPlane } from "../shared/control-plane"

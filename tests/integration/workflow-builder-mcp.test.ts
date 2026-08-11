@@ -80,7 +80,7 @@ describe("workflow builder MCP server", () => {
 
     expect(initialize).toMatchObject({
       serverInfo: expect.objectContaining({
-        name: "c0-workflow-builder",
+        name: "s0-workflow-builder",
       }),
     })
 

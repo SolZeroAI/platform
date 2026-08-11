@@ -1,4 +1,4 @@
-import { type SandboxEvent } from "@c0-agent/shared"
+import { type SandboxEvent } from "@solzero/shared"
 import { shouldHideMcpDiscoveryError } from "@/lib/session-events"
 import { reduceSubagentEvents, type SubagentRunView } from "@/lib/subagent-events"
 

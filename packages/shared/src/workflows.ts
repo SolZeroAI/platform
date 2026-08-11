@@ -326,7 +326,7 @@ export function validateWorkflowDraft(input: unknown): WorkflowDraftValidationRe
   const errors: string[] = []
   const warnings: string[] = []
 
-  // oxlint-disable-next-line effect/avoid-try-catch -- Synchronous, non-Effect boundary that captures manifest normalization/validation throws as structured validation errors; this module is intentionally Effect-free so the c0 control-flow rules stay inactive, and wrapping in Effect would force an effect import across the whole file.
+  // oxlint-disable-next-line effect/avoid-try-catch -- Synchronous, non-Effect boundary that captures manifest normalization/validation throws as structured validation errors; this module is intentionally Effect-free so the s0 control-flow rules stay inactive, and wrapping in Effect would force an effect import across the whole file.
   try {
     const manifest = normalizeWorkflowDraftManifest(input, "Imported workflow")
     const optionValidation = validateWorkflowNodeOptions(manifest)
@@ -371,7 +371,7 @@ export function createWorkflowExportDocument(input: {
   }
 
   return {
-    kind: "c0.workflow",
+    kind: "s0.workflow",
     exportVersion: 1,
     name: validation.manifest.name,
     manifest: validation.manifest,
@@ -399,8 +399,8 @@ export function parseWorkflowExport(source: string): WorkflowExportDocument {
   if (!isRecord(parsed)) {
     throw new Error("Workflow export must be a YAML object")
   }
-  if (parsed.kind !== "c0.workflow") {
-    throw new Error("Workflow export kind must be 'c0.workflow'")
+  if (parsed.kind !== "s0.workflow") {
+    throw new Error("Workflow export kind must be 's0.workflow'")
   }
   if (parsed.exportVersion !== 1) {
     throw new Error("Unsupported workflow export version")
@@ -416,7 +416,7 @@ export function parseWorkflowExport(source: string): WorkflowExportDocument {
   }
 
   return {
-    kind: "c0.workflow",
+    kind: "s0.workflow",
     exportVersion: 1,
     name: readString(parsed.name, validation.manifest.name),
     manifest: validation.manifest,

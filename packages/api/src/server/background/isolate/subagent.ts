@@ -15,7 +15,7 @@ import { type UIMessage } from "ai"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { type OpenCodeMcpServers, type SessionToolSpec } from "@c0-agent/shared"
+import { type OpenCodeMcpServers, type SessionToolSpec } from "@solzero/shared"
 import type { AiSearchMcpRuntimeContext } from "../../mcp/ai-search-runtime"
 import { createApiRequestObserver } from "../../effect/services/observability"
 import {

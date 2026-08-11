@@ -2,7 +2,7 @@
  * Utility functions for formatting display values
  */
 
-import { MODEL_OPTIONS, normalizeModelId } from "@c0-agent/shared"
+import { MODEL_OPTIONS, normalizeModelId } from "@solzero/shared"
 
 const MODEL_DISPLAY_NAMES = new Map<string, string>(
   MODEL_OPTIONS.flatMap((g) => g.models.map((m) => [m.id, m.name])),

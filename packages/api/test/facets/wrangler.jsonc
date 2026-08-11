@@ -1,6 +1,6 @@
 {
   "$schema": "../../../../node_modules/wrangler/config-schema.json",
-  "name": "c0-isolate-facet-tests",
+  "name": "s0-isolate-facet-tests",
   "main": "worker.ts",
   "compatibility_date": "2026-07-21",
   "compatibility_flags": [

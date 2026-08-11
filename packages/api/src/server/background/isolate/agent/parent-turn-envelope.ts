@@ -1,7 +1,7 @@
 import * as Option from "effect/Option"
 import type { IsolatePromptRequest } from "./types"
 
-const PARENT_TURN_ENVELOPE_TABLE = "c0_isolate_parent_turn_recovery"
+const PARENT_TURN_ENVELOPE_TABLE = "s0_isolate_parent_turn_recovery"
 
 export interface IsolateParentTurnEnvelope {
   messageId: string

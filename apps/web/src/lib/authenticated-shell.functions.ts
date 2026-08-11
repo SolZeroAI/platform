@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { getRequest } from "@tanstack/react-start/server"
-import type { ProviderSettingsResponse, PublicAuthProviderRegistry } from "@c0-agent/shared"
+import type { ProviderSettingsResponse, PublicAuthProviderRegistry } from "@solzero/shared"
 import { getAuthSessionContext, type AuthSessionContext } from "@/lib/auth-session"
 import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"
 

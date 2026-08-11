@@ -28,7 +28,7 @@ export interface ApiKeyPrincipal {
 export type AuthPrincipal = UserSessionPrincipal | ApiKeyPrincipal
 
 export class CurrentPrincipal extends Context.Service<CurrentPrincipal, AuthPrincipal>()(
-  "c0/api/CurrentPrincipal",
+  "s0/api/CurrentPrincipal",
 ) {}
 
 const AuthFailure = [UnauthorizedError, InternalServerError] as const
@@ -38,7 +38,7 @@ export class ControlPlaneAuth extends HttpApiMiddleware.Service<
   {
     readonly provides: CurrentPrincipal
   }
->()("c0/api/ControlPlaneAuth", {
+>()("s0/api/ControlPlaneAuth", {
   error: AuthFailure,
   security: {
     bearerAuth: HttpApiSecurity.bearer,

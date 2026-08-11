@@ -25,7 +25,7 @@ import {
   normalizeSubagentMode,
   type PullRequest,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { describeError } from "../../lib/effect-errors"
 import {
   createApiRequestObserver,

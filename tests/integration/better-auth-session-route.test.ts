@@ -12,7 +12,7 @@ const adminEmail = "admin@example.test"
 const devEnv = {
   ...env,
   STAGE: "dev",
-  C0_CONFIG_ADMIN: { adminEmails: [adminEmail], adminDomains: [] },
+  S0_CONFIG_ADMIN: { adminEmails: [adminEmail], adminDomains: [] },
 } as ApiEnv
 const authRegistry = {
   defaultSignInProviderId: "github",

@@ -1,4 +1,4 @@
-import type { WorkflowManifest, WorkflowManifestNode } from "@c0-agent/shared"
+import type { WorkflowManifest, WorkflowManifestNode } from "@solzero/shared"
 import { generateId } from "../auth/crypto"
 import { parseJson } from "../../lib/json"
 import { toError } from "../../lib/effect-errors"
@@ -215,7 +215,7 @@ function normalizeSlackTriggerNode(node: WorkflowManifestNode): NormalizedSlackT
   )
   const commandName = Match.value(surface).pipe(
     Match.when("command", () =>
-      Option.getOrElse(normalizeSlackCommandName(options.command), () => "/c0"),
+      Option.getOrElse(normalizeSlackCommandName(options.command), () => "/s0"),
     ),
     Match.orElse(() => null),
   )
@@ -227,7 +227,7 @@ function normalizeSlackTriggerNode(node: WorkflowManifestNode): NormalizedSlackT
     node,
     surface,
     commandName,
-    commandDescription: readString(options.commandDescription, "Run c0 from Slack"),
+    commandDescription: readString(options.commandDescription, "Run s0 from Slack"),
     eventTypes: resolvedEventTypes,
     channelNamePattern: readString(options.channelNamePattern) || null,
     keywordRules: readStringArray(options.keywordRules),
@@ -305,7 +305,7 @@ export function buildSlackManifest(input: {
   Match.value(commandTriggers.length > 0).pipe(
     Match.when(true, () => {
       features.slash_commands = Arr.map(commandTriggers, (trigger) => ({
-        command: trigger.commandName ?? "/c0",
+        command: trigger.commandName ?? "/s0",
         description: trigger.commandDescription,
         url: input.requestUrls.commands[trigger.node.id],
         should_escape: false,
@@ -597,7 +597,7 @@ const createNewSlackApp = Effect.fn("workflows.createNewSlackApp")(function* (
   store: WorkflowSlackAppStore,
 ) {
   const appId = `wsa_${generateId(12)}`
-  const appName = input.appName?.trim() || `${input.workflow.name} c0`
+  const appName = input.appName?.trim() || `${input.workflow.name} s0`
   return yield* Effect.tryPromise({
     try: () =>
       store.createApp({
@@ -649,7 +649,7 @@ const registerTriggerNodes = Effect.fn("workflows.registerTriggerNodes")(functio
   const app = yield* ensureWorkflowSlackApp({
     env: input.env,
     workflow: input.workflow,
-    appName: `${input.manifest.name} c0`,
+    appName: `${input.manifest.name} s0`,
     now,
   })
   const registrations: UpsertWorkflowSlackTriggerRegistrationInput[] = Arr.map(
@@ -737,7 +737,7 @@ export const getWorkflowSlackAppSetup = Effect.fn("workflows.getSlackAppSetup")(
   const app = yield* ensureWorkflowSlackApp({
     env: input.env,
     workflow: input.workflow,
-    appName: `${input.manifest.name} c0`,
+    appName: `${input.manifest.name} s0`,
   })
   const requestUrls = buildWorkflowSlackRequestUrls({
     serverUrl: input.serverUrl,

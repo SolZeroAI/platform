@@ -218,7 +218,7 @@ export function createLocalSandboxProvider(
   const root = options.workspaceRoot ?? SANDBOX_ROOT
   return {
     specificationVersion: "harness-sandbox-v1",
-    providerId: "c0-local-container",
+    providerId: "s0-local-container",
     createSession: async () => {
       await mkdir(root, { recursive: true })
       return new LocalNetworkSandboxSession(

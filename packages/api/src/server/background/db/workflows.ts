@@ -821,14 +821,14 @@ export class WorkflowStore {
   })
 }
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
 function runWorkflowStoreEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowStore to non-Effect background workflow runtime modules (runner, alarm, routers, nodes, lifecycle).
   return Effect.runPromise(effect)
 }
 
 function runWorkflowStoreOption<A>(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
   effect: Effect.Effect<Option.Option<A>, D1Error>,
 ): Promise<A | null> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowStore to non-Effect background workflow runtime modules (runner, alarm, routers, nodes, lifecycle).

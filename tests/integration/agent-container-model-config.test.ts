@@ -39,6 +39,40 @@ const anthropicModel: RuntimeProviderConfig = {
   },
 }
 
+const cloudflareResponsesModel: RuntimeProviderConfig = {
+  kind: "openai-responses",
+  providerId: "cloudflare-ai-gateway",
+  modelId: "openai/gpt-5.6-luna",
+  auth: {
+    apiKey: "container-proxy",
+    baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+    name: "cloudflare-ai-gateway",
+    modelProviderName: "cloudflare-ai-gateway",
+  },
+}
+
+const cloudflareChatModel: RuntimeProviderConfig = {
+  kind: "openai-compatible",
+  providerId: "cloudflare-ai-gateway",
+  modelId: "xai/grok-4.5",
+  auth: {
+    apiKey: "container-proxy",
+    baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+    name: "cloudflare-ai-gateway",
+    modelProviderName: "cloudflare-ai-gateway",
+  },
+}
+
+const cloudflareMessagesModel: RuntimeProviderConfig = {
+  kind: "anthropic",
+  providerId: "cloudflare-ai-gateway",
+  modelId: "anthropic/claude-opus-5",
+  auth: {
+    apiKey: "container-proxy",
+    baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+  },
+}
+
 const runtimeCases: RuntimeCase[] = [
   {
     runtime: "opencode",
@@ -89,6 +123,69 @@ const runtimeCases: RuntimeCase[] = [
       },
     },
   },
+  {
+    runtime: "opencode",
+    model: cloudflareResponsesModel,
+    expectedSettings: {
+      provider: "openai",
+      model: "openai/openai/gpt-5.6-luna",
+      auth: {
+        openai: {
+          apiKey: "container-proxy",
+          baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+        },
+      },
+      reasoningVariant: "high",
+    },
+  },
+  {
+    runtime: "opencode",
+    model: cloudflareChatModel,
+    expectedSettings: {
+      provider: "cloudflare-ai-gateway",
+      model: "cloudflare-ai-gateway/xai/grok-4.5",
+      auth: {
+        openaiCompatible: {
+          apiKey: "container-proxy",
+          baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+          name: "cloudflare-ai-gateway",
+        },
+      },
+      reasoningVariant: "high",
+    },
+  },
+  {
+    runtime: "codex",
+    model: cloudflareResponsesModel,
+    expectedSettings: {
+      model: "openai/gpt-5.6-luna",
+      auth: {
+        openai: {
+          apiKey: "container-proxy",
+          baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai/v1",
+        },
+      },
+      reasoningEffort: "high",
+      webSearch: true,
+    },
+  },
+  {
+    runtime: "claude-code",
+    model: cloudflareMessagesModel,
+    expectedSettings: {
+      model: "anthropic/claude-opus-5",
+      auth: {
+        anthropic: {
+          apiKey: "container-proxy",
+          baseUrl: "https://api.cloudflare.com/client/v4/accounts/account-1/ai",
+        },
+      },
+      thinking: {
+        type: "enabled",
+        display: "summarized",
+      },
+    },
+  },
 ]
 
 describe("agent container model configuration", () => {
@@ -121,10 +218,19 @@ describe("agent container model configuration", () => {
         "shell commands, package managers, arbitrary command execution",
       )
       expect(instructions).toContain("native tools supplied by the selected agent harness")
-      expect(instructions).not.toContain("c0-create-pr")
+      expect(instructions).not.toContain("s0-create-pr")
       expect(instructions).not.toContain("Create a pull request")
     },
   )
+
+  it("uses adaptive thinking for Claude Opus 5 at the configured medium default", () => {
+    expect(harnessAdapterSettings("claude-code", cloudflareMessagesModel, "medium")).toMatchObject({
+      settings: {
+        model: "anthropic/claude-opus-5",
+        thinking: { type: "adaptive", display: "summarized" },
+      },
+    })
+  })
 
   it.each(runtimeCases)("adds repository and MCP guidance for $runtime", ({ runtime, model }) => {
     const instructions = buildHarnessInstructions({
@@ -132,7 +238,7 @@ describe("agent container model configuration", () => {
       model,
       repository: {
         owner: "example-org",
-        name: "c0",
+        name: "s0",
         defaultBranch: "main",
         branchName: "codex/harness-skills",
       },
@@ -143,10 +249,10 @@ describe("agent container model configuration", () => {
 
     expect(instructions).toContain("Use configured MCP tools directly")
     expect(instructions).toContain("delegated agents do not inherit these MCP permissions")
-    expect(instructions).toContain("The attached repository is example-org/c0")
+    expect(instructions).toContain("The attached repository is example-org/s0")
     expect(instructions).toContain("Work on codex/harness-skills")
     expect(instructions).toContain("Never push directly to main")
-    expect(instructions).not.toContain("c0-create-pr")
+    expect(instructions).not.toContain("s0-create-pr")
   })
 
   it("converts runtime packages to HarnessV1Skill values and fingerprints content hashes", () => {

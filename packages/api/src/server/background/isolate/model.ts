@@ -2,10 +2,16 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { type LanguageModel, type ModelMessage } from "ai"
-import type { CompiledOpenCodeConfig } from "@c0-agent/shared"
+import { createWorkersAI } from "workers-ai-provider"
+import type { CompiledOpenCodeConfig } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import {
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+  CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+  normalizeCloudflareAiGatewayResponse,
+} from "../ai-providers/cloudflare-ai-gateway"
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
 import {
   BackgroundTracing,
@@ -34,17 +40,21 @@ export interface IsolateModelContext {
   providerOptions?: Record<string, JsonObject>
 }
 
-type SupportedProviderPackage = "@ai-sdk/openai" | "@ai-sdk/openai-compatible" | "@ai-sdk/anthropic"
+type SupportedProviderPackage =
+  | "@ai-sdk/openai"
+  | "@ai-sdk/openai-compatible"
+  | "@ai-sdk/anthropic"
+  | "workers-ai-provider"
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 type JsonObject = { [key: string]: JsonValue }
-
 function toSupportedProviderPackage(value: string | undefined): SupportedProviderPackage {
   return Match.value(value).pipe(
     Match.whenOr(
       "@ai-sdk/openai",
       "@ai-sdk/openai-compatible",
       "@ai-sdk/anthropic",
+      "workers-ai-provider",
       (resolved) => resolved,
     ),
     Match.orElse(() => "@ai-sdk/openai-compatible" as const),
@@ -104,20 +114,80 @@ function buildProviderOptions(input: {
   modelOptions: Record<string, unknown>
   reasoningEffort?: string
 }): Option.Option<Record<string, JsonObject>> {
-  const reasoningOption = Option.getOrElse(
-    Option.fromNullishOr(input.reasoningEffort).pipe(
-      Option.filter((effort) => effort.length > 0 && input.providerPackage !== "@ai-sdk/anthropic"),
-      Option.map((effort): JsonObject => ({ reasoningEffort: effort })),
+  const reasoningOption = Match.value(input.providerPackage).pipe(
+    Match.when("@ai-sdk/anthropic", (): JsonObject => ({})),
+    Match.when("workers-ai-provider", () =>
+      Option.getOrElse(
+        Option.fromNullishOr(input.reasoningEffort).pipe(
+          Option.filter((effort) => effort.length > 0),
+          Option.map(
+            (effort): JsonObject => ({
+              reasoning_effort: Match.value(effort).pipe(
+                Match.when("none", () => null),
+                Match.orElse((value) => value),
+              ),
+            }),
+          ),
+        ),
+        (): JsonObject => ({}),
+      ),
     ),
-    (): JsonObject => ({}),
+    Match.orElse(() =>
+      Option.getOrElse(
+        Option.fromNullishOr(input.reasoningEffort).pipe(
+          Option.filter((effort) => effort.length > 0),
+          Option.map((effort): JsonObject => ({ reasoningEffort: effort })),
+        ),
+        (): JsonObject => ({}),
+      ),
+    ),
   )
   const options: JsonObject = {
     ...(input.modelOptions as JsonObject),
     ...reasoningOption,
   }
+  const providerOptionsKey = Match.value(input.providerPackage).pipe(
+    Match.when("workers-ai-provider", () => "workers-ai"),
+    Match.orElse(() => input.providerId),
+  )
 
   return Option.liftPredicate(options, (resolved) => Object.keys(resolved).length > 0).pipe(
-    Option.map((resolved) => ({ [input.providerId]: resolved })),
+    Option.map((resolved) => ({ [providerOptionsKey]: resolved })),
+  )
+}
+
+function requireAiGatewayBinding(env: Env): Ai {
+  return Option.getOrThrowWith(
+    Option.fromNullishOr(env.AI_GATEWAY),
+    () => new Error("Cloudflare AI Gateway is enabled but the AI_GATEWAY binding is missing"),
+  )
+}
+
+function requireAiGatewayId(env: Env): string {
+  return Option.getOrThrowWith(
+    Option.fromNullishOr(env.AI_GATEWAY_ID).pipe(
+      Option.filter((gatewayId) => gatewayId.trim().length > 0),
+    ),
+    () => new Error("Cloudflare AI Gateway is enabled but AI_GATEWAY_ID is missing"),
+  )
+}
+
+async function executeProviderFetch(
+  input: {
+    providerId: string
+    fetchImplementation?: typeof fetch
+  },
+  request: Parameters<typeof fetch>[0],
+  init?: Parameters<typeof fetch>[1],
+): Promise<Response> {
+  const response = await Option.match(Option.fromNullishOr(input.fetchImplementation), {
+    // oxlint-disable-next-line effect/avoid-native-fetch -- This IS the AI provider HTTP passthrough being traced; the AI SDK requires a native fetch implementation and no HttpClient layer is provisioned on this path.
+    onNone: () => fetch(request, init),
+    onSome: (fetchImplementation) => fetchImplementation(request, init),
+  })
+  return Match.value(input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID).pipe(
+    Match.when(true, () => normalizeCloudflareAiGatewayResponse(response)),
+    Match.orElse(() => response),
   )
 }
 
@@ -127,6 +197,7 @@ function createProviderFetch(input: {
   providerPackage: SupportedProviderPackage
   modelId: string
   observability?: IsolateModelObservability
+  fetchImplementation?: typeof fetch
 }): typeof fetch {
   function tracedFetch(
     request: Parameters<typeof fetch>[0],
@@ -156,8 +227,7 @@ function createProviderFetch(input: {
           "url.path": parsed.pathname,
         },
         Effect.tryPromise({
-          // oxlint-disable-next-line effect/avoid-native-fetch -- This IS the AI provider HTTP passthrough being traced; the AI SDK requires a native fetch implementation and no HttpClient layer is provisioned on this path.
-          try: () => fetch(request, init),
+          try: () => executeProviderFetch(input, request, init),
           catch: (cause) => cause,
         }),
       )
@@ -168,25 +238,74 @@ function createProviderFetch(input: {
   return tracedFetch
 }
 
+function createCloudflareAiGatewayProviderNativeFetch(input: {
+  env: Env
+  storedKey: boolean
+}): typeof fetch {
+  return async function cloudflareAiGatewayProviderNativeFetch(request, init) {
+    const providerRequest = new Request(request, init)
+    const headers = new Headers(providerRequest.headers)
+    const runToken = Option.getOrThrowWith(
+      stringOption(Reflect.get(input.env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET)).pipe(
+        Option.filter((value) => value.trim().length > 0),
+      ),
+      () => new Error("Cloudflare AI Gateway run token is missing"),
+    )
+    headers.set("cf-aig-authorization", `Bearer ${runToken}`)
+    Match.value(input.storedKey).pipe(
+      Match.when(true, () => {
+        headers.delete("authorization")
+        headers.delete("x-api-key")
+      }),
+      Match.orElse(() => undefined),
+    )
+    // oxlint-disable-next-line effect/avoid-native-fetch -- Provider-native AI Gateway execution is the outbound AI provider boundary required for stored and per-request BYOK.
+    return fetch(new Request(providerRequest, { headers }))
+  }
+}
+
 function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   const { providerPackage, providerOptions } = getSelectedProviderConfig(input)
   const apiKey = stringOption(providerOptions.apiKey)
   const baseURL = stringOption(providerOptions.baseURL)
   const headers = toStringRecord(providerOptions.headers)
+  const cloudflareProviderNativeFetch = Match.value(
+    input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID &&
+      providerPackage !== "workers-ai-provider",
+  ).pipe(
+    Match.when(true, () =>
+      Option.some(
+        createCloudflareAiGatewayProviderNativeFetch({
+          env: input.env,
+          storedKey: providerOptions.s0CloudflareStoredKey === true,
+        }),
+      ),
+    ),
+    Match.orElse(() => Option.none<typeof fetch>()),
+  )
   const tracedFetch = createProviderFetch({
     env: input.env,
     providerId: input.providerId,
     providerPackage,
     modelId: input.modelId,
     observability: input.observability,
+    fetchImplementation: Option.getOrUndefined(cloudflareProviderNativeFetch),
   })
+  const resolvedApiKey = Option.getOrUndefined(apiKey)
+  const resolvedBaseUrl = baseURL
 
   return Match.value(providerPackage).pipe(
+    Match.when("workers-ai-provider", () =>
+      createWorkersAI({
+        binding: requireAiGatewayBinding(input.env),
+        gateway: { id: requireAiGatewayId(input.env) },
+      })(input.modelId),
+    ),
     Match.when("@ai-sdk/openai", () =>
       createOpenAI({
         name: input.providerId,
-        apiKey: Option.getOrUndefined(apiKey),
-        baseURL: Option.getOrUndefined(baseURL),
+        apiKey: resolvedApiKey,
+        baseURL: Option.getOrUndefined(resolvedBaseUrl),
         fetch: tracedFetch,
         headers: Option.getOrUndefined(headers),
       }).responses(input.modelId),
@@ -194,8 +313,8 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
     Match.when("@ai-sdk/anthropic", () =>
       createAnthropic({
         name: input.providerId,
-        apiKey: Option.getOrUndefined(apiKey),
-        baseURL: Option.getOrUndefined(baseURL),
+        apiKey: resolvedApiKey,
+        baseURL: Option.getOrUndefined(resolvedBaseUrl),
         fetch: tracedFetch,
         headers: Option.getOrUndefined(headers),
       })(input.modelId),
@@ -203,9 +322,9 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
     Match.orElse(() =>
       createOpenAICompatible({
         name: input.providerId,
-        apiKey: Option.getOrUndefined(apiKey),
+        apiKey: resolvedApiKey,
         baseURL: Option.getOrThrowWith(
-          baseURL,
+          resolvedBaseUrl,
           () => new Error(`Provider '${input.providerId}' is missing a baseURL`),
         ),
         fetch: tracedFetch,

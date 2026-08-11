@@ -1,5 +1,5 @@
 import type { Env } from "../types"
-import type { WorkflowManifest } from "@c0-agent/shared"
+import type { WorkflowManifest } from "@solzero/shared"
 import { prefixStorageKeyWithUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
 import * as Effect from "effect/Effect"

@@ -2,7 +2,7 @@
  * Task extraction utilities for parsing TodoWrite events
  */
 
-import type { SandboxEvent } from "@c0-agent/shared"
+import type { SandboxEvent } from "@solzero/shared"
 import type { Task } from "@/types/session"
 
 interface TodoWriteArgs {

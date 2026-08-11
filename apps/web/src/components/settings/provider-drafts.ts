@@ -1,3 +1,8 @@
+import {
+  CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
+} from "@solzero/shared"
+
 export type SharedProviderDraft = {
   providerId: string
   displayName: string
@@ -21,6 +26,7 @@ type SharedProviderSource = {
   providerId?: unknown
   name?: unknown
   source?: unknown
+  credentialSource?: unknown
 }
 
 type SharedProviderOverrideSource = {
@@ -73,16 +79,33 @@ export function buildSharedProviderDrafts(
 
   return providers
     .filter((provider) => provider.source === "shared")
-    .map((provider) => {
+    .flatMap((provider) => {
+      if (provider.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID) {
+        return CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS.map((byokProvider) => {
+          const override = overridesByProviderId.get(byokProvider.userOverrideProviderId)
+          return {
+            providerId: byokProvider.userOverrideProviderId,
+            displayName: `Cloudflare AI Gateway — ${byokProvider.name}`,
+            enabled: Boolean(override),
+            hasExistingApiKey: Boolean(override?.hasApiKey),
+            apiKey: "",
+          }
+        })
+      }
+      if (provider.credentialSource === "binding") {
+        return []
+      }
       const providerId = readDraftText(provider.providerId)
       const override = overridesByProviderId.get(providerId)
-      return {
-        providerId,
-        displayName: readDraftText(provider.name) || providerId,
-        enabled: Boolean(override),
-        hasExistingApiKey: Boolean(override?.hasApiKey),
-        apiKey: "",
-      }
+      return [
+        {
+          providerId,
+          displayName: readDraftText(provider.name) || providerId,
+          enabled: Boolean(override),
+          hasExistingApiKey: Boolean(override?.hasApiKey),
+          apiKey: "",
+        },
+      ]
     })
 }
 

@@ -21,7 +21,7 @@ import { Effect, Fiber, Option, Tracer } from "effect"
 
 const env = {
   STAGE: "test",
-  WORKER_NAME: "c0-api-dev",
+  WORKER_NAME: "s0-api-dev",
 } as ApiEnv
 
 interface RecordedSpan {
@@ -208,7 +208,7 @@ describe("API observability", () => {
       path: "/api/auth/get-session",
       requestIdSrc: "generated",
       stage: "dev",
-      workerName: "c0-api-dev",
+      workerName: "s0-api-dev",
     })
     expect(output).not.toContain("headers")
     expect(output).not.toContain("colo")
@@ -218,7 +218,7 @@ describe("API observability", () => {
     expect(output).not.toContain("very long user agent")
   })
 
-  it("records c0-local correlation fields on request logs and Cloudflare spans", async () => {
+  it("records s0-local correlation fields on request logs and Cloudflare spans", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {})
     vi.spyOn(console, "info").mockImplementation(() => {})
     const fetchMock = vi.spyOn(globalThis, "fetch")
@@ -248,16 +248,16 @@ describe("API observability", () => {
 
     const annotations = requestLogAnnotations(observer.context)
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(annotations["c0.local_trace_id"]).toMatch(/^[a-f0-9]{32}$/)
-    expect(annotations["c0.local_span_id"]).toMatch(/^[a-f0-9]{16}$/)
-    expect(annotations["trace.id"]).toBe(annotations["c0.local_trace_id"])
-    expect(annotations["span.id"]).toBe(annotations["c0.local_span_id"])
+    expect(annotations["s0.local_trace_id"]).toMatch(/^[a-f0-9]{32}$/)
+    expect(annotations["s0.local_span_id"]).toMatch(/^[a-f0-9]{16}$/)
+    expect(annotations["trace.id"]).toBe(annotations["s0.local_trace_id"])
+    expect(annotations["span.id"]).toBe(annotations["s0.local_span_id"])
     expect(tracingContext.spans[0]).toMatchObject({
       name: "api.better_auth",
       attributes: expect.objectContaining({
         "api.surface": "better_auth",
-        "c0.local_trace_id": annotations["c0.local_trace_id"],
-        "c0.local_span_id": annotations["c0.local_span_id"],
+        "s0.local_trace_id": annotations["s0.local_trace_id"],
+        "s0.local_span_id": annotations["s0.local_span_id"],
         "trace.id": annotations["trace.id"],
         "span.id": annotations["span.id"],
       }),
@@ -286,7 +286,7 @@ describe("API observability", () => {
       path: "/sessions",
       hostname: "api.example.test",
       stage: "test",
-      workerName: "c0-api-dev",
+      workerName: "s0-api-dev",
       logFormat: "pretty",
       consoleOutputEnabled: false,
       cfRay: "ray_123",
@@ -322,12 +322,12 @@ describe("API observability", () => {
       path: "/sessions",
       requestIdSrc: "generated",
       stage: "test",
-      workerName: "c0-api-dev",
+      workerName: "s0-api-dev",
     })
-    expect(annotations["c0.local_trace_id"]).toMatch(/^[a-f0-9]{32}$/)
-    expect(annotations["c0.local_span_id"]).toMatch(/^[a-f0-9]{16}$/)
-    expect(annotations["trace.id"]).toBe(annotations["c0.local_trace_id"])
-    expect(annotations["span.id"]).toBe(annotations["c0.local_span_id"])
+    expect(annotations["s0.local_trace_id"]).toMatch(/^[a-f0-9]{32}$/)
+    expect(annotations["s0.local_span_id"]).toMatch(/^[a-f0-9]{16}$/)
+    expect(annotations["trace.id"]).toBe(annotations["s0.local_trace_id"])
+    expect(annotations["span.id"]).toBe(annotations["s0.local_span_id"])
     expect(annotations).not.toHaveProperty("headers")
     expect(annotations).not.toHaveProperty("requestLogs")
     expect(annotations).not.toHaveProperty("logFormat")
@@ -349,7 +349,7 @@ describe("API observability", () => {
         Effect.withSpan("workflow.state.transition"),
         Effect.withTracer(makeEffectTracer(spanEvents)),
         Effect.provide(
-          makeEffectLoggerLayer({ stageMetadataInput: "test", workerName: "c0-api-test" }),
+          makeEffectLoggerLayer({ stageMetadataInput: "test", workerName: "s0-api-test" }),
         ),
       ),
     )
@@ -397,8 +397,8 @@ describe("API observability", () => {
           "http.response.status_code": 404,
           "request.id": "ray_456",
           "route.branch": "effect-http-api",
-          "c0.local_trace_id": observer.context.localTraceContext.traceId,
-          "c0.local_span_id": observer.context.localTraceContext.spanId,
+          "s0.local_trace_id": observer.context.localTraceContext.traceId,
+          "s0.local_span_id": observer.context.localTraceContext.spanId,
           "trace.id": observer.context.localTraceContext.traceId,
           "span.id": observer.context.localTraceContext.spanId,
           "user.id": "user_1",
@@ -472,7 +472,7 @@ describe("API observability", () => {
     const devEnv = {
       ...env,
       STAGE: "dev",
-      WORKER_NAME: "c0-api-route-test",
+      WORKER_NAME: "s0-api-route-test",
     } as ApiEnv
     const observer = createApiRequestObserver(
       new Request("https://api.example.test/api/auth/get-session"),
@@ -510,8 +510,8 @@ describe("API observability", () => {
       attributes: expect.objectContaining({
         "http.route.endpoint": "session",
         "http.route.group": "auth",
-        "c0.local_trace_id": observer.context.localTraceContext.traceId,
-        "c0.local_span_id": observer.context.localTraceContext.spanId,
+        "s0.local_trace_id": observer.context.localTraceContext.traceId,
+        "s0.local_span_id": observer.context.localTraceContext.spanId,
         status: "ok",
       }),
     })
@@ -607,7 +607,7 @@ describe("API observability", () => {
       ...env,
       APP_VERSION: "test",
       STAGE: "dev",
-      WORKER_NAME: "c0-api-handler-test",
+      WORKER_NAME: "s0-api-handler-test",
     } as ApiEnv
     const request = new Request("https://api.example.test/health")
     const observer = createApiRequestObserver(request, devEnv, tracingContext.ctx)
@@ -636,7 +636,7 @@ describe("API observability", () => {
           name: "http.health.get",
           attributes: expect.objectContaining({
             "http.route.group": "health",
-            "c0.local_trace_id": observer.context.localTraceContext.traceId,
+            "s0.local_trace_id": observer.context.localTraceContext.traceId,
           }),
         }),
       ]),
@@ -649,7 +649,7 @@ describe("API observability", () => {
       ...env,
       APP_VERSION: "test",
       STAGE: "dev",
-      WORKER_NAME: "c0-api-handler-test",
+      WORKER_NAME: "s0-api-handler-test",
     } as ApiEnv
     const request = new Request("https://api.example.test/?1782430873=")
     const observer = createApiRequestObserver(request, devEnv, tracingContext.ctx)

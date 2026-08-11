@@ -7,9 +7,9 @@ import {
   type ProviderSettingsResponse,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { SidebarLayout } from "@/components/sidebar-layout"
 import {
   formatOktaReconnectError,
@@ -93,7 +93,7 @@ export function SessionPage({
         .map((group) => ({
           ...group,
           models: group.models.filter((model) =>
-            isAgentRuntimeCompatibleWithProvider(agentRuntime, model.providerId),
+            isAgentRuntimeCompatibleWithProvider(agentRuntime, model.providerId, model.providerApi),
           ),
         }))
         .filter((group) => group.models.length > 0),
@@ -504,7 +504,7 @@ export function SessionPage({
   if (authStatus === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <C0Loader size={32} />
+        <S0Loader size={32} />
       </div>
     )
   }

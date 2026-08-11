@@ -16,8 +16,8 @@ import {
   type SubagentMode,
   stringifyOpenCodeMcpServers,
   stringifySessionTools,
-} from "@c0-agent/shared"
-import { C0Loader } from "@/components/c0-loader"
+} from "@solzero/shared"
+import { S0Loader } from "@/components/s0-loader"
 import { type RepoQueryState } from "@/components/home-session-tools-dialog"
 import { SidebarLayout } from "@/components/sidebar-layout"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
@@ -120,7 +120,11 @@ export function HomePage({
         .map((group) => ({
           ...group,
           models: group.models.filter((model) =>
-            isAgentRuntimeCompatibleWithProvider(selectedAgentRuntime, model.providerId),
+            isAgentRuntimeCompatibleWithProvider(
+              selectedAgentRuntime,
+              model.providerId,
+              model.providerApi,
+            ),
           ),
         }))
         .filter((group) => group.models.length > 0),
@@ -519,7 +523,7 @@ export function HomePage({
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <C0Loader size={32} />
+        <S0Loader size={32} />
       </div>
     )
   }

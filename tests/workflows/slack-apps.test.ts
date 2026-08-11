@@ -18,7 +18,7 @@ function slackTrigger(override: Partial<NormalizedSlackTriggerNode>): Normalized
     },
     surface: "event",
     commandName: null,
-    commandDescription: "Run c0 from Slack",
+    commandDescription: "Run s0 from Slack",
     eventTypes: ["app_mention"],
     channelNamePattern: null,
     keywordRules: [],
@@ -31,12 +31,12 @@ function slackTrigger(override: Partial<NormalizedSlackTriggerNode>): Normalized
 
 function manifestFor(triggers: NormalizedSlackTriggerNode[]) {
   return buildSlackManifest({
-    appName: "Incident assistant c0",
+    appName: "Incident assistant s0",
     requestUrls: {
-      events: "https://c0.test/workflows/slack-apps/wsa_1/events",
-      interactions: "https://c0.test/workflows/slack-apps/wsa_1/interactions",
+      events: "https://s0.test/workflows/slack-apps/wsa_1/events",
+      interactions: "https://s0.test/workflows/slack-apps/wsa_1/interactions",
       commands: {
-        slack_command: "https://c0.test/workflows/slack-apps/wsa_1/commands/slack_command",
+        slack_command: "https://s0.test/workflows/slack-apps/wsa_1/commands/slack_command",
       },
     },
     triggers,
@@ -58,7 +58,7 @@ describe("workflow Slack app manifests", () => {
     expect(manifest.features.slash_commands).toBeUndefined()
     expect(manifest.oauth_config.scopes.bot).not.toContain("commands")
     expect(manifest.settings.event_subscriptions).toEqual({
-      request_url: "https://c0.test/workflows/slack-apps/wsa_1/events",
+      request_url: "https://s0.test/workflows/slack-apps/wsa_1/events",
       bot_events: ["app_mention"],
     })
   })
@@ -67,7 +67,7 @@ describe("workflow Slack app manifests", () => {
     const manifest = manifestFor([slackTrigger({ eventTypes: ["app_mention", "message"] })])
 
     expect(manifest.settings.event_subscriptions).toEqual({
-      request_url: "https://c0.test/workflows/slack-apps/wsa_1/events",
+      request_url: "https://s0.test/workflows/slack-apps/wsa_1/events",
       bot_events: [
         "app_mention",
         "message.channels",
@@ -82,7 +82,7 @@ describe("workflow Slack app manifests", () => {
     const manifest = manifestFor([slackTrigger({ eventTypes: ["channel_created"] })])
 
     expect(manifest.settings.event_subscriptions).toEqual({
-      request_url: "https://c0.test/workflows/slack-apps/wsa_1/events",
+      request_url: "https://s0.test/workflows/slack-apps/wsa_1/events",
       bot_events: ["channel_created"],
     })
     expect(manifest.oauth_config.scopes.bot).toContain("channels:read")
@@ -100,16 +100,16 @@ describe("workflow Slack app manifests", () => {
           options: {},
         },
         surface: "command",
-        commandName: "/c0",
+        commandName: "/s0",
         eventTypes: [],
       }),
     ])
 
     expect(manifest.features.slash_commands).toEqual([
       {
-        command: "/c0",
-        description: "Run c0 from Slack",
-        url: "https://c0.test/workflows/slack-apps/wsa_1/commands/slack_command",
+        command: "/s0",
+        description: "Run s0 from Slack",
+        url: "https://s0.test/workflows/slack-apps/wsa_1/commands/slack_command",
         should_escape: false,
       },
     ])
@@ -130,7 +130,7 @@ describe("workflow Slack app manifests", () => {
     expect(eventManifest.settings.interactivity).toBeUndefined()
     expect(interactionManifest.settings.interactivity).toEqual({
       is_enabled: true,
-      request_url: "https://c0.test/workflows/slack-apps/wsa_1/interactions",
+      request_url: "https://s0.test/workflows/slack-apps/wsa_1/interactions",
     })
   })
 
@@ -138,7 +138,7 @@ describe("workflow Slack app manifests", () => {
     const invalidManifest = manifestFor([slackTrigger({ eventTypes: ["channel_created"] })])
     invalidManifest.features.slash_commands = []
     invalidManifest.settings.event_subscriptions = {
-      request_url: "https://c0.test/workflows/slack-apps/wsa_1/events",
+      request_url: "https://s0.test/workflows/slack-apps/wsa_1/events",
       bot_events: ["message", "channel_created"],
     }
     invalidManifest.oauth_config.scopes.bot = ["chat:write"]

@@ -220,8 +220,8 @@ export const WORKFLOW_TEMPLATES = [
           position: { x: 80, y: 300 },
           options: {
             surface: "command",
-            command: "/c0",
-            commandDescription: "Ask c0",
+            command: "/s0",
+            commandDescription: "Ask SolZero",
             cooldownSeconds: 0,
             dedupeWindowSeconds: 300,
           },
@@ -229,7 +229,7 @@ export const WORKFLOW_TEMPLATES = [
         {
           id: "answer",
           type: "isolate-session",
-          label: "Answer with c0",
+          label: "Answer with SolZero",
           position: { x: 400, y: 200 },
           options: {
             model: "litellm/gpt-5.6-luna",
@@ -368,7 +368,7 @@ export const WORKFLOW_TEMPLATES = [
           options: {
             channel: "",
             timestamp: "",
-            name: "c0-thinking",
+            name: "s0-thinking",
           },
         },
         {
@@ -430,7 +430,7 @@ export const WORKFLOW_TEMPLATES = [
           options: {
             channel: "",
             timestamp: "",
-            name: "c0-thinking",
+            name: "s0-thinking",
           },
         },
         {
@@ -455,7 +455,7 @@ export const WORKFLOW_TEMPLATES = [
           options: {
             channel: "",
             timestamp: "",
-            name: "c0-thinking",
+            name: "s0-thinking",
           },
         },
         {
@@ -497,7 +497,7 @@ export const WORKFLOW_TEMPLATES = [
           options: {
             channel: "",
             timestamp: "",
-            name: "c0-thinking",
+            name: "s0-thinking",
           },
         },
       ],

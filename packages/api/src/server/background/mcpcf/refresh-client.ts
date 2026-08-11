@@ -81,7 +81,7 @@ function fetchServersPage(input: {
   page: number
   cursor: Option.Option<string>
   accumulated: readonly unknown[]
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Recursive pagination needs an explicit return type to avoid TypeScript circular inference.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Recursive pagination needs an explicit return type to avoid TypeScript circular inference.
 }): Effect.Effect<unknown[], Error | McpcfRefreshHttpError> {
   return Match.value(input.page >= 50).pipe(
     Match.when(true, () => Effect.succeed([...input.accumulated])),

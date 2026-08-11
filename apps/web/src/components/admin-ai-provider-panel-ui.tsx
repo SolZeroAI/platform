@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminCronRunRecord, AdminLitellmModel } from "@c0/api"
+import type { AdminCronRunRecord, AdminLitellmModel } from "@solzero/api"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Dialog } from "@/components/ui/dialog"
 import { InputGroup } from "@cloudflare/kumo/components/input-group"
@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
-const EMPTY_SELECT_VALUE = "__c0_admin_empty__"
+const EMPTY_SELECT_VALUE = "__s0_admin_empty__"
 
 const ADAPTER_OPTIONS = [
   "@ai-sdk/openai",

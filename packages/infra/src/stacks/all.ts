@@ -1,23 +1,23 @@
 import * as Alchemy from "alchemy"
 import { adopt } from "alchemy/AdoptPolicy"
 import * as Effect from "effect/Effect"
-import { createC0 } from "../c0"
+import { createS0 } from "../s0"
 import { stackOptions, type StackOptionsInput } from "../stack"
-import { c0StackRuntime } from "./runtime"
+import { s0StackRuntime } from "./runtime"
 
-export type C0StackOutput = Effect.Success<ReturnType<typeof createC0>>
-type C0StackServices = Effect.Services<typeof C0Program>
+export type S0StackOutput = Effect.Success<ReturnType<typeof createS0>>
+type S0StackServices = Effect.Services<typeof S0Program>
 
-export class C0 extends Alchemy.Stack<C0, C0StackOutput>()("C0") {}
+export class S0 extends Alchemy.Stack<S0, S0StackOutput>()("S0") {}
 
 // oxlint-disable-next-line effect/prefer-effect-fn -- Alchemy Stack.make expects an Effect value; Effect.fn changes inference here.
-export const C0Program = Effect.gen(function* () {
-  const runtime = yield* c0StackRuntime()
-  return yield* createC0(runtime).pipe(adopt(true))
+export const S0Program = Effect.gen(function* () {
+  const runtime = yield* s0StackRuntime()
+  return yield* createS0(runtime).pipe(adopt(true))
 })
 
-export function makeC0Stack(input: StackOptionsInput = {}) {
-  return C0.make(stackOptions<C0StackServices>(input), C0Program)
+export function makeS0Stack(input: StackOptionsInput = {}) {
+  return S0.make(stackOptions<S0StackServices>(input), S0Program)
 }
 
-export default makeC0Stack()
+export default makeS0Stack()

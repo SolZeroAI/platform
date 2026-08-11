@@ -2,7 +2,7 @@ import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Match from "effect/Match"
 import type * as Schema from "effect/Schema"
-import type { StageMetadata } from "@c0-agent/shared"
+import { resolveS0Brand, type StageMetadata } from "@solzero/shared"
 import type { DeploymentMetadata } from "./deploymentMetadata"
 
 function jsonBinding(value: unknown): Schema.Json {
@@ -32,6 +32,8 @@ export interface CreateWebOptions {
 export function createWeb(options: CreateWebOptions) {
   const { appName, stageMetadata, deploymentMetadata, repoRoot, dev } = options
   const [primaryDomain, ...domainAliases] = stageMetadata.infra.webDomains
+  // oxlint-disable-next-line effect/avoid-process-env -- Public brand overrides are build-time inputs for the browser bundle.
+  const brand = resolveS0Brand(process.env)
 
   return Cloudflare.Website.Vite("web", {
     name: `${appName}-web-${stageMetadata.name}`,
@@ -44,7 +46,7 @@ export function createWeb(options: CreateWebOptions) {
       enabled: true,
     },
     ...webDevOptions(dev),
-    // oxlint-disable-next-line c0-lint/no-ternary -- Alchemy domain config is optional only for deployed stages.
+    // oxlint-disable-next-line s0-lint/no-ternary -- Alchemy domain config is optional only for deployed stages.
     ...(primaryDomain
       ? {
           domain: {
@@ -59,18 +61,23 @@ export function createWeb(options: CreateWebOptions) {
       VITE_STAGE: stageMetadata.name,
       VITE_APP_VERSION: deploymentMetadata.appVersion,
       VITE_COMMIT_SHA: deploymentMetadata.commitSha,
-      C0_STAGE_METADATA: jsonBinding({
+      VITE_S0_BRAND_NAME: brand.name,
+      VITE_S0_BRAND_LOGO_LIGHT_PATH: brand.logoLightPath,
+      VITE_S0_BRAND_LOGO_DARK_PATH: brand.logoDarkPath,
+      VITE_S0_BRAND_FAVICON_PATH: brand.faviconPath,
+      VITE_S0_BRAND_APPLE_TOUCH_ICON_PATH: brand.appleTouchIconPath,
+      S0_STAGE_METADATA: jsonBinding({
         _tag: stageMetadata._tag,
         name: stageMetadata.name,
         app: stageMetadata.app,
         infra: stageMetadata.infra,
       }),
-      VITE_C0_LOG_LEVEL: stageMetadata.app.logLevel,
-      VITE_C0_SHOW_TEST_ERROR_BUTTON: String(stageMetadata.app.showTestErrorButton),
-      VITE_C0_BETTER_AUTH_SESSION_TRANSFER_ENABLED: String(
+      VITE_S0_LOG_LEVEL: stageMetadata.app.logLevel,
+      VITE_S0_SHOW_TEST_ERROR_BUTTON: String(stageMetadata.app.showTestErrorButton),
+      VITE_S0_BETTER_AUTH_SESSION_TRANSFER_ENABLED: String(
         stageMetadata.app.betterAuthSessionTransferEnabled,
       ),
-      VITE_C0_SANDBOX_INACTIVITY_TIMEOUT_MS: String(stageMetadata.app.sandboxInactivityTimeoutMs),
+      VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS: String(stageMetadata.app.sandboxInactivityTimeoutMs),
     },
   })
 }

@@ -56,7 +56,7 @@ describe("Isolate parent turn recovery envelope", () => {
     registerParentTurnEnvelope(sql, envelope)
 
     expect(Option.getOrNull(readParentTurnEnvelope(sql))).toEqual(envelope)
-    const rawRows = db.prepare("SELECT * FROM c0_isolate_parent_turn_recovery").all() as Record<
+    const rawRows = db.prepare("SELECT * FROM s0_isolate_parent_turn_recovery").all() as Record<
       string,
       unknown
     >[]
@@ -93,7 +93,7 @@ describe("Isolate parent turn recovery envelope", () => {
 
     expect(Option.getOrNull(readParentTurnEnvelope(sql))).toEqual(latest)
     expect(
-      db.prepare("SELECT COUNT(*) AS count FROM c0_isolate_parent_turn_recovery").get(),
+      db.prepare("SELECT COUNT(*) AS count FROM s0_isolate_parent_turn_recovery").get(),
     ).toEqual({ count: 1 })
     db.close()
   })

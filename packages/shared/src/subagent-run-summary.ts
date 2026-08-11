@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-switch-statement, c0-lint/no-ternary, effect/avoid-direct-json -- Compact replay reduction is an SDK wire-format boundary; direct guards deliberately discard raw child content while retaining safe lifecycle facts. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-switch-statement, s0-lint/no-ternary, effect/avoid-direct-json -- Compact replay reduction is an SDK wire-format boundary; direct guards deliberately discard raw child content while retaining safe lifecycle facts. */
 import type {
   SandboxEvent,
   SubagentMilestone,

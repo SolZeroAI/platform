@@ -1,4 +1,4 @@
-import { serializeWorkflowExport } from "@c0-agent/shared"
+import { serializeWorkflowExport } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import { readWorkflowManifest } from "../../../background/workflows/artifacts"
 import { runControlPlane } from "../shared/control-plane"

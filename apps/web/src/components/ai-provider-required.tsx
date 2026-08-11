@@ -4,7 +4,7 @@ import { Button } from "@cloudflare/kumo/components/button"
 import { Link } from "@tanstack/react-router"
 import { TriangleAlert, X } from "lucide-react"
 import { useState } from "react"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { Dialog } from "@/components/ui/dialog"
 
 export function AiProviderRequiredButton({
@@ -59,7 +59,7 @@ export function AiProviderLoadingButton({
         aria-label="Loading AI Provider models"
         className="mt-3 flex h-10 w-full items-center rounded-lg border border-kumo-hairline bg-kumo-tint/40 px-3"
       >
-        <C0Loader size={22} className="text-kumo-subtle" />
+        <S0Loader size={22} className="text-kumo-subtle" />
       </div>
     )
   }
@@ -72,7 +72,7 @@ export function AiProviderLoadingButton({
       title="Loading AI Provider models"
       className="home-model-control group flex min-h-9 items-center rounded-lg px-2.5 py-1 text-kumo-subtle opacity-70"
     >
-      <C0Loader size={22} className="text-kumo-subtle" />
+      <S0Loader size={22} className="text-kumo-subtle" />
     </button>
   )
 }

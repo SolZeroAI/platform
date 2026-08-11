@@ -41,4 +41,24 @@ describe("provider settings drafts", () => {
       ),
     ).toBe(true)
   })
+
+  it("offers vendor-specific personal BYOK slots for Cloudflare AI Gateway", () => {
+    const drafts = buildSharedProviderDrafts(
+      [
+        {
+          providerId: "cloudflare-ai-gateway",
+          name: "Cloudflare AI Gateway",
+          source: "shared",
+          credentialSource: "binding",
+        },
+      ],
+      [],
+    )
+
+    expect(drafts.map((draft) => draft.providerId)).toEqual([
+      "cloudflare-ai-gateway-byok-openai",
+      "cloudflare-ai-gateway-byok-anthropic",
+      "cloudflare-ai-gateway-byok-xai",
+    ])
+  })
 })

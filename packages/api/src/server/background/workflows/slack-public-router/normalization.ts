@@ -1,4 +1,4 @@
-import { getWebUrl } from "@c0-agent/shared"
+import { getWebUrl } from "@solzero/shared"
 import { toError } from "../../../lib/effect-errors"
 import type {
   WorkflowSlackAppStorePromise,

@@ -17,16 +17,17 @@ import {
   validateSkillResourcePath,
 } from "../../packages/api/src/server/background/skills/catalog"
 import {
-  C0_CREATE_PR_SKILL_ID,
-  C0_CREATE_PR_SKILL_MD,
+  S0_CREATE_PR_SKILL_ID,
+  S0_CREATE_PR_SKILL_MD,
 } from "../../packages/api/src/server/background/skills/built-ins"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const migration = readFileSync(
-  resolve(__dirname, "../../packages/infra/d1-migrations/0027_agent_skills.sql"),
-  "utf8",
-)
+const migration = ["0027_agent_skills.sql", "0030_s0_agent_skill_prefix.sql"]
+  .map((filename) =>
+    readFileSync(resolve(__dirname, `../../packages/infra/d1-migrations/${filename}`), "utf8"),
+  )
+  .join("\n")
 
 type SqliteValue = string | number | bigint | null | Uint8Array
 
@@ -194,19 +195,19 @@ describe("global agent skills", () => {
 
     expect(packages).toHaveLength(1)
     expect(packages[0]).toMatchObject({
-      id: C0_CREATE_PR_SKILL_ID,
-      name: "c0-create-pr",
-      content: expect.stringContaining('c0-create-pr "PR title" "PR body"'),
+      id: S0_CREATE_PR_SKILL_ID,
+      name: "s0-create-pr",
+      content: expect.stringContaining('s0-create-pr "PR title" "PR body"'),
     })
-    expect(bucket.objects.get(globalSkillMarkdownKey("c0-create-pr"))).toBe(C0_CREATE_PR_SKILL_MD)
+    expect(bucket.objects.get(globalSkillMarkdownKey("s0-create-pr"))).toBe(S0_CREATE_PR_SKILL_MD)
     expect(await listIsolateGlobalSkillNames({ db, userId: "user-1" })).toEqual([])
   })
 
   it("resolves explicit preferences before the admin default and resets cleanly", async () => {
     const store = new AgentSkillStore(db)
-    await Effect.runPromise(store.setPreference("user-1", C0_CREATE_PR_SKILL_ID, false))
+    await Effect.runPromise(store.setPreference("user-1", S0_CREATE_PR_SKILL_ID, false))
     expect(await listEffectiveGlobalSkills({ db, userId: "user-1" })).toMatchObject([
-      { id: C0_CREATE_PR_SKILL_ID, defaultEnabled: true, enabled: false, overridden: true },
+      { id: S0_CREATE_PR_SKILL_ID, defaultEnabled: true, enabled: false, overridden: true },
     ])
     expect(
       await resolveRuntimeSkillPackages({
@@ -216,9 +217,9 @@ describe("global agent skills", () => {
       }),
     ).toEqual([])
 
-    await Effect.runPromise(store.clearPreference("user-1", C0_CREATE_PR_SKILL_ID))
+    await Effect.runPromise(store.clearPreference("user-1", S0_CREATE_PR_SKILL_ID))
     expect(await listEffectiveGlobalSkills({ db, userId: "user-1" })).toMatchObject([
-      { id: C0_CREATE_PR_SKILL_ID, defaultEnabled: true, enabled: true, overridden: false },
+      { id: S0_CREATE_PR_SKILL_ID, defaultEnabled: true, enabled: true, overridden: false },
     ])
   })
 
@@ -229,10 +230,10 @@ describe("global agent skills", () => {
       userId: "user-1",
     })
     const store = new AgentSkillStore(db)
-    await Effect.runPromise(store.setPreference("user-1", C0_CREATE_PR_SKILL_ID, true))
-    const deleted = await Effect.runPromise(store.softDelete(C0_CREATE_PR_SKILL_ID))
+    await Effect.runPromise(store.setPreference("user-1", S0_CREATE_PR_SKILL_ID, true))
+    const deleted = await Effect.runPromise(store.softDelete(S0_CREATE_PR_SKILL_ID))
 
-    expect(bucket.objects.has(globalSkillMarkdownKey("c0-create-pr"))).toBe(true)
+    expect(bucket.objects.has(globalSkillMarkdownKey("s0-create-pr"))).toBe(true)
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM user_agent_skill_preferences").get() as {
         count: number
@@ -247,7 +248,7 @@ describe("global agent skills", () => {
     ).toEqual([])
 
     await deleteGlobalSkillPackage(bucket as unknown as R2Bucket, deleted.slug)
-    expect(bucket.objects.has(globalSkillMarkdownKey("c0-create-pr"))).toBe(false)
+    expect(bucket.objects.has(globalSkillMarkdownKey("s0-create-pr"))).toBe(false)
   })
 
   it("prevents duplicate active slugs without overwriting the existing R2 package", async () => {

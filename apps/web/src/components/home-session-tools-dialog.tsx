@@ -14,7 +14,7 @@ import {
   type OpenCodeMcpServers,
   type SessionToolSpec,
   type SubagentMode,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Banner } from "@cloudflare/kumo/components/banner"
 import { Button } from "@cloudflare/kumo/components/button"
@@ -27,7 +27,7 @@ import { Tooltip, TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { Check, ChevronRight, ExternalLink, Plus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { DialogPaginationPageSize } from "@/components/dialog-pagination-page-size"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
 import { IsolateAgentControls } from "@/components/isolate-agent-controls"
@@ -615,7 +615,7 @@ export function HomeSessionToolsDialog({
                             className="border-b border-kumo-hairline px-3 py-8 text-sm text-kumo-subtle"
                           >
                             <TableCellState>
-                              <C0Loader size={32} />
+                              <S0Loader size={32} />
                             </TableCellState>
                           </KumoTable.Cell>
                         </KumoTable.Row>
@@ -873,7 +873,7 @@ export function HomeSessionToolsDialog({
                 ) : null}
                 {aiSearchSourcesLoading ? (
                   <div className="flex h-24 items-center justify-center">
-                    <C0Loader size={32} />
+                    <S0Loader size={32} />
                   </div>
                 ) : null}
                 {!aiSearchSourcesLoading &&

@@ -1,10 +1,10 @@
 import { Effect, type Redacted } from "effect"
 import { FetchHttpClient, HttpClientRequest } from "effect/unstable/http"
 import { HttpApiClient, HttpApiMiddleware } from "effect/unstable/httpapi"
-import { C0Api } from "./http"
+import { S0Api } from "./http"
 import { ControlPlaneAuth } from "./http/security"
 
-export type C0ApiClient = HttpApiClient.ForApi<typeof C0Api>
+export type S0ApiClient = HttpApiClient.ForApi<typeof S0Api>
 
 function applyControlPlaneHeaders(
   request: HttpClientRequest.HttpClientRequest,
@@ -25,19 +25,19 @@ export function controlPlaneAuthClient(options: { bearerToken?: string | Redacte
   )
 }
 
-export function makeC0ApiClient(options: {
+export function makeS0ApiClient(options: {
   baseUrl: string | URL
   bearerToken?: string | Redacted.Redacted
-}): Effect.Effect<C0ApiClient> {
-  const client = HttpApiClient.make(C0Api, {
+}): Effect.Effect<S0ApiClient> {
+  const client = HttpApiClient.make(S0Api, {
     baseUrl: options.baseUrl,
   }).pipe(Effect.provide(FetchHttpClient.layer))
 
   if (options.bearerToken === undefined) {
-    return client as Effect.Effect<C0ApiClient>
+    return client as Effect.Effect<S0ApiClient>
   }
 
   return client.pipe(
     Effect.provide(controlPlaneAuthClient({ bearerToken: options.bearerToken })),
-  ) as Effect.Effect<C0ApiClient>
+  ) as Effect.Effect<S0ApiClient>
 }

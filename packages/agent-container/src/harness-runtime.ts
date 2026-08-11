@@ -110,9 +110,28 @@ export function harnessAdapterSettings(
           runtime,
           settings: {
             provider: "anthropic",
-            model: model.modelId,
+            model:
+              model.providerId === "cloudflare-ai-gateway"
+                ? `anthropic/${model.modelId}`
+                : model.modelId,
             auth: {
               anthropic: {
+                apiKey: model.auth.apiKey,
+                baseUrl: model.auth.baseUrl,
+              },
+            },
+            reasoningVariant: openCodeReasoningVariant(reasoning),
+          },
+        }
+      }
+      if (model.kind === "openai-responses") {
+        return {
+          runtime,
+          settings: {
+            provider: "openai",
+            model: `openai/${model.modelId}`,
+            auth: {
+              openai: {
                 apiKey: model.auth.apiKey,
                 baseUrl: model.auth.baseUrl,
               },
@@ -125,7 +144,10 @@ export function harnessAdapterSettings(
         runtime,
         settings: {
           provider: model.auth.name ?? "litellm",
-          model: model.modelId,
+          model:
+            model.providerId === "cloudflare-ai-gateway"
+              ? `cloudflare-ai-gateway/${model.modelId}`
+              : model.modelId,
           auth: {
             openaiCompatible: {
               apiKey: model.auth.apiKey,
@@ -137,8 +159,24 @@ export function harnessAdapterSettings(
         },
       }
     case "codex":
-      if (model.kind !== "openai-compatible") {
-        throw new Error("Codex harness requires a LiteLLM OpenAI-compatible model")
+      if (model.kind === "openai-responses") {
+        return {
+          runtime,
+          settings: {
+            model: model.modelId,
+            auth: {
+              openai: {
+                apiKey: model.auth.apiKey,
+                baseUrl: model.auth.baseUrl,
+              },
+            },
+            reasoningEffort: reasoningEffort(reasoning),
+            webSearch: true,
+          },
+        }
+      }
+      if (model.kind !== "openai-compatible" || model.providerId !== "litellm") {
+        throw new Error("Codex harness requires an OpenAI Responses or LiteLLM model")
       }
       return {
         runtime,
@@ -157,7 +195,7 @@ export function harnessAdapterSettings(
       }
     case "claude-code":
       if (model.kind !== "anthropic") {
-        throw new Error("Claude Code harness requires a LiteLLM Anthropic model")
+        throw new Error("Claude Code harness requires an Anthropic Messages model")
       }
       return {
         runtime,
@@ -204,9 +242,9 @@ export function buildHarnessInstructions(input: {
   })
   const sections = [
     [
-      "# c0 agent instructions",
+      "# SolZero agent instructions",
       "",
-      "You are a coding agent running through c0 in a real Linux container. The workspace supports shell commands, package managers, arbitrary command execution, filesystem access, and the native tools supplied by the selected agent harness.",
+      "You are a coding agent running through SolZero in a real Linux container. The workspace supports shell commands, package managers, arbitrary command execution, filesystem access, and the native tools supplied by the selected agent harness.",
       "",
       `Runtime metadata: ${metadata}`,
       "Use this metadata as the source of truth when asked about your runtime, provider, or model. Report the exact values and do not infer a different model name from generic self-identification.",
@@ -225,15 +263,15 @@ export function buildHarnessInstructions(input: {
   }
 
   if (input.repository) {
-    const branch = input.repository.branchName ?? "the current c0-managed branch"
+    const branch = input.repository.branchName ?? "the current SolZero-managed branch"
     const baseBranch = input.repository.defaultBranch ?? "the repository default branch"
     sections.push(
       [
         "## Managed repository",
         "",
         `The attached repository is ${input.repository.owner}/${input.repository.name}. Work on ${branch}.`,
-        "Treat the checkout, remote, and working branch as c0-managed. Do not reclone the repository, rewrite remotes, delete the workspace, or switch to the default branch.",
-        `Commit and push changes only from the c0-managed branch. Never push directly to ${baseBranch}.`,
+        "Treat the checkout, remote, and working branch as SolZero-managed. Do not reclone the repository, rewrite remotes, delete the workspace, or switch to the default branch.",
+        `Commit and push changes only from the SolZero-managed branch. Never push directly to ${baseBranch}.`,
       ].join("\n"),
     )
   }

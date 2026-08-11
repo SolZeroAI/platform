@@ -1,11 +1,11 @@
 "use client"
 
-import { summarizeSessionTools } from "@c0-agent/shared"
+import { summarizeSessionTools } from "@solzero/shared"
 import { Link } from "@tanstack/react-router"
 import { useCallback, useEffect, useState } from "react"
 import type { SessionItem } from "@/lib/session-list"
 import { formatRelativeTime } from "@/lib/time"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
 
 const PAGE_SIZE = 20
@@ -89,7 +89,7 @@ export function DataControlsSettings() {
 
         {loading ? (
           <div className="flex min-h-32 items-center justify-center py-8">
-            <C0Loader size={20} className="text-kumo-subtle" />
+            <S0Loader size={20} className="text-kumo-subtle" />
           </div>
         ) : sessions.length === 0 ? (
           <div className="py-8 text-center text-sm text-kumo-subtle">

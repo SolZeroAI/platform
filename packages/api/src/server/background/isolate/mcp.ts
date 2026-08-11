@@ -10,7 +10,7 @@ import {
   type StageMetadataInput,
   type SessionToolRuntimePlan,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { MCPClientManager, RegisterServerOptions } from "agents/mcp/client"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"

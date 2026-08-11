@@ -1,5 +1,5 @@
 import { Select } from "@cloudflare/kumo/components/select"
-import { normalizeSubagentMode, type SubagentMode } from "@c0-agent/shared"
+import { normalizeSubagentMode, type SubagentMode } from "@solzero/shared"
 
 export function SubagentModeField({
   value,

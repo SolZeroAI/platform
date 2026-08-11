@@ -8,9 +8,9 @@
 echo "Watching for sandbox containers (Ctrl+C to stop)..."
 echo "=================================================="
 
-# Find container by name pattern (workerd-c0-*)
+# Find container by name pattern (workerd-s0-*)
 find_container() {
-    docker ps --filter "name=workerd-c0-" --format '{{.ID}}' 2>/dev/null | head -1
+    docker ps --filter "name=workerd-s0-" --format '{{.ID}}' 2>/dev/null | head -1
 }
 
 LAST_CONTAINER_ID=""

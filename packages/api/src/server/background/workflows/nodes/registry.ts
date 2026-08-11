@@ -2,7 +2,7 @@ import {
   getWorkflowNodeRuntimeSupport,
   isWorkflowNodeType,
   type WorkflowNodeAdapterCategory,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { WorkflowNodeExecutionInput } from "./common"
 import { executeWorkflowHttpNode } from "./http"
 import { executeWorkflowNotificationNode } from "./notification"
@@ -19,7 +19,7 @@ export interface WorkflowNodeAdapter {
 
 const runNode =
   (
-    // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: the channel must be named so the Effect node executors can be run at the Promise-typed WorkflowActionExecutor RPC ABI edge.
+    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: the channel must be named so the Effect node executors can be run at the Promise-typed WorkflowActionExecutor RPC ABI edge.
     execute: (input: WorkflowNodeExecutionInput) => Effect.Effect<Record<string, unknown>, Error>,
   ) =>
   (input: WorkflowNodeExecutionInput) =>

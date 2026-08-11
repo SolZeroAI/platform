@@ -1,5 +1,5 @@
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import { builderDraftLatest } from "../handlers/workflows/builder-drafts"
 import { deleteWorkflow } from "../handlers/workflows/delete"
 import { exportWorkflow } from "../handlers/workflows/export"
@@ -28,7 +28,7 @@ import {
 } from "../handlers/workflows/shared"
 import { observeRoute } from "../services/observability"
 
-export const HttpWorkflowsLive = HttpApiBuilder.group(C0Api, "workflows", (handlers) =>
+export const HttpWorkflowsLive = HttpApiBuilder.group(S0Api, "workflows", (handlers) =>
   handlers
     .handle("catalog", () => observeRoute("workflows", "catalog", catalog()))
     .handle("list", (input) => observeRoute("workflows", "list", list(input)))

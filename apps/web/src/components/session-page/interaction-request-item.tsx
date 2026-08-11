@@ -1,5 +1,5 @@
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
-import type { OpenCodeInteractionResponse, SandboxEvent } from "@c0-agent/shared"
+import type { OpenCodeInteractionResponse, SandboxEvent } from "@solzero/shared"
 import { ChevronRight, MessageSquare, ShieldQuestion, X } from "lucide-react"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AnimatedLayerCardPrimary } from "@/components/expandable-layer-card"

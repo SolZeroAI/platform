@@ -9,7 +9,7 @@ import type { ApiEnv } from "infra/types/env"
 import { isAdminEmailForEnv } from "../background/db/admin-config"
 
 const SESSION_TRANSFER_TTL_MS = 2 * 60 * 1000
-const SESSION_TRANSFER_IDENTIFIER_PREFIX = "c0-session-transfer"
+const SESSION_TRANSFER_IDENTIFIER_PREFIX = "s0-session-transfer"
 
 interface ActiveBetterAuthSession {
   session: {
@@ -265,7 +265,7 @@ export function betterAuthSessionTransferPlugin(env: ApiEnv): BetterAuthPlugin {
   }
 
   return {
-    id: "c0-session-transfer",
+    id: "s0-session-transfer",
     endpoints: {
       generateSessionTransfer: createGenerateSessionTransferEndpoint("/session-transfer"),
       redeemSessionTransfer: createRedeemSessionTransferEndpoint("/session-transfer/redeem"),

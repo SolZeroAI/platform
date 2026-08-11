@@ -8,9 +8,9 @@ import {
   useRef,
   useState,
 } from "react"
-import { type SandboxEvent } from "@c0-agent/shared"
-import { C0Loader } from "@/components/c0-loader"
-import { C0LogoSvg } from "@/components/c0-logo-svg"
+import { type SandboxEvent } from "@solzero/shared"
+import { S0Loader } from "@/components/s0-loader"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 import { SafeMarkdown } from "@/components/safe-markdown"
 import { useSessionSocket } from "@/hooks/use-session-socket"
 import { showErrorToast } from "@/lib/toast-manager"
@@ -322,7 +322,7 @@ export function WorkflowAiChatSessionEvents({
         )}
         {isProcessing ? (
           <div className="flex items-center gap-2 rounded-lg bg-kumo-base px-3 py-2 text-sm text-kumo-subtle ring-1 ring-kumo-hairline">
-            <C0Loader size={14} />
+            <S0Loader size={14} />
             Thinking
           </div>
         ) : null}
@@ -366,7 +366,7 @@ export function WorkflowAiEventItem({
       <div className="mr-6 rounded-2xl bg-kumo-base p-3 ring-1 ring-kumo-hairline">
         <div className="mb-1 flex items-center justify-between gap-2 text-xs text-kumo-subtle">
           <span className="flex items-center gap-1">
-            <C0LogoSvg className="h-4 w-4 text-kumo-brand" aria-hidden />
+            <S0LogoSvg className="h-4 w-4 text-kumo-brand" aria-hidden />
             Agent
           </span>
           <span>{time}</span>

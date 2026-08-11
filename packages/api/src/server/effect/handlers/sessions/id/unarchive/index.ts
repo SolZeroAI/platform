@@ -1,5 +1,5 @@
 import type { ApiEnv } from "infra/types/env"
-import type { IdParams } from "@c0/api"
+import type { IdParams } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { SessionIndexStore } from "../../../../../background/db/session-index"

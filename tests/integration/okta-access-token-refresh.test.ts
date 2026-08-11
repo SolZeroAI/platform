@@ -53,7 +53,7 @@ function createEnv(db: D1Database, authOverrides: Partial<AuthProviderTestConfig
   const clientSecretEnv = "TEST_OIDC_CLIENT_SECRET"
   return {
     DB: db,
-    C0_CONFIG_AUTH: {
+    S0_CONFIG_AUTH: {
       defaultSignInProviderId: providerConfig.providerId,
       adminPassword: { env: "TEST_ADMIN_PASSWORD" },
       providers: {

@@ -1,4 +1,4 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/no-ternary, c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/prefer-option-over-null, effect/avoid-direct-json, effect/avoid-try-catch, effect/effect-run-in-body, effect/imperative-loops -- This module is the D1, R2, and untrusted SKILL.md package boundary; explicit validation, pagination, compensation, and cleanup ordering stay local and imperative. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/prefer-option-over-null, effect/avoid-direct-json, effect/avoid-try-catch, effect/effect-run-in-body, effect/imperative-loops -- This module is the D1, R2, and untrusted SKILL.md package boundary; explicit validation, pagination, compensation, and cleanup ordering stay local and imperative. */
 import { and, asc, eq, isNull, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
@@ -12,7 +12,7 @@ import {
 } from "../db/errors"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import { agentSkills, userAgentSkillPreferences } from "../../effect/db/schema"
-import { C0_CREATE_PR_SKILL_ID, C0_CREATE_PR_SKILL_MD } from "./built-ins"
+import { S0_CREATE_PR_SKILL_ID, S0_CREATE_PR_SKILL_MD } from "./built-ins"
 
 const GLOBAL_SKILLS_PREFIX = "global/"
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -512,10 +512,10 @@ async function ensureBuiltInPackage(
   bucket: R2Bucket,
   skill: AgentSkillRecord,
 ): Promise<AgentSkillRecord> {
-  if (skill.id !== C0_CREATE_PR_SKILL_ID || skill.origin !== "built-in") {
+  if (skill.id !== S0_CREATE_PR_SKILL_ID || skill.origin !== "built-in") {
     return skill
   }
-  const expected = C0_CREATE_PR_SKILL_MD
+  const expected = S0_CREATE_PR_SKILL_MD
   const existing = await readGlobalSkillMarkdown(bucket, skill.slug)
   const contentHash = await hashSkillContent(expected)
   if (existing !== expected) {

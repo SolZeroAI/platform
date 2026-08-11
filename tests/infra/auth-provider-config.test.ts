@@ -6,13 +6,13 @@ import {
   normalizeAuthProviderRegistry,
   publicAuthProviderRegistry,
 } from "../../packages/shared/src/auth"
-import { resolveC0Config } from "../../packages/shared/src/c0-config"
+import { resolveS0Config } from "../../packages/shared/src/s0-config"
 
 const repoRoot = resolve(import.meta.dirname, "../..")
 
 describe("auth provider configuration", () => {
   it("loads the checked-in OSS default as managed admin credential sign-in", () => {
-    const config = resolveC0Config(
+    const config = resolveS0Config(
       parse(readFileSync(resolve(repoRoot, "config/example.config.jsonc"), "utf8")),
     )
 

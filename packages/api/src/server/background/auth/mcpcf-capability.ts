@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from "jose"
-import { MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH } from "@c0-agent/shared"
+import { MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH } from "@solzero/shared"
 
 const ALGORITHM = "HS256"
-const ISSUER = "c0-api"
+const ISSUER = "s0-api"
 const AUDIENCE = "mcpcf"
 const DEFAULT_TTL_SECONDS = 60 * 60
 

@@ -2,7 +2,7 @@ import {
   getSelectedMcpcfServerIds,
   type McpcfServerDefinition,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import type { IsolateMcpcfMcpPromptServer } from "../session/isolate/system"
 import { getMcpcfMcpServerName } from "../session/mcp-config"
 import { IsolateMcpServerSyncError, type McpcfMcpToolExposureReader } from "./mcp"

@@ -7,7 +7,7 @@ import {
   type WorkflowManifest,
   type WorkflowManifestNode,
   type WorkflowTemplate,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { showErrorToast } from "@/lib/toast-manager"
 import {
   RunTriggerOptions,

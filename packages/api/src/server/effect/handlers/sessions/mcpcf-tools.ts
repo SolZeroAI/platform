@@ -7,7 +7,7 @@ import type {
   McpcfServerParams,
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
-} from "@c0/api"
+} from "@solzero/api"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
 import {

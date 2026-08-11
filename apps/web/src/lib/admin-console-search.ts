@@ -438,4 +438,4 @@ function setOptionalParam(params: URLSearchParams, key: string, value: string | 
     params.set(key, value.trim())
   }
 }
-import { AGENT_RUNTIMES } from "@c0-agent/shared"
+import { AGENT_RUNTIMES } from "@solzero/shared"

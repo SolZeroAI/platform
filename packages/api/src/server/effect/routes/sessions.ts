@@ -1,5 +1,5 @@
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { C0Api } from "@c0/api"
+import { S0Api } from "@solzero/api"
 import { create } from "../handlers/sessions/create"
 import { artifacts } from "../handlers/sessions/id/artifacts"
 import { deleteSession } from "../handlers/sessions/id/delete"
@@ -30,7 +30,7 @@ import { createSandbox } from "../handlers/sessions/sandbox"
 import { createSlack } from "../handlers/sessions/slack"
 import { observeRoute } from "../services/observability"
 
-export const HttpSessionsLive = HttpApiBuilder.group(C0Api, "sessions", (handlers) =>
+export const HttpSessionsLive = HttpApiBuilder.group(S0Api, "sessions", (handlers) =>
   handlers
     .handle("list", (input) => observeRoute("sessions", "list", list(input)))
     .handle("create", (input) => observeRoute("sessions", "create", create(input)))

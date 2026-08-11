@@ -1,4 +1,4 @@
-import type { AdminAiSearchSourcePayload } from "@c0/api"
+import type { AdminAiSearchSourcePayload } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { exportAiSearchConfig } from "../../../background/ai-search/admin-actions"

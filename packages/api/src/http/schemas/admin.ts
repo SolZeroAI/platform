@@ -481,9 +481,56 @@ export class AdminLitellmProviderResponse extends Schema.Class<AdminLitellmProvi
   cronStatus: AdminCronJobStatus,
 }) {}
 
+export class AdminCloudflareAiGatewayModel extends Schema.Class<AdminCloudflareAiGatewayModel>(
+  "AdminCloudflareAiGatewayModel",
+)({
+  id: Schema.String,
+  name: Schema.String,
+  reasoningEfforts: Schema.Array(Schema.String),
+  defaultReasoningEffort: Schema.NullOr(Schema.String),
+}) {}
+
+export class AdminCloudflareAiGatewayProviderKey extends Schema.Class<AdminCloudflareAiGatewayProviderKey>(
+  "AdminCloudflareAiGatewayProviderKey",
+)({
+  providerId: Schema.Literals(["openai", "anthropic", "xai"]),
+  name: Schema.String,
+  configured: Schema.Boolean,
+  source: Schema.Literals(["deployment", "admin", "none"]),
+  locked: Schema.Boolean,
+  envVarName: Schema.NullOr(Schema.String),
+}) {}
+
+export class AdminCloudflareAiGatewayProviderResponse extends Schema.Class<AdminCloudflareAiGatewayProviderResponse>(
+  "AdminCloudflareAiGatewayProviderResponse",
+)({
+  enabled: Schema.Boolean,
+  bindingConfigured: Schema.Boolean,
+  secretsStoreConfigured: Schema.Boolean,
+  gatewayId: Schema.NullOr(Schema.String),
+  cacheTtl: Schema.NullOr(Schema.Number),
+  collectLogs: Schema.Boolean,
+  defaultModel: Schema.NullOr(Schema.String),
+  models: Schema.Record(Schema.String, AdminCloudflareAiGatewayModel),
+  providerKeys: Schema.Array(AdminCloudflareAiGatewayProviderKey),
+}) {}
+
+export const AdminCloudflareAiGatewayProviderKeysPayload = Schema.Struct({
+  keys: Schema.Array(
+    Schema.Struct({
+      providerId: Schema.Literals(["openai", "anthropic", "xai"]),
+      apiKey: Schema.optionalKey(Schema.String),
+      clearApiKey: Schema.optionalKey(Schema.Boolean),
+    }),
+  ),
+})
+export type AdminCloudflareAiGatewayProviderKeysPayload =
+  typeof AdminCloudflareAiGatewayProviderKeysPayload.Type
+
 export class AdminAiProvidersResponse extends Schema.Class<AdminAiProvidersResponse>(
   "AdminAiProvidersResponse",
 )({
+  cloudflareAiGateway: AdminCloudflareAiGatewayProviderResponse,
   litellm: AdminLitellmProviderResponse,
 }) {}
 

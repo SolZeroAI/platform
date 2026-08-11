@@ -9,7 +9,7 @@ import {
   type AiSearchSessionTool,
   type PullRequest,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { runAiSearchMcpTool, type AiSearchMcpRuntimeContext } from "../../mcp/ai-search-runtime"
 import {
   getWorkflowBuilderCatalog,
@@ -150,7 +150,7 @@ function runIsolateTool<A, E>(
   context: IsolateToolContext,
   toolName: string,
   attributes: Record<string, unknown>,
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Generic span runner: the `Effect<A, E>` parameter channel is intrinsic to forwarding the caller's tool effect into BackgroundTracing.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span runner: the `Effect<A, E>` parameter channel is intrinsic to forwarding the caller's tool effect into BackgroundTracing.
   run: Effect.Effect<A, E>,
 ) {
   return Effect.gen(function* () {
@@ -346,7 +346,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         }),
         git_create_pull_request: tool({
           description:
-            "Commit all current workspace changes, push the c0-managed branch, and create a GitHub pull request against the repository default branch.",
+            "Commit all current workspace changes, push the s0-managed branch, and create a GitHub pull request against the repository default branch.",
           inputSchema: inputSchema(GitCreatePullRequestToolInput),
           execute: ({ title, body, commitMessage }) =>
             // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.

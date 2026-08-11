@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
 import { getRequest } from "@tanstack/react-start/server"
-import type { AdminAiProvidersResponse, AdminAiSearchResponse, AdminMcpcfResponse } from "@c0/api"
+import type {
+  AdminAiProvidersResponse,
+  AdminAiSearchResponse,
+  AdminMcpcfResponse,
+} from "@solzero/api"
 import { getAuthSessionContext } from "@/lib/auth-session"
 import type { AdminAiSearchInitialData, AdminIntegrationsInitialData } from "@/lib/admin-console"
 import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"

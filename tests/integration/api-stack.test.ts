@@ -3,15 +3,15 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Test from "alchemy/Test/Vitest"
 import * as Effect from "effect/Effect"
 import { expect } from "vitest"
-import { C0_CONFIG_KEYS } from "../../packages/api/src/server/background/db/c0-config"
+import { S0_CONFIG_KEYS } from "../../packages/api/src/server/background/db/s0-config"
 import { hashToken } from "../../packages/api/src/server/background/auth/crypto"
 import { AI_SEARCH_SOURCE_HEADER } from "../../packages/api/src/server/background/session/mcp-config"
 import {
-  c0ApiRequest,
-  c0ApiRequestWhenReady,
-  createC0AlchemyTestOptions,
-  makeC0ApiTestResources,
-  setC0AlchemyTestEnv,
+  s0ApiRequest,
+  s0ApiRequestWhenReady,
+  createS0AlchemyTestOptions,
+  makeS0ApiTestResources,
+  setS0AlchemyTestEnv,
 } from "../../packages/infra/src/testing"
 import { createLitellmModelRegistry } from "./litellm-env-fixture"
 
@@ -21,14 +21,14 @@ const AI_SEARCH_TEST_SOURCE_ID = "product-docs"
 const TEST_BETTER_AUTH_SECRET = "u7Qm9Kx2Vp8Ls4Nr6Tb1Wd5Yc3Hf0ZaE"
 const TEST_SESSION_TOKEN = "test-user-session-token"
 
-setC0AlchemyTestEnv()
+setS0AlchemyTestEnv()
 
-const testOptions = createC0AlchemyTestOptions()
+const testOptions = createS0AlchemyTestOptions()
 const { test } = Test.make(testOptions)
 
 interface ApiStackOutput {
   readonly agentResources?: {
-    readonly c0Config?: {
+    readonly s0Config?: {
       readonly accountId?: string
       readonly namespaceId?: string
     }
@@ -71,7 +71,7 @@ test.provider(
   "serves the API integration suite with locally emulated Cloudflare resources",
   (stack) =>
     Effect.gen(function* () {
-      const output = yield* stack.deploy(makeLocallySeededC0ApiTestResources())
+      const output = yield* stack.deploy(makeLocallySeededS0ApiTestResources())
       const apiOutput = output as ApiStackOutput
 
       yield* Effect.promise(() => expectApiReference(apiOutput))
@@ -86,25 +86,25 @@ test.provider(
   { timeout: 240_000 },
 )
 
-function makeLocallySeededC0ApiTestResources() {
+function makeLocallySeededS0ApiTestResources() {
   return Effect.gen(function* () {
-    const resources = yield* makeC0ApiTestResources(testOptions)
+    const resources = yield* makeS0ApiTestResources(testOptions)
     const SeedControlPlaneFixture = Alchemy.Action(
       "SeedControlPlaneFixture",
       Effect.gen(function* () {
         const db = yield* Cloudflare.D1.QueryDatabase(resources.agentResources.db)
-        const c0Config = yield* Cloudflare.KV.ReadWriteNamespace(resources.agentResources.c0Config)
+        const s0Config = yield* Cloudflare.KV.ReadWriteNamespace(resources.agentResources.s0Config)
         const repoCache = yield* Cloudflare.KV.ReadWriteNamespace(
           resources.agentResources.repoCache,
         )
 
         return Effect.fn(function* (_input: {
           readonly databaseId: string
-          readonly c0ConfigNamespaceId: string
+          readonly s0ConfigNamespaceId: string
           readonly repoCacheNamespaceId: string
           readonly fixtureVersion: number
         }) {
-          yield* seedControlPlaneFixture(db, c0Config, repoCache)
+          yield* seedControlPlaneFixture(db, s0Config, repoCache)
           return { seeded: true }
         })
       }).pipe(
@@ -115,7 +115,7 @@ function makeLocallySeededC0ApiTestResources() {
 
     yield* SeedControlPlaneFixture({
       databaseId: resources.agentResources.db.databaseId,
-      c0ConfigNamespaceId: resources.agentResources.c0Config.namespaceId,
+      s0ConfigNamespaceId: resources.agentResources.s0Config.namespaceId,
       repoCacheNamespaceId: resources.agentResources.repoCache.namespaceId,
       fixtureVersion: 1,
     })
@@ -157,7 +157,7 @@ async function expectApiReference(output: ApiStackOutput) {
     claudeCode: expect.any(Object),
   })
 
-  const openApiResponse = await c0ApiRequestWhenReady(apiUrl, "/openapi.json")
+  const openApiResponse = await s0ApiRequestWhenReady(apiUrl, "/openapi.json")
   await expectText(openApiResponse, 200)
   const openApi = (await openApiResponse.json()) as {
     readonly openapi?: string
@@ -170,7 +170,7 @@ async function expectApiReference(output: ApiStackOutput) {
   expect(openApi.paths?.["/sessions/run/isolate"]).toBeUndefined()
   expect(openApi.paths?.["/sessions/run/sandbox"]).toBeUndefined()
 
-  const referenceResponse = await c0ApiRequestWhenReady(apiUrl, "/reference")
+  const referenceResponse = await s0ApiRequestWhenReady(apiUrl, "/reference")
   const referenceHtml = await expectText(referenceResponse, 200)
   expect(referenceHtml).toContain("scalar")
 }
@@ -212,11 +212,11 @@ async function expectDocsMcp(output: ApiStackOutput) {
 async function expectUnauthenticatedRequests(output: ApiStackOutput) {
   const apiUrl = deployedApiUrl(output)
 
-  const workflowsResponse = await c0ApiRequestWhenReady(apiUrl, "/workflows?limit=1&offset=0")
+  const workflowsResponse = await s0ApiRequestWhenReady(apiUrl, "/workflows?limit=1&offset=0")
   const workflowsBody = await expectText(workflowsResponse, 401)
   expect(workflowsBody).toContain("Unauthorized")
 
-  const spoofedIdentityResponse = await c0ApiRequestWhenReady(
+  const spoofedIdentityResponse = await s0ApiRequestWhenReady(
     apiUrl,
     "/workflows?limit=1&offset=0",
     {
@@ -225,12 +225,12 @@ async function expectUnauthenticatedRequests(output: ApiStackOutput) {
   )
   await expectText(spoofedIdentityResponse, 401)
 
-  const genericBearerResponse = await c0ApiRequestWhenReady(apiUrl, "/workflows?limit=1&offset=0", {
+  const genericBearerResponse = await s0ApiRequestWhenReady(apiUrl, "/workflows?limit=1&offset=0", {
     headers: { Authorization: "Bearer legacy-internal-token" },
   })
   await expectText(genericBearerResponse, 401)
 
-  const webhookResponse = await c0ApiRequest(apiUrl, "/workflows/webhooks/missing", {
+  const webhookResponse = await s0ApiRequest(apiUrl, "/workflows/webhooks/missing", {
     body: JSON.stringify({ ok: true }),
     headers: { "content-type": "application/json" },
     method: "POST",
@@ -241,7 +241,7 @@ async function expectUnauthenticatedRequests(output: ApiStackOutput) {
 
 async function expectExplicitCredentialPrecedence(output: ApiStackOutput) {
   const cookie = await userSessionCookie()
-  const unsupportedBearerResponse = await c0ApiRequestWhenReady(
+  const unsupportedBearerResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/workflows?limit=1&offset=0",
     {
@@ -253,7 +253,7 @@ async function expectExplicitCredentialPrecedence(output: ApiStackOutput) {
   )
   await expectText(unsupportedBearerResponse, 401)
 
-  const invalidApiKeyResponse = await c0ApiRequestWhenReady(
+  const invalidApiKeyResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/workflows?limit=1&offset=0",
     {
@@ -269,7 +269,7 @@ async function expectExplicitCredentialPrecedence(output: ApiStackOutput) {
 async function expectWorkflowsApi(output: ApiStackOutput) {
   const headers = authorizedHeaders("user_1")
 
-  const listResponse = await c0ApiRequestWhenReady(
+  const listResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/workflows?limit=10&offset=0&q=slack&status=active&sortBy=name&sortDir=asc",
     { headers },
@@ -285,7 +285,7 @@ async function expectWorkflowsApi(output: ApiStackOutput) {
     workflows: [{ id: "wf_1", name: "Slack workflow" }],
   })
 
-  const artifactResponse = await c0ApiRequestWhenReady(
+  const artifactResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/workflows/wf_1/runs/wfr_1/artifacts/save",
     { headers },
@@ -307,7 +307,7 @@ async function expectWorkflowsApi(output: ApiStackOutput) {
     storageType: "kv",
   })
 
-  const deleteResponse = await c0ApiRequest(output.api?.url, "/workflows/wf_1/runs/wfr_delete", {
+  const deleteResponse = await s0ApiRequest(output.api?.url, "/workflows/wf_1/runs/wfr_delete", {
     headers,
     method: "DELETE",
   })
@@ -319,7 +319,7 @@ async function expectWorkflowsApi(output: ApiStackOutput) {
     }),
   )
 
-  const missingRunResponse = await c0ApiRequest(
+  const missingRunResponse = await s0ApiRequest(
     output.api?.url,
     "/workflows/wf_1/runs/wfr_missing",
     { headers, method: "DELETE" },
@@ -329,7 +329,7 @@ async function expectWorkflowsApi(output: ApiStackOutput) {
 }
 
 async function expectReposApi(output: ApiStackOutput) {
-  const reposResponse = await c0ApiRequestWhenReady(
+  const reposResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/repos?owner=example-org&perPage=10",
     {
@@ -353,8 +353,8 @@ async function expectReposApi(output: ApiStackOutput) {
     repos: [
       {
         defaultBranch: "main",
-        fullName: "example-org/c0",
-        name: "c0",
+        fullName: "example-org/s0",
+        name: "s0",
         owner: "example-org",
       },
       {
@@ -366,7 +366,7 @@ async function expectReposApi(output: ApiStackOutput) {
     ],
   })
 
-  const sessionResponse = await c0ApiRequestWhenReady(
+  const sessionResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/workflows?limit=10&offset=0",
     {
@@ -379,10 +379,10 @@ async function expectReposApi(output: ApiStackOutput) {
 
 async function expectSessionsApi(output: ApiStackOutput) {
   const headers = authorizedHeaders("user_1")
-  const createResponse = await c0ApiRequest(output.api?.url, "/sessions", {
+  const createResponse = await s0ApiRequest(output.api?.url, "/sessions", {
     body: JSON.stringify({
       model: "litellm/gpt-5.4-mini",
-      repoName: "c0",
+      repoName: "s0",
       repoOwner: "example-org",
       sessionKind: "isolate",
       title: "Repo-backed session",
@@ -401,7 +401,7 @@ async function expectSessionsApi(output: ApiStackOutput) {
   })
   expect(createBody.sessionId).toEqual(expect.any(String))
 
-  const slackResponse = await c0ApiRequest(output.api?.url, "/sessions/slack", {
+  const slackResponse = await s0ApiRequest(output.api?.url, "/sessions/slack", {
     body: JSON.stringify({
       model: "litellm/gpt-5.4-mini",
       repoName: "docs",
@@ -426,16 +426,16 @@ async function expectSessionsApi(output: ApiStackOutput) {
 }
 
 async function expectAdminApi(output: ApiStackOutput) {
-  const unauthenticated = await c0ApiRequestWhenReady(output.api?.url, "/admin/summary")
+  const unauthenticated = await s0ApiRequestWhenReady(output.api?.url, "/admin/summary")
   await expectText(unauthenticated, 401)
 
-  const forbidden = await c0ApiRequestWhenReady(output.api?.url, "/admin/summary", {
+  const forbidden = await s0ApiRequestWhenReady(output.api?.url, "/admin/summary", {
     headers: authorizedHeaders("user_1"),
   })
   await expectText(forbidden, 403)
 
   const adminHeaders = authorizedHeaders("admin_1")
-  const summary = await c0ApiRequestWhenReady(output.api?.url, "/admin/summary", {
+  const summary = await s0ApiRequestWhenReady(output.api?.url, "/admin/summary", {
     headers: adminHeaders,
   })
   const summaryBody = await expectJson<{
@@ -447,7 +447,7 @@ async function expectAdminApi(output: ApiStackOutput) {
   expect(summaryBody.workflows).toContainEqual({ count: 1, status: "active" })
   expect(summaryBody.workflowRuns).toContainEqual({ count: 1, status: "completed" })
 
-  const sessionsResponse = await c0ApiRequestWhenReady(
+  const sessionsResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/admin/sessions?limit=25&offset=0&q=debug&status=active&kind=sandbox&source=web&userId=user_1&repoOwner=example-org&repoName=ai&sortBy=userEmail&sortDir=asc",
     { headers: adminHeaders },
@@ -461,7 +461,7 @@ async function expectAdminApi(output: ApiStackOutput) {
     total: 1,
   })
 
-  const workflowsResponse = await c0ApiRequestWhenReady(
+  const workflowsResponse = await s0ApiRequestWhenReady(
     output.api?.url,
     "/admin/workflows?limit=25&offset=0&q=slack&status=active&userId=user_1&sortBy=name&sortDir=asc",
     { headers: adminHeaders },
@@ -493,7 +493,7 @@ function apiKeyForUser(userId: string): string {
 
 function seedControlPlaneFixture(
   db: Cloudflare.D1.QueryDatabaseClient,
-  c0Config: Cloudflare.KV.ReadWriteNamespaceClient,
+  s0Config: Cloudflare.KV.ReadWriteNamespaceClient,
   repoCache: Cloudflare.KV.ReadWriteNamespaceClient,
 ) {
   return Effect.gen(function* () {
@@ -659,8 +659,8 @@ function seedControlPlaneFixture(
       "user_1/workflow-outputs/wf_1/wfr_1/save.json",
       JSON.stringify({ alertId: "alert_1", status: "firing" }, null, 2),
     )
-    yield* c0Config.put(
-      C0_CONFIG_KEYS.aiSearch.source(AI_SEARCH_TEST_SOURCE_ID),
+    yield* s0Config.put(
+      S0_CONFIG_KEYS.aiSearch.source(AI_SEARCH_TEST_SOURCE_ID),
       JSON.stringify({
         id: AI_SEARCH_TEST_SOURCE_ID,
         label: "Product Docs",
@@ -669,7 +669,7 @@ function seedControlPlaneFixture(
         maxResults: 5,
         dataSource: {
           type: "r2",
-          bucketName: "c0-alchemy-test-ai-search-content-test",
+          bucketName: "s0-alchemy-test-ai-search-content-test",
           prefix: null,
           r2Jurisdiction: null,
         },
@@ -677,8 +677,8 @@ function seedControlPlaneFixture(
         updatedAt: 1,
       }),
     )
-    yield* c0Config.put(
-      C0_CONFIG_KEYS.aiProviders.litellmModels,
+    yield* s0Config.put(
+      S0_CONFIG_KEYS.aiProviders.litellmModels,
       JSON.stringify(
         createLitellmModelRegistry({
           baseUrl: "https://litellm.example.test",
@@ -749,8 +749,8 @@ async function postMcpMessage(
     method: "POST",
   }
   const response = await (whenReady
-    ? c0ApiRequestWhenReady(apiUrl, "/mcp", init, { retryNotFound: false })
-    : c0ApiRequest(apiUrl, "/mcp", init))
+    ? s0ApiRequestWhenReady(apiUrl, "/mcp", init, { retryNotFound: false })
+    : s0ApiRequest(apiUrl, "/mcp", init))
 
   return {
     response,
@@ -786,7 +786,7 @@ async function initializeMcpSession(apiUrl: string | undefined) {
       result: expect.objectContaining({
         protocolVersion: expect.any(String),
         serverInfo: expect.objectContaining({
-          name: "c0-ai-search",
+          name: "s0-ai-search",
         }),
       }),
     }),

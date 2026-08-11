@@ -4,11 +4,11 @@ import { Input } from "@cloudflare/kumo/components/input"
 import { Pagination } from "@cloudflare/kumo/components/pagination"
 import { Select } from "@cloudflare/kumo/components/select"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
-import { type AdminSessionRecord, type AdminWorkflowRecord } from "@c0/api"
+import { type AdminSessionRecord, type AdminWorkflowRecord } from "@solzero/api"
 import { type Table } from "@tanstack/react-table"
 import { flexRender } from "@tanstack/react-table"
 import { ChevronDown, ChevronsUpDown } from "lucide-react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import {
   PAGE_SIZE_OPTIONS,
   SESSION_RUNTIME_OPTIONS,
@@ -202,7 +202,7 @@ export function AdminDataTable<TData>({
                 >
                   <TableCellState className="h-full">
                     {loading ? (
-                      <C0Loader size={32} />
+                      <S0Loader size={32} />
                     ) : (
                       <Empty title={empty} description="Adjust the filters or refresh the table." />
                     )}

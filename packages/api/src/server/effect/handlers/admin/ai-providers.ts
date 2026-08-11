@@ -1,5 +1,14 @@
-import type { AdminLitellmConfigPayload } from "@c0/api"
+import type {
+  AdminCloudflareAiGatewayProviderKeysPayload,
+  AdminLitellmConfigPayload,
+} from "@solzero/api"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import {
+  getCloudflareAiGatewayProviderKeyStatuses,
+  getCloudflareAiGatewaySnapshot,
+  updateCloudflareAiGatewayProviderKeys,
+} from "../../../background/ai-providers/cloudflare-ai-gateway"
 import {
   getLitellmProviderSnapshot,
   syncLitellmModels as runLitellmModelSync,
@@ -50,14 +59,91 @@ function formatLitellmSnapshot(snapshot: LitellmProviderSnapshot) {
   }
 }
 
+const formatCloudflareAiGateway = Effect.fn("admin.formatCloudflareAiGateway")(function* (
+  context: ControlPlaneContext,
+) {
+  const providerKeys = yield* getCloudflareAiGatewayProviderKeyStatuses(context.env)
+  return Option.match(getCloudflareAiGatewaySnapshot(context.env), {
+    onNone: () => ({
+      enabled: false,
+      bindingConfigured: false,
+      secretsStoreConfigured: false,
+      gatewayId: null,
+      cacheTtl: null,
+      collectLogs: false,
+      defaultModel: null,
+      models: {},
+      providerKeys,
+    }),
+    onSome: ({ bindingConfigured, config, gatewayId, secretsStoreConfigured }) => ({
+      enabled: config.enabled,
+      bindingConfigured,
+      secretsStoreConfigured,
+      gatewayId: Option.getOrNull(gatewayId),
+      cacheTtl: config.cacheTtl,
+      collectLogs: config.collectLogs,
+      defaultModel: config.defaultModel || null,
+      models: Object.fromEntries(
+        Object.entries(config.models).map(([id, model]) => [
+          id,
+          {
+            id,
+            name: model.name,
+            reasoningEfforts: [...(model.reasoning?.efforts ?? [])],
+            defaultReasoningEffort: model.reasoning?.default ?? null,
+          },
+        ]),
+      ),
+      providerKeys,
+    }),
+  })
+})
+
 export const getAiProvidersAdminResponse = Effect.fn("admin.getAiProvidersAdminResponse")(
   function* (context: ControlPlaneContext) {
     const litellm = yield* getLitellmProviderSnapshot(context.env)
+    const cloudflareAiGateway = yield* formatCloudflareAiGateway(context)
     return {
+      cloudflareAiGateway,
       litellm: formatLitellmSnapshot(litellm),
     }
   },
 )
+
+export const performUpdateCloudflareAiGatewayProviderKeys = Effect.fn(
+  "admin.performUpdateCloudflareAiGatewayProviderKeys",
+)(function* (
+  context: ControlPlaneContext,
+  admin: AdminIdentity,
+  payload: AdminCloudflareAiGatewayProviderKeysPayload,
+) {
+  const updatesKey = payload.keys.some((key) => Boolean(key.apiKey?.trim()))
+  yield* failWhen(
+    updatesKey && !context.env.REPO_SECRETS_ENCRYPTION_KEY,
+    "Global secret encryption is not configured",
+    500,
+  )
+  yield* updateCloudflareAiGatewayProviderKeys(context.env, payload.keys).pipe(
+    Effect.catch((cause) => failMessage(describeError(cause), 400)),
+  )
+
+  const log = yield* EffectRequestLogger
+  yield* log.emit({
+    event: "admin.ai_provider.cloudflare_ai_gateway.keys_updated",
+    boundary: "admin.ai_provider.cloudflare_ai_gateway",
+    admin: {
+      userId: admin.userId,
+      email: admin.email,
+    },
+    cloudflareAiGateway: {
+      updatedProviders: payload.keys
+        .filter((key) => Boolean(key.apiKey?.trim()) || key.clearApiKey === true)
+        .map((key) => key.providerId),
+    },
+  })
+
+  return json(yield* getAiProvidersAdminResponse(context))
+})
 
 export const performUpdateLitellmProvider = Effect.fn("admin.performUpdateLitellmProvider")(
   function* (

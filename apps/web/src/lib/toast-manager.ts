@@ -1,4 +1,5 @@
 import { createKumoToastManager } from "@cloudflare/kumo/components/toast"
+import { getCloudflareAiGatewayErrorHelp } from "@solzero/shared"
 
 export const appToastManager = createKumoToastManager()
 
@@ -15,6 +16,35 @@ export function showErrorToast(title: string, options?: ErrorToastOptions) {
     variant: "error",
     timeout: options?.timeout ?? 8000,
     actions: options?.actions,
+  })
+}
+
+export function showActionableErrorToast(message: string) {
+  const help = getCloudflareAiGatewayErrorHelp(message)
+  if (!help) {
+    showErrorToast(message)
+    return
+  }
+
+  showErrorToast(help.title, {
+    description: help.description,
+    timeout: 15_000,
+    actions: [
+      {
+        children: "Top up",
+        size: "sm",
+        onClick: () => {
+          window.open(help.topUpUrl, "_blank", "noopener,noreferrer")
+        },
+      },
+      {
+        children: "Documentation",
+        size: "sm",
+        onClick: () => {
+          window.open(help.documentationUrl, "_blank", "noopener,noreferrer")
+        },
+      },
+    ],
   })
 }
 

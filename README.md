@@ -1,14 +1,17 @@
-![c0 Agent landing page](docs/c0-landing.jpg)
+![SolZero Agent landing page](docs/solzero-landing.jpg)
 
-# c0
+# SolZero
 
-c0 is an open-source AI platform built for enterprise work, tools, and context.
+Give your work an agent. 
 
-## What Makes c0 Compelling?
+SolZero Agent is low-cost, low-maintenance, scalable, and durable. Deploy it in minutes to your 
+Cloudflare account and focus on work that matters.
 
-### c0 Agent Harness
+## What Makes SolZero Different?
 
-c0 Agent is a custom harness built on Cloudflare Workers and Durable Objects. It is the default
+### SolZero Agent Harness
+
+SolZero Agent is a custom harness built on Cloudflare Workers and Durable Objects. It is the default
 runtime for everyday work, with low startup overhead and no container to provision for each
 session. [Cloudflare Workers](https://developers.cloudflare.com/workers/reference/how-workers-works/)
 run globally and bill for requests and active CPU time rather than wall-clock duration, which makes
@@ -16,74 +19,64 @@ the Isolate harness a strong fit for interactive and event-driven agent work.
 
 Built-in context compaction and searchable durable conversation history keep long-running sessions
 focused and efficient. Skills and MCP tools bring organizational context into the agent when it is
-needed. Sub-agents scale out dynamically as independent, durable c0 Agent instances without
+needed. Sub-agents scale out dynamically as independent, durable SolZero Agent instances without
 provisioning another container.
 
 ### Full sandboxes for deeper work
 
-Some tasks need a complete development environment. c0 also supports sandboxed OpenCode, Codex,
+Some tasks need a complete development environment. SolZero also supports sandboxed OpenCode, Codex,
 and Claude Code agents with a full Linux filesystem and shell. These runtimes have more startup and
-resource overhead than c0 Agent, but they are a better fit for deep coding and other work that needs
+resource overhead than SolZero Agent, but they are a better fit for deep coding and other work that needs
 full system access.
 
 ### Workflows for deterministic and agentic automation
 
-Workflows are one of our favorite parts of c0. They are fast to build, easy to adapt to a team's
+Workflows are one of our favorite parts of SolZero. They are fast to build, easy to adapt to a team's
 processes, and useful for weekly reports, day-to-day operations, proactive automation, and reactive
 incident workflows.
 
-c0 Workflows combine deterministic nodes with non-deterministic agent steps. They run on Cloudflare
+SolZero Workflows combine deterministic nodes with non-deterministic agent steps. They run on Cloudflare
 Workflows and support durable execution, schedules, webhooks, human-in-the-loop approvals, session
 reuse, and response caching. Reusing a session or cached response can reduce repeat model calls,
 latency, and token spend.
 
 ## Integrations
 
-c0 includes integration code for:
+SolZero includes code for these integrations:
 
-- Credential, social, and generic OIDC authentication through Better Auth, including Okta through
-  OIDC.
-- LiteLLM as the model gateway.
-- MCP servers, skills, and MCP Context Forge.
-- GitHub Apps and Slack.
-- Cloudflare AI Search for built-in, R2, and website data sources. c0 can create and manage these
-  sources from the Admin dashboard, so teams do not have to manually provision and integrate a
-  separate vector database themselves.
+- Better Auth supports credential and social sign-in. Generic OIDC support includes Okta
+- LLM Providers
+  - Cloudflare AI Gateway. Includes free credits for GPT OSS 120B, along with GPT 5.6 Luna, GPT 5.6 Sol, Claude Opus 5, and Grok 4.5 as pre-configured models
+  - LiteLLM
+- MCP support covers servers, skills, and MCP Context Forge
+- GitHub Apps and Slack connect SolZero to development and team workflows
+- Cloudflare AI Search can use built-in content, R2 objects, or websites. Administrators can manage these sources from the Admin dashboard. Cloudflare AI Search stores the search index
 
-Deployment owners can manage non-secret platform configuration in a stage-specific JSONC file.
-Integrations that are not deployment-managed can be configured at runtime through the Admin
-dashboard. Deployment-managed values take precedence, which keeps an organization's required
-configuration explicit and reviewable.
+Deployment owners store non-secret platform settings in a JSONC file for each stage. Administrators can manage other integration settings at runtime from the Admin dashboard. Values in the stage file have priority, which makes required settings clear during review.
 
-The source code for these integrations is included, but the external services, accounts, and
-credentials are not. A model gateway must be configured before an agent can make model calls. MCP
-Context Forge, GitHub, Slack, AI Search, and external identity providers are optional. Contributions
-for other integrations used by your organization are welcome.
-
-## Tech Stack
+## Tech stack
 
 - Cloudflare Workers, Durable Objects, Workflows, Containers, D1, KV, R2, and AI Search
 - Effect for the backend API service
 - TanStack Start and Kumo for the web app
-- Better Auth for authentication
+- Better Auth for sign-in
 - Alchemy v2 for infrastructure as code
 - Nub for package management
 
 See [docs/system-diagram.md](docs/system-diagram.md) for the system architecture.
 
-## Getting Started
+## Get started
 
 ### Prerequisites
 
-- Node.js 24.15.x. The repository's `.nvmrc` and package metadata are the source of truth
+- Node.js 24.15.x. The repository's `.nvmrc` and package metadata are the source of truth.
 - [Nub](https://nubjs.com/) 0.4.11
-- A Docker-compatible CLI and running engine
-- A Cloudflare account. Deploying this complete stack requires the Workers Paid plan because c0
-  provisions Cloudflare Containers
+- A Docker-compatible CLI with an active engine
+- A Cloudflare account with the Workers Paid plan. The complete SolZero stack creates Cloudflare Containers.
 
-### Local setup
+### Set up a local environment
 
-Install Nub if needed, then install the locked dependencies:
+Install Nub, and then install the locked dependencies:
 
 ```sh
 curl -fsSL https://nubjs.com/install.sh | bash
@@ -97,34 +90,47 @@ cp config/.env.example config/.env
 cp config/.dev.vars.example config/.dev.vars
 ```
 
-Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in `config/.env`. The file is used by
-infrastructure tooling and must remain untracked. `config/.dev.vars` contains only secret values
-referenced by the dev profile.
+Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` to `config/.env`. Infrastructure tools read this file. Keep it untracked. Use `config/.dev.vars` only for secrets referenced by the dev profile.
 
-Update `config/dev.config.jsonc` before signing in:
+The deployment token needs the account `API Tokens > Write` permission, plus edit access for AI Gateway and Secrets Store. Alchemy uses these permissions to create the runtime token, BYOK resources, and the other SolZero resources.
 
-1. Replace `admin@example.com` in `admins.adminEmails` with your email address.
-2. Keep `deployment.zone` as `localhost` for local development.
-3. Leave optional LiteLLM, MCP Context Forge, GitHub, Slack, and external auth blocks disabled until
-   you intend to configure them.
+Edit `config/dev.config.jsonc` before you sign in:
 
-Every stage has a complete, independent non-secret profile:
-`config/dev.config.jsonc`, `config/test.config.jsonc`, `config/pre.config.jsonc`, and
-`config/prod.config.jsonc`. An ephemeral `pre-*` stage uses the pre profile. Profiles are not merged.
-Secret fields contain explicit environment references rather than secret values.
+1. In `admins.adminEmails`, replace `admin@example.com` with your email address.
+2. Keep `deployment.zone` set to `localhost` for local work.
+3. Review the Cloudflare AI Gateway model allowlist and its default model.
+4. Keep optional LiteLLM, MCP Context Forge, GitHub, Slack, and external auth blocks disabled until you are ready to configure them.
 
-Validate the profiles:
+Each stage has a complete profile:
+
+- `config/dev.config.jsonc`
+- `config/test.config.jsonc`
+- `config/pre.config.jsonc`
+- `config/prod.config.jsonc`
+
+An ephemeral `pre-*` stage uses the pre profile. Each profile stands alone and contains all non-secret settings for its stage. Secret fields hold explicit environment references.
+
+To store a provider key in Cloudflare Secrets Store, uncomment its `providerKeys` reference in the stage JSONC file. After that edit, set the matching `S0_CONFIG_SECRETS_CF_AI_GATEWAY_*_API_KEY` value in the stage vars file.
+
+A deployment reference locks that provider in Admin. For an unlocked provider, an administrator can store an encrypted global key in Admin. Each user can set an OpenAI, Anthropic, or xAI override from Settings > AI Providers.
+
+Cloudflare resolves credentials in this order:
+
+1. The user key or global Admin key for the request
+2. The default BYOK key on the gateway
+3. Unified Billing credits when that mode is active
+
+Validate every profile:
 
 ```sh
 nub run config:check
 ```
 
-The default security keys and administrator password are marked `generateIfMissing`; Alchemy creates
-and persists them when their entries in `config/.dev.vars` are omitted or empty. When you enable an
-integration, uncomment and populate each secret it references in `config/.dev.vars`. c0 fails before
-startup with the missing environment variable name when a required secret is absent.
+The default security keys and administrator password use `generateIfMissing`. Alchemy creates and stores them when their entries in `config/.dev.vars` are empty or omitted.
 
-Confirm that the credentials resolve to the intended Cloudflare account, then start c0:
+When you enable an integration, uncomment each required secret in `config/.dev.vars` and add its value. If a required secret is missing, SolZero stops before startup and reports the environment variable name.
+
+After your credentials select the intended Cloudflare account, start SolZero:
 
 ```sh
 set -a
@@ -134,55 +140,56 @@ nub exec wrangler whoami
 nub run dev
 ```
 
-The web app runs at <http://localhost:3000> and the API Worker at
-<http://localhost:1337>. In another terminal, verify the control plane and retrieve the generated
-local administrator password:
+The web app runs at <http://localhost:3000>. The API Worker runs at <http://localhost:1337>.
+
+In another terminal, check the control plane and get the generated administrator password:
 
 ```sh
 curl --fail-with-body http://localhost:1337/health
 nub run auth:admin-password -- dev --local
 ```
 
-Sign in at <http://localhost:3000> with an email from `admins.adminEmails` and the retrieved
-password. Configure a LiteLLM-compatible gateway in Admin, synchronize its model list, then create an
-Isolate session and send a prompt. GitHub linking is required only for repository-backed sessions.
+Open <http://localhost:3000>. Sign in with an address from `admins.adminEmails` and the generated password.
+
+Create an Isolate, OpenCode, or Codex session. Select a compatible Cloudflare AI Gateway model, and then send a prompt. Configure LiteLLM in Admin when you need more models. Repository-backed sessions require a linked GitHub account.
 
 ### Deploy to Cloudflare
 
-The production profile derives `https://ai.<zone>` for the web app and
-`https://api.ai.<zone>` for the API unless `deployment.webFqdn` and `deployment.apiFqdn` override
-them. Both hostnames must belong to the configured Cloudflare zone.
+The production profile derives `https://ai.<zone>` for the web app and `https://api.ai.<zone>` for the API by default. Set `deployment.webFqdn` or `deployment.apiFqdn` to use explicit hostnames. Both hostnames must belong to the configured Cloudflare zone.
 
-Prepare production configuration and secrets:
+Create the production secrets file:
 
 ```sh
 cp config/.dev.vars.example config/.prod.vars
 ```
 
-1. Set `deployment.zone` in `config/prod.config.jsonc` to the Cloudflare-managed zone.
-2. Optionally set explicit `deployment.webFqdn` and `deployment.apiFqdn` values.
+Prepare the production profile:
+
+1. Set `deployment.zone` in `config/prod.config.jsonc` to your Cloudflare-managed zone.
+2. Add explicit `deployment.webFqdn` and `deployment.apiFqdn` values when you need custom hostnames.
 3. Replace `admin@example.com` with the production administrator email.
-4. Enable only the external integrations you are ready to configure.
-5. Uncomment and populate the matching integration secrets in `config/.prod.vars`.
+4. Enable the external integrations that you are ready to configure.
+5. Uncomment the matching secrets in `config/.prod.vars`, and then add their values.
+
+Validate the profiles:
 
 ```sh
 nub run config:check
 ```
 
-Run the plan to review the resources to be created:
+Review the planned resources:
 
 ```sh
 nub run infra:plan:prod
 ```
 
-Deploy only after the plan targets the intended account, zone, and resource names:
+Confirm that the plan uses the intended account, zone, and resource names. Start the deployment after this check:
 
 ```sh
 nub run infra:deploy:prod
 ```
 
-The first Container deployment can take several minutes to become ready even after the Workers are
-available. Retrieve the generated administrator password and verify the public surfaces:
+The first Container deployment can take several minutes after the Workers become available. Get the administrator password and check the public routes:
 
 ```sh
 nub run auth:admin-password -- prod
@@ -190,14 +197,13 @@ curl --fail-with-body https://api.ai.<zone>/health
 curl --fail-with-body https://ai.<zone>/api/auth/config
 ```
 
-Open `https://ai.<zone>`, sign in with the configured administrator email, configure the model
-gateway, and run the same Isolate-session smoke test used locally. Then test a Container runtime if
-you intend to use OpenCode, Codex, or Claude Code.
+Open `https://ai.<zone>`. Sign in with the production administrator email. Configure the model gateway, and then repeat the local SolZero Agent smoke test.
 
-For preview deployment, use the same sequence with `config/pre.config.jsonc`, `config/.pre.vars`,
-`nub run infra:plan:pre`, and `nub run infra:deploy:pre`. The `dev`, `test`, `pre`, and `prod`
-profiles are all validated intentionally; do not delete unused profiles without changing that
-contract.
+When your deployment uses sandbox agents, test its selected OpenCode, Codex, or Claude Code Container runtime.
+
+For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. Run `nub run infra:plan:pre`, followed by `nub run infra:deploy:pre`.
+
+SolZero validates the `dev`, `test`, `pre`, and `prod` profiles. Keep every profile in the repository to preserve this contract.
 
 ## Common commands
 
@@ -212,17 +218,15 @@ nub run lint                # repository lint checks
 nub run format              # formatting check
 ```
 
-Run the local API-key e2e test after creating a user API key:
+Run the local API key end-to-end test after you create a user API key:
 
 ```sh
-C0_API_KEY="<user API key>" \
+S0_API_KEY="<user API key>" \
 BACKGROUND_BASE_URL=http://localhost:1337 \
 nub run test:e2e
 ```
 
-## What's Next?
-
-There is more work to do. Current areas of focus include:
+## Roadmap
 
 - Dynamic Sites
 - Teams
@@ -230,12 +234,11 @@ There is more work to do. Current areas of focus include:
 - A public documentation site
 - Code Mode fixes
 - UI polish
-- Dynamic container support based on Cloudflare Account plan
+- Dynamic Container support for each Cloudflare account plan
+- Self managing updates, system checks, etc
 
 ## License
 
-Copyright (C) 2026 Consensys
+Copyright (C) 2026 SolZero
 
-This project is licensed under the GNU Lesser General Public License v3.0-only. See
-[COPYING](COPYING), [COPYING.LESSER](COPYING.LESSER), and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+SolZero uses the GNU Lesser General Public License v3.0-only. Full terms appear in [COPYING](COPYING), [COPYING.LESSER](COPYING.LESSER), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

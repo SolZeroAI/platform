@@ -4,7 +4,7 @@ import { DYNAMIC_WORKFLOW_CLASS_NAME, getDynamicWorkflowName } from "../../apps/
 describe("dynamic workflow resource", () => {
   it("uses a stable stage-scoped Cloudflare Workflow name", () => {
     expect(DYNAMIC_WORKFLOW_CLASS_NAME).toBe("DynamicUserWorkflow")
-    expect(getDynamicWorkflowName("c0", "pre")).toBe("c0-dynamic-workflow-pre")
-    expect(getDynamicWorkflowName("c0", "prod")).toBe("c0-dynamic-workflow-prod")
+    expect(getDynamicWorkflowName("s0", "pre")).toBe("s0-dynamic-workflow-pre")
+    expect(getDynamicWorkflowName("s0", "prod")).toBe("s0-dynamic-workflow-prod")
   })
 })

@@ -39,16 +39,30 @@ export function isHarnessRuntime(value: AgentRuntime): value is HarnessAgentRunt
 export function isAgentRuntimeCompatibleWithProvider(
   agentRuntime: AgentRuntime,
   providerId: string,
+  providerApi?: string,
 ): boolean {
   switch (agentRuntime) {
     case "isolate":
       return true
     case "opencode":
-      return providerId === "litellm" || providerId === "litellm-anthropic"
+      return (
+        providerId === "litellm" ||
+        providerId === "litellm-anthropic" ||
+        (providerId === "cloudflare-ai-gateway" &&
+          (providerApi === "responses" ||
+            providerApi === "chat_completions" ||
+            providerApi === "messages"))
+      )
     case "codex":
-      return providerId === "litellm"
+      return (
+        providerId === "litellm" ||
+        (providerId === "cloudflare-ai-gateway" && providerApi === "responses")
+      )
     case "claude-code":
-      return providerId === "litellm-anthropic"
+      return (
+        providerId === "litellm-anthropic" ||
+        (providerId === "cloudflare-ai-gateway" && providerApi === "messages")
+      )
   }
 }
 
@@ -57,11 +71,11 @@ export function describeAgentRuntimeModelCompatibility(agentRuntime: AgentRuntim
     case "isolate":
       return "any configured model"
     case "opencode":
-      return "LiteLLM OpenAI-compatible or LiteLLM Anthropic models"
+      return "Cloudflare AI Gateway or LiteLLM models"
     case "codex":
-      return "LiteLLM OpenAI-compatible models"
+      return "Cloudflare AI Gateway OpenAI Responses or LiteLLM OpenAI-compatible models"
     case "claude-code":
-      return "LiteLLM Anthropic models"
+      return "Cloudflare AI Gateway or LiteLLM Anthropic Messages models"
   }
 }
 

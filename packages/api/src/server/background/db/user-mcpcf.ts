@@ -258,7 +258,7 @@ export class UserMcpcfServerConfigStore {
 }
 
 function runUserMcpcfEffect<A>(
-  // oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
+  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
   effect: Effect.Effect<A, D1Error | UserMcpcfMigrationError>,
 ): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect UserMcpcfServerConfigStore to the non-Effect MCP Context Forge server.

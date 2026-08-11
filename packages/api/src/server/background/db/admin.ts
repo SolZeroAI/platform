@@ -1,5 +1,5 @@
-import type { AdminListQuery, AdminWorkflowListQuery } from "@c0/api"
-import { resolveAgentRuntime } from "@c0-agent/shared"
+import type { AdminListQuery, AdminWorkflowListQuery } from "@solzero/api"
+import { resolveAgentRuntime } from "@solzero/shared"
 import { and, asc, desc, eq, lt, or, sql, type AnyColumn, type SQL } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"

@@ -1,4 +1,4 @@
-import type { SandboxEvent } from "@c0-agent/shared"
+import type { SandboxEvent } from "@solzero/shared"
 import { toolMatchesMcpDiscoveryServer } from "./tool-formatters"
 import type { SubagentRunView } from "./subagent-events"
 

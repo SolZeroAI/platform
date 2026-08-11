@@ -1,6 +1,6 @@
 import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
-import { type AdminSessionDetailResponse } from "@c0/api"
+import { type AdminSessionDetailResponse } from "@solzero/api"
 import { RotateCcw, X } from "lucide-react"
 import { CodeSurface } from "@/components/code"
 import { type WorkflowRunDetail } from "@/lib/admin-console"

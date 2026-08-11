@@ -1,16 +1,19 @@
 export { handleGitHubAppWebhookRequest } from "./background/auth/github-webhook"
 export { getAuthProviderRegistry, getPublicAuthProviderRegistry } from "./background/db/auth-config"
+export { normalizeCloudflareAiGatewayResponse } from "./background/ai-providers/cloudflare-ai-gateway"
 export { reconcileManagedAdminCredentials } from "./background/db/admin-credentials"
 export { IsolateSessionAgent } from "./background/isolate/agent"
 export { IsolateSubAgent } from "./background/isolate/subagent"
 export { handleSessionWebSocketRequest } from "./background/router"
 export {
+  decryptCloudflareAiGatewayByokProxyCredential,
+  requestWithCloudflareProviderNativeCredential,
   requestWithSharedProviderCredential,
+  resolveSharedProviderCredential,
   resolveSharedProviderApiKey,
-  resolveSharedProviderOutboundHost,
+  resolveSharedProviderOutboundHosts,
   sharedProviderPathClass,
   sharedProviderRequestModel,
-  sharedProviderSecretName,
   SHARED_PROVIDER_OUTBOUND_HANDLER,
 } from "./background/sandbox/providers/shared-provider-outbound"
 export { SessionDO } from "./background/session/durable-object"
@@ -38,7 +41,7 @@ export {
 export { createBetterAuth } from "./lib/better-auth"
 export { handleMcpcfMcpRequest } from "./mcp/mcpcf"
 export {
-  isC0McpPath,
+  isS0McpPath,
   isMcpcfProxyMcpPath,
   isMcpPath,
   shouldDispatchMcpRequest,

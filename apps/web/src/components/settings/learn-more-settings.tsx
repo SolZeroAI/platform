@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { C0Loader } from "@/components/c0-loader"
-import { C0AnimatedIcon } from "@/components/c0-animated-icon"
+import { S0Loader } from "@/components/s0-loader"
+import { S0AnimatedIcon } from "@/components/s0-animated-icon"
+import { getS0Brand } from "@/lib/brand"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
 
 const LEARN_MORE_TOC_ITEMS = [
@@ -97,17 +98,19 @@ function KumoBackgroundColorSwatch({
 }
 
 export function LearnMoreSettings() {
+  const brand = getS0Brand()
   return (
     <SettingsDocsLayout
       title="Learn More"
       titleId="settings-learn-more"
-      description="Visual assets for the c0 project."
+      description={`Visual assets for the ${brand.name} project.`}
       tocItems={LEARN_MORE_TOC_ITEMS}
     >
       <section className="space-y-4">
         <SettingsDocsSectionHeading id="theme-colors" level="h2" title="Theme colors">
           <p className="text-sm text-kumo-subtle">
-            Kumo background tokens used across c0, with the active theme value for the current mode.
+            Kumo background tokens used across {brand.name}, with the active theme value for the
+            current mode.
           </p>
         </SettingsDocsSectionHeading>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -120,27 +123,27 @@ export function LearnMoreSettings() {
       <section className="space-y-4">
         <SettingsDocsSectionHeading id="brand-assets" level="h2" title="Assets">
           <p className="text-sm text-kumo-subtle">
-            Core c0 brand elements used across the product experience.
+            Core {brand.name} brand elements used across the product experience.
           </p>
         </SettingsDocsSectionHeading>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-kumo-line p-4">
-            <div className="text-sm font-medium text-kumo-default mb-1">Liquid metal c0 logo</div>
+            <div className="text-sm font-medium text-kumo-default mb-1">{brand.name} logo</div>
             <div className="text-xs text-kumo-subtle mb-4">
-              c0 logo rendered with Paper's Liquid Metal shader.
+              {brand.name} logo used as the animated brand mark.
             </div>
             <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-canvas">
-              <C0AnimatedIcon size={96} />
+              <S0AnimatedIcon size={96} />
             </div>
           </div>
 
           <div className="rounded-xl border border-kumo-line p-4">
-            <div className="text-sm font-medium text-kumo-default mb-1">c0 Loader</div>
+            <div className="text-sm font-medium text-kumo-default mb-1">{brand.name} loader</div>
             <div className="text-xs text-kumo-subtle mb-4">
-              Stroke-drawn c0 logo animated with GSAP DrawSVG, used as a loading indicator.
+              The {brand.name} mark animated as a loading indicator.
             </div>
             <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-canvas">
-              <C0Loader size={96} />
+              <S0Loader size={96} />
             </div>
           </div>
         </div>

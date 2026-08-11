@@ -5,6 +5,7 @@ import {
   getGitHubRepoTool,
   getSelectedMcpcfServerIds,
   getStageMetadataSync,
+  humanizeCloudflareAiGatewayError,
   normalizeIsolateStepLimit,
   normalizeOpenCodeMcpServers,
   normalizeSessionTools,
@@ -17,7 +18,7 @@ import {
   type SessionRuntimeCapabilities,
   type OpenCodeMcpServers,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { generateId, hashToken } from "../../auth/crypto"
 import {
   resolveGitHubCloneCredentials,
@@ -522,7 +523,7 @@ export function promptFailureMessage(
 ): string {
   return Match.value(isArchived).pipe(
     Match.when(true, () => "Session archived"),
-    Match.orElse(() => toError(errorValue).message),
+    Match.orElse(() => humanizeCloudflareAiGatewayError(toError(errorValue).message)),
   )
 }
 

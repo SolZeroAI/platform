@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-table"
 import { ChevronDown, ChevronsUpDown, Pencil } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { C0Loader, TableCellState } from "@/components/c0-loader"
+import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { SecretsSearchFilter } from "@/components/secrets-search-filter"
 import { Dialog } from "@/components/ui/dialog"
 import {
@@ -482,7 +482,7 @@ export function SecretsTable({
                   >
                     <TableCellState>
                       {loading ? (
-                        <C0Loader size={32} />
+                        <S0Loader size={32} />
                       ) : (
                         <Empty
                           title="No secrets found"

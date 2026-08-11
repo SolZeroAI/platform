@@ -1,9 +1,10 @@
-/* oxlint-disable c0-lint/no-if-statement, c0-lint/prefer-option-over-null, c0-lint/no-ternary, c0-lint/no-return-in-arrow, c0-lint/no-return-in-callback, c0-lint/avoid-untagged-errors -- Container HTTP and AI SDK event adapters validate untrusted JSON at an imperative boundary before entering the Effect lifecycle. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/prefer-option-over-null, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/avoid-untagged-errors -- Container HTTP and AI SDK event adapters validate untrusted JSON at an imperative boundary before entering the Effect lifecycle. */
 import {
+  humanizeCloudflareAiGatewayError,
   resolveAgentRuntime,
   type AgentRuntime,
   type CompiledOpenCodeConfig,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { toError } from "../../../lib/effect-errors"
@@ -22,7 +23,18 @@ type AgentContainerRuntime = Exclude<AgentRuntime, "isolate">
 type RuntimeProviderConfig =
   | {
       kind: "openai-compatible"
-      providerId: "litellm"
+      providerId: "litellm" | "cloudflare-ai-gateway"
+      modelId: string
+      auth: {
+        apiKey: string
+        baseUrl: string
+        name: string
+        modelProviderName: string
+      }
+    }
+  | {
+      kind: "openai-responses"
+      providerId: "cloudflare-ai-gateway"
       modelId: string
       auth: {
         apiKey: string
@@ -33,7 +45,7 @@ type RuntimeProviderConfig =
     }
   | {
       kind: "anthropic"
-      providerId: "litellm-anthropic"
+      providerId: "litellm-anthropic" | "cloudflare-ai-gateway"
       modelId: string
       auth: {
         apiKey: string
@@ -172,6 +184,8 @@ function runtimeProviderConfig(input: {
 }): RuntimeProviderConfig {
   const apiKey = requireProviderOption(input.config, input.providerId, "apiKey")
   const baseUrl = requireProviderOption(input.config, input.providerId, "baseURL")
+  const providerApi =
+    input.config.provider[input.providerId]?.models?.[input.modelId]?.provider?.api
   return Match.value(input.providerId).pipe(
     Match.when("litellm", () => ({
       kind: "openai-compatible" as const,
@@ -193,6 +207,43 @@ function runtimeProviderConfig(input: {
         baseUrl,
       },
     })),
+    Match.when("cloudflare-ai-gateway", () =>
+      Match.value(providerApi).pipe(
+        Match.when("responses", () => ({
+          kind: "openai-responses" as const,
+          providerId: "cloudflare-ai-gateway" as const,
+          modelId: input.modelId,
+          auth: {
+            apiKey,
+            baseUrl,
+            name: "cloudflare-ai-gateway",
+            modelProviderName: "cloudflare-ai-gateway",
+          },
+        })),
+        Match.when("chat_completions", () => ({
+          kind: "openai-compatible" as const,
+          providerId: "cloudflare-ai-gateway" as const,
+          modelId: input.modelId,
+          auth: {
+            apiKey,
+            baseUrl,
+            name: "cloudflare-ai-gateway",
+            modelProviderName: "cloudflare-ai-gateway",
+          },
+        })),
+        Match.when("messages", () => ({
+          kind: "anthropic" as const,
+          providerId: "cloudflare-ai-gateway" as const,
+          modelId: input.modelId,
+          auth: { apiKey, baseUrl },
+        })),
+        Match.orElse(() => {
+          throw new Error(
+            `Cloudflare AI Gateway model '${input.modelId}' must declare provider.api as responses, chat_completions, or messages`,
+          )
+        }),
+      ),
+    ),
     Match.orElse(() => {
       throw new Error(
         `Provider '${input.providerId}' is not compatible with ${input.runtime} runtime`,
@@ -207,7 +258,12 @@ function assertRuntimeProviderCompatibility(
 ): void {
   const ok = Match.value(runtime).pipe(
     Match.when("opencode", () => true),
-    Match.when("codex", () => provider.kind === "openai-compatible"),
+    Match.when(
+      "codex",
+      () =>
+        provider.kind === "openai-responses" ||
+        (provider.kind === "openai-compatible" && provider.providerId === "litellm"),
+    ),
     Match.when("claude-code", () => provider.kind === "anthropic"),
     Match.exhaustive,
   )
@@ -300,7 +356,7 @@ export function mapRuntimeEvent(
         type: "error",
         messageId: event.messageId,
         sandboxId,
-        error: event.error,
+        error: humanizeCloudflareAiGatewayError(event.error),
         timestamp: timestampSeconds(event),
       }
     case "finish":
@@ -308,7 +364,7 @@ export function mapRuntimeEvent(
         type: "execution_complete",
         messageId: event.messageId,
         success: event.success,
-        error: event.error,
+        error: event.error ? humanizeCloudflareAiGatewayError(event.error) : event.error,
         sandboxId,
         timestamp: timestampSeconds(event),
       }

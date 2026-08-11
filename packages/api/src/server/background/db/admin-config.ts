@@ -3,16 +3,16 @@ import {
   isAdminEmail,
   normalizeAdminConfig,
   type AdminConfig,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import {
-  C0_CONFIG_BINDINGS,
-  C0_CONFIG_KEYS,
-  C0_CONFIG_LOCATIONS,
-  C0ConfigStore,
-  getC0DeploymentConfig,
-} from "./c0-config"
+  S0_CONFIG_BINDINGS,
+  S0_CONFIG_KEYS,
+  S0_CONFIG_LOCATIONS,
+  S0ConfigStore,
+  getS0DeploymentConfig,
+} from "./s0-config"
 import type { Env } from "../types"
 
 export interface AdminConfigPresence {
@@ -23,14 +23,14 @@ export interface AdminConfigPresence {
   config: AdminConfig
 }
 
-function getStore(env: Env): Option.Option<C0ConfigStore> {
-  return Option.fromNullishOr(Reflect.get(env, "C0_CONFIG")).pipe(
-    Option.map((kv) => new C0ConfigStore(kv as KVNamespace, env.REPO_SECRETS_ENCRYPTION_KEY)),
+function getStore(env: Env): Option.Option<S0ConfigStore> {
+  return Option.fromNullishOr(Reflect.get(env, "S0_CONFIG")).pipe(
+    Option.map((kv) => new S0ConfigStore(kv as KVNamespace, env.REPO_SECRETS_ENCRYPTION_KEY)),
   )
 }
 
 export const getAdminConfigWithPresence = Effect.fn("adminConfig.getConfig")(function* (env: Env) {
-  const deploymentValue = getC0DeploymentConfig<AdminConfig>(env, C0_CONFIG_BINDINGS.admin)
+  const deploymentValue = getS0DeploymentConfig<AdminConfig>(env, S0_CONFIG_BINDINGS.admin)
 
   return yield* Option.match(deploymentValue, {
     onSome: (value) =>
@@ -38,7 +38,7 @@ export const getAdminConfigWithPresence = Effect.fn("adminConfig.getConfig")(fun
         configured: true,
         source: "deployment" as const,
         locked: true,
-        envVarName: C0_CONFIG_LOCATIONS.admin,
+        envVarName: S0_CONFIG_LOCATIONS.admin,
         config: normalizeAdminConfig(value),
       } satisfies AdminConfigPresence),
     onNone: () =>
@@ -46,7 +46,7 @@ export const getAdminConfigWithPresence = Effect.fn("adminConfig.getConfig")(fun
         const store = getStore(env)
         const value = yield* Option.match(store, {
           onNone: () => Effect.succeed(Option.none<unknown>()),
-          onSome: (resolved) => resolved.getJson(C0_CONFIG_KEYS.admin.config),
+          onSome: (resolved) => resolved.getJson(S0_CONFIG_KEYS.admin.config),
         })
         return Option.match(value, {
           onSome: (config) =>

@@ -4,6 +4,10 @@ import {
   mapStreamPart,
 } from "../../packages/agent-container/src/harness-runtime"
 import { mapRuntimeEvent } from "../../packages/api/src/server/background/sandbox/providers/harness-container-provider"
+import {
+  CLOUDFLARE_AI_GATEWAY_TOP_UP_URL,
+  CLOUDFLARE_WORKERS_AI_PRICING_DOCS_URL,
+} from "../../packages/shared/src"
 
 describe("AI SDK harness event mapping", () => {
   it("maps AI SDK text, reasoning, tool, and file-change parts", () => {
@@ -98,12 +102,12 @@ describe("AI SDK harness event mapping", () => {
     expect(runtime.poll(0).events).toEqual([
       expect.objectContaining({
         type: "error",
-        error: "Codex harness requires a LiteLLM OpenAI-compatible model",
+        error: "Codex harness requires an OpenAI Responses or LiteLLM model",
       }),
       expect.objectContaining({
         type: "finish",
         success: false,
-        error: "Codex harness requires a LiteLLM OpenAI-compatible model",
+        error: "Codex harness requires an OpenAI Responses or LiteLLM model",
       }),
     ])
   })
@@ -154,5 +158,24 @@ describe("AI SDK harness event mapping", () => {
       content: "think",
       assistantMessageId: "reasoning-1",
     })
+  })
+
+  it("maps exhausted Workers AI allocation failures to an actionable session error", () => {
+    const event = mapRuntimeEvent(
+      {
+        type: "error",
+        messageId: "message-1",
+        error: "3036: You have used up your daily free allocation of 10,000 neurons.",
+        timestamp: 1_000,
+      },
+      "sandbox-1",
+      { text: "", reasoningById: new Map() },
+    )
+
+    expect(event).toMatchObject({
+      type: "error",
+      error: expect.stringContaining(CLOUDFLARE_WORKERS_AI_PRICING_DOCS_URL),
+    })
+    expect(event?.type === "error" ? event.error : "").toContain(CLOUDFLARE_AI_GATEWAY_TOP_UP_URL)
   })
 })

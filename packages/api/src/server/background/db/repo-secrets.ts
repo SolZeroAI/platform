@@ -418,7 +418,7 @@ export class GlobalSecretsStore {
   })
 }
 
-// oxlint-disable-next-line c0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
 function runGlobalSecretsEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect GlobalSecretsStore to non-Effect runtime consumers (Slack credential sync, durable object, sandbox/storage nodes, MCP forge server).
   return Effect.runPromise(effect)

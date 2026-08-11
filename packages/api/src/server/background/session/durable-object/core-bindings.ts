@@ -3,7 +3,7 @@ import {
   type OpenCodeMcpServers,
   type SessionKind,
   type SessionToolSpec,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import { type Attachment, type PromptExecutionMode, type SandboxEvent } from "../../types"
 import { type SessionRow } from "../types"
 import {

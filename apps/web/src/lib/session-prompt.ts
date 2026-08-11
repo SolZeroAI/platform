@@ -1,9 +1,9 @@
-import type { AgentRuntime, SessionKind } from "@c0-agent/shared"
+import type { AgentRuntime, SessionKind } from "@solzero/shared"
 
 const fallbackPromptErrors = new Map<string, string>()
 
 function promptErrorStorageKey(sessionId: string): string {
-  return `c0-prompt-error-${sessionId}`
+  return `s0-prompt-error-${sessionId}`
 }
 
 function takeFallbackPromptError(key: string): string | null {

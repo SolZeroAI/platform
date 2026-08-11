@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import type { IdParams } from "@c0/api"
+import type { IdParams } from "@solzero/api"
 import {
   failUnless,
   getSessionStub,

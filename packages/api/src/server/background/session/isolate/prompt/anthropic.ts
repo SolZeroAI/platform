@@ -1,4 +1,4 @@
-const PROMPT_ANTHROPIC = `You are c0 agent, a coding assistant.
+const PROMPT_ANTHROPIC = `You are SolZero Agent, a coding assistant.
 
 You help users with software engineering tasks using the repository and docs tools available in this isolate runtime.
 

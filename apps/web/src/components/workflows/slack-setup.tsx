@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { C0Loader } from "@/components/c0-loader"
+import { S0Loader } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { copyToClipboard } from "@/lib/format"
 import {
@@ -136,7 +136,7 @@ export function WorkflowSlackAppSetupModal({
     >
       {loading && !setup ? (
         <div className="flex min-h-48 items-center justify-center text-kumo-subtle">
-          <C0Loader size={16} />
+          <S0Loader size={16} />
         </div>
       ) : loadError ? (
         <div className="rounded-lg bg-kumo-danger-tint/10 p-3 text-sm text-kumo-danger ring-1 ring-kumo-danger/30">
@@ -263,7 +263,7 @@ export function WorkflowSlackAppSetupModal({
                   disabled={savingCredentials}
                   className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-kumo-brand px-3 py-2 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
                 >
-                  {savingCredentials ? <C0Loader size={16} /> : <Save className="h-4 w-4" />}
+                  {savingCredentials ? <S0Loader size={16} /> : <Save className="h-4 w-4" />}
                   {savingCredentials ? "Saving" : "Save credentials"}
                 </button>
               </LayerCard.Primary>

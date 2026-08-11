@@ -4,7 +4,7 @@ import {
   validateWorkflowDraft,
   type WorkflowDraftValidationResult,
   type WorkflowManifest,
-} from "@c0-agent/shared"
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -91,7 +91,7 @@ const manifestFromWrapper = (wrapper: unknown) =>
 const unwrapWorkflowManifestInput = (value: unknown): unknown =>
   Match.value(value).pipe(
     Match.when(Match.record, (record) =>
-      Match.value(record.kind === "c0.workflow").pipe(
+      Match.value(record.kind === "s0.workflow").pipe(
         Match.when(true, () => manifestFromWrapper(record.manifest)),
         Match.orElse(() =>
           Match.value(isRecord(record.workflow)).pipe(

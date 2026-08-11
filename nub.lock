@@ -93,10 +93,10 @@ importers:
 
   apps/api:
     dependencies:
-      '@c0-agent/shared':
+      '@solzero/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@c0/api':
+      '@solzero/api':
         specifier: workspace:*
         version: link:../../packages/api
       '@cloudflare/containers':
@@ -115,10 +115,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@c0-agent/shared':
+      '@solzero/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@c0/api':
+      '@solzero/api':
         specifier: workspace:*
         version: link:../../packages/api
       '@cloudflare/kumo':
@@ -306,7 +306,7 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: 3.0.14
         version: 3.0.14(zod@4.4.3)
-      '@c0-agent/shared':
+      '@solzero/shared':
         specifier: workspace:*
         version: link:../shared
       '@cloudflare/codemode':
@@ -351,6 +351,9 @@ importers:
       jose:
         specifier: ^6.2.1
         version: 6.2.4
+      workers-ai-provider:
+        specifier: 4.0.0
+        version: 4.0.0(@ai-sdk/anthropic@4.0.18(zod@4.4.3))(@ai-sdk/openai@4.0.19(zod@4.4.3))(@ai-sdk/provider@4.0.3)(ai@7.0.36(zod@4.4.3))
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -368,7 +371,7 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))
 
-  packages/c0-lint:
+  packages/s0-lint:
     dependencies:
       '@oxlint/plugins':
         specifier: 1.66.0
@@ -386,7 +389,7 @@ importers:
 
   packages/infra:
     dependencies:
-      '@c0-agent/shared':
+      '@solzero/shared':
         specifier: workspace:*
         version: link:../shared
       '@effect/platform-node':

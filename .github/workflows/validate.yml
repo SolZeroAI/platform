@@ -26,11 +26,16 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Set up Nub
-        uses: ./.github/actions/setup-nub
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.4.11
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
       - name: Install dependencies
         run: nub install --frozen-lockfile
