@@ -26,7 +26,7 @@ function createHostHarness(input?: {
     ...createInitialIsolateSessionAgentState(),
     sessionId: "session-1",
     userId: "user-1",
-    repoOwner: "Consensys",
+    repoOwner: "SolZero",
     repoName: "ai",
     model: "test/model",
     subagentDispatch:

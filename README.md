@@ -239,6 +239,6 @@ nub run test:e2e
 
 ## License
 
-Copyright (C) 2026 Consensys
+Copyright (C) 2026 SolZero
 
 SolZero uses the GNU Lesser General Public License v3.0-only. Full terms appear in [COPYING](COPYING), [COPYING.LESSER](COPYING.LESSER), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
