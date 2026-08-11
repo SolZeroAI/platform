@@ -32,6 +32,11 @@ jobs:
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
       - name: Install dependencies
         run: nub install --frozen-lockfile
 
