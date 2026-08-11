@@ -173,12 +173,23 @@ export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
   )
 }
 
-export function s0ConfigFileNameForStage(stage: string): string {
-  return `${s0ConfigStageForStage(stage)}.config.jsonc`
+function s0ConfigProfilePrefix(profile: string | undefined): string {
+  const normalized = profile?.trim().toLowerCase() ?? ""
+  if (!normalized) return ""
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
+    throw new Error(
+      `Invalid s0 config profile '${profile}'. Expected lowercase letters, numbers, and hyphens`,
+    )
+  }
+  return `${normalized}-`
 }
 
-export function s0ConfigPathForStage(stage: string): string {
-  return `config/${s0ConfigFileNameForStage(stage)}`
+export function s0ConfigFileNameForStage(stage: string, profile?: string): string {
+  return `${s0ConfigProfilePrefix(profile)}${s0ConfigStageForStage(stage)}.config.jsonc`
+}
+
+export function s0ConfigPathForStage(stage: string, profile?: string): string {
+  return `config/${s0ConfigFileNameForStage(stage, profile)}`
 }
 
 function normalizeTextArray(values: readonly string[]): string[] {
@@ -523,6 +534,7 @@ export function s0ActiveSecretReferences(config: S0ResolvedConfig): SecretRefere
 }
 
 export interface S0RuntimeBootstrapBindings {
+  readonly S0_CONFIG_FILE: string
   readonly S0_CONFIG_ADMIN: AdminConfig
   readonly S0_CONFIG_AUTH: S0AuthConfig
   readonly S0_CONFIG_CLOUDFLARE_AI_GATEWAY: S0CloudflareAiGatewayConfig

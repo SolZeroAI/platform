@@ -133,6 +133,18 @@ describe("canonical s0 configuration", () => {
     expect(canonicalS0ConfigJson(preview)).toBe(canonicalS0ConfigJson(pre))
   })
 
+  it("selects a complete local profile without changing the deployment stage", () => {
+    expect(s0ConfigFileNameForStage("dev", "s0")).toBe("s0-dev.config.jsonc")
+    expect(s0ConfigFileNameForStage("pre-123", "s0")).toBe("s0-pre.config.jsonc")
+    expect(s0ConfigPathForStage("prod", "s0")).toBe("config/s0-prod.config.jsonc")
+  })
+
+  it("rejects config profile names that could escape the config directory", () => {
+    expect(() => s0ConfigPathForStage("dev", "../private")).toThrow(
+      "Invalid s0 config profile '../private'",
+    )
+  })
+
   it.each(["dev", "pre", "prod"])(
     "keeps the optional GitHub App disabled in the shipped %s profile",
     (stage) => {

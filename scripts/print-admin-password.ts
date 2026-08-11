@@ -70,8 +70,9 @@ const rawState = (["S0", "S0Api", "S0Web"] as const).reduce<string | undefined>(
   undefined,
 )
 if (!rawState) {
+  const configProfile = process.env.S0_CONFIG_PROFILE
   throw new Error(
-    `No generated admin password exists for stage '${stage}'. Deploy the stack first, or configure the secret referenced by ${s0ConfigPathForStage(stage)}:auth.adminPassword.`,
+    `No generated admin password exists for stage '${stage}'. Deploy the stack first, or configure the secret referenced by ${s0ConfigPathForStage(stage, configProfile)}:auth.adminPassword.`,
   )
 }
 

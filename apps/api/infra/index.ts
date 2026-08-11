@@ -50,6 +50,7 @@ export type ApiSecretInput = string | Output.Output<Redacted.Redacted<string>>
 
 export interface ApiInfraEnv {
   readonly S0_PROVIDER_LAYER: "live" | "mock"
+  readonly S0_CONFIG_FILE: string
   readonly S0_CONFIG_ADMIN: AdminConfig
   readonly S0_CONFIG_AUTH: S0AuthConfig
   readonly S0_CONFIG_CLOUDFLARE_AI_GATEWAY: S0CloudflareAiGatewayConfig
@@ -94,6 +95,7 @@ function configuredStringSecretValue(
 
 export function getApiInfraEnv(
   config: S0ResolvedConfig,
+  configurationFile: string,
   deploymentConfigDigest: string,
   secretBindings: Readonly<Record<string, ApiSecretInput>>,
 ): ApiInfraEnv {
@@ -143,6 +145,7 @@ export function getApiInfraEnv(
   )
   return {
     S0_PROVIDER_LAYER: "live",
+    S0_CONFIG_FILE: configurationFile,
     S0_CONFIG_ADMIN: config.admins,
     S0_CONFIG_AUTH: config.auth,
     S0_CONFIG_CLOUDFLARE_AI_GATEWAY: config.aiProviders.cloudflareAiGateway,
@@ -302,6 +305,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     APP_VERSION: deploymentMetadata.appVersion,
     COMMIT_SHA: deploymentMetadata.commitSha,
     S0_PROVIDER_LAYER: env.S0_PROVIDER_LAYER,
+    S0_CONFIG_FILE: env.S0_CONFIG_FILE,
     S0_STAGE_METADATA: jsonBinding({
       _tag: stageMetadata._tag,
       name: stageMetadata.name,

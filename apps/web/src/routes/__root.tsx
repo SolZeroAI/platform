@@ -17,7 +17,7 @@ export const Route = createRootRoute({
         { title: `${brand.name} Agent` },
         {
           name: "description",
-          content: "AI agent platform for software engineering workflows",
+          content: "Give your work an agent.",
         },
       ],
       links: [

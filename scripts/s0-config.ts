@@ -31,8 +31,8 @@ function readConfigPath(configPath: string): unknown {
   return parsed
 }
 
-function readConfigFile(stage: string): unknown {
-  return readConfigPath(resolve(repoRoot, s0ConfigPathForStage(stage)))
+function readConfigFile(stage: string, profile?: string): unknown {
+  return readConfigPath(resolve(repoRoot, s0ConfigPathForStage(stage, profile)))
 }
 
 async function generatedSchema(): Promise<string> {
@@ -49,16 +49,18 @@ async function generatedSchema(): Promise<string> {
   return result.code
 }
 
-async function checkConfig(): Promise<void> {
+async function checkConfig(profile?: string): Promise<void> {
   resolveS0Config(readConfigPath(exampleConfigPath))
-  for (const stage of S0_CONFIG_STAGE_NAMES) {
-    resolveS0Config(readConfigFile(stage))
+  const stages = profile ? (["dev", "pre", "prod"] as const) : S0_CONFIG_STAGE_NAMES
+  for (const stage of stages) {
+    resolveS0Config(readConfigFile(stage, profile))
   }
   if (readFileSync(schemaPath, "utf8") !== (await generatedSchema())) {
     throw new Error("config/s0.config.schema.json is stale. Run `nub run config:schema`.")
   }
+  const configPaths = stages.map((stage) => s0ConfigPathForStage(stage, profile))
   process.stdout.write(
-    `Validated s0 config files: config/example.config.jsonc, ${S0_CONFIG_STAGE_NAMES.map(s0ConfigPathForStage).join(", ")}\n`,
+    `Validated s0 config files: config/example.config.jsonc, ${configPaths.join(", ")}\n`,
   )
 }
 
@@ -67,11 +69,14 @@ async function writeSchema(): Promise<void> {
   process.stdout.write("Updated config/s0.config.schema.json\n")
 }
 
-const [command] = process.argv.slice(2).filter((argument) => argument !== "--")
-if (command === "check") {
+const args = process.argv.slice(2).filter((argument) => argument !== "--")
+const [command, profileFlag, profile] = args
+if (command === "check" && args.length === 1) {
   await checkConfig()
-} else if (command === "schema") {
+} else if (command === "check" && profileFlag === "--profile" && profile && args.length === 3) {
+  await checkConfig(profile)
+} else if (command === "schema" && args.length === 1) {
   await writeSchema()
 } else {
-  throw new Error("Usage: s0-config.ts check | schema")
+  throw new Error("Usage: s0-config.ts check [--profile <name>] | schema")
 }

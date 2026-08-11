@@ -124,9 +124,7 @@ export function SignInPage({
         <div className="text-center">
           <S0AnimatedIcon size={96} className="mx-auto mb-4" />
           <h1 className={`text-3xl ${manrope.className}`}>Welcome to {brand.name}</h1>
-          <p className="mt-2 max-w-md text-kumo-subtle">
-            AI agent platform with relevant context and tools.
-          </p>
+          <p className="mt-2 max-w-md text-kumo-subtle">Give your work an agent.</p>
         </div>
         {credentialProvider ? (
           <form className="flex w-full max-w-sm flex-col gap-3" onSubmit={handleCredentialSignIn}>

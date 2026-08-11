@@ -1,6 +1,5 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
 import {
-  s0ConfigPathForStage,
   normalizeAuthProviderRegistry,
   publicAuthProviderRegistry,
   type AuthProviderConfig,
@@ -99,7 +98,7 @@ export const getPublicAuthProviderRegistry = Effect.fn("authConfig.getPublicAuth
     const registry = yield* getStoredAuthProviderRegistry(env)
     return publicAuthProviderRegistry(
       registry,
-      s0ConfigPathForStage(env.STAGE),
+      env.S0_CONFIG_FILE,
     ) satisfies PublicAuthProviderRegistry
   },
 )

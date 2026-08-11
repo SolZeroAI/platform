@@ -20,7 +20,7 @@ function loadTestApiEnv(mcpcfProxySigningSecret?: string) {
         : [[reference.env, "test-secret-value-at-least-32-characters"] as const],
     ),
   )
-  return getApiInfraEnv(config, "test-config-digest", secretBindings)
+  return getApiInfraEnv(config, "config/test.config.jsonc", "test-config-digest", secretBindings)
 }
 
 describe("API infrastructure environment", () => {
@@ -39,6 +39,7 @@ describe("API infrastructure environment", () => {
     const env = loadTestApiEnv(secret)
 
     expect(env.MCPCF_PROXY_SIGNING_SECRET).toBe(secret)
+    expect(env.S0_CONFIG_FILE).toBe("config/test.config.jsonc")
     expect(env.S0_CONFIG_CLOUDFLARE_AI_GATEWAY).toEqual(config.aiProviders.cloudflareAiGateway)
   })
 })

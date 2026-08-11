@@ -2,7 +2,7 @@
   "name": "s0-agent",
   "version": "1.4.4",
   "private": true,
-  "description": "SolZero is an open-source AI platform built for organizational work, tools, and context. A single deployment to Cloudflare to get started.",
+  "description": "Give your work an agent. SolZero Agent is low-cost, low-maintenance, scalable, and durable.",
   "homepage": "https://github.com/Consensys/c0#readme",
   "bugs": {
     "url": "https://github.com/Consensys/c0/issues"

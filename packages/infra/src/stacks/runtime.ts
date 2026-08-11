@@ -28,11 +28,15 @@ const __dirname = dirname(__filename)
 export const INFRA_DIR = resolve(__dirname, "../..")
 export const REPO_ROOT = resolve(INFRA_DIR, "../..")
 
-export function loadS0ConfigFile(repoRoot: string, stage: string): S0ResolvedConfig {
-  const configPath = resolve(repoRoot, s0ConfigPathForStage(stage))
+export function loadS0ConfigFile(
+  repoRoot: string,
+  stage: string,
+  profile?: string,
+): S0ResolvedConfig {
+  const configPath = resolve(repoRoot, s0ConfigPathForStage(stage, profile))
   if (!existsSync(configPath)) {
     throw new Error(
-      `Missing s0 configuration file for stage '${stage}': ${configPath}. Preview stages use config/pre.config.jsonc.`,
+      `Missing s0 configuration file for stage '${stage}': ${configPath}. Preview stages use the pre config for the selected profile.`,
     )
   }
   const errors: ParseError[] = []
@@ -118,9 +122,13 @@ export function s0StackRuntime() {
     const stage = yield* Alchemy.Stage
     const context = yield* Alchemy.AlchemyContext
     loadStageVars(stageVarsTag(stage))
-    const s0Config = loadS0ConfigFile(REPO_ROOT, stage)
+    // oxlint-disable-next-line effect/avoid-process-env -- An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
+    const configProfile = process.env.S0_CONFIG_PROFILE
+    const configFile = s0ConfigPathForStage(stage, configProfile)
+    const s0Config = loadS0ConfigFile(REPO_ROOT, stage, configProfile)
     const apiEnv = getApiInfraEnv(
       s0Config,
+      configFile,
       deploymentConfigDigest(s0Config),
       yield* resolveConfigSecrets(s0Config),
     )
