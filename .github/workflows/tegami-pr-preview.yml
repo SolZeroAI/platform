@@ -1,0 +1,45 @@
+name: Tegami PR Preview
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Build release preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Build release preview
+        run: nub run tegami pr preview --artifact tegami-pr-preview.md
+
+      - name: Upload release preview
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: tegami-pr-preview
+          path: tegami-pr-preview.md
+          if-no-files-found: error
+          retention-days: 1

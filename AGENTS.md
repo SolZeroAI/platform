@@ -10,6 +10,13 @@ All responses and output content must follow these writing style rules: write in
 - Treat the task as incomplete until those checks pass, unless you explicitly report why a command could not be run or why a failure is unrelated to your changes.
 - During iteration, scoped or package-local checks are fine for speed, but the final handoff should still include the repo-root validation commands above.
 
+## Release Management
+
+- Use the `manage-solzero-releases` skill for changes that affect users, administrators, or deployment operators.
+- Read `.agents/skills/manage-solzero-releases/SKILL.md` before you choose a version change or write a file under `.tegami/`.
+- Add a Tegami release entry to the feature pull request. Use the `release:none` label for a change with no observable effect, and explain that choice in the pull request.
+- Do not edit `VERSION`, `CHANGELOG.md`, or `.tegami/publish-lock.yaml` on a feature branch. The automated version pull request owns those files.
+
 ## Local Development
 
 - Use the default dev commands for app debugging: `nub run dev`, `nub run dev:api`, `nub run dev:web`, or `nub run dev:apps`.

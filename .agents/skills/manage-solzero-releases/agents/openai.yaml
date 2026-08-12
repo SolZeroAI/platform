@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage SolZero Releases"
+  short_description: "Plan versions and write release entries"
+  default_prompt: "Use $manage-solzero-releases to choose a version change and write a clear Tegami release entry."

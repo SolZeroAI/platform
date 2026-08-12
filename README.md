@@ -236,6 +236,11 @@ nub run test:e2e
 - UI polish
 - Dynamic Container support for each Cloudflare account plan
 - Self managing updates, system checks, etc
+- Creative
+  - screenshots of login page and other notable pages
+    - is video possible? For each notable UX point, such as login, agent use, workflow use, etc.
+    - Would this use Takumi or kitesurf?
+  - systems diagram generation with Takumi
 
 ## License
 

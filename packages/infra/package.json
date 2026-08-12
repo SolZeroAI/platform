@@ -1,6 +1,6 @@
 {
   "name": "@solzero/infra",
-  "version": "1.4.4",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

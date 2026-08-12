@@ -21,6 +21,15 @@ nub install --frozen-lockfile
 
 Create a focused branch, keep changes scoped, and add or update tests for behavior changes.
 
+## Release notes
+
+Add a Markdown file under `.tegami/` when a change affects a user, administrator, or deployment
+operator. Target `release:solzero` in its frontmatter and choose the version change described in
+[the release guide](docs/releasing.md). Run `nub run tegami` to create an entry interactively.
+
+For internal maintenance with no observable effect, explain that choice in the pull request and apply
+the `release:none` label.
+
 ## Validation
 
 Run the repository checks before opening a pull request:
@@ -43,6 +52,7 @@ A strong pull request includes:
 - A concise explanation of the problem and solution
 - Tests or a clear explanation of why tests are not needed
 - Documentation and config example updates when behavior or configuration changes
+- A `.tegami/` release entry, or a `release:none` explanation
 - No credentials, private data, internal URLs, or organization-specific defaults
 - Updates to `THIRD_PARTY_NOTICES.md` when third-party code or separately licensed assets are added
 

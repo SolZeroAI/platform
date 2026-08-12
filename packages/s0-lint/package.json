@@ -1,6 +1,6 @@
 {
   "name": "@solzero/s0-lint",
-  "version": "1.4.4",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {

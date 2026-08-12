@@ -20,13 +20,15 @@ the report, coordinate next steps with you, and publish an advisory when a fix i
 
 ## Supported versions
 
-Before the first tagged release, security fixes are made on the default branch. After releases begin,
-this section will identify the release lines receiving security updates.
+Security fixes are made on the default branch and included in the next release. The latest tagged
+release receives security updates. Older release lines are unsupported unless a security advisory
+states otherwise.
 
-| Version        | Supported |
-| -------------- | --------- |
-| Default branch | Yes       |
-| Older commits  | No        |
+| Version         | Supported |
+| --------------- | --------- |
+| Latest release  | Yes       |
+| Default branch  | Yes       |
+| Older releases  | No        |
 
 ## Scope
 

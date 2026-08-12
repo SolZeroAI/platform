@@ -1,6 +1,6 @@
 {
   "name": "@solzero/background-web",
-  "version": "1.4.4",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "dev": "nub run --cwd ../../packages/infra dev:web",
