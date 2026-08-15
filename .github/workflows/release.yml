@@ -47,3 +47,4 @@ jobs:
         run: nub run tegami ci
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          S0_CREATIVE_RELEASE_ASSETS: "true"
