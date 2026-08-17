@@ -9,6 +9,11 @@ import {
   type ReleaseEntry,
 } from "../src/creative/index"
 import { renderReleaseNotesCardToFile } from "../src/creative/node"
+import {
+  nextReleaseVersion,
+  parseSolZeroReleaseBump,
+  type ReleaseBump,
+} from "../src/creative/release-version"
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 
@@ -26,33 +31,39 @@ function releaseLayout(value: string | undefined): ReleaseCardLayout | undefined
   throw new Error("--layout must be dark-columns or light-features.")
 }
 
-async function pendingReleaseEntries() {
+async function pendingReleaseEntries(): Promise<{
+  readonly entries: readonly ReleaseEntry[]
+  readonly bumps: readonly ReleaseBump[]
+}> {
   const directory = join(REPO_ROOT, ".tegami")
   const filenames = (await readdir(directory)).filter(
     (filename) => filename.endsWith(".md") && filename !== "README.md",
   )
   const entries: ReleaseEntry[] = []
+  const bumps: ReleaseBump[] = []
   for (const filename of filenames) {
     const markdown = await readFile(join(directory, filename), "utf8")
-    if (!/^[\s\S]*["']?release:solzero["']?\s*:\s*(major|minor|patch)/m.test(markdown)) {
-      continue
-    }
+    const bump = parseSolZeroReleaseBump(markdown)
+    if (!bump) continue
     const entry = parseTegamiReleaseEntry(markdown)
-    if (entry.sections.length > 0) entries.push(entry)
+    if (entry.sections.length === 0) continue
+    entries.push(entry)
+    bumps.push(bump)
   }
-  return entries
+  return { entries, bumps }
 }
 
 async function renderRelease(args: readonly string[]): Promise<void> {
   const inputPath = option(args, "--input")
-  const version =
-    option(args, "--version") ?? (await readFile(join(REPO_ROOT, "VERSION"), "utf8")).trim()
+  const pending = await pendingReleaseEntries()
+  const currentVersion = (await readFile(join(REPO_ROOT, "VERSION"), "utf8")).trim()
+  const version = option(args, "--version") ?? nextReleaseVersion(currentVersion, pending.bumps)
   const layout = releaseLayout(option(args, "--layout"))
   const input: ReleaseCardInput = inputPath
     ? (JSON.parse(await readFile(resolve(REPO_ROOT, inputPath), "utf8")) as ReleaseCardInput)
     : createReleaseCardInput({
         version,
-        entries: await pendingReleaseEntries(),
+        entries: pending.entries,
         layout,
         title: option(args, "--title"),
       })
