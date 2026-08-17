@@ -21,6 +21,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.s0-loader,
+.s0-form-spin-loader {
+  display: inline-block;
+  flex: none;
+  contain: layout paint style;
+}
+
+.s0-loader__piece {
+  transform-box: view-box;
+  transform-origin: 188px 282.5px;
+}
+
 html:has([data-s0-admin-page]),
 body:has([data-s0-admin-page]) {
   overflow: hidden;

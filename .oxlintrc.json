@@ -21,7 +21,8 @@
     "**/*.gen.ts"
   ],
   "rules": {
-    "s0-lint/max-file-lines": "error"
+    "s0-lint/max-file-lines": "error",
+    "s0-lint/no-colocated-tests": "error"
   },
   "overrides": [
     {

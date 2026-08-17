@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { S0Loader } from "@/components/s0-loader"
 import { S0AnimatedIcon } from "@/components/s0-animated-icon"
+import { S0FormSpinLoader } from "@/components/s0-form-spin-loader"
 import { getS0Brand } from "@/lib/brand"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
 
@@ -99,6 +100,7 @@ function KumoBackgroundColorSwatch({
 
 export function LearnMoreSettings() {
   const brand = getS0Brand()
+
   return (
     <SettingsDocsLayout
       title="Learn More"
@@ -126,7 +128,7 @@ export function LearnMoreSettings() {
             Core {brand.name} brand elements used across the product experience.
           </p>
         </SettingsDocsSectionHeading>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid items-start gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-kumo-line p-4">
             <div className="text-sm font-medium text-kumo-default mb-1">{brand.name} logo</div>
             <div className="text-xs text-kumo-subtle mb-4">
@@ -137,13 +139,27 @@ export function LearnMoreSettings() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-kumo-line p-4">
-            <div className="text-sm font-medium text-kumo-default mb-1">{brand.name} loader</div>
-            <div className="text-xs text-kumo-subtle mb-4">
-              The {brand.name} mark animated as a loading indicator.
+          <div className="space-y-4">
+            <div className="rounded-xl border border-kumo-line p-4">
+              <div className="text-sm font-medium text-kumo-default mb-1">{brand.name} loader</div>
+              <div className="text-xs text-kumo-subtle mb-4">
+                The primary {brand.name} loading indicator.
+              </div>
+              <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-canvas">
+                <S0Loader size={96} />
+              </div>
             </div>
-            <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-canvas">
-              <S0Loader size={96} />
+
+            <div className="rounded-xl border border-kumo-line p-4">
+              <div className="text-sm font-medium text-kumo-default mb-1">
+                {brand.name} alternative loader
+              </div>
+              <div className="text-xs text-kumo-subtle mb-4">
+                Form spin rotates between the white star and the completed mark.
+              </div>
+              <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-canvas">
+                <S0FormSpinLoader size={96} label={`${brand.name} Form spin alternative loader`} />
+              </div>
             </div>
           </div>
         </div>

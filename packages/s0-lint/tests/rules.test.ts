@@ -35,6 +35,12 @@ const maxFileLinesValid = Array.from(
 const requestSurfacePath = "packages/api/src/server/fixture.ts"
 
 const cases: Record<S0RuleName, RuleCase> = {
+  "no-colocated-tests": {
+    invalid: "export const value = 1;",
+    invalidPath: "apps/web/src/lib/fixture.test.ts",
+    valid: "export const value = 1;",
+    validPath: "apps/web/tests/lib/fixture.test.ts",
+  },
   "max-file-lines": {
     invalid: maxFileLinesInvalid,
     valid: maxFileLinesValid,

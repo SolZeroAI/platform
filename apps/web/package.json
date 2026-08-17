@@ -12,8 +12,9 @@
     "deploy:pre": "nub run --cwd ../../packages/infra deploy:web:pre",
     "deploy:prod": "nub run --cwd ../../packages/infra deploy:web:prod",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint src vite.config.ts",
-    "lint:fix": "oxlint --fix src vite.config.ts",
+    "lint": "oxlint src scripts vite.config.ts",
+    "lint:fix": "oxlint --fix src scripts vite.config.ts",
+    "render:release": "tsx scripts/render-release-card.ts render-release",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
@@ -55,13 +56,18 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@effect/platform-node": "4.0.0-beta.100",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/semver": "7.7.1",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.6",
+    "semver": "7.8.5",
     "tailwindcss": "^4.3.0",
+    "takumi-js": "2.7.1",
+    "tsx": "^4.22.0",
     "typescript": "^7.0.2",
     "vite": "^8.0.13",
     "vitest": "^4.1.6"

@@ -19,6 +19,7 @@ import {
 import { loadAuthenticatedShellForRoute } from "@/lib/authenticated-shell.functions"
 import { getS0Brand } from "@/lib/brand"
 import { manrope } from "@/lib/fonts"
+import { showErrorToast } from "@/lib/toast-manager"
 import { ProviderSettingsProvider } from "@/hooks/use-provider-settings"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -68,7 +69,6 @@ export function SignInPage({
   authProviderConfig: PublicAuthProviderRegistry
 }) {
   const brand = getS0Brand()
-  const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const signInProviders = [...authProviderConfig.providers]
     .filter((provider) => provider.capabilities.signIn)
@@ -88,13 +88,12 @@ export function SignInPage({
     const email = String(form.get("email") ?? "").trim()
     const password = String(form.get("password") ?? "")
     setPending(true)
-    setError(null)
     try {
       const callbackURL = getCurrentAuthCallback()
       const result = await authClient.signIn.email({ email, password, callbackURL })
-      if (result.error) setError(result.error.message ?? "Sign-in failed")
+      if (result.error) showErrorToast(result.error.message ?? "Sign-in failed")
     } catch (errorValue) {
-      setError(errorValue instanceof Error ? errorValue.message : "Sign-in failed")
+      showErrorToast(errorValue instanceof Error ? errorValue.message : "Sign-in failed")
     } finally {
       setPending(false)
     }
@@ -102,18 +101,17 @@ export function SignInPage({
 
   const handleExternalSignIn = async (provider: PublicAuthProvider) => {
     setPending(true)
-    setError(null)
     try {
       const callbackURL = getCurrentAuthCallback()
       const result = await (provider.kind === "social"
         ? signInWithSocial(provider.id, callbackURL)
         : signInWithOAuth(provider.id, callbackURL))
       if (result.error) {
-        setError(result.error.message ?? "Sign-in failed")
+        showErrorToast(result.error.message ?? "Sign-in failed")
         setPending(false)
       }
     } catch (errorValue) {
-      setError(errorValue instanceof Error ? errorValue.message : "Sign-in failed")
+      showErrorToast(errorValue instanceof Error ? errorValue.message : "Sign-in failed")
       setPending(false)
     }
   }
@@ -124,7 +122,7 @@ export function SignInPage({
         <div className="text-center">
           <S0AnimatedIcon size={96} className="mx-auto mb-4" />
           <h1 className={`text-3xl ${manrope.className}`}>Welcome to {brand.name}</h1>
-          <p className="mt-2 max-w-md text-kumo-subtle">Give your work an agent.</p>
+          <p className="mt-2 max-w-md text-kumo-subtle">Give your work an agent</p>
         </div>
         {credentialProvider ? (
           <form className="flex w-full max-w-sm flex-col gap-3" onSubmit={handleCredentialSignIn}>
@@ -190,7 +188,6 @@ export function SignInPage({
             Sign in with {provider.displayName}
           </Button>
         ))}
-        {error ? <p className="text-sm text-kumo-danger">{error}</p> : null}
         {signInProviders.length === 0 ? (
           <p className="text-sm text-kumo-subtle">Sign-in is not configured for this deployment.</p>
         ) : null}

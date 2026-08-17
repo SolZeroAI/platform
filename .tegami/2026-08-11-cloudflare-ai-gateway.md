@@ -5,6 +5,8 @@ packages:
 
 ## Route model traffic through Cloudflare AI Gateway
 
+<!-- creative: {"title":"Send every model through one reliable gateway.","bullets":["Route SolZero agents through Cloudflare AI Gateway.","Manage models and provider keys from one catalog."],"workType":"feature"} -->
+
 SolZero now provisions Cloudflare AI Gateway as its default model gateway. Each deployment profile
 can set a model allowlist and choose its default model. Sessions that run in Isolate, OpenCode,
 Codex, or Claude Code can select a compatible gateway model.

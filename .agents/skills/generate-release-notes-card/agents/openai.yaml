@@ -1,0 +1,5 @@
+interface:
+  display_name: "Generate release notes card"
+  short_description: "Generate structured branded release cards"
+  brand_color: "#0078D7"
+  default_prompt: "Use $generate-release-notes-card to render the current SolZero Tegami release as a branded image."

@@ -34,6 +34,20 @@ Choose `patch`, `minor`, or `major` according to the version policy. Write the n
 operators. Include required action in the note. Tegami adds pull request and contributor links to the
 GitHub Release.
 
+Add a creative directive after the section heading when the release card needs shorter social copy:
+
+```md
+<!-- creative: {"title":"Send every model through one reliable gateway.","bullets":["Route agents through Cloudflare AI Gateway.","Manage models and provider keys from one catalog."],"workType":"feature"} -->
+```
+
+Use a short title that states the user benefit. Add one or two concise bullets for the card. Put
+remaining technical context in the full release note. Set the work type for each highlight. Use the
+release-card skill to render and inspect the final card. See
+[`apps/web/src/creative/README.md`](../apps/web/src/creative/README.md) for the field limits.
+
+The automated release flow renders a card for minor and major releases. Patch releases publish
+text-only GitHub notes. The manual command remains available for local previews.
+
 Run `nub run tegami` to create an entry interactively. The pull request preview workflow posts the
 combined version and release-note preview. A change with no observable effect can use the
 `release:none` label after the pull request explains why it needs no entry.

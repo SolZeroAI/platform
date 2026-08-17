@@ -31,6 +31,7 @@ const compositionRuleNames = [
 export const s0RuleNames = [
   ...compositionRuleNames,
   "max-file-lines",
+  "no-colocated-tests",
   "prefer-option-over-null",
   "avoid-untagged-errors",
   "use-effect-otel",

@@ -3,6 +3,8 @@ import type { S0RuleName } from "./rule-names.ts"
 export const messages: Record<S0RuleName, string> = {
   "max-file-lines":
     "Rule: keep authored files at or below 1000 lines. Why: oversized files hide ownership boundaries and slow review. Fix: split the file into logical modules, components, services, or utilities.",
+  "no-colocated-tests":
+    "Rule: keep tests in a dedicated test directory. Why: source directories should contain production code. Fix: move the file under test, tests, or __tests__.",
   "no-if-statement":
     "Rule: avoid imperative if branching. Why: it hides control flow in Effect code. Fix: use Option.match/Either.match/Match.value or data combinators, then run one Effect pipeline.",
   "no-ternary":
