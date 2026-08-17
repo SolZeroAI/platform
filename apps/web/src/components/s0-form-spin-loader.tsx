@@ -167,7 +167,7 @@ export function S0FormSpinLoader({
         <path
           data-s0-form-spin-outer
           d={SOLZERO_MORPH_STAR_PATH}
-          fill="white"
+          fill="currentColor"
           mask={`url(#${maskId})`}
         />
       </svg>
