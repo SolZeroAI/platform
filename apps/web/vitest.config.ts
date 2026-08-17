@@ -20,6 +20,6 @@ export default defineConfig({
       VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS: "600000",
     },
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["tests/**/*.test.ts"],
   },
 })

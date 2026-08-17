@@ -10,6 +10,12 @@ All responses and output content must follow these writing style rules: write in
 - Treat the task as incomplete until those checks pass, unless you explicitly report why a command could not be run or why a failure is unrelated to your changes.
 - During iteration, scoped or package-local checks are fine for speed, but the final handoff should still include the repo-root validation commands above.
 
+## Test Placement
+
+- Store tests only in dedicated `test`, `tests`, or `__tests__` directories.
+- Put web tests under `apps/web/tests`. Put cross-package suites under the matching root `tests/<suite>` directory.
+- The `s0-lint/no-colocated-tests` rule rejects `*.test.*` and `*.spec.*` files that sit beside source code.
+
 ## Release Management
 
 - Use the `manage-solzero-releases` skill for changes that affect users, administrators, or deployment operators.

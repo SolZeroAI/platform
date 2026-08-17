@@ -42,6 +42,8 @@ import type { S0RuleName } from "./rule-names.ts"
 import type { NodeLike } from "./types.ts"
 
 const MAX_AUTHORED_FILE_LINES = 1000
+const TEST_FILE_PATTERN = /\.(?:spec|test)\.[cm]?[jt]sx?$/
+const TEST_DIRECTORY_PATTERN = /(?:^|[/\\])(?:__tests__|tests?)(?:[/\\]|$)/
 
 function shouldIgnoreFileLineCount(filename: string) {
   return ["/node_modules/", "/dist/", "/.alchemy/", "/.output/", "/coverage/"].some((segment) =>
@@ -55,6 +57,27 @@ function programEndLine(node: NodeLike) {
 }
 
 export const rules: Record<S0RuleName, Rule> = {
+  "no-colocated-tests": defineRule({
+    meta: {
+      type: "problem",
+      docs: {
+        description: messages["no-colocated-tests"],
+      },
+      schema: [],
+    },
+    createOnce(context) {
+      return {
+        Program(node: NodeLike) {
+          if (
+            TEST_FILE_PATTERN.test(context.filename) &&
+            !TEST_DIRECTORY_PATTERN.test(context.filename)
+          ) {
+            context.report({ node, message: messages["no-colocated-tests"] })
+          }
+        },
+      } as unknown as Visitor
+    },
+  }),
   "max-file-lines": defineRule({
     meta: {
       type: "suggestion",
