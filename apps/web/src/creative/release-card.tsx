@@ -1,9 +1,12 @@
 import type { CSSProperties, ReactElement } from "react"
+import * as Schema from "effect/Schema"
 
 export const RELEASE_CARD_WIDTH = 1200
 export const RELEASE_CARD_HEIGHT = 675
 
-export type ReleaseCardLayout = "dark-columns" | "light-features"
+export const ReleaseCardLayoutSchema = Schema.Literals(["dark-columns", "light-features"])
+
+export type ReleaseCardLayout = typeof ReleaseCardLayoutSchema.Type
 
 export const releaseWorkTypes = [
   "feature",
@@ -16,28 +19,42 @@ export const releaseWorkTypes = [
   "breaking",
 ] as const
 
-export type ReleaseWorkType = (typeof releaseWorkTypes)[number]
+export const ReleaseWorkTypeSchema = Schema.Literals(releaseWorkTypes)
 
-export function isReleaseWorkType(value: string): value is ReleaseWorkType {
-  return releaseWorkTypes.includes(value as ReleaseWorkType)
-}
+export type ReleaseWorkType = typeof ReleaseWorkTypeSchema.Type
 
-export interface ReleaseHighlight {
-  readonly title: string
-  readonly description: string
-  readonly bullets?: readonly string[]
-  readonly label?: string
-  readonly workType?: ReleaseWorkType
-}
+export const ReleaseTitleSchema = Schema.Trim.pipe(
+  Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(64)),
+)
+export const ReleaseDescriptionSchema = Schema.Trim.pipe(
+  Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(180)),
+)
+export const ReleaseBulletSchema = Schema.Trim.pipe(
+  Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(120)),
+)
 
-export interface ReleaseCardInput {
-  readonly version: string
-  readonly title: string
-  readonly summary?: string
-  readonly highlights: readonly ReleaseHighlight[]
-  readonly also?: readonly string[]
-  readonly layout?: ReleaseCardLayout
-}
+export const ReleaseHighlightSchema = Schema.Struct({
+  title: ReleaseTitleSchema,
+  description: ReleaseDescriptionSchema,
+  bullets: Schema.optionalKey(
+    Schema.Array(ReleaseBulletSchema).check(Schema.isLengthBetween(1, 3)),
+  ),
+  label: Schema.optionalKey(ReleaseTitleSchema),
+  workType: Schema.optionalKey(ReleaseWorkTypeSchema),
+})
+
+export type ReleaseHighlight = typeof ReleaseHighlightSchema.Type
+
+export const ReleaseCardInputSchema = Schema.Struct({
+  version: Schema.Trim.pipe(Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(32))),
+  title: ReleaseTitleSchema,
+  summary: Schema.optionalKey(ReleaseDescriptionSchema),
+  highlights: Schema.Array(ReleaseHighlightSchema).check(Schema.isNonEmpty()),
+  also: Schema.optionalKey(Schema.Array(ReleaseTitleSchema).check(Schema.isMaxLength(5))),
+  layout: Schema.optionalKey(ReleaseCardLayoutSchema),
+})
+
+export type ReleaseCardInput = typeof ReleaseCardInputSchema.Type
 
 const palette = {
   brand: "#0078d7",

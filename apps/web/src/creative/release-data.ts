@@ -1,6 +1,11 @@
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import {
-  isReleaseWorkType,
-  releaseWorkTypes,
+  ReleaseBulletSchema,
+  ReleaseDescriptionSchema,
+  ReleaseCardInputSchema,
+  ReleaseTitleSchema,
+  ReleaseWorkTypeSchema,
   type ReleaseCardInput,
   type ReleaseCardLayout,
   type ReleaseHighlight,
@@ -9,30 +14,30 @@ import {
 
 const CREATIVE_DIRECTIVE = /<!--\s*creative:\s*(\{[\s\S]*?})\s*-->/i
 
-export interface ReleaseSocialCopy {
-  readonly title?: string
-  readonly description?: string
-  readonly bullets?: readonly string[]
-  readonly workType?: ReleaseWorkType
-}
+export const ReleaseSocialCopySchema = Schema.Struct({
+  title: Schema.optionalKey(ReleaseTitleSchema),
+  description: Schema.optionalKey(ReleaseDescriptionSchema),
+  bullets: Schema.optionalKey(
+    Schema.Array(ReleaseBulletSchema).check(Schema.isLengthBetween(1, 3)),
+  ),
+  workType: Schema.optionalKey(ReleaseWorkTypeSchema),
+})
 
-function optionalBulletFields(value: Record<string, unknown>): readonly string[] | undefined {
-  const raw = value.bullets
-  if (raw === undefined) return undefined
-  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 3) {
-    throw new Error("The creative bullets field must contain one to three strings.")
-  }
-  return raw.map((bullet) => {
-    if (typeof bullet !== "string" || !bullet.trim()) {
-      throw new Error("Each creative bullet must be a non-empty string.")
-    }
-    const copy = bullet.trim()
-    if (copy.length > 120) {
-      throw new Error("Each creative bullet must be 120 characters or fewer.")
-    }
-    return copy
-  })
-}
+export type ReleaseSocialCopy = typeof ReleaseSocialCopySchema.Type
+
+export class ReleaseCardDataError extends Schema.TaggedErrorClass<ReleaseCardDataError>()(
+  "ReleaseCardDataError",
+  {
+    operation: Schema.Literals(["parse-entry", "create-input", "decode-input"]),
+    message: Schema.String,
+    cause: Schema.Unknown,
+  },
+) {}
+
+const decodeReleaseSocialCopy = Schema.decodeUnknownSync(
+  Schema.fromJsonString(ReleaseSocialCopySchema),
+  { onExcessProperty: "error" },
+)
 
 export interface ReleaseSection {
   readonly title: string
@@ -44,64 +49,25 @@ export interface ReleaseEntry {
   readonly sections: readonly ReleaseSection[]
 }
 
-function optionalCopyField(
-  value: Record<string, unknown>,
-  field: "title" | "description",
-  maximumLength: number,
-): string | undefined {
-  const raw = value[field]
-  if (raw === undefined) return undefined
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error(`The creative ${field} must be a non-empty string.`)
-  }
-  const copy = raw.trim()
-  if (copy.length > maximumLength) {
-    throw new Error(`The creative ${field} must be ${maximumLength} characters or fewer.`)
-  }
-  return copy
+export interface CreateReleaseCardInputOptions {
+  readonly version: string
+  readonly entries: readonly ReleaseEntry[]
+  readonly layout?: ReleaseCardLayout
+  readonly title?: string
 }
 
-export function createReleaseSection(title: string, content: string): ReleaseSection {
+function createReleaseSection(title: string, content: string): ReleaseSection {
   const match = CREATIVE_DIRECTIVE.exec(content)
   if (!match) return { title, content }
-
-  let value: unknown
-  try {
-    value = JSON.parse(match[1] ?? "")
-  } catch (error) {
-    throw new Error("The creative release directive must contain valid JSON.", { cause: error })
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("The creative release directive must contain a JSON object.")
-  }
-
-  const fields = value as Record<string, unknown>
-  const unknownFields = Object.keys(fields).filter(
-    (field) =>
-      field !== "title" && field !== "description" && field !== "bullets" && field !== "workType",
-  )
-  if (unknownFields.length > 0) {
-    throw new Error(`Unknown creative release field: ${unknownFields.join(", ")}.`)
-  }
-
-  const workType = fields.workType
-  if (workType !== undefined && (typeof workType !== "string" || !isReleaseWorkType(workType))) {
-    throw new Error(`The creative workType must be one of: ${releaseWorkTypes.join(", ")}.`)
-  }
 
   return {
     title,
     content: content.replace(match[0], "").trim(),
-    social: {
-      title: optionalCopyField(fields, "title", 64),
-      description: optionalCopyField(fields, "description", 180),
-      bullets: optionalBulletFields(fields),
-      workType,
-    },
+    social: decodeReleaseSocialCopy(match[1] ?? ""),
   }
 }
 
-export function parseTegamiReleaseEntry(markdown: string): ReleaseEntry {
+function parseTegamiReleaseEntryUnsafe(markdown: string): ReleaseEntry {
   const body = markdown.replace(/^---[\s\S]*?---\s*/, "")
   const matches = [...body.matchAll(/^##\s+(.+)$/gm)]
   return {
@@ -115,6 +81,19 @@ export function parseTegamiReleaseEntry(markdown: string): ReleaseEntry {
     }),
   }
 }
+
+export const parseTegamiReleaseEntry = Effect.fn("releaseCard.parseTegamiEntry")(
+  (markdown: string) =>
+    Effect.try({
+      try: () => parseTegamiReleaseEntryUnsafe(markdown),
+      catch: (cause) =>
+        new ReleaseCardDataError({
+          operation: "parse-entry",
+          message: "The Tegami release entry contains invalid creative data.",
+          cause,
+        }),
+    }),
+)
 
 function plainText(markdown: string): string {
   return markdown
@@ -152,12 +131,7 @@ function inferWorkType(markdown: string): ReleaseWorkType {
   return "feature"
 }
 
-export function createReleaseCardInput(options: {
-  readonly version: string
-  readonly entries: readonly ReleaseEntry[]
-  readonly layout?: ReleaseCardLayout
-  readonly title?: string
-}): ReleaseCardInput {
+function createReleaseCardInputUnsafe(options: CreateReleaseCardInputOptions): ReleaseCardInput {
   const sections = options.entries
     .flatMap((entry) => entry.sections)
     .map((section) =>
@@ -192,3 +166,40 @@ export function createReleaseCardInput(options: {
     layout: options.layout ?? "light-features",
   }
 }
+
+export const createReleaseCardInput = Effect.fn("releaseCard.createInput")((
+  options: CreateReleaseCardInputOptions,
+) => {
+  const input = Effect.try({
+    try: () => createReleaseCardInputUnsafe(options),
+    catch: (cause) => cause,
+  })
+  return input.pipe(
+    Effect.flatMap(
+      Schema.decodeUnknownEffect(ReleaseCardInputSchema, { onExcessProperty: "error" }),
+    ),
+    Effect.mapError(
+      (cause) =>
+        new ReleaseCardDataError({
+          operation: "create-input",
+          message: "The release card input could not be created.",
+          cause,
+        }),
+    ),
+  )
+})
+
+export const decodeReleaseCardInputJson = Effect.fn("releaseCard.decodeInputJson")((json: string) =>
+  Schema.decodeUnknownEffect(Schema.fromJsonString(ReleaseCardInputSchema), {
+    onExcessProperty: "error",
+  })(json).pipe(
+    Effect.mapError(
+      (cause) =>
+        new ReleaseCardDataError({
+          operation: "decode-input",
+          message: "The release card JSON input is invalid.",
+          cause,
+        }),
+    ),
+  ),
+)

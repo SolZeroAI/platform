@@ -1,8 +1,9 @@
 export {
   RELEASE_CARD_HEIGHT,
   RELEASE_CARD_WIDTH,
+  ReleaseCardInputSchema,
+  ReleaseCardLayoutSchema,
   ReleaseNotesCard,
-  isReleaseWorkType,
   releaseWorkTypes,
   type ReleaseCardInput,
   type ReleaseCardLayout,
@@ -11,8 +12,11 @@ export {
 } from "./release-card"
 export {
   createReleaseCardInput,
-  createReleaseSection,
+  decodeReleaseCardInputJson,
   parseTegamiReleaseEntry,
+  ReleaseCardDataError,
+  ReleaseSocialCopySchema,
+  type CreateReleaseCardInputOptions,
   type ReleaseEntry,
   type ReleaseSocialCopy,
   type ReleaseSection,

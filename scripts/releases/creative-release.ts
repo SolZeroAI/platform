@@ -1,18 +1,27 @@
-import { readFile } from "node:fs/promises"
-import type { BumpType, ChangelogEntry, TegamiPlugin } from "tegami"
+import * as NodeFileSystem from "@effect/platform-node/NodeFileSystem"
+import * as Config from "effect/Config"
+import * as Effect from "effect/Effect"
+import * as FileSystem from "effect/FileSystem"
+import * as Schema from "effect/Schema"
+import type { BumpType, ChangelogEntry, Draft, TegamiPlugin } from "tegami"
 import {
   createReleaseCardInput,
-  type ReleaseCardLayout,
+  ReleaseCardLayoutSchema,
   type ReleaseEntry,
 } from "../../apps/web/src/creative/index.ts"
 import { renderReleaseNotesCardToFile } from "../../apps/web/src/creative/node.ts"
 import { SOLZERO_PACKAGE_ID, SOLZERO_VERSION_FILE } from "./solzero-release.ts"
 
-function releaseLayout(value: string | undefined): ReleaseCardLayout {
-  if (!value || value === "light-features") return "light-features"
-  if (value === "dark-columns") return value
-  throw new Error("S0_CREATIVE_RELEASE_LAYOUT must be dark-columns or light-features.")
-}
+const releaseAssetsEnabled = Config.boolean("S0_CREATIVE_RELEASE_ASSETS").pipe(
+  Config.withDefault(false),
+)
+
+const decodeReleaseLayout = Schema.decodeUnknownEffect(ReleaseCardLayoutSchema)
+
+const releaseLayout = Config.string("S0_CREATIVE_RELEASE_LAYOUT").pipe(
+  Config.withDefault("light-features"),
+  Effect.flatMap(decodeReleaseLayout),
+)
 
 function releaseEntries(changelogs: readonly ChangelogEntry[]): ReleaseEntry[] {
   return changelogs.map((entry) => ({
@@ -42,24 +51,32 @@ export function formatSolZeroReleaseNotes(
   return [...card, ...sections].join("\n").trim()
 }
 
+const applyCreativeDraft = Effect.fn("releaseCard.applyTegamiDraft")(function* (
+  draft: Draft,
+  cwd: string,
+) {
+  if (!(yield* releaseAssetsEnabled)) return
+  const packageDraft = draft.getPackageDraft(SOLZERO_PACKAGE_ID)
+  if (!packageDraft || !isReleaseCardBump(packageDraft.type)) return
+
+  const entries = releaseEntries(packageDraft.changelogs ?? [])
+  if (entries.length === 0) return
+
+  const fs = yield* FileSystem.FileSystem
+  const version = (yield* fs.readFileString(`${cwd}/${SOLZERO_VERSION_FILE}`)).trim()
+  const layout = yield* releaseLayout
+  const input = yield* createReleaseCardInput({ version, entries, layout })
+  yield* renderReleaseNotesCardToFile({ repoRoot: cwd, input })
+})
+
 export function creativeRelease(): TegamiPlugin {
   return {
     name: "solzero-creative-release",
     enforce: "pre",
-    async applyCliDraft(draft) {
-      if (process.env.S0_CREATIVE_RELEASE_ASSETS !== "true") return
-      const packageDraft = draft.getPackageDraft(SOLZERO_PACKAGE_ID)
-      if (!packageDraft || !isReleaseCardBump(packageDraft.type)) return
-
-      const entries = releaseEntries(packageDraft.changelogs ?? [])
-      if (entries.length === 0) return
-
-      const version = (await readFile(`${this.cwd}/${SOLZERO_VERSION_FILE}`, "utf8")).trim()
-      const layout = releaseLayout(process.env.S0_CREATIVE_RELEASE_LAYOUT)
-      await renderReleaseNotesCardToFile({
-        repoRoot: this.cwd,
-        input: createReleaseCardInput({ version, entries, layout }),
-      })
+    applyCliDraft(draft) {
+      return Effect.runPromise(
+        applyCreativeDraft(draft, this.cwd).pipe(Effect.provide(NodeFileSystem.layer)),
+      )
     },
   }
 }
