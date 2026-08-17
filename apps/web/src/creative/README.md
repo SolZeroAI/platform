@@ -1,22 +1,21 @@
-# `@solzero/creative`
+# Release cards
 
-`@solzero/creative` owns SolZero release media. It combines typed release data with checked-in brand
-assets and deterministic templates.
+The web app owns SolZero release media. It combines typed release data with the app's brand assets
+and deterministic templates.
 
 ## Architecture decision
 
-SolZero uses one package for release cards and future product visuals. Shared brand data and layout
-components stay in this package. This keeps one source for the release data contract and its visual
-system.
+SolZero keeps release cards with the web app. The renderer uses the app's React and Manrope
+dependencies and reads its checked-in SolZero logo. Card-specific layouts stay in this directory.
+This gives the web app one owner for its visual assets and release media.
 
 [Takumi](https://takumi.kane.tw/docs/) renders images. Its native binding runs in the local CLI and
 GitHub Actions. Its WASM binding supports a future Cloudflare Worker entry point. Takumi keyframe
 animation can sample the same component tree into WebP, APNG, GIF, or video frames. See the
 [keyframe animation guide](https://takumi.kane.tw/docs/keyframe-animation/).
 
-Node-specific file access lives in the `@solzero/creative/node` export. The main export contains the
-reusable contracts and components. A future Worker service can render the same components with
-`takumi-js/wasm`.
+Node-specific file access lives in `node.ts`. The main index contains the reusable contracts and
+components. A future Worker service can render the same components with `takumi-js/wasm`.
 
 ## Release cards
 
@@ -39,7 +38,7 @@ interface ReleaseCardInput {
 }
 ```
 
-The package includes these layouts:
+The web app includes these layouts:
 
 - `dark-columns` places up to four updates in dark Kumo cards.
 - `light-features` places up to three primary updates on a light Kumo canvas.
@@ -83,11 +82,11 @@ no frame or background.
 
 ## Release flow
 
-Tegami calls the creative release hook after it prepares the version draft. The hook passes the
-structured release data to Takumi and writes `docs/solzero-release-notes.png`. The image becomes part
-of the version commit. The GitHub release body loads the card from that tag through a stable raw
-GitHub URL. Creative directives stay hidden in rendered GitHub Markdown, so the full release note
-remains available below the card.
+Tegami calls the creative release hook after it prepares a minor or major version draft. The hook
+passes the structured release data to Takumi and writes `docs/solzero-release-notes.png`. The image
+becomes part of the version commit. The GitHub release body loads the card from that tag through a
+stable raw GitHub URL. Patch releases publish text-only notes. Creative directives stay hidden in
+rendered GitHub Markdown, so the full release note remains available below the card.
 
 The renderer runs as a native Node function in GitHub Actions. Its inputs come from the repository
 checkout and the Tegami draft.

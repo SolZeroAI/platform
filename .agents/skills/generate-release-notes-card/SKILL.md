@@ -5,8 +5,8 @@ description: Generate or update the branded SolZero release-notes image from Teg
 
 # Generate Release Notes Card
 
-Use the canonical `@solzero/creative` renderer. Keep fonts, logos, colors, and layouts in that
-package.
+Use the canonical renderer in `apps/web/src/creative`. Keep fonts, logos, colors, and layouts with
+the web app.
 
 ## Workflow
 
@@ -46,9 +46,11 @@ Use a structured input file when the user provides custom content:
 nub run creative:release-card -- --input path/to/release-card.json
 ```
 
-The JSON shape is documented in `packages/creative/README.md`.
+The JSON shape is documented in `apps/web/src/creative/README.md`.
 
-The release hook and GitHub Actions render the card through Takumi's native Node binding.
+The release hook and GitHub Actions render cards for minor and major releases through Takumi's
+native Node binding. Patch releases use text-only GitHub notes. The manual command can render a
+local preview for any version.
 
 7. Confirm that `docs/solzero-release-notes.png` exists and has a 1200 by 675 pixel canvas.
 8. Inspect the rendered image. Check badge selection, round bullet fit, text contrast, the SolZero

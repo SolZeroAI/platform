@@ -7,8 +7,8 @@ import {
   type ReleaseCardInput,
   type ReleaseCardLayout,
   type ReleaseEntry,
-} from "./index"
-import { renderReleaseNotesCardToFile } from "./node"
+} from "../src/creative/index"
+import { renderReleaseNotesCardToFile } from "../src/creative/node"
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 

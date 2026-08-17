@@ -43,7 +43,10 @@ Add a creative directive after the section heading when the release card needs s
 Use a short title that states the user benefit. Add one or two concise bullets for the card. Put
 remaining technical context in the full release note. Set the work type for each highlight. Use the
 release-card skill to render and inspect the final card. See
-[`packages/creative/README.md`](../packages/creative/README.md) for the field limits.
+[`apps/web/src/creative/README.md`](../apps/web/src/creative/README.md) for the field limits.
+
+The automated release flow renders a card for minor and major releases. Patch releases publish
+text-only GitHub notes. The manual command remains available for local previews.
 
 Run `nub run tegami` to create an entry interactively. The pull request preview workflow posts the
 combined version and release-note preview. A change with no observable effect can use the

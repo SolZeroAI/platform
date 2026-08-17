@@ -40,7 +40,7 @@
     "auth:admin-password": "tsx scripts/print-admin-password.ts",
     "config:check": "tsx scripts/s0-config.ts check",
     "config:schema": "tsx scripts/s0-config.ts schema",
-    "creative:release-card": "nub run --filter @solzero/creative render:release",
+    "creative:release-card": "nub run --filter @solzero/background-web render:release",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "tegami": "tsx scripts/tegami.mts",
     "workflow:runtime:audit": "tsx scripts/workflows/audit-runtime-abi.ts",
