@@ -183,12 +183,7 @@ export function S0Loader({ size = 64, className = "" }: S0LoaderProps) {
 
         <g filter={`url(#${filterId})`}>
           {LOADER_PIECES.map((piece) => (
-            <g
-              key={piece.name}
-              data-s0-loader-piece={piece.name}
-              className="s0-loader__piece"
-              opacity={0}
-            >
+            <g key={piece.name} data-s0-loader-piece={piece.name} className="s0-loader__piece">
               <g clipPath={`url(#s0-loader-piece-${piece.name}-${instanceId})`}>
                 <path
                   d={SOLZERO_MARK_PATH}
