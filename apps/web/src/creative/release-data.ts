@@ -140,11 +140,10 @@ function createReleaseCardInputUnsafe(options: CreateReleaseCardInputOptions): R
   const highlights: ReleaseHighlight[] = sections.map((section) => {
     const title = section.social?.title ?? plainText(section.title)
     const fallbackBullets = releaseBullets(section.content)
-    const description =
-      section.social?.description ?? section.social?.bullets?.join(" ") ?? fallbackBullets.join(" ")
     const bullets =
       section.social?.bullets ??
       (section.social?.description ? [section.social.description] : fallbackBullets)
+    const description = section.social?.description ?? firstSentences(bullets.join(" "))
     return {
       title: plainText(title),
       description: plainText(description),
