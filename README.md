@@ -1,43 +1,44 @@
-![SolZero platform landing page](docs/solzero-landing.jpg)
+![SolZero Agent landing page](docs/solzero-landing.jpg)
 
 # SolZero
 
-Source: [github.com/SolZeroAI/platform](https://github.com/SolZeroAI/platform)
+Give your work an agent. 
 
-SolZero is a platform. Deploy one package to a Cloudflare account and you get the Agent, the
-Workflow builder, always-on bots, and the coding harnesses together. The package is sized to keep
-maintenance and cost low, and it scales with the Cloudflare account that hosts it.
+SolZero Agent is low-cost, low-maintenance, scalable, and durable. Deploy it in minutes to your 
+Cloudflare account and focus on work that matters.
 
-The Agent is custom-built for latency, cost, and capability. Isolate is that runtime: Cloudflare
-Workers and Durable Objects, with no container to start for a typical session.
-[Cloudflare Workers](https://developers.cloudflare.com/workers/reference/how-workers-works/)
-run globally and bill for requests and active CPU time rather than wall-clock duration. Context
-compaction and searchable durable conversation history keep long sessions focused. Skills and MCP
-tools bring organizational context in when the Agent needs it. Sub-agents start as more Isolate
-instances.
+## What Makes SolZero Different?
 
-The Workflow builder is agentic. Deterministic nodes sit next to agent steps. Teams use it for
-weekly reports, day-to-day operations, proactive automation, and incident response. Workflows run
-on Cloudflare Workflows. They support durable execution, schedules, webhooks, human-in-the-loop
-approvals, session reuse, and response caching. Reusing a session or a cached response can cut
-repeat model calls, latency, and token spend.
+### SolZero Agent Harness
 
-Always-on bots stay connected the way a Grok Bot does. Slack, GitHub, webhooks, and schedules keep
-work moving when nobody has a browser session open.
+SolZero Agent is a custom harness built on Cloudflare Workers and Durable Objects. It is the default
+runtime for everyday work, with low startup overhead and no container to provision for each
+session. [Cloudflare Workers](https://developers.cloudflare.com/workers/reference/how-workers-works/)
+run globally and bill for requests and active CPU time rather than wall-clock duration, which makes
+the Isolate harness a strong fit for interactive and event-driven agent work.
 
-The platform runs common coding harnesses: Codex, Grok, and Claude Code. OpenCode is available on
-the same sandboxed container path, with a full Linux filesystem and shell.
+Built-in context compaction and searchable durable conversation history keep long-running sessions
+focused and efficient. Skills and MCP tools bring organizational context into the agent when it is
+needed. Sub-agents scale out dynamically as independent, durable SolZero Agent instances without
+provisioning another container.
 
-## Isolate Agent
+### Full sandboxes for deeper work
 
-The Isolate Agent is the default runtime for everyday work. Startup cost stays low because the
-session lives on Workers and Durable Objects.
+Some tasks need a complete development environment. SolZero also supports sandboxed OpenCode, Codex,
+and Claude Code agents with a full Linux filesystem and shell. These runtimes have more startup and
+resource overhead than SolZero Agent, but they are a better fit for deep coding and other work that needs
+full system access.
 
-## Coding harnesses
+### Workflows for deterministic and agentic automation
 
-Tasks that need a complete development environment run Codex, Grok, Claude Code, or OpenCode in a
-sandbox. Those runtimes start a full Linux filesystem and shell. They fit deep coding and other
-work that needs system access.
+Workflows are one of our favorite parts of SolZero. They are fast to build, easy to adapt to a team's
+processes, and useful for weekly reports, day-to-day operations, proactive automation, and reactive
+incident workflows.
+
+SolZero Workflows combine deterministic nodes with non-deterministic agent steps. They run on Cloudflare
+Workflows and support durable execution, schedules, webhooks, human-in-the-loop approvals, session
+reuse, and response caching. Reusing a session or cached response can reduce repeat model calls,
+latency, and token spend.
 
 ## Integrations
 
