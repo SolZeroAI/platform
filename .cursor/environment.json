@@ -1,4 +1,15 @@
 {
   "name": "SolZero",
-  "install": "./scripts/cloud-agent-install.sh"
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "ports": [
+    {
+      "name": "web",
+      "port": 3000
+    },
+    {
+      "name": "api",
+      "port": 1337
+    }
+  ]
 }
