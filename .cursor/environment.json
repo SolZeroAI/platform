@@ -1,0 +1,4 @@
+{
+  "name": "SolZero",
+  "install": "./scripts/cloud-agent-install.sh"
+}
