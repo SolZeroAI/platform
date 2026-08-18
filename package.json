@@ -2,15 +2,15 @@
   "name": "s0-agent",
   "version": "0.0.0",
   "private": true,
-  "description": "Give your work an agent. SolZero Agent is low-cost, low-maintenance, scalable, and durable.",
-  "homepage": "https://github.com/SolZeroHQ/solzero#readme",
+  "description": "SolZero platform: a custom Agent, an agentic Workflow builder, always-on bots, and Codex, Grok, and Claude Code harnesses. One Cloudflare package.",
+  "homepage": "https://github.com/SolZeroAI/platform#readme",
   "bugs": {
-    "url": "https://github.com/SolZeroHQ/solzero/issues"
+    "url": "https://github.com/SolZeroAI/platform/issues"
   },
   "license": "LGPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SolZeroHQ/solzero.git"
+    "url": "git+https://github.com/SolZeroAI/platform.git"
   },
   "workspaces": [
     "apps/*",

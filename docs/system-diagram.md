@@ -1,6 +1,9 @@
 # SolZero system diagram
 
-The image gives a presentation view of the service map. The Mermaid source below shows the exact request and data paths.
+This is the SolZero platform on Cloudflare: the custom Agent, the agentic Workflow builder,
+always-on bots, and the Codex, Grok, Claude Code, and OpenCode harnesses in one deployable package.
+The image gives a presentation view of the service map. The Mermaid source below shows the exact
+request and data paths.
 
 ![Branded SolZero Cloudflare service map](./solzero-cloudflare-service-map-branded.png)
 

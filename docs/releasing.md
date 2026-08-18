@@ -4,7 +4,8 @@ SolZero uses [Tegami](https://tegami.fuma-nama.dev) to prepare versions and publ
 public product has one version. `VERSION` stores it. Private workspace packages stay at `0.0.0` and
 are never published to npm.
 
-Each release creates an immutable `vX.Y.Z` Git tag and a GitHub Release with the same version.
+Each release creates an immutable `vX.Y.Z` Git tag and a GitHub Release with the same version on
+[SolZeroAI/platform](https://github.com/SolZeroAI/platform).
 
 ## Version policy
 
