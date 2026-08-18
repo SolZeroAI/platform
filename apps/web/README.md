@@ -1,13 +1,15 @@
 # SolZero Web Client
 
-The SolZero web client is the shared interface for agents, Workflows, organizational context, and
+The SolZero web client is the shared interface for the SolZero platform. People use it for the
+custom Agent, the agentic Workflow builder, always-on bots, organizational context, and
 administration. It is a TanStack Start and Kumo application deployed to Cloudflare Workers through
 Alchemy v2.
 
 ## Features
 
-- SolZero Agent sessions on the fast, Worker-native Isolate harness.
-- Sandboxed OpenCode, Codex, and Claude Code sessions for deeper work.
+- Isolate Agent sessions tuned for latency, cost, and capability.
+- Sandboxed Codex, Grok, Claude Code, and OpenCode harness sessions for deeper work.
+- Always-on bots that stay connected the way a Grok Bot does, including Slack and GitHub.
 - Durable deterministic and agentic Workflows, including approvals, session reuse, and response
   caching.
 - MCP tools, skills, MCP Context Forge, and Cloudflare AI Search sources.

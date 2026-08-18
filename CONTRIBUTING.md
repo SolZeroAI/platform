@@ -1,6 +1,13 @@
 # Contributing to SolZero
 
-Thank you for helping improve SolZero. Contributions from organizations and individual users are welcome.
+This repository is the SolZero platform: [github.com/SolZeroAI/platform](https://github.com/SolZeroAI/platform).
+
+SolZero is a platform you deploy as one package to Cloudflare. It includes a custom Agent built for
+latency, cost, and capability, an agentic Workflow builder, always-on bots in the same class as a
+Grok Bot, and the Codex, Grok, and Claude Code harnesses. Read the [README](README.md) for the
+product picture and local setup.
+
+Contributions from organizations and individual users are welcome.
 
 ## Before you start
 
@@ -13,7 +20,7 @@ Thank you for helping improve SolZero. Contributions from organizations and indi
 ## Development setup
 
 SolZero requires Node.js 24.15 and Nub 0.4.11. Follow the complete onboarding instructions in the
-[README](README.md#getting-started), then install dependencies from the repository root:
+[README](README.md#get-started), then install dependencies from the repository root:
 
 ```sh
 nub install --frozen-lockfile

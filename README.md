@@ -151,7 +151,7 @@ nub run auth:admin-password -- dev --local
 
 Open <http://localhost:3000>. Sign in with an address from `admins.adminEmails` and the generated password.
 
-Create an Isolate, OpenCode, or Codex session. Select a compatible Cloudflare AI Gateway model, and then send a prompt. Configure LiteLLM in Admin when you need more models. Repository-backed sessions require a linked GitHub account.
+Create an Isolate, Codex, Claude Code, or OpenCode session. Select a compatible Cloudflare AI Gateway model, and then send a prompt. Grok models are available through the same Agent and harness paths. Configure LiteLLM in Admin when you need more models. Repository-backed sessions require a linked GitHub account.
 
 ### Deploy to Cloudflare
 
@@ -199,7 +199,7 @@ curl --fail-with-body https://ai.<zone>/api/auth/config
 
 Open `https://ai.<zone>`. Sign in with the production administrator email. Configure the model gateway, and then repeat the local SolZero Agent smoke test.
 
-When your deployment uses sandbox agents, test its selected OpenCode, Codex, or Claude Code Container runtime.
+When your deployment uses sandbox agents, test its selected Codex, Claude Code, or OpenCode Container runtime.
 
 For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. Run `nub run infra:plan:pre`, followed by `nub run infra:deploy:pre`.
 

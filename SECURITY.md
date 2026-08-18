@@ -5,7 +5,7 @@ it privately so we can investigate before details are made public.
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/SolZeroHQ/solzero/security/advisories/new)
+Use [GitHub private vulnerability reporting](https://github.com/SolZeroAI/platform/security/advisories/new)
 to submit a report. Please do not open a public issue for a suspected vulnerability.
 
 Include the following when possible:

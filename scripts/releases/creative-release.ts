@@ -10,6 +10,7 @@ import {
   type ReleaseEntry,
 } from "../../apps/web/src/creative/index.ts"
 import { renderReleaseNotesCardToFile } from "../../apps/web/src/creative/node.ts"
+import { SOLZERO_GITHUB_REPO } from "./github-repo.ts"
 import { SOLZERO_PACKAGE_ID, SOLZERO_VERSION_FILE } from "./solzero-release.ts"
 
 const releaseAssetsEnabled = Config.boolean("S0_CREATIVE_RELEASE_ASSETS").pipe(
@@ -46,7 +47,7 @@ export function formatSolZeroReleaseNotes(
   const hasCard = changelogs.some((entry) =>
     isReleaseCardBump(entry.packages.get(SOLZERO_PACKAGE_ID)?.type),
   )
-  const imageUrl = `https://raw.githubusercontent.com/SolZeroHQ/solzero/v${version}/docs/solzero-release-notes.png`
+  const imageUrl = `https://raw.githubusercontent.com/${SOLZERO_GITHUB_REPO}/v${version}/docs/solzero-release-notes.png`
   const card = hasCard ? [`![SolZero v${version} release notes](${imageUrl})`, ""] : []
   return [...card, ...sections].join("\n").trim()
 }

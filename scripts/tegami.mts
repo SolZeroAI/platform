@@ -2,6 +2,7 @@ import { tegami } from "tegami"
 import { runCli } from "tegami/cli"
 import { github } from "tegami/plugins/github"
 import { creativeRelease, formatSolZeroReleaseNotes } from "./releases/creative-release.ts"
+import { SOLZERO_GITHUB_REPO } from "./releases/github-repo.ts"
 import { solZeroRelease } from "./releases/solzero-release.ts"
 
 const release = tegami({
@@ -14,7 +15,7 @@ const release = tegami({
   plugins: [
     creativeRelease(),
     github({
-      repo: "SolZeroHQ/solzero",
+      repo: SOLZERO_GITHUB_REPO,
       release: {
         eager: false,
         create({ pkg, plan }) {
