@@ -54,7 +54,7 @@ const SLACK_EVENT_REQUIRED_BOT_SCOPES: Record<string, readonly string[]> = {
  * encryption key, missing app, missing bot token). Tagged so callers can `catchTag` precisely while
  * surfacing the `message` on the run.
  */
-export class WorkflowSlackAppError extends Schema.TaggedErrorClass<WorkflowSlackAppError>()(
+export class WorkflowSlackAppError extends Schema.TaggedError<WorkflowSlackAppError>()(
   "WorkflowSlackAppError",
   {
     message: Schema.String,

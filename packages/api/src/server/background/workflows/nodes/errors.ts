@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema"
  * notification). Carries a human-readable `message` so the runtime can surface it on the run while
  * keeping the Effect failure channel tagged for precise `catchTag` handling.
  */
-export class WorkflowNodeError extends Schema.TaggedErrorClass<WorkflowNodeError>()(
+export class WorkflowNodeError extends Schema.TaggedError<WorkflowNodeError>()(
   "WorkflowNodeError",
   {
     message: Schema.String,

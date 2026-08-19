@@ -21,7 +21,6 @@ import {
   type SecretReference,
   type StageMetadata,
 } from "@solzero/shared"
-import type { WorkflowActionsEntrypoint } from "../../../packages/api/src/server/background/workflows/runner"
 import type { DeploymentMetadata } from "../../../packages/infra/src/deploymentMetadata"
 import type {} from "../env"
 import {
@@ -231,14 +230,14 @@ function jsonBinding(value: unknown): Schema.Json {
   return value as Schema.Json
 }
 
-function workflowActionsBinding(
-  service: string,
-): Cloudflare.WorkerEntrypointBinding<WorkflowActionsEntrypoint> {
-  return {
-    BindingType: "Cloudflare.WorkerEntrypointBinding",
-    service,
-    entrypoint: "WorkflowActions",
-  }
+function workflowActionsBinding(workerName: string) {
+  // The API Worker binds its own WorkflowActions entrypoint while the
+  // Worker resource is still being constructed, so only the physical
+  // script name is available. Alchemy's helper reads `worker.workerName`.
+  return Cloudflare.WorkerEntrypoint(
+    { workerName } as unknown as Cloudflare.Worker,
+    "WorkflowActions",
+  )
 }
 
 function dynamicWorkflowBinding(appName: string, stageMetadata: StageMetadata, workerName: string) {

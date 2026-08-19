@@ -99,7 +99,7 @@ export interface ResolvedAuthorizedRepo {
 }
 
 /** Short-circuit control-plane response carrying a JSON payload + HTTP status. */
-export class ControlPlaneFailure extends Schema.TaggedErrorClass<ControlPlaneFailure>()(
+export class ControlPlaneFailure extends Schema.TaggedError<ControlPlaneFailure>()(
   "ControlPlaneFailure",
   {
     payload: Schema.Unknown,

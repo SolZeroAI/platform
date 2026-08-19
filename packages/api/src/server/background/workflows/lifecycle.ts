@@ -28,7 +28,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 /** Failure raised when a workflow (or run) the caller referenced does not exist. */
-export class WorkflowLifecycleNotFoundError extends Schema.TaggedErrorClass<WorkflowLifecycleNotFoundError>()(
+export class WorkflowLifecycleNotFoundError extends Schema.TaggedError<WorkflowLifecycleNotFoundError>()(
   "WorkflowLifecycleNotFoundError",
   {
     message: Schema.String,
@@ -36,7 +36,7 @@ export class WorkflowLifecycleNotFoundError extends Schema.TaggedErrorClass<Work
 ) {}
 
 /** Failure raised when workflow input (manifest/state) is invalid for the requested operation. */
-export class WorkflowLifecycleInputError extends Schema.TaggedErrorClass<WorkflowLifecycleInputError>()(
+export class WorkflowLifecycleInputError extends Schema.TaggedError<WorkflowLifecycleInputError>()(
   "WorkflowLifecycleInputError",
   {
     message: Schema.String,
@@ -45,7 +45,7 @@ export class WorkflowLifecycleInputError extends Schema.TaggedErrorClass<Workflo
 ) {}
 
 /** Failure raised when a workflow run cannot be retried because it lacks a reusable trigger. */
-export class WorkflowRetryTriggerError extends Schema.TaggedErrorClass<WorkflowRetryTriggerError>()(
+export class WorkflowRetryTriggerError extends Schema.TaggedError<WorkflowRetryTriggerError>()(
   "WorkflowRetryTriggerError",
   {
     message: Schema.String,

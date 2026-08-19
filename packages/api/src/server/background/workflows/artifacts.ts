@@ -7,7 +7,7 @@ import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
 
 /** Failure raised when a workflow manifest/code artifact is missing from the bucket. */
-export class WorkflowArtifactError extends Schema.TaggedErrorClass<WorkflowArtifactError>()(
+export class WorkflowArtifactError extends Schema.TaggedError<WorkflowArtifactError>()(
   "WorkflowArtifactError",
   {
     message: Schema.String,

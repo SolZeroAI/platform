@@ -1,0 +1,401 @@
+diff --git a/lib/Cloudflare/AI/SearchInstance.js b/lib/Cloudflare/AI/SearchInstance.js
+--- a/lib/Cloudflare/AI/SearchInstance.js
++++ b/lib/Cloudflare/AI/SearchInstance.js
+@@ -417,7 +417,7 @@
+             name: output.namespace,
+             id: output.instanceId,
+         })
+-            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.void));
++            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.void));
+     }),
+ });
+ /**
+@@ -463,12 +463,13 @@
+ const resolveNamespace = (namespace) => namespace ?? "default";
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId, namespace, id) => aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+-    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.succeed(undefined)));
++    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.succeed(undefined)));
+ const createInstanceId = (id, instanceId) => Effect.gen(function* () {
+     return instanceId ?? (yield* createPhysicalName({ id, lowercase: true }));
+ });
+diff --git a/lib/Cloudflare/Containers/ContainerApplication.d.ts b/lib/Cloudflare/Containers/ContainerApplication.d.ts
+--- a/lib/Cloudflare/Containers/ContainerApplication.d.ts
++++ b/lib/Cloudflare/Containers/ContainerApplication.d.ts
+@@ -172,6 +172,11 @@
+     /** Entrypoint file for the Effect program, typically `import.meta.url`. */
+     main: string;
+     /**
++     * Bundle `main` as a plain external program and preserve an inline
++     * Dockerfile as the complete image definition.
++     */
++    isExternal?: boolean;
++    /**
+      * Environment image for the generated Dockerfile — a plain registry
+      * reference, e.g. `"oven/bun:latest"`. Alchemy synthesizes the `FROM` line
+      * and appends the statements that copy the bundled program and set the
+@@ -291,6 +296,7 @@
+  */
+ export interface AnyContainerApplicationProps extends ContainerApplicationPropsBase {
+     main?: string;
++    isExternal?: boolean;
+     image?: string;
+     context?: string;
+     dockerfile?: string | InlineDockerfile;
+diff --git a/lib/Cloudflare/Containers/ContainerBundle.d.ts b/lib/Cloudflare/Containers/ContainerBundle.d.ts
+--- a/lib/Cloudflare/Containers/ContainerBundle.d.ts
++++ b/lib/Cloudflare/Containers/ContainerBundle.d.ts
+@@ -68,7 +68,7 @@
+  * then appends the statements that copy the bundled program and set the
+  * entrypoint.
+  */
+-export declare const buildFinalDockerfile: (envPreamble: string | undefined, runtime: "bun" | "node", external?: string[], autoInstallExternals?: boolean) => string;
++export declare const buildFinalDockerfile: (envPreamble: string | undefined, runtime: "bun" | "node", external?: string[], autoInstallExternals?: boolean, isExternal?: boolean) => string;
+ /**
+  * Materialize resolved inline `dockerfile` content into a stable,
+  * deterministic build-context directory (containing only the Dockerfile) so
+diff --git a/lib/Cloudflare/Containers/ContainerBundle.js b/lib/Cloudflare/Containers/ContainerBundle.js
+--- a/lib/Cloudflare/Containers/ContainerBundle.js
++++ b/lib/Cloudflare/Containers/ContainerBundle.js
+@@ -142,7 +142,10 @@
+  * then appends the statements that copy the bundled program and set the
+  * entrypoint.
+  */
+-export const buildFinalDockerfile = (envPreamble, runtime, external = [], autoInstallExternals = true) => {
++export const buildFinalDockerfile = (envPreamble, runtime, external = [], autoInstallExternals = true, isExternal = false) => {
++    if (isExternal && envPreamble) {
++        return `${envPreamble.trim()}\n`;
++    }
+     const base = envPreamble ??
+         (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
+     const runtimeBin = runtime === "bun" ? "bun" : "node";
+@@ -365,7 +368,7 @@
+     yield* validateContainerImageProps(news);
+     const runtime = news.runtime ?? "bun";
+     const context = yield* getStableContextDir(process.cwd(), dotAlchemy, `${id}-container`);
+-    const dockerfileContent = buildFinalDockerfile(yield* containerEnvPreamble(news), runtime, news.external, news.autoInstallExternals);
++    const dockerfileContent = buildFinalDockerfile(yield* containerEnvPreamble(news), runtime, news.external, news.autoInstallExternals, news.isExternal);
+     const [bundle] = yield* Effect.all([
+         bundleContainerProgram({
+             id,
+diff --git a/lib/Cloudflare/Containers/ContainerProvider.js b/lib/Cloudflare/Containers/ContainerProvider.js
+--- a/lib/Cloudflare/Containers/ContainerProvider.js
++++ b/lib/Cloudflare/Containers/ContainerProvider.js
+@@ -143,7 +143,7 @@
+                 external: props.external,
+                 build: props.build,
+             });
+-            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals);
++            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals, props.isExternal);
+             const imageHash = (yield* sha256Object({
+                 bundleHash,
+                 dockerfile: finalDockerfile,
+@@ -287,7 +287,7 @@
+             }
+             const runtime = props.runtime ?? "bun";
+             const contextDir = yield* getStableContextDir(process.cwd(), dotAlchemy, `${id}-container`);
+-            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals);
++            const finalDockerfile = buildFinalDockerfile(yield* containerEnvPreamble(props), runtime, props.external, props.autoInstallExternals, props.isExternal);
+             yield* docker.materialize({
+                 context: contextDir,
+                 dockerfile: finalDockerfile,
+diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/WorkerProvider.js
+--- a/lib/Cloudflare/Workers/WorkerProvider.js
++++ b/lib/Cloudflare/Workers/WorkerProvider.js
+@@ -2,7 +2,6 @@
+ import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
+-import * as zones from "@distilled.cloud/cloudflare/zones";
+ import * as Config from "effect/Config";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -30,7 +29,7 @@
+ import { localRuntimeServices } from "../LocalRuntime.js";
+ import { detachQueueConsumersOfScript } from "../Queues/Consumer.js";
+ import { CloudflareLogs } from "../Logs.js";
+-import { resolveZoneId } from "../Zone/lookup.js";
++import { findZoneByName, resolveZoneId } from "../Zone/lookup.js";
+ import { getAssetsPathPrefix, mergeAssetsConfigFiles, readAssets, readAssetsConfigFiles, uploadAssets, } from "./Assets.js";
+ import { getCompatibility } from "./Compatibility.js";
+ import { isDurableObjectExport } from "./DurableObject.js";
+@@ -838,25 +837,24 @@
+         return normalizeCrons(result.schedules.map((schedule) => schedule.cron));
+     });
+     /**
+-     * Infer the Cloudflare Zone ID for a given hostname by listing the
+-     * account's zones and matching the hostname against each zone's name —
+-     * walking up the DNS label hierarchy until a match is found.
++     * Infer the Cloudflare Zone ID for a hostname by checking candidate
++     * parent zone names from most-specific to least-specific.
+      */
+-    const inferZoneIdForHostname = (hostname, zoneCache) => Effect.gen(function* () {
++    const inferZoneIdForHostname = (accountId, hostname, zoneCache) => Effect.gen(function* () {
+         const cached = zoneCache.get(hostname);
+         if (cached)
+             return cached;
+-        const zoneList = yield* zones
+-            .listZones({})
+-            .pipe(Effect.map((response) => response.result ?? []));
+-        for (const zone of zoneList) {
+-            zoneCache.set(zone.name, zone.id);
+-        }
+         const parts = hostname.split(".");
+         for (let i = 0; i < parts.length - 1; i++) {
+             const candidate = parts.slice(i).join(".");
+-            const match = zoneList.find((z) => z.name === candidate);
++            const candidateCached = zoneCache.get(candidate);
++            if (candidateCached) {
++                zoneCache.set(hostname, candidateCached);
++                return candidateCached;
++            }
++            const match = yield* findZoneByName({ accountId, name: candidate });
+             if (match) {
++                zoneCache.set(candidate, match.id);
+                 zoneCache.set(hostname, match.id);
+                 return match.id;
+             }
+@@ -894,7 +892,7 @@
+         const toRemove = liveAll.filter((d) => !desiredSet.has(d.hostname));
+         yield* Effect.all(toRemove.map((d) => workers
+             .deleteDomain({ accountId, domainId: d.id })
+-            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void))), { concurrency: "unbounded" });
++            .pipe(Effect.catchCause(() => Effect.void))), { concurrency: "unbounded" });
+         if (desired.length === 0)
+             return [];
+         const zoneCache = new Map();
+@@ -926,7 +924,7 @@
+                     `it is already attached to Worker '${otherOwner.service ?? "<unknown>"}'. ` +
+                     `Detach it from that Worker first, or pick a different hostname.`));
+             }
+-            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
++            const zoneId = yield* inferZoneIdForHostname(accountId, hostname, zoneCache);
+             // Same eventual-consistency window as `setWorkerSubdomain`:
+             // PUT /accounts/.../workers/domains right after `putScript`
+             // can return `WorkerNotFound` until Cloudflare's script
+@@ -1210,7 +1208,7 @@
+                         zone: route.zone ?? route.zoneName,
+                         hostname: hostnameFromPattern(pattern),
+                     })
+-                    : yield* inferZoneIdForHostname(hostnameFromPattern(pattern), zoneCache);
++                    : yield* inferZoneIdForHostname(accountId, hostnameFromPattern(pattern), zoneCache);
+             const key = routeKey({ pattern, zoneId });
+             if (seen.has(key))
+                 continue;
+@@ -3773,7 +3771,7 @@
+                             accountId: output.accountId,
+                             domainId: d.id,
+                         })
+-                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                            .pipe(Effect.catchCause(() => Effect.void)),
+                     ]
+                     : []), { concurrency: "unbounded" });
+             }
+diff --git a/src/Cloudflare/AI/SearchInstance.ts b/src/Cloudflare/AI/SearchInstance.ts
+--- a/src/Cloudflare/AI/SearchInstance.ts
++++ b/src/Cloudflare/AI/SearchInstance.ts
+@@ -777,7 +777,7 @@
+         })
+         .pipe(
+           Effect.catchTag(
+-            ["AiSearchInstanceNotFound", "NamespaceNotFound"],
++            ["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"],
+             () => Effect.void,
+           ),
+         );
+@@ -838,15 +838,17 @@
+
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId: string, namespace: string, id: string) =>
+   aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+     .pipe(
+-      Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () =>
+-        Effect.succeed(undefined),
++      Effect.catchTag(
++        ["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"],
++        () => Effect.succeed(undefined),
+       ),
+     );
+
+diff --git a/src/Cloudflare/Containers/ContainerApplication.ts b/src/Cloudflare/Containers/ContainerApplication.ts
+--- a/src/Cloudflare/Containers/ContainerApplication.ts
++++ b/src/Cloudflare/Containers/ContainerApplication.ts
+@@ -206,6 +206,11 @@
+   /** Entrypoint file for the Effect program, typically `import.meta.url`. */
+   main: string;
+   /**
++   * Bundle `main` as a plain external program and preserve an inline
++   * Dockerfile as the complete image definition.
++   */
++  isExternal?: boolean;
++  /**
+    * Environment image for the generated Dockerfile — a plain registry
+    * reference, e.g. `"oven/bun:latest"`. Alchemy synthesizes the `FROM` line
+    * and appends the statements that copy the bundled program and set the
+@@ -332,6 +337,7 @@
+  */
+ export interface AnyContainerApplicationProps extends ContainerApplicationPropsBase {
+   main?: string;
++  isExternal?: boolean;
+   image?: string;
+   context?: string;
+   dockerfile?: string | InlineDockerfile;
+diff --git a/src/Cloudflare/Containers/ContainerBundle.ts b/src/Cloudflare/Containers/ContainerBundle.ts
+--- a/src/Cloudflare/Containers/ContainerBundle.ts
++++ b/src/Cloudflare/Containers/ContainerBundle.ts
+@@ -203,7 +203,12 @@
+   runtime: "bun" | "node",
+   external: string[] = [],
+   autoInstallExternals = true,
++  isExternal = false,
+ ): string => {
++  if (isExternal && envPreamble) {
++    return `${envPreamble.trim()}\n`;
++  }
++
+   const base =
+     envPreamble ??
+     (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
+@@ -491,6 +496,7 @@
+     runtime,
+     news.external,
+     news.autoInstallExternals,
++    news.isExternal,
+   );
+   const [bundle] = yield* Effect.all(
+     [
+diff --git a/src/Cloudflare/Containers/ContainerProvider.ts b/src/Cloudflare/Containers/ContainerProvider.ts
+--- a/src/Cloudflare/Containers/ContainerProvider.ts
++++ b/src/Cloudflare/Containers/ContainerProvider.ts
+@@ -234,6 +234,7 @@
+             runtime,
+             props.external,
+             props.autoInstallExternals,
++            props.isExternal,
+           );
+           const imageHash = (yield* sha256Object({
+             bundleHash,
+@@ -420,6 +421,7 @@
+             runtime,
+             props.external,
+             props.autoInstallExternals,
++            props.isExternal,
+           );
+           yield* docker.materialize({
+             context: contextDir,
+diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/WorkerProvider.ts
+--- a/src/Cloudflare/Workers/WorkerProvider.ts
++++ b/src/Cloudflare/Workers/WorkerProvider.ts
+@@ -2,7 +2,6 @@
+ import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
+ import * as workers from "@distilled.cloud/cloudflare/workers";
+ import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
+-import * as zones from "@distilled.cloud/cloudflare/zones";
+ import * as Config from "effect/Config";
+ import * as Data from "effect/Data";
+ import * as Effect from "effect/Effect";
+@@ -31,7 +30,7 @@
+ import { localRuntimeServices } from "../LocalRuntime.ts";
+ import { detachQueueConsumersOfScript } from "../Queues/Consumer.ts";
+ import { CloudflareLogs } from "../Logs.ts";
+-import { resolveZoneId } from "../Zone/lookup.ts";
++import { findZoneByName, resolveZoneId } from "../Zone/lookup.ts";
+ import {
+   getAssetsPathPrefix,
+   mergeAssetsConfigFiles,
+@@ -1210,11 +1209,11 @@
+         });
+
+       /**
+-       * Infer the Cloudflare Zone ID for a given hostname by listing the
+-       * account's zones and matching the hostname against each zone's name —
+-       * walking up the DNS label hierarchy until a match is found.
++       * Infer the Cloudflare Zone ID for a hostname by checking candidate
++       * parent zone names from most-specific to least-specific.
+        */
+       const inferZoneIdForHostname = (
++        accountId: string,
+         hostname: string,
+         zoneCache: Map<string, string>,
+       ) =>
+@@ -1222,18 +1221,17 @@
+           const cached = zoneCache.get(hostname);
+           if (cached) return cached;
+
+-          const zoneList = yield* zones
+-            .listZones({})
+-            .pipe(Effect.map((response) => response.result ?? []));
+-          for (const zone of zoneList) {
+-            zoneCache.set(zone.name, zone.id);
+-          }
+-
+           const parts = hostname.split(".");
+           for (let i = 0; i < parts.length - 1; i++) {
+             const candidate = parts.slice(i).join(".");
+-            const match = zoneList.find((z) => z.name === candidate);
++            const candidateCached = zoneCache.get(candidate);
++            if (candidateCached) {
++              zoneCache.set(hostname, candidateCached);
++              return candidateCached;
++            }
++            const match = yield* findZoneByName({ accountId, name: candidate });
+             if (match) {
++              zoneCache.set(candidate, match.id);
+               zoneCache.set(hostname, match.id);
+               return match.id;
+             }
+@@ -1286,7 +1284,7 @@
+             toRemove.map((d) =>
+               workers
+                 .deleteDomain({ accountId, domainId: d.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                .pipe(Effect.catchCause(() => Effect.void)),
+             ),
+             { concurrency: "unbounded" },
+           );
+@@ -1336,7 +1334,11 @@
+               );
+             }
+
+-            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
++            const zoneId = yield* inferZoneIdForHostname(
++              accountId,
++              hostname,
++              zoneCache,
++            );
+             // Same eventual-consistency window as `setWorkerSubdomain`:
+             // PUT /accounts/.../workers/domains right after `putScript`
+             // can return `WorkerNotFound` until Cloudflare's script
+@@ -1721,6 +1723,7 @@
+                     hostname: hostnameFromPattern(pattern),
+                   })
+                 : yield* inferZoneIdForHostname(
++                    accountId,
+                     hostnameFromPattern(pattern),
+                     zoneCache,
+                   );
+@@ -5061,7 +5064,7 @@
+                           domainId: d.id,
+                         })
+                         .pipe(
+-                          Effect.catchTag("DomainNotFound", () => Effect.void),
++                          Effect.catchCause(() => Effect.void),
+                         ),
+                     ]
+                   : [],

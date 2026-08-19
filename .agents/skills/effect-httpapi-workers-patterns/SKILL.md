@@ -12,7 +12,7 @@ Use this skill when editing or reviewing an Effect HttpApi stack, generated Effe
 - Keep API contracts separate from server implementation.
   - Contract modules define `HttpApi`, `HttpApiGroup`, endpoints, schemas, tagged errors, and security declarations.
   - Server route modules only implement `HttpApiBuilder.group(...)` live layers.
-- Prefer named `Schema.Class` response/request types and `Schema.TaggedErrorClass` errors with `httpApiStatus`.
+- Prefer named `Schema.Class` response/request types and `Schema.TaggedError` errors with `httpApiStatus`.
 - Avoid broad `JsonRecord`, `AnyJson`, and generic `{ error: string }` contracts for real endpoints.
 - If a generated client requires `unknown` or extra services, fix the schema contract instead of casting at the call site.
 - Avoid `as unknown as ...` for Effect client calls. It usually means a helper lost a concrete type or the HttpApi contract is too loose.

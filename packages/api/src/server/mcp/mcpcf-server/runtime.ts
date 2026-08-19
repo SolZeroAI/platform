@@ -40,7 +40,7 @@ import {
   LinkedOAuthReconnectRequiredError,
 } from "../../lib/oauth-tokens"
 
-export class McpcfMcpRuntimeError extends Schema.TaggedErrorClass<McpcfMcpRuntimeError>()(
+export class McpcfMcpRuntimeError extends Schema.TaggedError<McpcfMcpRuntimeError>()(
   "McpcfMcpRuntimeError",
   {
     message: Schema.String,

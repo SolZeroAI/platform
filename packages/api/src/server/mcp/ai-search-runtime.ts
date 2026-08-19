@@ -18,7 +18,7 @@ export interface AiSearchMcpRuntimeContext {
   readonly log: Pick<RequestLogger, "error">
 }
 
-class AiSearchMcpRuntimeError extends Schema.TaggedErrorClass<AiSearchMcpRuntimeError>()(
+class AiSearchMcpRuntimeError extends Schema.TaggedError<AiSearchMcpRuntimeError>()(
   "AiSearchMcpRuntimeError",
   {
     message: Schema.String,

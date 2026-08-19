@@ -102,7 +102,7 @@ export interface CloudflareAiGatewayProviderKeyUpdate {
   readonly clearApiKey?: boolean
 }
 
-class CloudflareAiGatewayProviderKeyConfigError extends Schema.TaggedErrorClass<CloudflareAiGatewayProviderKeyConfigError>()(
+class CloudflareAiGatewayProviderKeyConfigError extends Schema.TaggedError<CloudflareAiGatewayProviderKeyConfigError>()(
   "CloudflareAiGatewayProviderKeyConfigError",
   { message: Schema.String },
 ) {}

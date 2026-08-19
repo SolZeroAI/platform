@@ -22,7 +22,7 @@ const MANROPE_BOLD_PATH = fileURLToPath(
 
 export const DEFAULT_RELEASE_CARD_PATH = "docs/solzero-release-notes.png"
 
-export class ReleaseCardRenderError extends Schema.TaggedErrorClass<ReleaseCardRenderError>()(
+export class ReleaseCardRenderError extends Schema.TaggedError<ReleaseCardRenderError>()(
   "ReleaseCardRenderError",
   {
     operation: Schema.Literals(["register-fonts", "compile-template", "render-image"]),

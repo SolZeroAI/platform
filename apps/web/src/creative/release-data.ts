@@ -25,7 +25,7 @@ export const ReleaseSocialCopySchema = Schema.Struct({
 
 export type ReleaseSocialCopy = typeof ReleaseSocialCopySchema.Type
 
-export class ReleaseCardDataError extends Schema.TaggedErrorClass<ReleaseCardDataError>()(
+export class ReleaseCardDataError extends Schema.TaggedError<ReleaseCardDataError>()(
   "ReleaseCardDataError",
   {
     operation: Schema.Literals(["parse-entry", "create-input", "decode-input"]),

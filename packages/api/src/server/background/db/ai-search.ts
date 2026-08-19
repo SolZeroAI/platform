@@ -82,14 +82,14 @@ export interface AiSearchInstanceListItem {
   modifiedAt: string | null
 }
 
-export class AiSearchConfigurationError extends Schema.TaggedErrorClass<AiSearchConfigurationError>()(
+export class AiSearchConfigurationError extends Schema.TaggedError<AiSearchConfigurationError>()(
   "AiSearchConfigurationError",
   {
     message: Schema.String,
   },
 ) {}
 
-export class AiSearchSourceUnavailableError extends Schema.TaggedErrorClass<AiSearchSourceUnavailableError>()(
+export class AiSearchSourceUnavailableError extends Schema.TaggedError<AiSearchSourceUnavailableError>()(
   "AiSearchSourceUnavailableError",
   {
     sourceIds: Schema.Array(Schema.String),

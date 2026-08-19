@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema"
 
 const DOTENV_NAME_PATTERN = /^[\w.-]+$/
 
-export class DotenvExportError extends Schema.TaggedErrorClass<DotenvExportError>()(
+export class DotenvExportError extends Schema.TaggedError<DotenvExportError>()(
   "DotenvExportError",
   {
     message: Schema.String,

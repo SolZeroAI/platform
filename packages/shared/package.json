@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "4.0.0-beta.100",
+    "effect": "4.0.0-beta.107",
     "yaml": "2.9.0"
   },
   "devDependencies": {

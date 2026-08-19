@@ -18,7 +18,7 @@
     "@ai-sdk/provider-utils": "5.0.12",
     "@modelcontextprotocol/sdk": "1.29.0",
     "ai": "7.0.36",
-    "effect": "4.0.0-beta.100",
+    "effect": "4.0.0-beta.107",
     "ws": "8.21.0",
     "zod": "^4.1.8"
   },
