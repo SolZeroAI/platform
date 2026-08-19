@@ -13,7 +13,7 @@ export interface McpcfRefreshClient {
   fetchServerTools: typeof fetchServerTools
 }
 
-class McpcfRefreshHttpError extends Schema.TaggedErrorClass<McpcfRefreshHttpError>()(
+class McpcfRefreshHttpError extends Schema.TaggedError<McpcfRefreshHttpError>()(
   "McpcfRefreshHttpError",
   {
     message: Schema.String,

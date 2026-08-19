@@ -187,7 +187,7 @@ function configuredAppStageProps(config: S0ApplicationConfig): AppStageProps {
 
 export type StageMetadata = Dev | Test | Pre | Prod
 
-export class InvalidStageError extends Schema.TaggedErrorClass<InvalidStageError>()(
+export class InvalidStageError extends Schema.TaggedError<InvalidStageError>()(
   "InvalidStageError",
   {
     stage: Schema.String,

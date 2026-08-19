@@ -21,13 +21,10 @@ import {
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 
-class ReleaseCardCliError extends Schema.TaggedErrorClass<ReleaseCardCliError>()(
-  "ReleaseCardCliError",
-  {
-    message: Schema.String,
-    cause: Schema.optionalKey(Schema.Unknown),
-  },
-) {}
+class ReleaseCardCliError extends Schema.TaggedError<ReleaseCardCliError>()("ReleaseCardCliError", {
+  message: Schema.String,
+  cause: Schema.optionalKey(Schema.Unknown),
+}) {}
 
 function option(args: readonly string[], name: string): string | undefined {
   const index = args.indexOf(name)

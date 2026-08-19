@@ -47,7 +47,7 @@
     "better-auth": "^1.6.11",
     "cloudflare": "^5.2.0",
     "drizzle-orm": "1.0.0-rc.2-e38a2ba",
-    "effect": "4.0.0-beta.100",
+    "effect": "4.0.0-beta.107",
     "jose": "^6.2.1",
     "workers-ai-provider": "4.0.0",
     "yaml": "^2.9.0"

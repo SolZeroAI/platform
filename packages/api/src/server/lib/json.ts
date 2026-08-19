@@ -11,10 +11,10 @@ const decodeRecordOption = Schema.decodeUnknownOption(
 const decodeArrayOption = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Array(Schema.Unknown)),
 )
-const decodeValueOption = Schema.decodeUnknownOption(Schema.UnknownFromJsonString)
-const decodeValueSync = Schema.decodeUnknownSync(Schema.UnknownFromJsonString)
-const encodeJsonString = Schema.encodeUnknownSync(Schema.UnknownFromJsonString)
-const encodeJsonStringOption = Schema.encodeUnknownOption(Schema.UnknownFromJsonString)
+const decodeValueOption = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
+const decodeValueSync = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
+const encodeJsonString = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
+const encodeJsonStringOption = Schema.encodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 
 const emptyRecord = (): Record<string, unknown> => ({})
 const emptyArray = (): readonly unknown[] => []

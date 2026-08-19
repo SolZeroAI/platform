@@ -1,6 +1,6 @@
 import { Predicate, Schema } from "effect"
 
-export class UnauthorizedError extends Schema.TaggedErrorClass<UnauthorizedError>()(
+export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
   "UnauthorizedError",
   {
     message: Schema.String,
@@ -12,7 +12,7 @@ export class UnauthorizedError extends Schema.TaggedErrorClass<UnauthorizedError
   }
 }
 
-export class ForbiddenError extends Schema.TaggedErrorClass<ForbiddenError>()(
+export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()(
   "ForbiddenError",
   {
     message: Schema.String,
@@ -20,7 +20,7 @@ export class ForbiddenError extends Schema.TaggedErrorClass<ForbiddenError>()(
   { httpApiStatus: 403 },
 ) {}
 
-export class BadRequestError extends Schema.TaggedErrorClass<BadRequestError>()(
+export class BadRequestError extends Schema.TaggedError<BadRequestError>()(
   "BadRequestError",
   {
     message: Schema.String,
@@ -28,7 +28,7 @@ export class BadRequestError extends Schema.TaggedErrorClass<BadRequestError>()(
   { httpApiStatus: 400 },
 ) {}
 
-export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()(
+export class NotFoundError extends Schema.TaggedError<NotFoundError>()(
   "NotFoundError",
   {
     message: Schema.String,
@@ -36,7 +36,7 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()(
   { httpApiStatus: 404 },
 ) {}
 
-export class ConflictError extends Schema.TaggedErrorClass<ConflictError>()(
+export class ConflictError extends Schema.TaggedError<ConflictError>()(
   "ConflictError",
   {
     message: Schema.String,
@@ -44,7 +44,7 @@ export class ConflictError extends Schema.TaggedErrorClass<ConflictError>()(
   { httpApiStatus: 409 },
 ) {}
 
-export class InternalServerError extends Schema.TaggedErrorClass<InternalServerError>()(
+export class InternalServerError extends Schema.TaggedError<InternalServerError>()(
   "InternalServerError",
   {
     message: Schema.String,
@@ -53,7 +53,7 @@ export class InternalServerError extends Schema.TaggedErrorClass<InternalServerE
   { httpApiStatus: 500 },
 ) {}
 
-export class UpstreamError extends Schema.TaggedErrorClass<UpstreamError>()(
+export class UpstreamError extends Schema.TaggedError<UpstreamError>()(
   "UpstreamError",
   {
     message: Schema.String,

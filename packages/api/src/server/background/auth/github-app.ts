@@ -63,7 +63,7 @@ export type {
   GitHubUserProfile,
 } from "./github-app-model"
 
-export class GitHubAppError extends Schema.TaggedErrorClass<GitHubAppError>()("GitHubAppError", {
+export class GitHubAppError extends Schema.TaggedError<GitHubAppError>()("GitHubAppError", {
   message: Schema.String,
   cause: Schema.optional(Schema.Unknown),
 }) {}

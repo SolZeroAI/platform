@@ -8,8 +8,8 @@ import * as Schema from "effect/Schema"
 const decodeRecordOption = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)),
 )
-const decodeValueSync = Schema.decodeUnknownSync(Schema.UnknownFromJsonString)
-const encodeJsonString = Schema.encodeUnknownSync(Schema.UnknownFromJsonString)
+const decodeValueSync = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
+const encodeJsonString = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
 
 const emptyRecord = (): Record<string, unknown> => ({})
 

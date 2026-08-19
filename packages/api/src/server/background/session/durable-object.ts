@@ -302,7 +302,7 @@ import { installSessionDOQueryArchiveBindings } from "./durable-object/query-arc
 export const WS_AUTH_TIMEOUT_MS = 30_000
 export const WS_TOKEN_TTL_MS = 5 * 60_000
 
-export class IsolateRuntimeUnavailableError extends Schema.TaggedErrorClass<IsolateRuntimeUnavailableError>()(
+export class IsolateRuntimeUnavailableError extends Schema.TaggedError<IsolateRuntimeUnavailableError>()(
   "IsolateRuntimeUnavailableError",
   { message: Schema.String },
 ) {}

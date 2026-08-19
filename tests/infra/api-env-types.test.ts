@@ -2,13 +2,9 @@ import type * as Cloudflare from "alchemy/Cloudflare"
 import type { Json } from "effect/Schema"
 import { describe, expectTypeOf, it } from "vitest"
 import type { ApiWorkerBindingResources } from "../../apps/api/infra"
-import type { WorkflowActionsEntrypoint } from "../../packages/api/src/server/background/workflows/runner"
 import type { ApiEnv } from "../../packages/infra/src/types/env"
 
 type InferredApiEnv = Cloudflare.InferEnv<ApiWorkerBindingResources>
-type WorkflowActionMethod<Name extends keyof WorkflowActionsEntrypoint> = (
-  ...args: Parameters<WorkflowActionsEntrypoint[Name]>
-) => Promise<Awaited<ReturnType<WorkflowActionsEntrypoint[Name]>>>
 
 describe("API env types", () => {
   it("derive directly from the Alchemy API worker binding resources", () => {
@@ -30,14 +26,11 @@ describe("API env types", () => {
     expectTypeOf<ApiEnv["CODEX_AGENT"]>().toMatchTypeOf<DurableObjectNamespace>()
     expectTypeOf<ApiEnv["CLAUDE_CODE_AGENT"]>().toMatchTypeOf<DurableObjectNamespace>()
     expectTypeOf<ApiEnv["ISOLATE_SESSION"]>().toMatchTypeOf<DurableObjectNamespace>()
-    expectTypeOf<ApiEnv["WORKFLOW_ACTIONS"]>().toMatchTypeOf<Service>()
+    expectTypeOf<ApiEnv["WORKFLOW_ACTIONS"]>().toMatchTypeOf<Fetcher>()
     expectTypeOf<ApiEnv>().not.toHaveProperty("ISOLATE_SUB_AGENT")
     expectTypeOf<ApiEnv>().not.toHaveProperty("ISOLATE_SUBAGENT")
     expectTypeOf<ApiEnv>().not.toHaveProperty("SELF")
     expectTypeOf<ApiEnv>().not.toHaveProperty("SANDBOX")
     expectTypeOf<ApiEnv>().not.toHaveProperty("CLOUDFLARE_API_TOKEN")
-    expectTypeOf<ApiEnv["WORKFLOW_ACTIONS"]["executeWorkflowNode"]>().toEqualTypeOf<
-      WorkflowActionMethod<"executeWorkflowNode">
-    >()
   })
 })
