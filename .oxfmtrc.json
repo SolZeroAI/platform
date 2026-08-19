@@ -10,7 +10,19 @@
     "**/*.gen.ts",
     "**/*.md",
     "**/*.yaml",
-    "**/*.yml"
+    "**/*.yml",
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+    "tools/oxlint/anti-slop/**"
   ],
   "arrowParens": "always",
   "semi": false
