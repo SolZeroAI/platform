@@ -237,20 +237,16 @@ export function getAppStageMetadataFromStr(stageStr: string) {
 }
 
 export function getAppStageMetadataSync(input: string | StageMetadataEnv) {
-  return Match.value(input).pipe(
-    Match.when(Match.string, (stage) => {
-      // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for browser/runtime feature flags; app metadata is deterministic and does not resolve infra.
-      return Effect.runSync(getAppStageMetadataFromStr(stage))
-    }),
-    Match.orElse((env) => {
-      if (env.S0_STAGE_METADATA !== undefined) {
-        const metadata = decodeStageMetadataBinding(env.S0_STAGE_METADATA)
-        return { name: metadata.name, app: metadata.app } satisfies AppStageMetadata
-      }
-      // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for browser/runtime feature flags; app metadata is deterministic and does not resolve infra.
-      return Effect.runSync(getAppStageMetadataFromStr(env.STAGE))
-    }),
+  if (typeof input !== "string" && input.S0_STAGE_METADATA !== undefined) {
+    const metadata = decodeStageMetadataBinding(input.S0_STAGE_METADATA)
+    return { name: metadata.name, app: metadata.app } satisfies AppStageMetadata
+  }
+  const stage = Match.value(input).pipe(
+    Match.when(Match.string, (value) => value),
+    Match.orElse((env) => env.STAGE),
   )
+  // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for browser/runtime feature flags; app metadata is deterministic and does not resolve infra.
+  return Effect.runSync(getAppStageMetadataFromStr(stage))
 }
 
 function localInfraStageProps(
