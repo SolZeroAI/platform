@@ -115,8 +115,7 @@ function resolveConfigSecrets(config: S0ResolvedConfig) {
 
 function deploymentConfigDigest(config: S0ResolvedConfig): string {
   // SHA-256 here is a config content digest so a deploy can detect change. It is not a password hash.
-  // codeql[js/insufficient-password-hash]
-  return createHash("sha256").update(canonicalS0ConfigJson(config)).digest("hex")
+  return createHash("sha256").update(canonicalS0ConfigJson(config)).digest("hex") // lgtm[js/insufficient-password-hash]
 }
 
 export function s0StackRuntime() {
