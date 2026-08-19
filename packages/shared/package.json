@@ -14,8 +14,8 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "build": "tsc --noEmit",
-    "lint": "oxlint src",
-    "lint:fix": "oxlint --fix src",
+    "lint": "NODE_OPTIONS='--import tsx' oxlint src",
+    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

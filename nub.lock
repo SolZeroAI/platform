@@ -54,6 +54,9 @@ importers:
       alchemy:
         specifier: 2.0.0-beta.67
         version: 2.0.0-beta.67(patch_hash=598cb59a6ee35c6bcf5bc07d5647e95570e5ad6b46d8fd3cbcff3eab7faa7d6f)(@effect/platform-node@4.0.0-beta.100(effect@4.0.0-beta.100)(ioredis@5.11.1))(effect@4.0.0-beta.100)(typescript@7.0.2)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0)))(ws@8.21.0)
+      anti-slop:
+        specifier: github:dmmulroy/anti-slop
+        version: https://codeload.github.com/dmmulroy/anti-slop/tar.gz/6d538555cb151d4121ed51a27db81890eacf8ae9
       concurrently:
         specifier: ^9.2.1
         version: 9.2.4
@@ -2277,6 +2280,10 @@ packages:
     resolution: {integrity: sha512-dVw9+y1tB9rDObtjzsDhxRsreZrEoKohujt+w/sZ09+kmA5yI/ORQJFPR/xSC+jpw0TWmE6gnb6N1lD/z7uElA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@oxlint/plugins@1.78.0':
+    resolution: {integrity: sha512-Ypt8KeRYw+4jUtlPirfcHWMrn5ms12VrrFPD+Mds477/7tJxG1Kcz2Yrg2nVcTQEUx/GdlhS+BUg1kmxNm04Ug==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
   '@oxlint/plugins@1.79.0':
     resolution: {integrity: sha512-S0uyoxakDINJ4DPgqxGlEEvrdSMeQb7Z2lKVjxoY2gwsbZbfg2Xr8Klfeo5ZeraHmmdBCELFUHkSe6KEmBpMvg==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -3372,6 +3379,10 @@ packages:
   ansis@4.3.1:
     resolution: {integrity: sha512-BJ8/l4R5LRE7hW9WdSuGYrLSHi2ynxeFpDFbH0K/CgNeY/tyhk+vO6TYxXC5r5CpUhNVX310xzPsN/H9lCdfOA==}
     engines: {node: '>=14'}
+
+  anti-slop@https://codeload.github.com/dmmulroy/anti-slop/tar.gz/6d538555cb151d4121ed51a27db81890eacf8ae9:
+    resolution: {gitHosted: true, integrity: sha512-FuQtJiLn0RfYVFGRyJjk4lC0m9O1XREORQVoziCbhz7dxxIx8Oi4VKWNv6ybZm3xIMskmumFH4Ex0PGpYfmjFA==, tarball: https://codeload.github.com/dmmulroy/anti-slop/tar.gz/6d538555cb151d4121ed51a27db81890eacf8ae9}
+    version: 0.1.0
 
   anynum@1.0.1:
     resolution: {integrity: sha512-N6//FLET/tXYNM/F6ABca1oH6fWB+KlTt909Le28WMDBk8oaT4vY17DCrwg2MvmuqUKt3Ni4N5dGJ/EoBgcO6A==}
@@ -8091,6 +8102,8 @@ snapshots:
 
   '@oxlint/plugins@1.66.0': {}
 
+  '@oxlint/plugins@1.78.0': {}
+
   '@oxlint/plugins@1.79.0': {}
 
   '@paper-design/shaders-react@0.0.76(@types/react@19.2.14)(react@19.2.6)':
@@ -9196,6 +9209,10 @@ snapshots:
   ansi-styles@6.2.3: {}
 
   ansis@4.3.1: {}
+
+  anti-slop@https://codeload.github.com/dmmulroy/anti-slop/tar.gz/6d538555cb151d4121ed51a27db81890eacf8ae9:
+    dependencies:
+      '@oxlint/plugins': 1.78.0
 
   anynum@1.0.1: {}
 

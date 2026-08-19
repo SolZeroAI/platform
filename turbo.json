@@ -9,8 +9,7 @@
     "config/.prod.vars",
     "config/*.config.jsonc",
     "config/s0.config.schema.json",
-    "packages/s0-lint/src/**",
-    "tools/oxlint/anti-slop/**"
+    "packages/s0-lint/src/**"
   ],
   "tasks": {
     "build": {

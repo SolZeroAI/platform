@@ -8,8 +8,8 @@
     "dev": "nub run --cwd ../../packages/infra dev:api",
     "build": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "oxlint index.ts src infra",
-    "lint:fix": "oxlint --fix index.ts src infra"
+    "lint": "NODE_OPTIONS='--import tsx' oxlint index.ts src infra",
+    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix index.ts src infra"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",

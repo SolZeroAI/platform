@@ -25,8 +25,8 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "oxlint src",
-    "lint:fix": "oxlint --fix src",
+    "lint": "NODE_OPTIONS='--import tsx' oxlint src",
+    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
     "test": "nub exec --cwd ../.. vitest run --config packages/api/vitest.facets.config.ts",
     "typecheck": "tsc --noEmit"
   },
