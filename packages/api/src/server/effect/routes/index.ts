@@ -2,6 +2,7 @@ import * as Layer from "effect/Layer"
 import { AuthMiddlewareLive } from "../services/auth"
 import { HttpAdminLive } from "./admin"
 import { HttpAuthLive } from "./auth"
+import { HttpBotsLive } from "./bots"
 import { HttpHealthLive } from "./health"
 import { HttpProvidersLive } from "./providers"
 import { HttpReposLive } from "./repos"
@@ -15,6 +16,7 @@ export const HttpRoutesLive = Layer.mergeAll(
   HttpHealthLive,
   HttpAdminLive,
   HttpAuthLive,
+  HttpBotsLive,
   HttpProvidersLive,
   HttpSessionsLive,
   HttpSkillsLive,

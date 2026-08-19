@@ -121,7 +121,13 @@ describe("isolate tools", () => {
       docsRuntimeContext,
     })
 
-    expect(Object.keys(tools)).toEqual(["docs_search"])
+    expect(Object.keys(tools)).toEqual([
+      "docs_search",
+      "create_bot_routine",
+      "list_bot_routines",
+      "complete_bot_routine",
+      "delete_bot_routine",
+    ])
   })
 
   it("exposes repository tools only when a repository is attached", () => {
@@ -143,6 +149,10 @@ describe("isolate tools", () => {
       "git_diff",
       "git_log",
       "git_create_pull_request",
+      "create_bot_routine",
+      "list_bot_routines",
+      "complete_bot_routine",
+      "delete_bot_routine",
     ])
   })
 
@@ -160,6 +170,10 @@ describe("isolate tools", () => {
       "get_workflow_node_catalog",
       "validate_workflow_manifest",
       "submit_workflow_draft",
+      "create_bot_routine",
+      "list_bot_routines",
+      "complete_bot_routine",
+      "delete_bot_routine",
     ])
   })
 
@@ -173,7 +187,12 @@ describe("isolate tools", () => {
       docsRuntimeContext,
     })
 
-    expect(Object.keys(tools)).toEqual([])
+    expect(Object.keys(tools)).toEqual([
+      "create_bot_routine",
+      "list_bot_routines",
+      "complete_bot_routine",
+      "delete_bot_routine",
+    ])
   })
 })
 
@@ -617,6 +636,7 @@ describe("isolate system prompt", () => {
     )
     expect(prompt).toContain("Internal knowledge tool: docs_search available")
     expect(prompt).toContain("Workflow builder tools: get_workflow_node_catalog")
+    expect(prompt).toContain("Bot routine tools: create_bot_routine")
     expect(prompt).toContain("Remote MCP tools: available from configured MCP servers: time")
     expect(prompt).toContain(
       "Do not attempt repository paths such as /repo unless a repository is attached.",

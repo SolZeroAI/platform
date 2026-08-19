@@ -1,5 +1,6 @@
 export * from "./admin"
 export * from "./auth"
+export * from "./bots"
 export * from "./health"
 export * from "./providers"
 export * from "./repos"

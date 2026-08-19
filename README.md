@@ -29,6 +29,10 @@ and Claude Code agents with a full Linux filesystem and shell. These runtimes ha
 resource overhead than SolZero Agent, but they are a better fit for deep coding and other work that needs
 full system access.
 
+### Always-on bots and routines
+
+Bots stay available the way a Grok Bot does. Each bot can create standing routines and temporary watches. A temporary routine can poll finite work such as pull request lint or validation, act on pass or fail, and delete itself when the work is done or the deadline passes. Routine ticks use the existing workflow alarm scheduler.
+
 ### Workflows for deterministic and agentic automation
 
 Workflows are one of our favorite parts of SolZero. They are fast to build, easy to adapt to a team's

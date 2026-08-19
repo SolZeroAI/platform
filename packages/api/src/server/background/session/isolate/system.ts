@@ -102,6 +102,8 @@ function buildEnvironmentPrompt(input: {
     ...repoLines,
     docsLine,
     ...workflowBuilderLines,
+    "  Bot routine tools: create_bot_routine, list_bot_routines, complete_bot_routine, delete_bot_routine",
+    "  Bot routines: use these tools when this session is linked to a bot. Temporary routines need a deadline or a GitHub pull request watch and are deleted when the work is done or the deadline passes. Standing routines stay until you delete them.",
     ...customMcpLines,
     ...mcpcfLines,
     "  Shell access: unavailable",

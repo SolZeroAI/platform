@@ -7,9 +7,12 @@ import * as Schema from "effect/Schema"
 import {
   buildSessionToolRuntimePlan,
   type AiSearchSessionTool,
+  type CreateBotRoutineInput,
   type PullRequest,
   type SessionToolSpec,
 } from "@solzero/shared"
+import { BotRoutineService } from "../bots/service"
+import { BotNotFoundError } from "../db/errors"
 import { runAiSearchMcpTool, type AiSearchMcpRuntimeContext } from "../../mcp/ai-search-runtime"
 import {
   getWorkflowBuilderCatalog,
@@ -85,6 +88,66 @@ class WorkflowManifestToolInput extends Schema.Class<WorkflowManifestToolInput>(
 )({
   manifest: Schema.Unknown,
 }) {}
+
+class CreateBotRoutineToolInput extends Schema.Class<CreateBotRoutineToolInput>(
+  "CreateBotRoutineToolInput",
+)({
+  name: NonEmptyString,
+  kind: Schema.Literals(["standing", "temporary"]),
+  cadenceKind: Schema.Literals(["cron", "interval"]),
+  cron: Schema.optionalKey(Schema.String),
+  intervalSeconds: Schema.optionalKey(PositiveInt),
+  prompt: NonEmptyString,
+  until: Schema.optionalKey(Schema.String),
+  watchKind: Schema.optionalKey(Schema.Literals(["none", "github_pull_request"])),
+  watchOwner: Schema.optionalKey(Schema.String),
+  watchRepo: Schema.optionalKey(Schema.String),
+  watchPullNumber: Schema.optionalKey(PositiveInt),
+  watchCompleteWhen: Schema.optionalKey(Schema.Literals(["merged_or_closed", "checks_concluded"])),
+}) {}
+
+class BotRoutineIdToolInput extends Schema.Class<BotRoutineIdToolInput>("BotRoutineIdToolInput")({
+  routineId: NonEmptyString,
+}) {}
+
+function createRoutineInputFromTool(input: CreateBotRoutineToolInput): CreateBotRoutineInput {
+  return {
+    name: input.name,
+    kind: input.kind,
+    cadence: {
+      kind: input.cadenceKind,
+      cron: input.cron,
+      intervalSeconds: input.intervalSeconds,
+    },
+    prompt: input.prompt,
+    until: input.until,
+    watch: {
+      kind: input.watchKind ?? "none",
+      owner: input.watchOwner,
+      repo: input.watchRepo,
+      pullNumber: input.watchPullNumber,
+      completeWhen: input.watchCompleteWhen,
+    },
+  }
+}
+
+function botRoutineService(context: IsolateToolContext) {
+  return new BotRoutineService(context.env)
+}
+
+function requireSessionBot(context: IsolateToolContext) {
+  return botRoutineService(context)
+    .getBotBySessionId(context.sessionId)
+    .pipe(
+      Effect.flatMap((bot) =>
+        Option.match(bot, {
+          onNone: () =>
+            Effect.fail(new BotNotFoundError({ message: "This session is not linked to a bot" })),
+          onSome: (resolved) => Effect.succeed(resolved),
+        }),
+      ),
+    )
+}
 
 function inputSchema<S extends Schema.Decoder<unknown, never>>(schema: S) {
   const validate = (value: unknown): ValidationResult<S["Type"]> =>
@@ -473,9 +536,95 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
     ),
   )
 
+  const botRoutineTools: ToolSet = {
+    create_bot_routine: tool({
+      description:
+        "Create a standing or temporary routine for the bot that owns this session. Temporary routines need an until deadline or a GitHub pull request watch and are deleted when the work is done or the deadline passes.",
+      inputSchema: inputSchema(CreateBotRoutineToolInput),
+      execute: (input) =>
+        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
+        Effect.runPromise(
+          runIsolateTool(
+            context,
+            "create_bot_routine",
+            {
+              "bot.routine.kind": input.kind,
+              "bot.routine.cadence": input.cadenceKind,
+              "bot.routine.watch": input.watchKind ?? "none",
+            },
+            requireSessionBot(context).pipe(
+              Effect.flatMap((bot) =>
+                botRoutineService(context).createRoutine(
+                  context.userId,
+                  bot.id,
+                  createRoutineInputFromTool(input),
+                ),
+              ),
+            ),
+          ),
+        ),
+    }),
+    list_bot_routines: tool({
+      description: "List standing and temporary routines owned by the bot for this session.",
+      inputSchema: inputSchema(EmptyToolInput),
+      execute: () =>
+        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
+        Effect.runPromise(
+          runIsolateTool(
+            context,
+            "list_bot_routines",
+            {},
+            requireSessionBot(context).pipe(
+              Effect.flatMap((bot) =>
+                botRoutineService(context).listRoutines(context.userId, bot.id),
+              ),
+            ),
+          ),
+        ),
+    }),
+    complete_bot_routine: tool({
+      description:
+        "Mark a routine done and delete it. Use this when a temporary watch such as pull request checks has finished.",
+      inputSchema: inputSchema(BotRoutineIdToolInput),
+      execute: ({ routineId }) =>
+        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
+        Effect.runPromise(
+          runIsolateTool(
+            context,
+            "complete_bot_routine",
+            { "bot.routine.id": routineId },
+            requireSessionBot(context).pipe(
+              Effect.flatMap((bot) =>
+                botRoutineService(context).completeRoutine(context.userId, bot.id, routineId),
+              ),
+            ),
+          ),
+        ),
+    }),
+    delete_bot_routine: tool({
+      description: "Delete a standing or temporary routine owned by the bot for this session.",
+      inputSchema: inputSchema(BotRoutineIdToolInput),
+      execute: ({ routineId }) =>
+        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
+        Effect.runPromise(
+          runIsolateTool(
+            context,
+            "delete_bot_routine",
+            { "bot.routine.id": routineId },
+            requireSessionBot(context).pipe(
+              Effect.flatMap((bot) =>
+                botRoutineService(context).deleteRoutine(context.userId, bot.id, routineId),
+              ),
+            ),
+          ),
+        ),
+    }),
+  }
+
   return {
     ...repoTools,
     ...docsToolSet,
     ...workflowTools,
+    ...botRoutineTools,
   }
 }

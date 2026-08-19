@@ -395,6 +395,47 @@ export const workflowRunEvents = sqliteTable(
   ],
 )
 
+export const bots = sqliteTable(
+  "bots",
+  {
+    id: text("id").primaryKey().notNull(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    instructions: text("instructions").notNull().default(""),
+    sessionId: text("session_id"),
+    status: text("status").notNull().default("active"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("idx_bots_owner_updated").on(table.userId, table.status, table.updatedAt),
+    index("idx_bots_session").on(table.sessionId),
+  ],
+)
+
+export const botRoutines = sqliteTable(
+  "bot_routines",
+  {
+    id: text("id").primaryKey().notNull(),
+    botId: text("bot_id").notNull(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    cadenceJson: text("cadence_json").notNull(),
+    prompt: text("prompt").notNull(),
+    until: integer("until"),
+    watchJson: text("watch_json").notNull().default('{"kind":"none"}'),
+    status: text("status").notNull().default("active"),
+    lastRunAt: integer("last_run_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("idx_bot_routines_bot_updated").on(table.botId, table.status, table.updatedAt),
+    index("idx_bot_routines_owner_updated").on(table.userId, table.status, table.updatedAt),
+  ],
+)
+
 export const cronRuns = sqliteTable(
   "cron_runs",
   {

@@ -9,7 +9,7 @@ Alchemy v2.
 
 - Isolate Agent sessions tuned for latency, cost, and capability.
 - Sandboxed Codex, Grok, Claude Code, and OpenCode harness sessions for deeper work.
-- Always-on bots that stay connected the way a Grok Bot does, including Slack and GitHub.
+- Always-on bots that stay connected the way a Grok Bot does, including Slack and GitHub. Each bot can create standing routines and temporary watches. A temporary routine is deleted when the watched work is done or the deadline passes.
 - Durable deterministic and agentic Workflows, including approvals, session reuse, and response
   caching.
 - MCP tools, skills, MCP Context Forge, and Cloudflare AI Search sources.

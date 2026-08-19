@@ -4,6 +4,7 @@
 
 export * from "./admin"
 export * from "./auth"
+export * from "./bots"
 export * from "./cloudflare-ai-gateway-errors"
 export * from "./cloudflare-ai-gateway"
 export * from "./s0-config"
