@@ -63,7 +63,7 @@
   "dependencies": {
     "@effect/platform-node": "4.0.0-beta.107",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "1.0.0-rc.2-e38a2ba",
+    "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.0-beta.107"
   },
   "devDependencies": {
@@ -75,7 +75,7 @@
     "alchemy": "2.0.0-beta.72",
     "anti-slop": "github:dmmulroy/anti-slop",
     "concurrently": "^9.2.1",
-    "drizzle-kit": "1.0.0-rc.2-e38a2ba",
+    "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "json": "^11.0.0",
     "jsonc-parser": "^3.3.1",
     "openapi-types": "^12.1.3",
