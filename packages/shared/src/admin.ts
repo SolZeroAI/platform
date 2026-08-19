@@ -19,13 +19,11 @@ export const EMPTY_ADMIN_CONFIG = {
 } satisfies AdminConfig
 
 const AdminConfigInputSchema = Schema.Struct({
-  adminEmails: Schema.optional(Schema.Array(Schema.Unknown)),
-  emails: Schema.optional(Schema.Array(Schema.Unknown)),
-  adminDomains: Schema.optional(Schema.Array(Schema.Unknown)),
-  domains: Schema.optional(Schema.Array(Schema.Unknown)),
+  adminEmails: Schema.optional(Schema.Array(Schema.String)),
+  emails: Schema.optional(Schema.Array(Schema.String)),
+  adminDomains: Schema.optional(Schema.Array(Schema.String)),
+  domains: Schema.optional(Schema.Array(Schema.String)),
 })
-
-const isString = Schema.is(Schema.String)
 
 function normalizeEmail(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase()
@@ -49,12 +47,10 @@ function normalizeDomain(value: string): string {
 }
 
 function normalizeStringArray(
-  value: readonly unknown[] | undefined,
+  value: readonly string[] | undefined,
   normalize: (input: string) => string,
 ): string[] {
-  return value === undefined
-    ? []
-    : [...new Set(value.filter(isString).map(normalize))].filter(Boolean).sort()
+  return value === undefined ? [] : [...new Set(value.map(normalize))].filter(Boolean).sort()
 }
 
 export function normalizeAdminConfig(value: unknown): AdminConfig {

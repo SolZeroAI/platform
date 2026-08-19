@@ -484,6 +484,13 @@ interface SessionToolDefinition {
   getToolId: (tool: SessionToolSpec) => string
 }
 
+interface SessionToolRegistry {
+  readonly github_repo: SessionToolDefinition
+  readonly [AI_SEARCH_SESSION_TOOL_KIND]: SessionToolDefinition
+  readonly [MCPCF_SESSION_TOOL_KIND]: SessionToolDefinition
+  readonly workflow_builder: SessionToolDefinition
+}
+
 function requireSessionToolString(
   rawTool: SessionToolRecord,
   field: string,
@@ -496,7 +503,7 @@ function requireSessionToolString(
   return value
 }
 
-const SESSION_TOOL_REGISTRY = {
+const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
   github_repo: {
     normalize: (rawTool: SessionToolRecord): GitHubRepoSessionTool => {
       const repoOwner = requireSessionToolString(rawTool, "repoOwner", "GitHub repo")

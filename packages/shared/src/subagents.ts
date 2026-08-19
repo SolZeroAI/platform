@@ -40,11 +40,15 @@ export function resolveSessionSubagentMode(
   )
 }
 
+export interface SessionSubagentModeField {
+  readonly subagents?: SubagentMode
+}
+
 /** Serialize a `subagents` field only for the session kinds that support it. */
 export function sessionSubagentModeField(
   sessionKind: SessionKind | string | null | undefined,
   value: unknown,
-): { subagents?: SubagentMode } {
+): SessionSubagentModeField {
   return Match.value(sessionKind).pipe(
     Match.when("isolate", () => ({ subagents: normalizeSubagentMode(value) })),
     Match.orElse(() => ({})),

@@ -1,4 +1,8 @@
-import { WORKFLOW_MANIFEST_VERSION, type WorkflowTemplate } from "./manifest-types"
+import {
+  WORKFLOW_MANIFEST_VERSION,
+  type WorkflowSessionNodeOptions,
+  type WorkflowTemplate,
+} from "./manifest-types"
 
 function prompt(lines: string[]): string {
   return lines.join("\n")
@@ -17,7 +21,7 @@ function createAlertAgentOptions(promptText: string) {
     tools: [],
     customMcpServers: {},
     secretKeys: [],
-  }
+  } satisfies WorkflowSessionNodeOptions
 }
 
 const normalizeAlertPayloadCode = prompt([

@@ -5,29 +5,16 @@ export const DEFAULT_ISOLATE_STEP_LIMIT = 50
 export const MIN_ISOLATE_STEP_LIMIT = 1
 export const MAX_ISOLATE_STEP_LIMIT = 64
 
-const IsolateStepLimitInputSchema = Schema.Union([
-  Schema.Number,
-  Schema.String,
-  Schema.Boolean,
-  Schema.Null,
-])
-
-function finiteNumberFromInput(value: number | string | boolean | null): Option.Option<number> {
-  return Option.liftPredicate(Number(value), Number.isFinite)
-}
+const IsolateStepLimitSchema = Schema.Union([Schema.Number, Schema.NumberFromString])
 
 export function normalizeIsolateStepLimit(
   value: unknown,
   fallback = DEFAULT_ISOLATE_STEP_LIMIT,
 ): number {
   const fallbackLimit = clampIsolateStepLimit(fallback)
-  return Option.match(Schema.decodeUnknownOption(IsolateStepLimitInputSchema)(value), {
+  return Option.match(Schema.decodeUnknownOption(IsolateStepLimitSchema)(value), {
     onNone: () => fallbackLimit,
-    onSome: (parsed) =>
-      Option.match(finiteNumberFromInput(parsed), {
-        onNone: () => fallbackLimit,
-        onSome: clampIsolateStepLimit,
-      }),
+    onSome: clampIsolateStepLimit,
   })
 }
 
