@@ -54,6 +54,11 @@ nub run build
 anti-slop rules in `tools/oxlint/anti-slop/`. This repository also enables the opt-in
 `anti-slop-effect` plugin because the workspace depends on Effect.
 
+The generic anti-slop rules and `anti-slop-effect/no-service-constructor-imports` are enabled at
+error. The existing TypeScript tree still has a large set of those findings. Clearing them needs a
+later rewrite of I/O parsers, dictionary contracts, assertion bridges, and Effect service
+construction. Keep the rules on. Do not add a repo-wide disable.
+
 If a check cannot run in your environment, explain why in the pull request.
 
 ## Pull requests
