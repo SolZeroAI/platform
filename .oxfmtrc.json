@@ -10,7 +10,18 @@
     "**/*.gen.ts",
     "**/*.md",
     "**/*.yaml",
-    "**/*.yml"
+    "**/*.yml",
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**"
   ],
   "arrowParens": "always",
   "semi": false

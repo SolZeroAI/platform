@@ -32,8 +32,8 @@
     "destroy:prod": "nub run alchemy destroy alchemy.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
     "build": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "oxlint src",
-    "lint:fix": "oxlint --fix src"
+    "lint": "NODE_OPTIONS='--import tsx' oxlint src",
+    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.0-beta.100",
@@ -46,7 +46,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260511.1",
     "@types/node": "^24.12.4",
-    "oxlint": "^1.64.0",
+    "oxlint": "1.79.0",
     "tsx": "^4.22.0",
     "typescript": "^7.0.2"
   }

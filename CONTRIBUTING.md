@@ -50,6 +50,12 @@ nub run test
 nub run build
 ```
 
+`nub run lint` runs Oxlint with `s0-lint`, `@mpsuesser/oxlint-plugin-effect`, and
+`anti-slop` from `github:dmmulroy/anti-slop`. This repository also enables the opt-in
+`anti-slop-effect` plugin because the workspace depends on Effect. Those anti-slop rules
+run at `warn`. Lint loads the GitHub package through `tsx` because that package ships
+TypeScript source.
+
 If a check cannot run in your environment, explain why in the pull request.
 
 ## Pull requests

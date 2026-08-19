@@ -9,6 +9,14 @@
     {
       "name": "effect",
       "specifier": "@mpsuesser/oxlint-plugin-effect"
+    },
+    {
+      "name": "anti-slop",
+      "specifier": "anti-slop"
+    },
+    {
+      "name": "anti-slop-effect",
+      "specifier": "./node_modules/anti-slop/src/effect/index.ts"
     }
   ],
   "ignorePatterns": [
@@ -18,11 +26,38 @@
     "**/.alchemy/**",
     "**/.output/**",
     "cloudflare-env-gen.d.ts",
-    "**/*.gen.ts"
+    "**/*.gen.ts",
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**"
   ],
   "rules": {
     "s0-lint/max-file-lines": "error",
-    "s0-lint/no-colocated-tests": "error"
+    "s0-lint/no-colocated-tests": "error",
+    "anti-slop/no-chained-type-assertions": "warn",
+    "anti-slop/no-conditional-empty-object-spread": "warn",
+    "anti-slop/no-known-value-widening": "warn",
+    "anti-slop/no-module-mocking": "warn",
+    "anti-slop/no-object-parameters": "warn",
+    "anti-slop/no-reflect-apply": "warn",
+    "anti-slop/no-reflect-get": "warn",
+    "anti-slop/no-runtime-typeof": "warn",
+    "anti-slop/no-shape-in-symbol-names": "warn",
+    "anti-slop/no-unknown-parameters": "warn",
+    "anti-slop/no-unknown-returns": "warn",
+    "anti-slop/no-unknown-type-aliases": "warn",
+    "anti-slop/no-unsafe-dictionary-type": "warn",
+    "anti-slop/no-widen-then-assert": "warn",
+    "anti-slop/require-safety-comment-for-type-assertion": "warn",
+    "anti-slop-effect/no-service-constructor-imports": "warn"
   },
   "overrides": [
     {
