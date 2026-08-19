@@ -150,13 +150,16 @@ function normalizeWorkflowDraftNodeForManifestVersion(
     return node
   }
 
+  const options = { ...node.options }
+  if (normalizeR2Encoding) {
+    options.encoding = "text"
+  }
+  if (normalizeIsolateSubagents) {
+    options.subagents = "disabled"
+  }
   return {
     ...node,
-    options: {
-      ...node.options,
-      ...(normalizeR2Encoding ? { encoding: "text" } : {}),
-      ...(normalizeIsolateSubagents ? { subagents: "disabled" } : {}),
-    },
+    options,
   }
 }
 

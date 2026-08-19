@@ -81,10 +81,17 @@ export function createGitUser(
   }
 }
 
+export interface GitEnv {
+  readonly GIT_AUTHOR_NAME: string
+  readonly GIT_AUTHOR_EMAIL: string
+  readonly GIT_COMMITTER_NAME: string
+  readonly GIT_COMMITTER_EMAIL: string
+}
+
 /**
  * Git environment variables for subprocess.
  */
-export function getGitEnv(user: GitUser): Record<string, string> {
+export function getGitEnv(user: GitUser): GitEnv {
   return {
     GIT_AUTHOR_NAME: user.name,
     GIT_AUTHOR_EMAIL: user.email,

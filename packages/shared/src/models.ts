@@ -4,11 +4,13 @@
 
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import {
   buildModelId,
   buildRuntimeModelOptions,
   findModelDisplayName,
   getModelReasoningConfig as getCatalogReasoningConfig,
+  ReasoningEffortSchema,
   SHARED_PROVIDER_CATALOG,
   type ModelReasoningConfig,
   type ReasoningEffort,
@@ -109,7 +111,7 @@ export function getDefaultReasoningEffort(model: string): Option.Option<Reasonin
 export function isValidReasoningEffort(model: string, effort: string): boolean {
   return Option.match(getReasoningConfig(model), {
     onNone: () => false,
-    onSome: (config) => config.efforts.includes(effort as ReasoningEffort),
+    onSome: (config) => Schema.is(ReasoningEffortSchema)(effort) && config.efforts.includes(effort),
   })
 }
 

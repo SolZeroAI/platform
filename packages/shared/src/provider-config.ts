@@ -165,7 +165,7 @@ export const DEFAULT_OPENCODE_PERMISSION = {
   external_directory: {
     "/home/user/.config/opencode/**": "allow",
   },
-} satisfies Record<string, unknown>
+}
 
 export function cloneDefaultOpenCodePermission(): OpenCodePermission {
   return normalizeOpenCodePermission(DEFAULT_OPENCODE_PERMISSION)

@@ -17,8 +17,5 @@ export function normalizeSecretReference(value: SecretReference, path: string): 
       `Invalid s0 configuration: ${path}.env must match ${ENVIRONMENT_BINDING_NAME_PATTERN}`,
     )
   }
-  return {
-    env,
-    ...(value.generateIfMissing === true ? { generateIfMissing: true } : {}),
-  }
+  return value.generateIfMissing === true ? { env, generateIfMissing: true } : { env }
 }

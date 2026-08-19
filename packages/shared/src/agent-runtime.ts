@@ -8,7 +8,11 @@ export type HarnessAgentRuntime = Exclude<AgentRuntime, "isolate">
 
 const AGENT_RUNTIME_VALUES: readonly string[] = AGENT_RUNTIMES
 
-const HARNESS_AGENT_RUNTIMES: readonly HarnessAgentRuntime[] = ["opencode", "codex", "claude-code"]
+const HARNESS_AGENT_RUNTIMES: ReadonlySet<AgentRuntime> = new Set<AgentRuntime>([
+  "opencode",
+  "codex",
+  "claude-code",
+])
 
 export function isAgentRuntime(value: unknown): value is AgentRuntime {
   return typeof value === "string" && AGENT_RUNTIME_VALUES.includes(value)
@@ -33,7 +37,7 @@ export function isHarnessAgentRuntime(agentRuntime: AgentRuntime): boolean {
 }
 
 export function isHarnessRuntime(value: AgentRuntime): value is HarnessAgentRuntime {
-  return HARNESS_AGENT_RUNTIMES.includes(value as HarnessAgentRuntime)
+  return HARNESS_AGENT_RUNTIMES.has(value)
 }
 
 export function isAgentRuntimeCompatibleWithProvider(

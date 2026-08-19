@@ -4,7 +4,7 @@ function prompt(lines: string[]): string {
   return lines.join("\n")
 }
 
-function createAlertAgentOptions(promptText: string): Record<string, unknown> {
+function createAlertAgentOptions(promptText: string) {
   return {
     model: "litellm/gpt-5.6-luna",
     reasoningEffort: "",
