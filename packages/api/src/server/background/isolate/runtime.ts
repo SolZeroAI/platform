@@ -7,6 +7,7 @@ import {
   BackgroundTracing,
   type CloudflareTracing,
   type LocalSpanContext,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate runtime.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
 } from "../observability/tracing"
 import {

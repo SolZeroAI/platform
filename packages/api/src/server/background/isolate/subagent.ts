@@ -27,7 +27,9 @@ import type { Env } from "../types"
 import { compileIsolateModelContext, type IsolateModelContext } from "./model"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { buildResolvedIsolateSkillSources } from "./skills"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds D1 drizzle for IsolateToolContext.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
 import { makeBackgroundTracingLayer } from "../observability/tracing"
 import { buildIsolateTools, type IsolateWorkspaceRuntime } from "./tools"
 import { IsolateSessionAgent } from "./agent"

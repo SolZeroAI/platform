@@ -12,6 +12,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- UserProviderConfigsStore is a D1 factory. Production callers import at module scope; replacing this constructor needs a Layer-owned D1 capability.
 import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { userProviderConfigs, userProviderPreferences } from "../../effect/db/schema"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
@@ -30,6 +31,7 @@ export interface UserProviderCustomInput {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   apiKey?: string
@@ -53,6 +55,7 @@ type UserProviderPreferenceRow = typeof userProviderPreferences.$inferSelect
 interface StoredCustomProviderPayload {
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
 }
@@ -75,6 +78,7 @@ export interface UserProviderSettingsSnapshot {
     providerId: string
     name: string
     npm?: string
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
     options?: Record<string, unknown>
     models: Record<string, ProviderModelDefinition>
     hasApiKey: boolean
@@ -86,6 +90,7 @@ export interface RuntimeUserProviderRecord {
   scope: UserProviderScope
   displayName: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models?: Record<string, ProviderModelDefinition>
   apiKey: string | null

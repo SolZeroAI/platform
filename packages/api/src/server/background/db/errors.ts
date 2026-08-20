@@ -43,6 +43,7 @@ export class D1Error extends Schema.TaggedError<D1Error>()("D1Error", {
 
 /** Builds a `catch` handler that tags a rejected drizzle/D1 promise with its `operation`. */
 export function d1Error(operation: string) {
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Promise/catch boundary: drizzle/D1 rejections arrive as unknown. d1FailureCause parses them before the tagged error is built.
   return (cause: unknown): D1Error => new D1Error({ operation, cause: d1FailureCause(cause) })
 }
 

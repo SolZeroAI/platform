@@ -52,6 +52,7 @@ import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object query-archive is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"

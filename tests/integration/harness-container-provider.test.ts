@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-module-mocking -- Production modules import at module scope. Replacing these mocks needs DI seams at those factories. */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import * as Effect from "effect/Effect"
 import type { AgentRuntime } from "../../packages/shared/src/agent-runtime"

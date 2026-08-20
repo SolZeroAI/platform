@@ -91,6 +91,7 @@ interface ResolvedProviderRecord {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   source: "shared" | "custom"
@@ -461,6 +462,7 @@ async function compiledProviderOptions(
     selectedProviderId: string
     selectedModelId: string
   },
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
 ): Promise<Record<string, unknown>> {
   const cloudflareOptions = await compileCloudflareAiGatewayProviderOptions({
     env: selection.env,
@@ -480,6 +482,7 @@ async function compiledProviderOptions(
 function defaultCompiledProviderOptions(
   provider: ResolvedProviderRecord,
   sharedProviderCredentialMode: SharedProviderCredentialMode,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
 ): Record<string, unknown> {
   const credentialOptions = Match.value(provider.credentialSource).pipe(
     Match.when("binding", () =>
@@ -494,6 +497,7 @@ function defaultCompiledProviderOptions(
       apiKey: compiledProviderApiKey(provider, sharedProviderCredentialMode),
     })),
   )
+  // oxlint-disable-next-line anti-slop/no-known-value-widening -- Provider catalog owner is open provider JSON. The compiled options bag stays open so live provider configs keep working.
   return {
     ...provider.options,
     ...credentialOptions,

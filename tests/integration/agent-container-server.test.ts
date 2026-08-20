@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-module-mocking -- Production modules import at module scope. Replacing these mocks needs DI seams at those factories. */
 import { once } from "node:events"
 import type { AddressInfo } from "node:net"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"

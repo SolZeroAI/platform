@@ -25,7 +25,11 @@ import {
 } from "@solzero/shared"
 import { describeError } from "../../../lib/effect-errors"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
-import { BackgroundTracing, makeBackgroundTracingLayer } from "../../observability/tracing"
+import {
+  BackgroundTracing,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent-controller.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
+  makeBackgroundTracingLayer,
+} from "../../observability/tracing"
 import {
   delegateToSubagentInputSchema,
   parseAgentToolEventMessage,

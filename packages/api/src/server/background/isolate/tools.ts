@@ -148,6 +148,7 @@ function requireSessionBot(context: IsolateToolContext) {
 }
 
 function inputSchema<S extends Schema.Decoder<unknown, never>>(schema: S) {
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- AI SDK tool input arrives as unknown. Schema.decodeUnknownResult already parses it at this boundary.
   const validate = (value: unknown): ValidationResult<S["Type"]> =>
     Schema.decodeUnknownResult(schema)(value).pipe(
       Result.match({

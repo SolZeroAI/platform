@@ -20,6 +20,7 @@ export interface SessionEventCommon {
   assistantMessageId?: string
   content?: string
   tool?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Live MCP and tool calls send open JSON argument bags. A closed args schema would reject those calls.
   args?: Record<string, unknown>
   callId?: string
   serverName?: string
@@ -236,6 +237,7 @@ type SessionEventPayload =
   | {
       type: "tool_call"
       tool: string
+      // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Live MCP and tool calls send open JSON argument bags. A closed args schema would reject those calls.
       args: Record<string, unknown>
       callId: string
       messageId: string

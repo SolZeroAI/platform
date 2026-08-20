@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-module-mocking -- Production modules import at module scope. Replacing these mocks needs DI seams at those factories. */
 import * as Effect from "effect/Effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { executeWorkflowSlackNode } from "../../packages/api/src/server/background/workflows/nodes/slack"

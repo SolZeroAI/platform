@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-module-mocking -- Production modules import at module scope. Replacing these mocks needs DI seams at those factories. */
 import * as Option from "effect/Option"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { SubagentSessionEvent } from "../../packages/shared/src"

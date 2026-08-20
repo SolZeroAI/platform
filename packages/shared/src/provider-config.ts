@@ -293,6 +293,7 @@ export interface RuntimeProviderCatalogEntry {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   source: "shared" | "custom"
   hasApiKey: boolean
@@ -325,6 +326,7 @@ export interface UserCustomProviderSettings {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   hasApiKey: boolean
@@ -334,6 +336,7 @@ export interface UserCustomProviderUpdate {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   apiKey?: string
