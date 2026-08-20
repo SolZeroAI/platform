@@ -8,6 +8,7 @@ import type {
 } from "./session-events"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import {
   sanitizeSubagentCompactError,
   sanitizeSubagentCompactLabel,
@@ -23,52 +24,64 @@ interface MutableRun extends SubagentRunSummary {
 
 export const EMPTY_SUBAGENT_SUMMARY_ERROR = "Sub-agent completed without a text summary."
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
-}
+const SubagentProgressDataSchema = Schema.Struct({
+  fraction: Schema.optional(Schema.Number),
+  message: Schema.optional(Schema.String),
+  phase: Schema.optional(Schema.String),
+  milestone: Schema.optional(Schema.String),
+  name: Schema.optional(Schema.String),
+  sequence: Schema.optional(Schema.Number),
+  at: Schema.optional(Schema.Number),
+})
 
-function parseChunk(body: string): Option.Option<Record<string, unknown>> {
+const SubagentChunkSchema = Schema.Struct({
+  type: Schema.String,
+  toolCallId: Schema.optional(Schema.String),
+  toolName: Schema.optional(Schema.String),
+  data: Schema.optional(SubagentProgressDataSchema),
+})
+
+type SubagentChunk = typeof SubagentChunkSchema.Type
+type SubagentProgressData = typeof SubagentProgressDataSchema.Type
+
+function parseChunk(body: string): Option.Option<SubagentChunk> {
   try {
-    const value: unknown = JSON.parse(body)
-    return Option.liftPredicate(
-      value,
-      (candidate): candidate is Record<string, unknown> =>
-        isRecord(candidate) && typeof candidate.type === "string",
-    )
+    return Schema.decodeUnknownOption(SubagentChunkSchema)(JSON.parse(body))
   } catch {
     return Option.none()
   }
 }
 
-function progressFromData(data: Record<string, unknown>, timestamp: number): SubagentProgress {
-  const fraction =
-    typeof data.fraction === "number" ? Math.min(1, Math.max(0, data.fraction)) : undefined
-  return {
-    ...(fraction === undefined ? {} : { fraction }),
-    ...(typeof data.message === "string"
-      ? { message: sanitizeSubagentCompactProgress(data.message) }
-      : {}),
-    ...(typeof data.phase === "string" ? { phase: sanitizeSubagentCompactLabel(data.phase) } : {}),
-    ...(typeof data.milestone === "string"
-      ? { milestone: sanitizeSubagentCompactLabel(data.milestone) }
-      : {}),
-    at: typeof data.at === "number" ? data.at : timestamp * 1000,
+function progressFromData(data: SubagentProgressData, timestamp: number): SubagentProgress {
+  const progress: SubagentProgress = {
+    at: data.at ?? timestamp * 1000,
   }
+  if (data.fraction !== undefined) {
+    progress.fraction = Math.min(1, Math.max(0, data.fraction))
+  }
+  if (data.message !== undefined) {
+    progress.message = sanitizeSubagentCompactProgress(data.message)
+  }
+  if (data.phase !== undefined) {
+    progress.phase = sanitizeSubagentCompactLabel(data.phase)
+  }
+  if (data.milestone !== undefined) {
+    progress.milestone = sanitizeSubagentCompactLabel(data.milestone)
+  }
+  return progress
 }
 
 function milestoneFromData(
-  data: Record<string, unknown>,
+  data: SubagentProgressData,
   event: SubagentSessionEvent,
 ): Option.Option<SubagentMilestone> {
-  const name = Option.orElse(
-    Option.liftPredicate(data.name, (value): value is string => typeof value === "string"),
-    () =>
-      Option.liftPredicate(data.milestone, (value): value is string => typeof value === "string"),
+  const name = Option.orElse(Option.fromNullishOr(data.name), () =>
+    Option.fromNullishOr(data.milestone),
   )
   return Option.map(name, (value) => ({
     name: sanitizeSubagentCompactLabel(value),
-    sequence: typeof data.sequence === "number" ? data.sequence : event.sequence,
-    at: typeof data.at === "number" ? data.at : event.timestamp * 1000,
+    sequence: data.sequence ?? event.sequence,
+    at: data.at ?? event.timestamp * 1000,
   }))
 }
 
@@ -83,20 +96,16 @@ function applyChunk(
         chunk.type === "tool-input-start" ||
         chunk.type === "tool-input-available" ||
         chunk.type === "tool-input-error"
-      if (toolInput && typeof chunk.toolCallId === "string") {
+      if (toolInput && chunk.toolCallId !== undefined) {
         run.toolCallIds.add(chunk.toolCallId)
       }
-      if (
-        toolInput &&
-        typeof chunk.toolName === "string" &&
-        !run.toolNames.includes(chunk.toolName)
-      ) {
+      if (toolInput && chunk.toolName !== undefined && !run.toolNames.includes(chunk.toolName)) {
         run.toolNames.push(chunk.toolName)
         run.toolNames.sort((left, right) => left.localeCompare(right))
       }
       if (
         (chunk.type === "data-agent-progress" || chunk.type === "data-agent-milestone") &&
-        isRecord(chunk.data)
+        chunk.data !== undefined
       ) {
         run.progress = progressFromData(chunk.data, event.timestamp)
         Option.match(milestoneFromData(chunk.data, event), {
@@ -156,13 +165,14 @@ function applyLifecycle(run: MutableRun, event: SubagentSessionEvent): void {
 
 function finalizeRun(run: MutableRun): SubagentRunSummary {
   const { order: _order, toolCallIds: _toolCallIds, ...summary } = run
-  return {
+  const result: SubagentRunSummary = {
     ...summary,
-    ...(run.completedAt === undefined
-      ? {}
-      : { durationMs: Math.max(0, Math.round((run.completedAt - run.startedAt) * 1000)) }),
-    ...(run.milestones?.length ? { milestones: run.milestones } : { milestones: undefined }),
+    milestones: run.milestones?.length ? run.milestones : undefined,
   }
+  if (run.completedAt !== undefined) {
+    result.durationMs = Math.max(0, Math.round((run.completedAt - run.startedAt) * 1000))
+  }
+  return result
 }
 
 /** Reduce replayed SessionDO child events to the compact, redacted synchronous result contract. */

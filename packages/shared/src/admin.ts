@@ -1,4 +1,5 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Admin configuration normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 export interface AdminConfig {
@@ -17,9 +18,12 @@ export const EMPTY_ADMIN_CONFIG = {
   adminDomains: [],
 } satisfies AdminConfig
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
+const AdminConfigInputSchema = Schema.Struct({
+  adminEmails: Schema.optional(Schema.Array(Schema.String)),
+  emails: Schema.optional(Schema.Array(Schema.String)),
+  adminDomains: Schema.optional(Schema.Array(Schema.String)),
+  domains: Schema.optional(Schema.Array(Schema.String)),
+})
 
 function normalizeEmail(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase()
@@ -42,23 +46,21 @@ function normalizeDomain(value: string): string {
   return normalized.slice(start, end)
 }
 
-function normalizeStringArray(value: unknown, normalize: (input: string) => string): string[] {
-  return Array.isArray(value)
-    ? [...new Set(value.filter((item): item is string => typeof item === "string").map(normalize))]
-        .filter(Boolean)
-        .sort()
-    : []
+function normalizeStringArray(
+  value: readonly string[] | undefined,
+  normalize: (input: string) => string,
+): string[] {
+  return value === undefined ? [] : [...new Set(value.map(normalize))].filter(Boolean).sort()
 }
 
 export function normalizeAdminConfig(value: unknown): AdminConfig {
-  if (!isRecord(value)) {
-    return EMPTY_ADMIN_CONFIG
-  }
-
-  return {
-    adminEmails: normalizeStringArray(value.adminEmails ?? value.emails, normalizeEmail),
-    adminDomains: normalizeStringArray(value.adminDomains ?? value.domains, normalizeDomain),
-  }
+  return Option.match(Schema.decodeUnknownOption(AdminConfigInputSchema)(value), {
+    onNone: () => EMPTY_ADMIN_CONFIG,
+    onSome: (record) => ({
+      adminEmails: normalizeStringArray(record.adminEmails ?? record.emails, normalizeEmail),
+      adminDomains: normalizeStringArray(record.adminDomains ?? record.domains, normalizeDomain),
+    }),
+  })
 }
 
 export function isAdminEmail(

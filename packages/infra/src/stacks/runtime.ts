@@ -114,7 +114,10 @@ function resolveConfigSecrets(config: S0ResolvedConfig) {
 }
 
 function deploymentConfigDigest(config: S0ResolvedConfig): string {
-  return createHash("sha256").update(canonicalS0ConfigJson(config)).digest("hex")
+  const { adminPassword: _omittedCredentialRef, ...authForDigest } = config.auth
+  const digestConfig = { ...config, auth: authForDigest }
+  // SHA-256 here is a config content digest so a deploy can detect change. It is not a password hash.
+  return createHash("sha256").update(canonicalS0ConfigJson(digestConfig)).digest("hex") // lgtm[js/insufficient-password-hash]
 }
 
 export function s0StackRuntime() {

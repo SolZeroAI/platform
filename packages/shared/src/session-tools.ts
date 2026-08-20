@@ -484,6 +484,13 @@ interface SessionToolDefinition {
   getToolId: (tool: SessionToolSpec) => string
 }
 
+interface SessionToolRegistry {
+  readonly github_repo: SessionToolDefinition
+  readonly [AI_SEARCH_SESSION_TOOL_KIND]: SessionToolDefinition
+  readonly [MCPCF_SESSION_TOOL_KIND]: SessionToolDefinition
+  readonly workflow_builder: SessionToolDefinition
+}
+
 function requireSessionToolString(
   rawTool: SessionToolRecord,
   field: string,
@@ -496,9 +503,9 @@ function requireSessionToolString(
   return value
 }
 
-const SESSION_TOOL_REGISTRY = {
+const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
   github_repo: {
-    normalize: (rawTool) => {
+    normalize: (rawTool: SessionToolRecord): GitHubRepoSessionTool => {
       const repoOwner = requireSessionToolString(rawTool, "repoOwner", "GitHub repo")
         .trim()
         .toLowerCase()
@@ -516,7 +523,7 @@ const SESSION_TOOL_REGISTRY = {
         repoName,
       }
     },
-    getToolId: (tool) => {
+    getToolId: (tool: SessionToolSpec) => {
       if (tool.kind !== "github_repo") {
         throw new Error("Expected a GitHub repo session tool")
       }
@@ -524,13 +531,13 @@ const SESSION_TOOL_REGISTRY = {
     },
   },
   [AI_SEARCH_SESSION_TOOL_KIND]: {
-    normalize: (rawTool) => ({
+    normalize: (rawTool: SessionToolRecord): AiSearchSessionTool => ({
       kind: AI_SEARCH_SESSION_TOOL_KIND,
       sourceId: normalizeAiSearchSourceId(
         requireSessionToolString(rawTool, "sourceId", "AI search"),
       ),
     }),
-    getToolId: (tool) => {
+    getToolId: (tool: SessionToolSpec) => {
       if (tool.kind !== AI_SEARCH_SESSION_TOOL_KIND) {
         throw new Error("Expected an AI Search session tool")
       }
@@ -538,13 +545,13 @@ const SESSION_TOOL_REGISTRY = {
     },
   },
   [MCPCF_SESSION_TOOL_KIND]: {
-    normalize: (rawTool) => ({
+    normalize: (rawTool: SessionToolRecord): McpcfSessionTool => ({
       kind: MCPCF_SESSION_TOOL_KIND,
       serverId: normalizeMcpcfServerId(
         requireSessionToolString(rawTool, "serverId", "MCP Context Forge"),
       ),
     }),
-    getToolId: (tool) => {
+    getToolId: (tool: SessionToolSpec) => {
       if (tool.kind !== MCPCF_SESSION_TOOL_KIND) {
         throw new Error("Expected an MCP Context Forge session tool")
       }
@@ -552,15 +559,15 @@ const SESSION_TOOL_REGISTRY = {
     },
   },
   workflow_builder: {
-    normalize: () => ({ kind: "workflow_builder" }),
-    getToolId: (tool) => {
+    normalize: (): WorkflowBuilderSessionTool => ({ kind: "workflow_builder" }),
+    getToolId: (tool: SessionToolSpec) => {
       if (tool.kind !== "workflow_builder") {
         throw new Error("Expected a workflow builder session tool")
       }
       return tool.kind
     },
   },
-} satisfies Record<SessionToolSpec["kind"], SessionToolDefinition>
+}
 
 function getStoredSessionToolKind(rawTool: unknown): string | null {
   if (typeof rawTool !== "object" || rawTool === null || Array.isArray(rawTool)) {
@@ -572,10 +579,18 @@ function getStoredSessionToolKind(rawTool: unknown): string | null {
 }
 
 function getSessionToolDefinition(kind: string): SessionToolDefinition | undefined {
-  if (!Object.prototype.hasOwnProperty.call(SESSION_TOOL_REGISTRY, kind)) {
-    return undefined
+  switch (kind) {
+    case "github_repo":
+      return SESSION_TOOL_REGISTRY.github_repo
+    case AI_SEARCH_SESSION_TOOL_KIND:
+      return SESSION_TOOL_REGISTRY[AI_SEARCH_SESSION_TOOL_KIND]
+    case MCPCF_SESSION_TOOL_KIND:
+      return SESSION_TOOL_REGISTRY[MCPCF_SESSION_TOOL_KIND]
+    case "workflow_builder":
+      return SESSION_TOOL_REGISTRY.workflow_builder
+    default:
+      return undefined
   }
-  return SESSION_TOOL_REGISTRY[kind as SessionToolSpec["kind"]]
 }
 
 function normalizeSessionTool(rawTool: unknown): SessionToolSpec {

@@ -161,11 +161,17 @@ export const OpenCodePermissionSchema = Schema.Union([
 ])
 export type OpenCodePermission = typeof OpenCodePermissionSchema.Type
 
-export const DEFAULT_OPENCODE_PERMISSION = {
+export type DefaultOpenCodePermission = {
+  readonly external_directory: {
+    readonly "/home/user/.config/opencode/**": OpenCodePermissionAction
+  }
+}
+
+export const DEFAULT_OPENCODE_PERMISSION: DefaultOpenCodePermission = {
   external_directory: {
     "/home/user/.config/opencode/**": "allow",
   },
-} satisfies Record<string, unknown>
+}
 
 export function cloneDefaultOpenCodePermission(): OpenCodePermission {
   return normalizeOpenCodePermission(DEFAULT_OPENCODE_PERMISSION)

@@ -80,12 +80,16 @@ export interface PublicAuthProviderRegistry {
   configurationFile: string
 }
 
-type UrlConstructorWithCanParse = typeof URL & {
-  canParse?: (input: string) => boolean
-}
-
 function failConfig(message: string): never {
   throw new Error(`Invalid auth configuration: ${message}`)
+}
+
+function normalizeIssuerUrl(issuer: string, providerId: string): string {
+  try {
+    return new URL(issuer).toString().replace(/\/+$/, "")
+  } catch {
+    return failConfig(`providers.${providerId}.issuer must be a valid URL`)
+  }
 }
 
 function requireNonEmpty(value: string, field: string): string {
@@ -104,7 +108,7 @@ function normalizeScopes(scopes: readonly string[] | undefined, defaults: readon
 
 export function normalizeAuthProviderRegistry(value: unknown): AuthProviderRegistry {
   const decoded = Schema.decodeUnknownSync(AuthProviderRegistrySchema)(value)
-  const providers = Object.fromEntries(
+  const providers: AuthProviderRegistry["providers"] = Object.fromEntries(
     Object.entries(decoded.providers).map(([rawProviderId, provider]) => {
       const providerId = rawProviderId.trim().toLowerCase()
       if (!AUTH_PROVIDER_ID_PATTERN.test(providerId)) {
@@ -156,21 +160,18 @@ export function normalizeAuthProviderRegistry(value: unknown): AuthProviderRegis
       }
 
       const issuer = requireNonEmpty(provider.issuer, `providers.${providerId}.issuer`)
-      if ((URL as UrlConstructorWithCanParse).canParse?.(issuer) !== true) {
-        failConfig(`providers.${providerId}.issuer must be a valid URL`)
-      }
       return [
         providerId,
         {
           ...common,
           clientId,
           clientSecret,
-          issuer: new URL(issuer).toString().replace(/\/+$/, ""),
+          issuer: normalizeIssuerUrl(issuer, providerId),
           scopes: normalizeScopes(provider.scopes, DEFAULT_OIDC_SCOPES),
         },
       ]
     }),
-  ) as AuthProviderRegistry["providers"]
+  )
 
   const signInProviderIds = Object.entries(providers)
     .filter(([, provider]) => provider.enabled && provider.capabilities.signIn)

@@ -1,10 +1,14 @@
-import { WORKFLOW_MANIFEST_VERSION, type WorkflowTemplate } from "./manifest-types"
+import {
+  WORKFLOW_MANIFEST_VERSION,
+  type WorkflowSessionNodeOptions,
+  type WorkflowTemplate,
+} from "./manifest-types"
 
 function prompt(lines: string[]): string {
   return lines.join("\n")
 }
 
-function createAlertAgentOptions(promptText: string): Record<string, unknown> {
+function createAlertAgentOptions(promptText: string) {
   return {
     model: "litellm/gpt-5.6-luna",
     reasoningEffort: "",
@@ -17,7 +21,7 @@ function createAlertAgentOptions(promptText: string): Record<string, unknown> {
     tools: [],
     customMcpServers: {},
     secretKeys: [],
-  }
+  } satisfies WorkflowSessionNodeOptions
 }
 
 const normalizeAlertPayloadCode = prompt([

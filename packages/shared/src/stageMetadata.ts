@@ -165,17 +165,19 @@ const AppStagePropsSchema = Schema.Struct({
   betterAuthSessionTransferEnabled: Schema.Boolean,
 })
 
-const StageMetadataBindingSchema = Schema.Union(
-  ["dev", "test", "pre", "prod"].map((tag) =>
-    Schema.Struct({
-      _tag: Schema.Literal(tag),
-      name: Schema.String,
-      app: AppStagePropsSchema,
-      infra: InfraStagePropsSchema,
-    }),
-  ),
-)
+const StageMetadataBindingFields = {
+  name: Schema.String,
+  app: AppStagePropsSchema,
+  infra: InfraStagePropsSchema,
+}
+const StageMetadataBindingSchema = Schema.Union([
+  Schema.Struct({ _tag: Schema.Literal("dev"), ...StageMetadataBindingFields }),
+  Schema.Struct({ _tag: Schema.Literal("test"), ...StageMetadataBindingFields }),
+  Schema.Struct({ _tag: Schema.Literal("pre"), ...StageMetadataBindingFields }),
+  Schema.Struct({ _tag: Schema.Literal("prod"), ...StageMetadataBindingFields }),
+])
 const decodeStageMetadataBinding = Schema.decodeUnknownSync(StageMetadataBindingSchema)
+type StageMetadataBinding = typeof StageMetadataBindingSchema.Type
 
 function configuredAppStageProps(config: S0ApplicationConfig): AppStageProps {
   return {
@@ -480,10 +482,21 @@ export function getStageMetadataFromStr(
   )
 }
 
+function stageMetadataFromBinding(binding: StageMetadataBinding): StageMetadata {
+  const props = { name: binding.name, app: binding.app, infra: binding.infra }
+  return Match.value(binding._tag).pipe(
+    Match.when("dev", () => new Dev(props)),
+    Match.when("test", () => new Test(props)),
+    Match.when("pre", () => new Pre(props)),
+    Match.when("prod", () => new Prod(props)),
+    Match.exhaustive,
+  )
+}
+
 export function getStageMetadata(env: StageMetadataEnv) {
   return env.S0_STAGE_METADATA === undefined
     ? getStageMetadataFromStr(env.STAGE)
-    : Effect.succeed(decodeStageMetadataBinding(env.S0_STAGE_METADATA) as StageMetadata)
+    : Effect.succeed(stageMetadataFromBinding(decodeStageMetadataBinding(env.S0_STAGE_METADATA)))
 }
 
 export function getStageMetadataFromConfig(

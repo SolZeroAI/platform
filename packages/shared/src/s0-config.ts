@@ -293,7 +293,8 @@ function validateGitHubAppAuthProvider(
 }
 
 function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
-  const githubApp: S0GitHubAppConfig = {
+  const webhookSecret = decoded.integrations.githubApp.webhookSecret
+  const githubAppBase = {
     ...decoded.integrations.githubApp,
     appId: decoded.integrations.githubApp.appId.trim(),
     clientId: decoded.integrations.githubApp.clientId.trim(),
@@ -306,15 +307,17 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       decoded.integrations.githubApp.privateKey,
       "integrations.githubApp.privateKey",
     ),
-    ...(decoded.integrations.githubApp.webhookSecret
-      ? {
+  }
+  const githubApp: S0GitHubAppConfig =
+    webhookSecret === undefined
+      ? githubAppBase
+      : {
+          ...githubAppBase,
           webhookSecret: normalizeSecretReference(
-            decoded.integrations.githubApp.webhookSecret,
+            webhookSecret,
             "integrations.githubApp.webhookSecret",
           ),
         }
-      : {}),
-  }
   const slack = decoded.integrations.slack
   const cloudflareAiGateway = normalizeCloudflareAiGatewayConfig(
     decoded.aiProviders.cloudflareAiGateway,
@@ -336,70 +339,62 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       "Invalid s0 configuration: auth.adminPassword is required when credential sign-in is enabled",
     )
   }
+  const deployment = {
+    ...decoded.deployment,
+    appName: decoded.deployment.appName.trim(),
+    zone: decoded.deployment.zone.trim(),
+    webFqdn:
+      decoded.deployment.webFqdn === undefined ? undefined : decoded.deployment.webFqdn.trim(),
+    apiFqdn:
+      decoded.deployment.apiFqdn === undefined ? undefined : decoded.deployment.apiFqdn.trim(),
+    observability: {
+      ...decoded.deployment.observability,
+      logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),
+      tracesDestinations: normalizeTextArray(decoded.deployment.observability.tracesDestinations),
+    },
+  }
+  const normalizedAuth = adminPassword ? { ...auth, adminPassword } : { ...auth }
+  const aiProviders: S0ResolvedConfig["aiProviders"] =
+    litellm === undefined
+      ? { cloudflareAiGateway }
+      : {
+          cloudflareAiGateway,
+          litellm: {
+            ...litellm,
+            baseUrl: normalizeOptionalUrl(litellm.baseUrl, "aiProviders.litellm.baseUrl") ?? "",
+            apiKey:
+              litellm.apiKey === undefined
+                ? undefined
+                : normalizeSecretReference(litellm.apiKey, "aiProviders.litellm.apiKey"),
+          },
+        }
+  const normalizedMcpcf =
+    mcpcf === undefined
+      ? undefined
+      : {
+          ...mcpcf,
+          baseUrl: normalizeOptionalUrl(mcpcf.baseUrl, "mcpcf.baseUrl") ?? "",
+          expectedIssuer: normalizeOptionalUrl(mcpcf.expectedIssuer, "mcpcf.expectedIssuer"),
+          authTypeAllowlist: normalizeTextArray(mcpcf.authTypeAllowlist).map((value) =>
+            value.toLowerCase(),
+          ),
+          serverBlacklist: normalizeTextArray(mcpcf.serverBlacklist),
+          adminApiToken:
+            mcpcf.adminApiToken === undefined
+              ? undefined
+              : normalizeSecretReference(mcpcf.adminApiToken, "mcpcf.adminApiToken"),
+        }
   const normalized: S0ResolvedConfig = {
     ...decoded,
-    deployment: {
-      ...decoded.deployment,
-      appName: decoded.deployment.appName.trim(),
-      zone: decoded.deployment.zone.trim(),
-      ...(decoded.deployment.webFqdn === undefined
-        ? {}
-        : { webFqdn: decoded.deployment.webFqdn.trim() }),
-      ...(decoded.deployment.apiFqdn === undefined
-        ? {}
-        : { apiFqdn: decoded.deployment.apiFqdn.trim() }),
-      observability: {
-        ...decoded.deployment.observability,
-        logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),
-        tracesDestinations: normalizeTextArray(decoded.deployment.observability.tracesDestinations),
-      },
-    },
+    deployment,
     application: {
       ...decoded.application,
       slackChannel: decoded.application.slackChannel.trim(),
     },
     admins: normalizeAdminConfig(decoded.admins),
-    auth: {
-      ...auth,
-      ...(adminPassword ? { adminPassword } : {}),
-    },
-    aiProviders: {
-      cloudflareAiGateway,
-      ...(litellm
-        ? {
-            litellm: {
-              ...litellm,
-              baseUrl: normalizeOptionalUrl(litellm.baseUrl, "aiProviders.litellm.baseUrl") ?? "",
-              ...(litellm.apiKey
-                ? {
-                    apiKey: normalizeSecretReference(litellm.apiKey, "aiProviders.litellm.apiKey"),
-                  }
-                : {}),
-            },
-          }
-        : {}),
-    },
-    ...(mcpcf
-      ? {
-          mcpcf: {
-            ...mcpcf,
-            baseUrl: normalizeOptionalUrl(mcpcf.baseUrl, "mcpcf.baseUrl") ?? "",
-            expectedIssuer: normalizeOptionalUrl(mcpcf.expectedIssuer, "mcpcf.expectedIssuer"),
-            authTypeAllowlist: normalizeTextArray(mcpcf.authTypeAllowlist).map((value) =>
-              value.toLowerCase(),
-            ),
-            serverBlacklist: normalizeTextArray(mcpcf.serverBlacklist),
-            ...(mcpcf.adminApiToken
-              ? {
-                  adminApiToken: normalizeSecretReference(
-                    mcpcf.adminApiToken,
-                    "mcpcf.adminApiToken",
-                  ),
-                }
-              : {}),
-          },
-        }
-      : {}),
+    auth: normalizedAuth,
+    aiProviders,
+    mcpcf: normalizedMcpcf,
     integrations: {
       githubApp,
       slack: {

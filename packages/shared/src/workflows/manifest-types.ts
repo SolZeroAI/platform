@@ -78,6 +78,7 @@ export interface WorkflowSessionNodeOptions {
   subagents?: SubagentMode
   tools?: SessionToolSpec[]
   customMcpServers?: OpenCodeMcpServers
+  secretKeys?: string[]
   repoOwner?: string
   repoName?: string
 }
