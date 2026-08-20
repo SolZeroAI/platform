@@ -4,6 +4,7 @@ import { Button } from "@cloudflare/kumo/components/button"
 import { Popover } from "@cloudflare/kumo/components/popover"
 import { Link, useLocation } from "@tanstack/react-router"
 import {
+  Bot as BotIcon,
   ChevronDown,
   GitBranch,
   History,
@@ -57,11 +58,13 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
       ? "sessions"
       : pathname?.startsWith("/workflows")
         ? "workflows"
-        : pathname?.startsWith("/admin")
-          ? "admin"
-          : pathname?.startsWith("/settings")
-            ? "settings"
-            : null
+        : pathname?.startsWith("/bots")
+          ? "bots"
+          : pathname?.startsWith("/admin")
+            ? "admin"
+            : pathname?.startsWith("/settings")
+              ? "settings"
+              : null
   const activeSettingsCategory = getSettingsCategoryFromSearch(locationSearch)
   const activeAdminView = getAdminViewFromLocation(pathname, locationSearch)
   const isPreviousSessionsActive = pathname === "/" && isHomePreviousSessionsHash(locationHash)
@@ -178,6 +181,14 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
             >
               <GitBranch className="h-4 w-4 flex-shrink-0" aria-hidden />
               Workflows
+            </Link>
+            <Link
+              to="/bots"
+              aria-current={activeNav === "bots" ? "page" : undefined}
+              className={navLinkClass(activeNav === "bots")}
+            >
+              <BotIcon className="h-4 w-4 flex-shrink-0" aria-hidden />
+              Bots
             </Link>
             <span
               aria-disabled="true"

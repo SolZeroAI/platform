@@ -70,6 +70,19 @@ export class AgentSkillNotFoundError extends Schema.TaggedError<AgentSkillNotFou
   },
 ) {}
 
+/** Failure raised when a bot id does not resolve to an owned row. */
+export class BotNotFoundError extends Schema.TaggedError<BotNotFoundError>()("BotNotFoundError", {
+  message: Schema.String,
+}) {}
+
+/** Failure raised when a bot routine id does not resolve to an owned row. */
+export class BotRoutineNotFoundError extends Schema.TaggedError<BotRoutineNotFoundError>()(
+  "BotRoutineNotFoundError",
+  {
+    message: Schema.String,
+  },
+) {}
+
 /** Failure raised when a Workflow Slack delivery dedupe row cannot be located after an upsert. */
 export class WorkflowSlackDeliveryError extends Schema.TaggedError<WorkflowSlackDeliveryError>()(
   "WorkflowSlackDeliveryError",

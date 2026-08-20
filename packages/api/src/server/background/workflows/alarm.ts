@@ -1,4 +1,13 @@
+import {
+  BOT_ROUTINE_ALARM_NODE_ID,
+  buildRoutineTickPrompt,
+  evaluateRoutineTick,
+  parseRoutineAlarmWorkflowId,
+  routineAlarmWorkflowId,
+  type BotRoutineSummary,
+} from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
+import { BotStore } from "../db/bots"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -16,6 +25,7 @@ interface StoredSchedule {
   scheduledAt: string
   userId: string
   cron?: string | null
+  target?: "workflow" | "routine"
 }
 
 interface WorkflowAlarmStorage {
@@ -162,7 +172,7 @@ function cronMatches(cron: ParsedCron, candidate: Date): boolean {
   )
 }
 
-function nextCronDate(expression: string, after: Date): Date {
+export function nextCronDate(expression: string, after: Date): Date {
   const cron = parseCronExpression(expression)
   const candidate = new Date(after)
   candidate.setUTCSeconds(0, 0)
@@ -230,6 +240,10 @@ const persistAlarmSchedule = Effect.fn("workflows.persistAlarmSchedule")(functio
     Match.when(Match.string, (value) => value),
     Match.orElse(() => null),
   )
+  const target = Match.value(input.body.target).pipe(
+    Match.when("routine", () => "routine" as const),
+    Match.orElse(() => "workflow" as const),
+  )
   const schedule: StoredSchedule = {
     workflowId: input.body.workflowId,
     nodeId: input.body.nodeId,
@@ -237,6 +251,7 @@ const persistAlarmSchedule = Effect.fn("workflows.persistAlarmSchedule")(functio
     scheduledAt: new Date(input.timestamp).toISOString(),
     userId: input.body.userId,
     cron,
+    target,
   }
   yield* Effect.tryPromise({
     try: () => input.storage.put("schedule", schedule),
@@ -392,29 +407,223 @@ const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(functio
   storage: WorkflowAlarmStorage
   schedule: StoredSchedule
 }) {
-  const store = createWorkflowStoreFromD1(input.env.DB)
-  const workflow = yield* Effect.tryPromise({
-    try: () => store.getWorkflow(input.schedule.workflowId),
+  const parsedRoutineId = Option.fromNullishOr(
+    parseRoutineAlarmWorkflowId(input.schedule.workflowId),
+  )
+  const targetedRoutineId = Match.value(input.schedule.target).pipe(
+    Match.when("routine", () =>
+      Option.orElse(parsedRoutineId, () => Option.some(input.schedule.workflowId)),
+    ),
+    Match.orElse(() => parsedRoutineId),
+  )
+  yield* Option.match(targetedRoutineId, {
+    onSome: (routineId) =>
+      handleScheduledRoutineAlarm({
+        env: input.env,
+        storage: input.storage,
+        schedule: input.schedule,
+        routineId,
+      }),
+    onNone: () => handleScheduledWorkflowAlarm(input),
+  })
+})
+
+const handleScheduledWorkflowAlarm = Effect.fn("workflows.handleScheduledWorkflowAlarm")(
+  function* (input: { env: Env; storage: WorkflowAlarmStorage; schedule: StoredSchedule }) {
+    const store = createWorkflowStoreFromD1(input.env.DB)
+    const workflow = yield* Effect.tryPromise({
+      try: () => store.getWorkflow(input.schedule.workflowId),
+      catch: toError,
+    })
+    yield* Option.match(
+      Option.filter(Option.fromNullishOr(workflow), (resolved) => resolved.status === "active"),
+      {
+        onNone: () =>
+          Effect.tryPromise({
+            try: () => input.storage.delete("schedule"),
+            catch: toError,
+          }),
+        onSome: (resolved) =>
+          runScheduledWorkflow({
+            env: input.env,
+            storage: input.storage,
+            schedule: input.schedule,
+            workflow: resolved,
+          }),
+      },
+    )
+  },
+)
+
+const promptBotSession = Effect.fn("workflows.promptBotSession")(function* (input: {
+  env: Env
+  sessionId: string
+  userId: string
+  content: string
+}) {
+  const sessionNamespace = input.env.SESSION as DurableObjectNamespace
+  const stub = sessionNamespace.get(sessionNamespace.idFromName(input.sessionId))
+  yield* Effect.tryPromise({
+    try: () =>
+      stub.fetch("http://internal/internal/prompt-async", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: stringifyJson({
+          content: input.content,
+          authorId: input.userId,
+          source: "web",
+          executionMode: "sync",
+        }),
+      }),
     catch: toError,
   })
-  yield* Option.match(
-    Option.filter(Option.fromNullishOr(workflow), (resolved) => resolved.status === "active"),
-    {
+})
+
+const handleScheduledRoutineAlarm = Effect.fn("workflows.handleScheduledRoutineAlarm")(
+  function* (input: {
+    env: Env
+    storage: WorkflowAlarmStorage
+    schedule: StoredSchedule
+    routineId: string
+  }) {
+    const store = new BotStore(input.env.DB)
+    const routineOption = yield* store.getRoutineById(input.routineId)
+    yield* Option.match(routineOption, {
       onNone: () =>
         Effect.tryPromise({
           try: () => input.storage.delete("schedule"),
           catch: toError,
         }),
-      onSome: (resolved) =>
-        runScheduledWorkflow({
+      onSome: (routine) =>
+        dispatchRoutineTick({
           env: input.env,
           storage: input.storage,
           schedule: input.schedule,
-          workflow: resolved,
+          routine,
+          store,
         }),
-    },
+    })
+  },
+)
+
+const dispatchRoutineTick = Effect.fn("workflows.dispatchRoutineTick")(function* (input: {
+  env: Env
+  storage: WorkflowAlarmStorage
+  schedule: StoredSchedule
+  routine: BotRoutineSummary
+  store: BotStore
+}) {
+  const now = Date.now()
+  const decision = evaluateRoutineTick({
+    kind: input.routine.kind,
+    until: input.routine.until,
+    status: input.routine.status,
+    cadence: input.routine.cadence,
+    now,
+    nextCronDate,
+  })
+  const nextRunAt = Match.value(decision).pipe(
+    Match.when({ action: "run" }, (run) => Option.some(run.nextRunAt)),
+    Match.orElse(() => Option.none()),
   )
+  const expiredRoutineId = Match.value(decision.action).pipe(
+    Match.when("expire", () => Option.some(input.routine.id)),
+    Match.orElse(() => Option.none()),
+  )
+  yield* Option.match(nextRunAt, {
+    onSome: (scheduledAt) =>
+      runActiveRoutineTick({
+        env: input.env,
+        storage: input.storage,
+        schedule: input.schedule,
+        routine: input.routine,
+        store: input.store,
+        now,
+        nextRunAt: scheduledAt,
+      }),
+    onNone: () =>
+      settleInactiveRoutine({
+        store: input.store,
+        storage: input.storage,
+        expiredRoutineId,
+      }),
+  })
 })
+
+const settleInactiveRoutine = Effect.fn("workflows.settleInactiveRoutine")(function* (input: {
+  store: BotStore
+  storage: WorkflowAlarmStorage
+  expiredRoutineId: Option.Option<string>
+}) {
+  yield* Option.match(input.expiredRoutineId, {
+    onSome: (routineId) => input.store.deleteRoutineById(routineId),
+    onNone: () => Effect.void,
+  })
+  yield* Effect.tryPromise({
+    try: () => input.storage.delete("schedule"),
+    catch: toError,
+  })
+})
+
+const runActiveRoutineTick = Effect.fn("workflows.runActiveRoutineTick")(function* (input: {
+  env: Env
+  storage: WorkflowAlarmStorage
+  schedule: StoredSchedule
+  routine: BotRoutineSummary
+  store: BotStore
+  now: number
+  nextRunAt: string
+}) {
+  const bot = yield* input.store.getOwned(input.routine.userId, input.routine.botId)
+  yield* Option.match(Option.fromNullishOr(bot.sessionId), {
+    onNone: () => Effect.void,
+    onSome: (sessionId) =>
+      promptBotSession({
+        env: input.env,
+        sessionId,
+        userId: input.routine.userId,
+        content: buildRoutineTickPrompt(input.routine),
+      }),
+  })
+  yield* input.store.markRoutineRun(input.routine.id, input.now)
+  const cron = Match.value(input.routine.cadence).pipe(
+    Match.when({ kind: "cron" }, (cadence) => Option.fromNullishOr(cadence.cron)),
+    Match.orElse(() => Option.none()),
+  )
+  const kind = Match.value(input.routine.cadence.kind).pipe(
+    Match.when("cron", () => "cron" as const),
+    Match.orElse(() => "datetime" as const),
+  )
+  yield* Effect.tryPromise({
+    try: () =>
+      persistRoutineReschedule({
+        storage: input.storage,
+        schedule: input.schedule,
+        nextRunAt: input.nextRunAt,
+        cron: Option.getOrNull(cron),
+        kind,
+      }),
+    catch: toError,
+  })
+})
+
+async function persistRoutineReschedule(input: {
+  storage: WorkflowAlarmStorage
+  schedule: StoredSchedule
+  nextRunAt: string
+  cron: string | null
+  kind: "cron" | "datetime"
+}): Promise<void> {
+  const nextSchedule: StoredSchedule = {
+    ...input.schedule,
+    kind: input.kind,
+    cron: input.cron,
+    target: "routine",
+    scheduledAt: input.nextRunAt,
+  }
+  await input.storage.put("schedule", nextSchedule)
+  await input.storage.setAlarm(Date.parse(input.nextRunAt))
+}
 
 export function handleWorkflowAlarm(input: {
   env: Env
@@ -536,6 +745,51 @@ export const scheduleWorkflowDateTriggers = Effect.fn("workflows.scheduleDateTri
     )
   },
 )
+
+export function scheduleRoutineAlarm(input: {
+  env: Env
+  routineId: string
+  userId: string
+  scheduledAt: string
+  cron: string | null
+}) {
+  const stub = getWorkflowAlarmStub(
+    input.env,
+    routineAlarmWorkflowId(input.routineId),
+    BOT_ROUTINE_ALARM_NODE_ID,
+  )
+  const kind = Match.value(Option.fromNullishOr(input.cron)).pipe(
+    Match.when(Option.isSome, () => "cron" as const),
+    Match.orElse(() => "datetime" as const),
+  )
+  return Effect.tryPromise({
+    try: () =>
+      stub.fetch("http://workflow-alarm/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: stringifyJson({
+          workflowId: routineAlarmWorkflowId(input.routineId),
+          nodeId: BOT_ROUTINE_ALARM_NODE_ID,
+          userId: input.userId,
+          kind,
+          scheduledAt: input.scheduledAt,
+          cron: input.cron,
+          target: "routine",
+        }),
+      }),
+    catch: toError,
+  }).pipe(Effect.map(() => undefined))
+}
+
+export function cancelRoutineAlarm(input: { env: Env; routineId: string }) {
+  return deleteAlarmScheduleFetch(
+    getWorkflowAlarmStub(
+      input.env,
+      routineAlarmWorkflowId(input.routineId),
+      BOT_ROUTINE_ALARM_NODE_ID,
+    ),
+  )
+}
 
 export const cancelWorkflowDateTriggers = Effect.fn("workflows.cancelDateTriggers")(
   function* (input: { env: Env; workflowId: string; nodes: Array<{ id: string; type: string }> }) {

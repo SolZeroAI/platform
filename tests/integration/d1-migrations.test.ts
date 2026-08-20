@@ -121,6 +121,15 @@ describe("D1 migrations", () => {
         origin: "built-in",
         default_enabled: 1,
       })
+
+      const botsColumns = db.prepare("PRAGMA table_info(bots)").all() as Array<{ name: string }>
+      const botRoutineColumns = db.prepare("PRAGMA table_info(bot_routines)").all() as Array<{
+        name: string
+      }>
+      expect(botsColumns.filter((column) => column.name === "session_id")).toHaveLength(1)
+      expect(botRoutineColumns.filter((column) => column.name === "cadence_json")).toHaveLength(1)
+      expect(botRoutineColumns.filter((column) => column.name === "until")).toHaveLength(1)
+      expect(botRoutineColumns.filter((column) => column.name === "watch_json")).toHaveLength(1)
     } finally {
       db.close()
     }

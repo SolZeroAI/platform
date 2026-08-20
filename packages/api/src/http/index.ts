@@ -1,6 +1,7 @@
 import { HttpApi, OpenApi } from "effect/unstable/httpapi"
 import { AdminGroup } from "./groups/admin"
 import { AuthGroup } from "./groups/auth"
+import { BotsGroup } from "./groups/bots"
 import { HealthGroup } from "./groups/health"
 import { ProvidersGroup } from "./groups/providers"
 import { ReposGroup } from "./groups/repos"
@@ -14,6 +15,7 @@ export class S0Api extends HttpApi.make("S0Api")
   .add(HealthGroup)
   .add(AdminGroup)
   .add(AuthGroup)
+  .add(BotsGroup)
   .add(ProvidersGroup)
   .add(SessionsGroup)
   .add(SkillsGroup)
