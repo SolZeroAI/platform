@@ -1,8 +1,11 @@
 import {
+  BotRoutineKindSchema,
+  BotStatusSchema,
   normalizeCreateBotInput,
   normalizeCreateBotRoutineInput,
   parseStoredBotRoutineCadence,
   parseStoredBotRoutineWatch,
+  type BotRoutineKind,
   type BotRoutineSummary,
   type BotStatus,
   type BotSummary,
@@ -12,6 +15,7 @@ import {
 import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import { stringifyJson } from "../../lib/json"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import { botRoutines, bots } from "../../effect/db/schema"
@@ -22,6 +26,14 @@ function newPrefixedId(prefix: string): string {
   return `${prefix}${generateId()}`
 }
 
+function requireBotStatus(value: string): BotStatus {
+  return Option.getOrElse(Schema.decodeUnknownOption(BotStatusSchema)(value), () => "active")
+}
+
+function requireBotRoutineKind(value: string): BotRoutineKind {
+  return Schema.decodeUnknownSync(BotRoutineKindSchema)(value)
+}
+
 function toBotSummary(row: typeof bots.$inferSelect): BotSummary {
   return {
     id: row.id,
@@ -29,7 +41,7 @@ function toBotSummary(row: typeof bots.$inferSelect): BotSummary {
     name: row.name,
     instructions: row.instructions,
     sessionId: row.sessionId,
-    status: row.status as BotStatus,
+    status: requireBotStatus(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -41,7 +53,7 @@ function toRoutineSummary(row: typeof botRoutines.$inferSelect): BotRoutineSumma
     botId: row.botId,
     userId: row.userId,
     name: row.name,
-    kind: row.kind as BotRoutineSummary["kind"],
+    kind: requireBotRoutineKind(row.kind),
     cadence: parseStoredBotRoutineCadence(row.cadenceJson),
     prompt: row.prompt,
     until: row.until,

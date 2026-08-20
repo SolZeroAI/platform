@@ -8,13 +8,10 @@ import {
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
   type WorkflowActionNodeType,
-  type WorkflowKvNamespaceBinding,
   type WorkflowNodeDefinition,
   type WorkflowNodeRuntimeSupport,
   type WorkflowNodeType,
   type WorkflowNodeValidationSupport,
-  type WorkflowR2BucketBinding,
-  type WorkflowStorageEncoding,
   type WorkflowTriggerNodeType,
 } from "./workflow-nodes/definitions"
 
@@ -103,10 +100,10 @@ export function getWorkflowJsonObjectFields(
   return uniqueFields
 }
 
-const workflowNodeTypeSet = new Set<WorkflowNodeType>(WORKFLOW_NODE_TYPES)
+const workflowNodeTypeSet = new Set<string>(WORKFLOW_NODE_TYPES)
 
 export function isWorkflowNodeType(value: string): value is WorkflowNodeType {
-  return workflowNodeTypeSet.has(value as WorkflowNodeType)
+  return workflowNodeTypeSet.has(value)
 }
 
 export function isWorkflowTriggerNodeType(
@@ -286,29 +283,29 @@ function keyLooksUserScoped(value: string): boolean {
 
 function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
   const errors: string[] = []
-  const r2Bindings = new Set(WORKFLOW_R2_BUCKET_OPTIONS.map((option) => option.binding))
-  const kvBindings = new Set(WORKFLOW_KV_NAMESPACE_OPTIONS.map((option) => option.binding))
+  const r2Bindings = new Set<string>(WORKFLOW_R2_BUCKET_OPTIONS.map((option) => option.binding))
+  const kvBindings = new Set<string>(WORKFLOW_KV_NAMESPACE_OPTIONS.map((option) => option.binding))
 
   if (node.type === "r2-put-object" || node.type === "r2-get-object") {
     const bucket = getBindingValue(node.options, "bucket")
-    if (bucket && !r2Bindings.has(bucket as WorkflowR2BucketBinding)) {
+    if (bucket && !r2Bindings.has(bucket)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 bucket '${bucket}'`)
     }
   }
 
   if (node.type === "r2-put-object") {
     const encoding = getBindingValue(node.options, "encoding")
-    const storageEncodings = new Set(
+    const storageEncodings = new Set<string>(
       WORKFLOW_STORAGE_ENCODING_OPTIONS.map((option) => option.value),
     )
-    if (encoding && !storageEncodings.has(encoding as WorkflowStorageEncoding)) {
+    if (encoding && !storageEncodings.has(encoding)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 content encoding '${encoding}'`)
     }
   }
 
   if (node.type === "kv-put" || node.type === "kv-get") {
     const namespace = getBindingValue(node.options, "namespace")
-    if (namespace && !kvBindings.has(namespace as WorkflowKvNamespaceBinding)) {
+    if (namespace && !kvBindings.has(namespace)) {
       errors.push(`Workflow node '${node.id}' uses unsupported KV namespace '${namespace}'`)
     }
   }

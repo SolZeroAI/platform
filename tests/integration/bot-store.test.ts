@@ -75,8 +75,9 @@ class SqliteD1Statement implements D1PreparedStatement {
 
   async raw<T = unknown[]>(): Promise<T[]> {
     const statement = this.db.prepare(this.query)
-    const columns = statement.columns().map((column) => column.name)
     const rows = statement.all(...this.params) as Record<string, unknown>[]
+    const firstRow = rows[0]
+    const columns = firstRow === undefined ? [] : Object.keys(firstRow)
     return rows.map((row) => columns.map((column) => row[column])) as T[]
   }
 }

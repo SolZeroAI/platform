@@ -7,6 +7,9 @@ import {
   nextRoutineRunAt,
   normalizeCreateBotRoutineInput,
   parseRoutineAlarmWorkflowId,
+  parseStoredBotRoutineCadence,
+  parseStoredBotRoutineWatch,
+  parseUntilTimestamp,
   routineAlarmWorkflowId,
 } from "../../packages/shared/src/bots"
 
@@ -154,5 +157,38 @@ describe("bot routines", () => {
     expect(routineAlarmWorkflowId("routine_1")).toBe("routine:routine_1")
     expect(parseRoutineAlarmWorkflowId("routine:routine_1")).toBe("routine_1")
     expect(parseRoutineAlarmWorkflowId("wf_1")).toBeNull()
+  })
+
+  it("parses stored cadence and watch JSON at the D1 boundary", () => {
+    expect(parseStoredBotRoutineCadence('{"kind":"cron","cron":"0 * * * *"}')).toEqual({
+      kind: "cron",
+      cron: "0 * * * *",
+    })
+    expect(parseStoredBotRoutineWatch('{"kind":"none"}')).toEqual({ kind: "none" })
+    expect(
+      parseStoredBotRoutineWatch(
+        '{"kind":"github_pull_request","owner":"SolZeroAI","repo":"platform","pullNumber":12,"completeWhen":"checks_concluded"}',
+      ),
+    ).toEqual({
+      kind: "github_pull_request",
+      owner: "SolZeroAI",
+      repo: "platform",
+      pullNumber: 12,
+      completeWhen: "checks_concluded",
+    })
+    expect(parseStoredBotRoutineWatch("{")).toEqual({ kind: "none" })
+    expect(() => parseStoredBotRoutineCadence("{")).toThrow(BotRoutineValidationError)
+    expect(() => parseStoredBotRoutineWatch('{"kind":"weekly"}')).toThrow(BotRoutineValidationError)
+  })
+
+  it("parses until as a unix timestamp or ISO-8601 string", () => {
+    expect(parseUntilTimestamp(null)).toBeNull()
+    expect(parseUntilTimestamp("")).toBeNull()
+    expect(parseUntilTimestamp(1_777_000_000_000)).toBe(1_777_000_000_000)
+    expect(parseUntilTimestamp("2026-08-20T12:00:00.000Z")).toBe(
+      Date.parse("2026-08-20T12:00:00.000Z"),
+    )
+    expect(() => parseUntilTimestamp(0)).toThrow(BotRoutineValidationError)
+    expect(() => parseUntilTimestamp("not-a-date")).toThrow(BotRoutineValidationError)
   })
 })
