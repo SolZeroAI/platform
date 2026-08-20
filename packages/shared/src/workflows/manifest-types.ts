@@ -1,11 +1,7 @@
 import type { OpenCodeMcpServers } from "../provider-config"
 import type { SessionToolSpec } from "../session-tools"
 import type { SubagentMode } from "../subagents"
-import type {
-  WorkflowKvNamespaceBinding,
-  WorkflowNodeType,
-  WorkflowR2BucketBinding,
-} from "../workflow-nodes"
+import type { WorkflowNodeType } from "../workflow-nodes"
 
 export const WORKFLOW_MANIFEST_VERSION = 4 as const
 export const WORKFLOW_SUBAGENTS_MANIFEST_VERSION = 4 as const
@@ -142,13 +138,13 @@ export interface WorkflowHttpRequestOptions {
 }
 
 export interface WorkflowR2PutObjectOptions {
-  bucket?: WorkflowR2BucketBinding
+  bucket?: string
   key?: string
   contentType?: string
 }
 
 export interface WorkflowKvPutOptions {
-  namespace?: WorkflowKvNamespaceBinding
+  namespace?: string
   key?: string
   expirationTtl?: number | string
 }
@@ -219,13 +215,13 @@ export interface WorkflowEmailNotificationOptions {
 }
 
 export interface WorkflowR2GetObjectOptions {
-  bucket?: WorkflowR2BucketBinding
+  bucket?: string
   key?: string
   responseType?: "auto" | "json" | "text"
 }
 
 export interface WorkflowKvGetOptions {
-  namespace?: WorkflowKvNamespaceBinding
+  namespace?: string
   key?: string
   responseType?: "auto" | "json" | "text"
 }

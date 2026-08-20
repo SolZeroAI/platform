@@ -923,6 +923,12 @@ function normalizeSessionRow(row: typeof SessionRowSchema.Type): SessionRow {
       agentRuntime: row.agent_runtime ?? undefined,
       sessionKind: row.session_kind,
     }),
+    github_installation_id: row.github_installation_id ?? null,
+    github_repo_id: row.github_repo_id ?? null,
+    repo_default_branch: row.repo_default_branch ?? null,
+    branch_name: row.branch_name ?? null,
+    secret_keys_json: row.secret_keys_json ?? "[]",
+    isolate_step_limit: normalizeIsolateStepLimit(row.isolate_step_limit),
     subagents: resolveSessionSubagentMode(row.session_kind, row.subagents),
   }
 }

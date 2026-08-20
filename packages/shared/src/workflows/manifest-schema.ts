@@ -3,11 +3,7 @@ import * as Schema from "effect/Schema"
 import { OpenCodeMcpServersSchema } from "../provider-config"
 import { AI_SEARCH_SESSION_TOOL_KIND, MCPCF_SESSION_TOOL_KIND } from "../session-tools"
 import { SubagentModeSchema } from "../subagents"
-import {
-  WORKFLOW_KV_NAMESPACE_OPTIONS,
-  WORKFLOW_NODE_TYPES,
-  WORKFLOW_R2_BUCKET_OPTIONS,
-} from "../workflow-nodes/definitions"
+import { WORKFLOW_NODE_TYPES } from "../workflow-nodes/definitions"
 import {
   WORKFLOW_MANIFEST_VERSION,
   type WorkflowManifest,
@@ -15,14 +11,6 @@ import {
 } from "./manifest-types"
 
 const WorkflowNodeTypeSchema = Schema.Literals(WORKFLOW_NODE_TYPES)
-const WorkflowR2BucketBindingSchema = Schema.Literals([
-  WORKFLOW_R2_BUCKET_OPTIONS[0].binding,
-  WORKFLOW_R2_BUCKET_OPTIONS[1].binding,
-])
-const WorkflowKvNamespaceBindingSchema = Schema.Literals([
-  WORKFLOW_KV_NAMESPACE_OPTIONS[0].binding,
-  WORKFLOW_KV_NAMESPACE_OPTIONS[1].binding,
-])
 
 const GitHubRepoSessionToolSchema = Schema.Struct({
   kind: Schema.Literal("github_repo"),
@@ -84,10 +72,10 @@ export const WorkflowNodeOptionsSchema = Schema.Struct({
   responseType: Schema.optional(Schema.Literals(["auto", "json", "text"])),
   timeoutMs: Schema.optional(Schema.Number),
   failOnHttpError: Schema.optional(Schema.Boolean),
-  bucket: Schema.optional(WorkflowR2BucketBindingSchema),
+  bucket: Schema.optional(Schema.String),
   key: Schema.optional(Schema.String),
   contentType: Schema.optional(Schema.String),
-  namespace: Schema.optional(WorkflowKvNamespaceBindingSchema),
+  namespace: Schema.optional(Schema.String),
   expirationTtl: Schema.optional(Schema.Union([Schema.Number, Schema.String])),
   message: Schema.optional(Schema.String),
   timeout: Schema.optional(Schema.String),

@@ -451,8 +451,10 @@ describe("AdminStore", () => {
       contentHash: "sha256-content",
       defaultEnabled: true,
     })
+    const db = new SqliteD1Database(sqlite)
     const context = {
-      env: { DB: new SqliteD1Database(sqlite) },
+      env: { DB: db },
+      db: makeD1Drizzle(db),
     } as unknown as ControlPlaneContext
 
     const response = await Effect.runPromise(
