@@ -1,4 +1,5 @@
 import type { EventRow } from "./types"
+import { decodeEventRows, decodeSqlChangeCount } from "./row-schemas"
 
 export interface SessionEventCreateInput {
   readonly id: string
@@ -40,46 +41,52 @@ export class SessionEventRepository {
       input.messageId,
       input.createdAt,
     )
-    const result = this.eventSql.exec("SELECT changes() AS count").one() as
-      | { readonly count?: unknown }
-      | undefined
-    return Number(result?.count ?? 0) > 0
+    const result = this.eventSql.exec("SELECT changes() AS count").one()
+    return Number(decodeSqlChangeCount(result ?? {}).count ?? 0) > 0
   }
 
   listEvents(limit: number): EventRow[] {
-    return this.eventSql
-      .exec("SELECT * FROM events ORDER BY created_at DESC, rowid DESC LIMIT ?1", limit)
-      .toArray() as EventRow[]
+    return decodeEventRows(
+      this.eventSql
+        .exec("SELECT * FROM events ORDER BY created_at DESC, rowid DESC LIMIT ?1", limit)
+        .toArray(),
+    )
   }
 
   listEventsByType(type: string, limit: number): EventRow[] {
-    return this.eventSql
-      .exec(
-        "SELECT * FROM events WHERE type = ?1 ORDER BY created_at DESC, rowid DESC LIMIT ?2",
-        type,
-        limit,
-      )
-      .toArray() as EventRow[]
+    return decodeEventRows(
+      this.eventSql
+        .exec(
+          "SELECT * FROM events WHERE type = ?1 ORDER BY created_at DESC, rowid DESC LIMIT ?2",
+          type,
+          limit,
+        )
+        .toArray(),
+    )
   }
 
   listEventsForMessage(messageId: string): EventRow[] {
-    return this.eventSql
-      .exec(
-        "SELECT * FROM events WHERE message_id = ?1 ORDER BY created_at ASC, rowid ASC",
-        messageId,
-      )
-      .toArray() as EventRow[]
+    return decodeEventRows(
+      this.eventSql
+        .exec(
+          "SELECT * FROM events WHERE message_id = ?1 ORDER BY created_at ASC, rowid ASC",
+          messageId,
+        )
+        .toArray(),
+    )
   }
 
   getEventsForReplay(limit: number): EventRow[] {
-    return this.eventSql
-      .exec(
-        `SELECT id, type, data, message_id, created_at FROM (
+    return decodeEventRows(
+      this.eventSql
+        .exec(
+          `SELECT id, type, data, message_id, created_at FROM (
            SELECT rowid AS event_rowid, * FROM events ORDER BY created_at DESC, rowid DESC LIMIT ?1
          ) sub ORDER BY created_at ASC, event_rowid ASC`,
-        limit,
-      )
-      .toArray() as EventRow[]
+          limit,
+        )
+        .toArray(),
+    )
   }
 
   /**
@@ -89,9 +96,10 @@ export class SessionEventRepository {
    * when one parent response produced more than `limit` event frames.
    */
   getEventsForReplayWithSubagentHistory(limit: number): EventRow[] {
-    return this.eventSql
-      .exec(
-        `WITH latest AS (
+    return decodeEventRows(
+      this.eventSql
+        .exec(
+          `WITH latest AS (
            SELECT rowid AS event_rowid, *
            FROM events
            ORDER BY created_at DESC, rowid DESC
@@ -109,9 +117,10 @@ export class SessionEventRepository {
          SELECT id, type, data, message_id, created_at
          FROM hydrated
          ORDER BY created_at ASC, event_rowid ASC`,
-        limit,
-      )
-      .toArray() as EventRow[]
+          limit,
+        )
+        .toArray(),
+    )
   }
 
   getEventsHistoryPage(
@@ -119,18 +128,20 @@ export class SessionEventRepository {
     cursorId: string,
     limit: number,
   ): { events: EventRow[]; hasMore: boolean } {
-    const rows = this.eventSql
-      .exec(
-        `SELECT * FROM events
+    const rows = decodeEventRows(
+      this.eventSql
+        .exec(
+          `SELECT * FROM events
          WHERE (created_at < ?1) OR (
            created_at = ?1 AND rowid < COALESCE((SELECT rowid FROM events WHERE id = ?2 LIMIT 1), 9223372036854775807)
          )
          ORDER BY created_at DESC, rowid DESC LIMIT ?3`,
-        cursorTimestamp,
-        cursorId,
-        limit + 1,
-      )
-      .toArray() as EventRow[]
+          cursorTimestamp,
+          cursorId,
+          limit + 1,
+        )
+        .toArray(),
+    )
 
     const hasMore = rows.length > limit
     if (hasMore) {

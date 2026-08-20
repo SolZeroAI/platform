@@ -33,7 +33,7 @@ import { localSpanHeaders, type LocalSpanContext } from "../../../background/obs
 import type { RunSessionPromptRequest, RunSessionPromptResponse } from "../../../background/types"
 import { stringifyJson } from "../../../lib/json"
 import * as Context from "effect/Context"
-import { D1Drizzle, type D1DrizzleDatabase } from "../../db/d1-drizzle"
+import { D1Drizzle, makeD1Drizzle, type D1DrizzleDatabase } from "../../db/d1-drizzle"
 import { getCloudflareBindings } from "../../services/middleware"
 import { authenticateControlPlaneRequest } from "../../services/auth"
 import {
@@ -209,7 +209,7 @@ export const resolveRequestIdentityAnnotation = Effect.fn(
 export function requireGlobalSecretsStore(env: ApiEnv): Option.Option<GlobalSecretsStore> {
   return Option.map(
     Option.fromNullishOr(env.REPO_SECRETS_ENCRYPTION_KEY),
-    (key) => new GlobalSecretsStore(env.DB, key),
+    (key) => new GlobalSecretsStore(makeD1Drizzle(env.DB), key),
   )
 }
 
@@ -367,7 +367,7 @@ const fetchAndEnrichReposPage = Effect.fn("controlPlane.fetchAndEnrichReposPage"
   options: RepoListOptions,
 ) {
   const pageResult = yield* fetchReposPage(githubProvider, accessToken, options)
-  const metadataStore = new RepoMetadataStore(env.DB)
+  const metadataStore = new RepoMetadataStore(makeD1Drizzle(env.DB))
   const metadataMap = yield* metadataStore
     .getBatch(pageResult.repositories.map((repo) => ({ owner: repo.owner, name: repo.name })))
     .pipe(

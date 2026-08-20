@@ -1,5 +1,6 @@
 import { type Node } from "@xyflow/react"
 import {
+  getErrorMessage,
   serializeWorkflowExport,
   type WorkflowManifest,
   type WorkflowNodeType,
@@ -141,9 +142,7 @@ export function serializeWorkflowContextYaml(manifest: WorkflowManifest): string
   }
 }
 
-export function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
+export { getErrorMessage }
 
 export function formatTime(value: number): string {
   return new Date(value).toLocaleString([], {

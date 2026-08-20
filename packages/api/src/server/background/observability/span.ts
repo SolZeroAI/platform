@@ -8,10 +8,23 @@ import { stringifyJson } from "../../lib/json"
 
 export type CloudflareTracing = NonNullable<ExecutionContext["tracing"]>
 export type CloudflareSpan = Parameters<Parameters<CloudflareTracing["enterSpan"]>[1]>[0]
+export type SpanAttributeValue = string | number | boolean
+export type SpanAttributeInput = Record<string, SpanAttributeValue | null | undefined>
+
+export function spanAttributeInput(fields: Record<string, unknown>): SpanAttributeInput {
+  return Object.fromEntries(
+    Object.entries(fields).flatMap(([key, value]) =>
+      Option.match(spanAttributeValue(value), {
+        onNone: (): Array<[string, SpanAttributeValue]> => [],
+        onSome: (attribute) => [[key, attribute]],
+      }),
+    ),
+  )
+}
 
 export function setCloudflareSpanAttributes(
   span: CloudflareSpan | undefined,
-  fields: Record<string, unknown>,
+  fields: SpanAttributeInput,
 ): void {
   Option.match(Option.fromNullishOr(span), {
     onNone: () => undefined,
@@ -25,9 +38,7 @@ export function setCloudflareSpanAttributes(
   })
 }
 
-export function toSpanAttributes(
-  fields: Record<string, unknown>,
-): Record<string, string | number | boolean> {
+export function toSpanAttributes(fields: SpanAttributeInput): Record<string, SpanAttributeValue> {
   return Object.fromEntries(
     Object.entries(fields).flatMap(([key, value]) =>
       Option.match(spanAttributeValue(value), {
@@ -78,7 +89,7 @@ export function completedSpanAttributes<E>(
 
 export function runCloudflarePromiseSpan<A>(
   span: CloudflareSpan,
-  attributes: Record<string, unknown>,
+  attributes: SpanAttributeInput,
   handler: (span: CloudflareSpan) => Promise<A>,
 ): Promise<A> {
   const startedAt = Date.now()
@@ -112,14 +123,11 @@ function finalizePromiseSpanFailure(
 export function runEffectInCloudflareSpan<A, E, R>(options: {
   readonly name: string
   readonly tracing?: CloudflareTracing
-  readonly attributes: Record<string, unknown>
+  readonly attributes: SpanAttributeInput
   readonly context: Context.Context<R>
   // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span bridge: A/E/R are intrinsic to running the caller's effect inside Cloudflare's imperative span callback.
   readonly effect: Effect.Effect<A, E, R>
-  readonly completedAttributes?: (
-    exit: Exit.Exit<A, E>,
-    durationMs: number,
-  ) => Record<string, unknown>
+  readonly completedAttributes?: (exit: Exit.Exit<A, E>, durationMs: number) => SpanAttributeInput
   readonly onSpanEnd?: () => void
   readonly onSpanStart?: (span: CloudflareSpan) => void
 }) {

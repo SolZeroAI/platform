@@ -11,6 +11,7 @@ import {
   parseStoredOpenCodeMcpServers,
   parseStoredSessionTools,
   type RuntimeActivityEvent,
+  type SessionArtifactMetadata,
   type SessionKind,
   type SessionRuntimeCapabilities,
   type OpenCodeMcpServers,
@@ -297,7 +298,7 @@ export function serializeArtifact(
   id: string
   type: string
   url: string | null
-  metadata: Record<string, unknown> | null
+  metadata: SessionArtifactMetadata | null
   prNumber?: number
   createdAt: number
 } {
@@ -341,7 +342,7 @@ export function serializeRuntimeActivity(
     statusTo: row.statusTo,
     keepAlive: row.keepAlive,
     reason: row.reason,
-    data: parseArtifactMetadata(row.dataJson) ?? {},
+    data: Option.getOrElse(decodeJsonRecord(row.dataJson), () => ({})),
     createdAt: row.createdAt,
     durationSincePreviousMs: Option.getOrNull(
       Option.map(Option.fromNullishOr(previousCreatedAt), (previous) =>

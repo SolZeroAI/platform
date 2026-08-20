@@ -10,13 +10,13 @@ import {
 
 export function createApiKey({ payload }: { payload: CreateApiKeyPayload }) {
   return runControlPlane(
-    Effect.fn("auth.apiKeys.create")(function* ({ request, env, principal }) {
+    Effect.fn("auth.apiKeys.create")(function* ({ request, db, principal }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing acting user context",
         401,
       )
-      const store = new UserApiKeyStore(env.DB)
+      const store = new UserApiKeyStore(db)
       const created = yield* store.create(userId, payload.label ?? null)
       return json(created, 201)
     }),
@@ -25,13 +25,13 @@ export function createApiKey({ payload }: { payload: CreateApiKeyPayload }) {
 
 export function listApiKeys() {
   return runControlPlane(
-    Effect.fn("auth.apiKeys.list")(function* ({ request, env, principal }) {
+    Effect.fn("auth.apiKeys.list")(function* ({ request, db, principal }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing acting user context",
         401,
       )
-      const store = new UserApiKeyStore(env.DB)
+      const store = new UserApiKeyStore(db)
       const keys = yield* store.listByUserId(userId)
       return json({ keys })
     }),

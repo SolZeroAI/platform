@@ -1,6 +1,6 @@
-import { parseJsonRecord, stringifyJson } from "./json"
 import { isSubagentMode } from "./subagents"
 
+import type { WorkflowNodeOptions } from "./workflows/manifest-types"
 import {
   WORKFLOW_KV_NAMESPACE_OPTIONS,
   WORKFLOW_NODE_CATALOG,
@@ -50,7 +50,7 @@ export const WORKFLOW_JSON_OBJECT_FIELD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*
 interface WorkflowNodeOptionTarget {
   id: string
   type: string
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
 }
 
 interface WorkflowNodeValidationGraph {
@@ -64,7 +64,7 @@ interface WorkflowNodeValidationGraph {
 export function getWorkflowNodeDefaultOptions(
   type: string,
   options: { now?: Date | number } = {},
-): Record<string, unknown> {
+): WorkflowNodeOptions {
   if (!isWorkflowNodeType(type)) {
     return {}
   }
@@ -260,13 +260,14 @@ function getWorkflowNodeValidationSupport(type: string): WorkflowNodeValidationS
   return isWorkflowNodeType(type) ? getWorkflowNodeDefinition(type).validation : null
 }
 
-function cloneWorkflowNodeDefaultOptions(
-  options: Record<string, unknown>,
-): Record<string, unknown> {
-  return parseJsonRecord(stringifyJson(options))
+function cloneWorkflowNodeDefaultOptions(options: WorkflowNodeOptions): WorkflowNodeOptions {
+  return structuredClone(options)
 }
 
-function getBindingValue(options: Record<string, unknown>, key: string): string | null {
+function getBindingValue(
+  options: WorkflowNodeOptions,
+  key: "bucket" | "encoding" | "namespace" | "key",
+): string | null {
   const value = options[key]
   return typeof value === "string" && value.trim() ? value.trim() : null
 }

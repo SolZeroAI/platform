@@ -6,6 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { BotStore } from "../../packages/api/src/server/background/db/bots"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -118,7 +119,7 @@ describe("bot store", () => {
   beforeEach(() => {
     sqlite = new DatabaseSync(":memory:")
     applyMigrations(sqlite)
-    store = new BotStore(new SqliteD1Database(sqlite) as unknown as D1Database)
+    store = new BotStore(makeD1Drizzle(new SqliteD1Database(sqlite) as unknown as D1Database))
   })
 
   afterEach(() => {

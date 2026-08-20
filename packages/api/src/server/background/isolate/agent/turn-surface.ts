@@ -1,6 +1,8 @@
 import { tracing as workerTracing } from "cloudflare:workers"
 import type { ToolSet } from "ai"
 import * as Option from "effect/Option"
+import { makeD1Drizzle } from "../../../effect/db/d1-drizzle"
+import { makeBackgroundTracingLayer } from "../../observability/tracing"
 import type { SessionToolSpec } from "@solzero/shared"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
 import type { Env } from "../../types"
@@ -58,6 +60,7 @@ export function buildIsolateTurnTools(input: {
 }): ToolSet {
   return buildIsolateTools({
     env: input.env,
+    db: makeD1Drizzle(input.env.DB),
     runtime: input.runtime,
     sessionId: input.sessionId,
     userId: input.userId,
@@ -70,7 +73,7 @@ export function buildIsolateTurnTools(input: {
             .log.error(error, { ...context, sessionId: input.sessionId }),
       },
     },
-    tracing: workerTracing,
+    tracingLayer: makeBackgroundTracingLayer({ tracing: workerTracing }),
   })
 }
 

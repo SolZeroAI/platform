@@ -5,6 +5,7 @@ import {
   WORKFLOW_TEMPLATES,
   type WorkflowManifest,
   type WorkflowManifestNode,
+  type WorkflowNodeOptions,
 } from "@solzero/shared"
 import {
   DEFAULT_SOURCE_HANDLE,
@@ -227,7 +228,7 @@ export function toManifest(
   }
 }
 
-export function getWorkflowNodeOptions(node: WorkflowManifestNode): Record<string, unknown> {
+export function getWorkflowNodeOptions(node: WorkflowManifestNode): WorkflowNodeOptions {
   if (node.type !== "isolate-session" && node.type !== "sandbox-session") {
     return node.options
   }

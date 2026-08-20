@@ -16,6 +16,7 @@ import {
   WORKFLOW_BUILDER_SESSION_HEADER,
 } from "../../background/session/mcp-config"
 import type { Env } from "../../background/types"
+import { WorkflowManifestDraftSchema } from "@solzero/shared"
 import {
   getWorkflowBuilderCatalog,
   submitWorkflowBuilderDraft,
@@ -32,7 +33,7 @@ const EmptyInputSchema: Tool["inputSchema"] = {
 }
 
 class WorkflowManifestInput extends Schema.Class<WorkflowManifestInput>("WorkflowManifestInput")({
-  manifest: Schema.Unknown,
+  manifest: WorkflowManifestDraftSchema,
 }) {}
 
 const WorkflowManifestInputSchema = objectInputSchema(WorkflowManifestInput)

@@ -14,12 +14,12 @@ import {
 
 export function list({ query }: { query: SessionsListQuery }) {
   return runControlPlane(
-    Effect.fn("sessions.list")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.list")(function* ({ request, env, db, principal }) {
       const userId = yield* requirePrincipalUserId(request, principal)
 
       const limit = parsePositiveInt(query.limit, 50, 100)
       const offset = parseNonNegativeInt(query.offset)
-      const store = new SessionIndexStore(env.DB)
+      const store = new SessionIndexStore(db)
       const result = yield* store.list({
         userId,
         status: query.status,

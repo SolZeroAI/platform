@@ -2,6 +2,7 @@ import type { ApiEnv } from "infra/types/env"
 import type { IdParams } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
+import { makeD1Drizzle } from "../../../../db/d1-drizzle"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
 import {
@@ -17,7 +18,7 @@ const handleStaleSessionIndex = Effect.fn("sessions.unarchive.stale")(function* 
   sessionId: string,
   response: Response,
 ) {
-  const store = new SessionIndexStore(env.DB)
+  const store = new SessionIndexStore(makeD1Drizzle(env.DB))
   const deleted = yield* store.delete(sessionId)
   return Match.value(deleted).pipe(
     Match.when(true, () => json({ status: "deleted", sessionId, reason: "stale_session_index" })),
@@ -30,7 +31,7 @@ const activateUnarchivedSession = Effect.fn("sessions.unarchive.activate")(funct
   sessionId: string,
   response: Response,
 ) {
-  const store = new SessionIndexStore(env.DB)
+  const store = new SessionIndexStore(makeD1Drizzle(env.DB))
   const activate = store.updateStatus(sessionId, "active")
   const guard = Effect.succeed(response.ok)
   yield* Effect.when(activate, guard)

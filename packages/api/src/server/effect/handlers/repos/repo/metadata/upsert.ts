@@ -15,6 +15,7 @@ export function upsertMetadata({
     Effect.fn("repos.metadata.upsert")(function* ({
       request,
       env,
+      db,
       principal,
       identityProvider,
       githubProvider,
@@ -43,7 +44,7 @@ export function upsertMetadata({
         channelAssociations,
         keywords,
       }
-      const store = new RepoMetadataStore(env.DB)
+      const store = new RepoMetadataStore(db)
       yield* store.upsert(repoAuth.repo.repoOwner, repoAuth.repo.repoName, metadata)
       return json({
         status: "updated",

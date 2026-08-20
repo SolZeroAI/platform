@@ -10,6 +10,34 @@ import type {
 export const WORKFLOW_MANIFEST_VERSION = 4 as const
 export const WORKFLOW_SUBAGENTS_MANIFEST_VERSION = 4 as const
 
+export interface WorkflowNodeOptions
+  extends
+    WorkflowSessionNodeOptions,
+    WorkflowJavaScriptNodeOptions,
+    WorkflowIfElseNodeOptions,
+    WorkflowJsonObjectOptions,
+    WorkflowDateTimeTriggerOptions,
+    WorkflowCronTriggerOptions,
+    WorkflowHttpRequestOptions,
+    WorkflowR2PutObjectOptions,
+    WorkflowR2GetObjectOptions,
+    WorkflowKvPutOptions,
+    WorkflowKvGetOptions,
+    WorkflowGetSecretOptions,
+    WorkflowUserApprovalOptions,
+    WorkflowSlackNotificationOptions,
+    WorkflowSlackTriggerOptions,
+    WorkflowSlackSendMessageOptions,
+    WorkflowSlackJoinChannelOptions,
+    WorkflowSlackFetchThreadOptions,
+    WorkflowSlackAddReactionOptions,
+    WorkflowSlackRemoveReactionOptions,
+    WorkflowEmailNotificationOptions {
+  title?: string
+  encoding?: string
+  inputValues?: Record<string, string>
+}
+
 export interface WorkflowManifestNode {
   id: string
   type: WorkflowNodeType
@@ -18,7 +46,7 @@ export interface WorkflowManifestNode {
     x: number
     y: number
   }
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
 }
 
 export interface WorkflowManifestEdge {
@@ -122,7 +150,7 @@ export interface WorkflowR2PutObjectOptions {
 export interface WorkflowKvPutOptions {
   namespace?: WorkflowKvNamespaceBinding
   key?: string
-  expirationTtl?: number
+  expirationTtl?: number | string
 }
 
 export interface WorkflowUserApprovalOptions {
@@ -150,11 +178,15 @@ export interface WorkflowSlackTriggerOptions {
   actionIds?: string[]
 }
 
+export interface WorkflowSlackBlock {
+  type: string
+}
+
 export interface WorkflowSlackSendMessageOptions {
   channel?: string
   text?: string
   threadTs?: string
-  blocks?: unknown
+  blocks?: string | WorkflowSlackBlock[]
 }
 
 export interface WorkflowSlackJoinChannelOptions {

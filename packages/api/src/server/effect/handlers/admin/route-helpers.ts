@@ -162,7 +162,7 @@ export const withAudit = <R>(
   perform: Effect.Effect<Response, unknown, R>,
 ) =>
   Effect.gen(function* () {
-    const store = new AdminStore(input.context.env.DB)
+    const store = new AdminStore(input.context.db)
     return yield* perform.pipe(
       Effect.tap((response) => auditSuccess(store, input, response)),
       Effect.tapError((failure) => auditFailure(store, input, failure)),

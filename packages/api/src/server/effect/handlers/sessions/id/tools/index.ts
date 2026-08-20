@@ -3,6 +3,7 @@ import type { IdParams, UpdateSessionToolsPayload } from "@solzero/api"
 import type { OpenCodeMcpServers, SessionToolSpec, SubagentMode } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
+import { makeD1Drizzle } from "../../../../db/d1-drizzle"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
 import {
@@ -36,7 +37,7 @@ const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
         updatedAt: number
       }>,
   )
-  const store = new SessionIndexStore(env.DB)
+  const store = new SessionIndexStore(makeD1Drizzle(env.DB))
   yield* store.updateTooling({
     id: sessionId,
     repoOwner: data.repoOwner,

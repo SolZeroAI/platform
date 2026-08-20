@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import {
   workflowSlackApps,
   workflowSlackDeliveries,
@@ -84,8 +84,8 @@ const DELIVERY_DEDUPE_MISSING_MESSAGE = "Workflow Slack delivery dedupe row was 
 export class WorkflowSlackAppStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   private toAppRecord(row: typeof workflowSlackApps.$inferSelect): WorkflowSlackAppRecord {
@@ -681,7 +681,7 @@ export interface WorkflowSlackAppStorePromise {
 }
 
 export function createWorkflowSlackAppStoreFromD1(db: D1Database): WorkflowSlackAppStorePromise {
-  const store = new WorkflowSlackAppStore(db)
+  const store = new WorkflowSlackAppStore(makeD1Drizzle(db))
   return {
     createApp: (input) => runSlackAppStoreEffect(store.createApp(input)),
     getAppById: (id) => runSlackAppStoreOption(store.getAppById(id)),

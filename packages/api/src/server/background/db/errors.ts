@@ -1,17 +1,49 @@
+import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
 
 // Typed failures for the background DB layer. Wrapping drizzle/D1 awaits in tagged errors keeps
 // the Effect error channels explicit and composes with `catchTag`/`catchTags` at call sites.
 
-/** Failure raised when a drizzle/D1 operation rejects. `cause` carries the original rejection. */
+export const D1FailureCauseSchema = Schema.Struct({
+  message: Schema.String,
+  name: Schema.optional(Schema.String),
+})
+
+export type D1FailureCause = typeof D1FailureCauseSchema.Type
+
+function nestedFailureMessage(cause: unknown): string {
+  return Match.value(cause).pipe(
+    Match.when(Match.instanceOf(Error), (error) =>
+      [error.message, nestedFailureMessage(error.cause)]
+        .filter((part) => part.length > 0)
+        .join("\n"),
+    ),
+    Match.when(Match.string, (message) => message),
+    Match.orElse(() => ""),
+  )
+}
+
+export function d1FailureCause(cause: unknown): D1FailureCause {
+  return Match.value(cause).pipe(
+    Match.when(Match.instanceOf(Error), (error) => ({
+      message: [error.message, nestedFailureMessage(error.cause)]
+        .filter((part) => part.length > 0)
+        .join("\n"),
+      name: error.name,
+    })),
+    Match.orElse(() => ({ message: String(cause) })),
+  )
+}
+
+/** Failure raised when a drizzle/D1 operation rejects. `cause` is the parsed rejection. */
 export class D1Error extends Schema.TaggedError<D1Error>()("D1Error", {
   operation: Schema.String,
-  cause: Schema.Unknown,
+  cause: D1FailureCauseSchema,
 }) {}
 
 /** Builds a `catch` handler that tags a rejected drizzle/D1 promise with its `operation`. */
 export function d1Error(operation: string) {
-  return (cause: unknown): D1Error => new D1Error({ operation, cause })
+  return (cause: unknown): D1Error => new D1Error({ operation, cause: d1FailureCause(cause) })
 }
 
 /** Failure raised when a requested MCP Context Forge server is not available in the registry. */

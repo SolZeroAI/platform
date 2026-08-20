@@ -16,6 +16,7 @@ import {
   resolveRuntimeSkillPackages,
   validateSkillResourcePath,
 } from "../../packages/api/src/server/background/skills/catalog"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 import {
   S0_CREATE_PR_SKILL_ID,
   S0_CREATE_PR_SKILL_MD,
@@ -204,7 +205,7 @@ describe("global agent skills", () => {
   })
 
   it("resolves explicit preferences before the admin default and resets cleanly", async () => {
-    const store = new AgentSkillStore(db)
+    const store = new AgentSkillStore(makeD1Drizzle(db))
     await Effect.runPromise(store.setPreference("user-1", S0_CREATE_PR_SKILL_ID, false))
     expect(await listEffectiveGlobalSkills({ db, userId: "user-1" })).toMatchObject([
       { id: S0_CREATE_PR_SKILL_ID, defaultEnabled: true, enabled: false, overridden: true },
@@ -229,7 +230,7 @@ describe("global agent skills", () => {
       bucket: bucket as unknown as R2Bucket,
       userId: "user-1",
     })
-    const store = new AgentSkillStore(db)
+    const store = new AgentSkillStore(makeD1Drizzle(db))
     await Effect.runPromise(store.setPreference("user-1", S0_CREATE_PR_SKILL_ID, true))
     const deleted = await Effect.runPromise(store.softDelete(S0_CREATE_PR_SKILL_ID))
 

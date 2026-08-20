@@ -1,5 +1,6 @@
 import { getDefaultSessionCustomMcpServers } from "../session-tools"
 import { DEFAULT_SUBAGENT_MODE } from "../subagents"
+import type { WorkflowNodeOptions } from "../workflows/manifest-types"
 
 export const WORKFLOW_NODE_TYPES = [
   "manual-trigger",
@@ -61,7 +62,7 @@ export type WorkflowNodeRuntimeSupport =
 export type WorkflowNodeDefaultOptionsDefinition =
   | {
       strategy: "static"
-      options: Record<string, unknown>
+      options: WorkflowNodeOptions
     }
   | {
       strategy: "relative-date"

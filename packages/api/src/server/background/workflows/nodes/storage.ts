@@ -2,6 +2,7 @@ import {
   WORKFLOW_KV_NAMESPACE_OPTIONS,
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
+  type WorkflowNodeOptions,
   type WorkflowStorageEncoding,
 } from "@solzero/shared"
 import { parseJson } from "../../../lib/json"
@@ -122,7 +123,7 @@ function serializeStorageContent(content: unknown): { body: string; contentType:
   )
 }
 
-function resolveR2Encoding(options: Record<string, unknown>): WorkflowStorageEncoding {
+function resolveR2Encoding(options: WorkflowNodeOptions): WorkflowStorageEncoding {
   const encoding = Option.getOrElse(getString(options.encoding), () => "text")
   return Match.value(workflowStorageEncodings.has(encoding)).pipe(
     Match.when(false, () => {
@@ -133,7 +134,7 @@ function resolveR2Encoding(options: Record<string, unknown>): WorkflowStorageEnc
 }
 
 function getR2ContentEncoding(
-  options: Record<string, unknown>,
+  options: WorkflowNodeOptions,
   manifestVersion: number | undefined,
 ): WorkflowStorageEncoding {
   return Match.value(
@@ -281,7 +282,7 @@ const runR2PutObjectNode = Effect.fn("workflows.runR2PutObjectNode")(function* (
 })
 
 const readR2Object = Effect.fn("workflows.readR2Object")(function* (params: {
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
   object: R2ObjectBody
   bucketBinding: string
   renderedKey: string
@@ -390,7 +391,7 @@ const runKvPutNode = Effect.fn("workflows.runKvPutNode")(function* (
 
 function buildKvGetResult(
   text: string,
-  options: Record<string, unknown>,
+  options: WorkflowNodeOptions,
   namespaceBinding: string,
   renderedKey: string,
 ) {

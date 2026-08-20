@@ -5,9 +5,11 @@ import {
   parseRoutineAlarmWorkflowId,
   routineAlarmWorkflowId,
   type BotRoutineSummary,
+  type WorkflowNodeOptions,
 } from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
 import { BotStore } from "../db/bots"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -498,7 +500,7 @@ const handleScheduledRoutineAlarm = Effect.fn("workflows.handleScheduledRoutineA
     schedule: StoredSchedule
     routineId: string
   }) {
-    const store = new BotStore(input.env.DB)
+    const store = new BotStore(makeD1Drizzle(input.env.DB))
     const routineOption = yield* store.getRoutineById(input.routineId)
     yield* Option.match(routineOption, {
       onNone: () =>
@@ -697,7 +699,7 @@ const scheduleTriggerNode = Effect.fn("workflows.scheduleTriggerNode")(function*
   env: Env
   workflowId: string
   userId: string
-  node: { id: string; type: string; options: Record<string, unknown> }
+  node: { id: string; type: string; options: WorkflowNodeOptions }
 }) {
   const cron = Match.value(input.node.options.cron).pipe(
     Match.when(Match.string, (value) => value.trim()),
@@ -738,7 +740,7 @@ export const scheduleWorkflowDateTriggers = Effect.fn("workflows.scheduleDateTri
     env: Env
     workflowId: string
     userId: string
-    nodes: Array<{ id: string; type: string; options: Record<string, unknown> }>
+    nodes: Array<{ id: string; type: string; options: WorkflowNodeOptions }>
   }) {
     const triggerNodes = Arr.filter(
       input.nodes,

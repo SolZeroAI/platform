@@ -17,7 +17,7 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { botRoutines, bots } from "../../effect/db/schema"
 import { generateId } from "../auth/crypto"
 import { BotNotFoundError, BotRoutineNotFoundError, d1Error, type D1Error } from "./errors"
@@ -66,11 +66,7 @@ function toRoutineSummary(row: typeof botRoutines.$inferSelect): BotRoutineSumma
 }
 
 export class BotStore {
-  constructor(private readonly db: D1Database) {}
-
-  private drizzle() {
-    return makeD1Drizzle(this.db)
-  }
+  constructor(private readonly drizzle: D1DrizzleDatabase) {}
 
   create(userId: string, input: CreateBotInput) {
     const normalized = normalizeCreateBotInput(input)
@@ -87,7 +83,7 @@ export class BotStore {
     }
     return Effect.tryPromise({
       try: () =>
-        this.drizzle().insert(bots).values({
+        this.drizzle.insert(bots).values({
           id: record.id,
           userId: record.userId,
           name: record.name,
@@ -104,7 +100,7 @@ export class BotStore {
   list(userId: string) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle()
+        this.drizzle
           .select()
           .from(bots)
           .where(eq(bots.userId, userId))
@@ -116,7 +112,7 @@ export class BotStore {
   getOwned(userId: string, botId: string) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle()
+        this.drizzle
           .select()
           .from(bots)
           .where(and(eq(bots.id, botId), eq(bots.userId, userId)))
@@ -135,7 +131,7 @@ export class BotStore {
 
   getBySessionId(sessionId: string) {
     return Effect.tryPromise({
-      try: () => this.drizzle().select().from(bots).where(eq(bots.sessionId, sessionId)).limit(1),
+      try: () => this.drizzle.select().from(bots).where(eq(bots.sessionId, sessionId)).limit(1),
       catch: d1Error("bots.getBySessionId"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0]).pipe(Option.map(toBotSummary))))
   }
@@ -146,7 +142,7 @@ export class BotStore {
       Effect.flatMap((bot) =>
         Effect.tryPromise({
           try: () =>
-            this.drizzle()
+            this.drizzle
               .update(bots)
               .set({ sessionId, updatedAt: now })
               .where(and(eq(bots.id, botId), eq(bots.userId, userId))),
@@ -178,23 +174,21 @@ export class BotStore {
       Effect.tap((record) =>
         Effect.tryPromise({
           try: () =>
-            this.drizzle()
-              .insert(botRoutines)
-              .values({
-                id: record.id,
-                botId: record.botId,
-                userId: record.userId,
-                name: record.name,
-                kind: record.kind,
-                cadenceJson: stringifyJson(record.cadence),
-                prompt: record.prompt,
-                until: record.until,
-                watchJson: stringifyJson(record.watch),
-                status: record.status,
-                lastRunAt: record.lastRunAt,
-                createdAt: record.createdAt,
-                updatedAt: record.updatedAt,
-              }),
+            this.drizzle.insert(botRoutines).values({
+              id: record.id,
+              botId: record.botId,
+              userId: record.userId,
+              name: record.name,
+              kind: record.kind,
+              cadenceJson: stringifyJson(record.cadence),
+              prompt: record.prompt,
+              until: record.until,
+              watchJson: stringifyJson(record.watch),
+              status: record.status,
+              lastRunAt: record.lastRunAt,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+            }),
           catch: d1Error("bots.createRoutine"),
         }),
       ),
@@ -206,7 +200,7 @@ export class BotStore {
       Effect.flatMap(() =>
         Effect.tryPromise({
           try: () =>
-            this.drizzle()
+            this.drizzle
               .select()
               .from(botRoutines)
               .where(and(eq(botRoutines.botId, botId), eq(botRoutines.userId, userId)))
@@ -221,7 +215,7 @@ export class BotStore {
   getRoutine(userId: string, botId: string, routineId: string) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle()
+        this.drizzle
           .select()
           .from(botRoutines)
           .where(
@@ -249,7 +243,7 @@ export class BotStore {
   getRoutineById(routineId: string) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle().select().from(botRoutines).where(eq(botRoutines.id, routineId)).limit(1),
+        this.drizzle.select().from(botRoutines).where(eq(botRoutines.id, routineId)).limit(1),
       catch: d1Error("bots.getRoutineById"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0]).pipe(Option.map(toRoutineSummary))))
   }
@@ -257,7 +251,7 @@ export class BotStore {
   markRoutineRun(routineId: string, lastRunAt: number) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle()
+        this.drizzle
           .update(botRoutines)
           .set({ lastRunAt, updatedAt: lastRunAt })
           .where(eq(botRoutines.id, routineId)),
@@ -270,7 +264,7 @@ export class BotStore {
       Effect.tap(() =>
         Effect.tryPromise({
           try: () =>
-            this.drizzle()
+            this.drizzle
               .delete(botRoutines)
               .where(
                 and(
@@ -287,7 +281,7 @@ export class BotStore {
 
   deleteRoutineById(routineId: string) {
     return Effect.tryPromise({
-      try: () => this.drizzle().delete(botRoutines).where(eq(botRoutines.id, routineId)),
+      try: () => this.drizzle.delete(botRoutines).where(eq(botRoutines.id, routineId)),
       catch: d1Error("bots.deleteRoutineById"),
     }).pipe(Effect.map(() => undefined))
   }

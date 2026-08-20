@@ -12,7 +12,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { userProviderConfigs, userProviderPreferences } from "../../effect/db/schema"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { D1Error, UserProviderPreferenceMigrationError, d1Error } from "./errors"
@@ -193,10 +193,11 @@ export class UserProviderConfigsStore {
   private readonly drizzle
 
   constructor(
-    private readonly db: D1Database,
+    drizzle: D1DrizzleDatabase,
+    private readonly d1: D1Database,
     private readonly encryptionKey: string,
   ) {
-    this.drizzle = makeD1Drizzle(db)
+    this.drizzle = drizzle
   }
 
   getSettingsSnapshot = Effect.fn("db.userProviderConfigs.getSettingsSnapshot")(function* (
@@ -415,7 +416,7 @@ export class UserProviderConfigsStore {
     const existingPreference = Option.fromNullishOr(existingPreferenceRows[0])
     yield* Effect.tryPromise({
       try: () =>
-        this.db
+        this.d1
           .prepare(
             `INSERT INTO user_provider_preferences (
               user_id,
@@ -677,7 +678,7 @@ export function createUserProviderConfigsStoreFromD1(
   db: D1Database,
   encryptionKey: string,
 ): UserProviderConfigsStorePromise {
-  const store = new UserProviderConfigsStore(db, encryptionKey)
+  const store = new UserProviderConfigsStore(makeD1Drizzle(db), db, encryptionKey)
   return {
     getSettingsSnapshot: (userId) =>
       runUserProviderConfigsEffect(store.getSettingsSnapshot(userId)),

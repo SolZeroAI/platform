@@ -12,6 +12,7 @@ import {
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
   type WorkflowManifestNode,
   type WorkflowNodeDefinition,
+  type WorkflowNodeOptions,
 } from "@solzero/shared"
 import { ExpandableLayerCard } from "@/components/expandable-layer-card"
 import { CodeSurface } from "@/components/code"
@@ -213,7 +214,7 @@ export function NodeInspector({
     }))
   }
 
-  const updateOptions = (options: Record<string, unknown>) => {
+  const updateOptions = (options: WorkflowNodeOptions) => {
     onChange((current) => ({
       ...current,
       options: { ...current.options, ...options },

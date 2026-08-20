@@ -5,7 +5,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Order from "effect/Order"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { globalSecrets } from "../../effect/db/schema"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { d1Error, type D1Error } from "./errors"
@@ -109,10 +109,10 @@ export class GlobalSecretsStore {
   private readonly drizzle
 
   constructor(
-    private readonly db: D1Database,
+    drizzle: D1DrizzleDatabase,
     private readonly encryptionKey: string,
   ) {
-    this.drizzle = makeD1Drizzle(db)
+    this.drizzle = drizzle
   }
 
   private getUserSecretPrefix(userId: string): string {
@@ -443,7 +443,7 @@ export function createGlobalSecretsStoreFromD1(
   db: D1Database,
   encryptionKey: string,
 ): GlobalSecretsStorePromise {
-  const store = new GlobalSecretsStore(db, encryptionKey)
+  const store = new GlobalSecretsStore(makeD1Drizzle(db), encryptionKey)
   return {
     setSecrets: (secrets, options) => runGlobalSecretsEffect(store.setSecrets(secrets, options)),
     listSecretKeys: (options) => runGlobalSecretsEffect(store.listSecretKeys(options)),

@@ -6,6 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { SessionIndexStore } from "../../packages/api/src/server/background/db/session-index"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -117,7 +118,7 @@ describe("SessionIndexStore.list", () => {
   beforeEach(async () => {
     sqlite = new DatabaseSync(":memory:")
     applyMigrations(sqlite)
-    store = new SessionIndexStore(new SqliteD1Database(sqlite))
+    store = new SessionIndexStore(makeD1Drizzle(new SqliteD1Database(sqlite)))
 
     await seedSessions(store)
   })

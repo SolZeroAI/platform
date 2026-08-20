@@ -50,23 +50,6 @@ import {
 import { buildLitellmCatalogProviders, getLitellmConfigWithPresence } from "./ai-providers/litellm"
 import { INTERNAL_AI_SEARCH_MCP_SERVER_NAME } from "./session/mcp-config"
 
-type SharedOverrideInput = {
-  providerId: string
-  displayName: string
-  apiKey?: string
-  clearApiKey?: boolean
-}
-
-type CustomProviderInput = {
-  providerId: string
-  name: string
-  npm?: string
-  options?: Record<string, unknown>
-  models: Record<string, ProviderModelDefinition>
-  apiKey?: string
-  clearApiKey?: boolean
-}
-
 class SharedOverrideInputSchema extends Schema.Class<SharedOverrideInputSchema>(
   "SharedOverrideInput",
 )({
@@ -150,12 +133,12 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
   ])
 
   const seenSharedProviderIds = new Set<string>()
-  const sharedOverrides = Arr.map(parsed.sharedOverrides as SharedOverrideInput[], (rawOverride) =>
+  const sharedOverrides = Arr.map(parsed.sharedOverrides, (rawOverride) =>
     normalizeSharedOverride(rawOverride, sharedProviderIds, seenSharedProviderIds),
   )
 
   const seenCustomProviderIds = new Set<string>()
-  const customProviders = Arr.map(parsed.customProviders as CustomProviderInput[], (rawProvider) =>
+  const customProviders = Arr.map(parsed.customProviders, (rawProvider) =>
     normalizeCustomProvider(rawProvider, sharedProviderIds, seenCustomProviderIds),
   )
 
@@ -174,7 +157,7 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
 }
 
 function normalizeSharedOverride(
-  rawOverride: SharedOverrideInput,
+  rawOverride: SharedOverrideInputSchema,
   sharedProviderIds: ReadonlySet<string>,
   seenSharedProviderIds: Set<string>,
 ): UserProviderSharedOverrideInput {
@@ -198,7 +181,7 @@ function normalizeSharedOverride(
 }
 
 function normalizeCustomProvider(
-  rawProvider: CustomProviderInput,
+  rawProvider: CustomProviderInputSchema,
   sharedProviderIds: ReadonlySet<string>,
   seenCustomProviderIds: Set<string>,
 ): UserProviderCustomInput {

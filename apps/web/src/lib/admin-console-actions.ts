@@ -60,9 +60,7 @@ export async function requestJson<T>(input: string, init?: RequestInit): Promise
   return data
 }
 
-export function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
+export { getErrorMessage } from "@solzero/shared"
 
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

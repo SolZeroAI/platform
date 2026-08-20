@@ -27,6 +27,8 @@ import type { Env } from "../types"
 import { compileIsolateModelContext, type IsolateModelContext } from "./model"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { buildResolvedIsolateSkillSources } from "./skills"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeBackgroundTracingLayer } from "../observability/tracing"
 import { buildIsolateTools, type IsolateWorkspaceRuntime } from "./tools"
 import { IsolateSessionAgent } from "./agent"
 import type { IsolateSubagentTrustedConfig } from "./agent/subagent-trusted-config"
@@ -182,12 +184,13 @@ export class IsolateSubAgent extends Think<Env> {
     )
     return buildIsolateTools({
       env: this.env,
+      db: makeD1Drizzle(this.env.DB),
       runtime: this.buildParentWorkspaceRuntime(),
       sessionId: turn.input.parentSessionId,
       userId: turn.input.userId,
       selectedTools: turn.input.selectedTools,
       docsRuntimeContext: this.createDocsRuntimeContext(turn.input),
-      tracing: workerTracing,
+      tracingLayer: makeBackgroundTracingLayer({ tracing: workerTracing }),
     })
   }
 

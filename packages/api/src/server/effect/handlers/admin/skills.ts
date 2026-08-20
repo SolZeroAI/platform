@@ -128,7 +128,7 @@ export function updateAgentSkill({
   return runControlPlane(
     Effect.fn("admin.skills.update")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
-      const store = new AgentSkillStore(context.env.DB)
+      const store = new AgentSkillStore(context.db)
       const skill = yield* store.requireActive(params.id).pipe(Effect.mapError(skillFailure))
       return yield* withAudit(
         {
@@ -152,7 +152,7 @@ export function deleteAgentSkill({ params }: { params: AdminIdParams }) {
   return runControlPlane(
     Effect.fn("admin.skills.delete")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
-      const store = new AgentSkillStore(context.env.DB)
+      const store = new AgentSkillStore(context.db)
       const skill = yield* store.requireActive(params.id).pipe(Effect.mapError(skillFailure))
       return yield* withAudit(
         {

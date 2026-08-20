@@ -31,7 +31,7 @@ function botFailure(cause: unknown): ControlPlaneFailure {
 }
 
 function service(context: ControlPlaneContext) {
-  return new BotRoutineService(context.env)
+  return new BotRoutineService(context.env, context.db)
 }
 
 export function list() {

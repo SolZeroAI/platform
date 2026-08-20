@@ -3,7 +3,7 @@ import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { parseJson, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { repoMetadata } from "../../effect/db/schema"
 import { d1Error } from "./errors"
 
@@ -51,8 +51,8 @@ function toMetadata(row: RepoMetadataRow): RepoMetadata {
 export class RepoMetadataStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   upsert = Effect.fn("db.repoMetadata.upsert")(function* (

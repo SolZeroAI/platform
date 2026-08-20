@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { globalSecrets, repoSecrets } from "../../effect/db/schema"
 import { d1Error } from "./errors"
 
@@ -31,7 +31,7 @@ export type RepoSecretUserResolver = (repo: {
   repoName: string
 }) => Promise<string[]>
 
-type BackfillDrizzle = ReturnType<typeof makeD1Drizzle>
+type BackfillDrizzle = D1DrizzleDatabase
 type RepoSecretRow = typeof repoSecrets.$inferSelect
 
 interface BackfillRowContext {

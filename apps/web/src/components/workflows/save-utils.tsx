@@ -6,6 +6,7 @@ import {
   getWorkflowNodeDefinitionForNode,
   type WorkflowManifest,
   type WorkflowManifestNode,
+  type WorkflowNodeOptions,
 } from "@solzero/shared"
 import {
   WorkflowRuntimeVersionChange,
@@ -249,9 +250,9 @@ export function createWorkflowSaveChangeTextDiff(
 }
 
 export function getWorkflowNodeOptionDiffValue(
-  options: Record<string, unknown>,
-  optionKey: string,
-): Record<string, unknown> {
+  options: WorkflowNodeOptions,
+  optionKey: keyof WorkflowNodeOptions,
+): WorkflowNodeOptions {
   return Object.prototype.hasOwnProperty.call(options, optionKey)
     ? { [optionKey]: options[optionKey] }
     : {}
@@ -335,9 +336,9 @@ export function updateWorkflowManifestNode(
 }
 
 export function restoreWorkflowNodeInputValues(
-  options: Record<string, unknown>,
-  previousInputValues: Record<string, unknown>,
-): Record<string, unknown> {
+  options: WorkflowNodeOptions,
+  previousInputValues: Record<string, string>,
+): WorkflowNodeOptions {
   const nextOptions = { ...options }
   if (Object.keys(previousInputValues).length > 0) {
     nextOptions.inputValues = cloneWorkflowJsonValue(previousInputValues)
@@ -348,19 +349,20 @@ export function restoreWorkflowNodeInputValues(
 }
 
 export function restoreWorkflowNodeOptionKeys(
-  options: Record<string, unknown>,
-  previousOptions: Record<string, unknown>,
-  optionKeys: string[],
-): Record<string, unknown> {
-  const nextOptions = { ...options }
-  for (const key of optionKeys) {
+  options: WorkflowNodeOptions,
+  previousOptions: WorkflowNodeOptions,
+  optionKeys: Array<keyof WorkflowNodeOptions>,
+): WorkflowNodeOptions {
+  return optionKeys.reduce((nextOptions, key) => {
     if (Object.prototype.hasOwnProperty.call(previousOptions, key)) {
-      nextOptions[key] = cloneWorkflowJsonValue(previousOptions[key])
-    } else {
-      delete nextOptions[key]
+      return {
+        ...nextOptions,
+        [key]: cloneWorkflowJsonValue(previousOptions[key]),
+      }
     }
-  }
-  return nextOptions
+    const { [key]: _omitted, ...rest } = nextOptions
+    return rest
+  }, options)
 }
 
 export function cloneWorkflowJsonValue<T>(value: T): T {
@@ -421,7 +423,7 @@ export function getWorkflowNodeChangeDetails(
         {
           kind: "node-input-values",
           nodeId: nextNode.id,
-          previousInputValues: { ...asJsonRecord(previousNode.options.inputValues) },
+          previousInputValues: { ...(previousNode.options.inputValues ?? {}) },
         },
         createWorkflowSaveChangeJsonDiff(
           "Node input values",
@@ -479,8 +481,8 @@ export function getWorkflowNodeChangeDetails(
 }
 
 export function getWorkflowInputValueChangeSummary(
-  previousOptions: Record<string, unknown>,
-  nextOptions: Record<string, unknown>,
+  previousOptions: WorkflowNodeOptions,
+  nextOptions: WorkflowNodeOptions,
 ): string | null {
   const previousInputValues = asJsonRecord(previousOptions.inputValues) ?? {}
   const nextInputValues = asJsonRecord(nextOptions.inputValues) ?? {}
@@ -496,7 +498,7 @@ export function getWorkflowInputValueChangeSummary(
 
 export function getWorkflowNodeOptionDetails(
   label: string,
-  options: Record<string, unknown>,
+  options: WorkflowNodeOptions,
 ): string[] {
   const optionKeys = Object.keys(options)
     .filter((key) => key !== "inputValues")
@@ -551,11 +553,15 @@ export function formatWorkflowConnectionEndpoint(
   return `${node ? formatWorkflowNodeLabel(node) : nodeId}.${handle}`
 }
 
-export function getRecordChangeKeys(
-  previousRecord: Record<string, unknown>,
-  nextRecord: Record<string, unknown>,
-): string[] {
-  const keys = new Set([...Object.keys(previousRecord), ...Object.keys(nextRecord)])
+function ownStringKeys<T extends object>(record: T): Array<keyof T & string> {
+  return Reflect.ownKeys(record).filter((key): key is keyof T & string => typeof key === "string")
+}
+
+export function getRecordChangeKeys<T extends object>(
+  previousRecord: T,
+  nextRecord: T,
+): Array<keyof T & string> {
+  const keys = new Set([...ownStringKeys(previousRecord), ...ownStringKeys(nextRecord)])
   return Array.from(keys)
     .filter((key) => formatJson(previousRecord[key]) !== formatJson(nextRecord[key]))
     .sort()

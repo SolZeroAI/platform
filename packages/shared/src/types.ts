@@ -118,11 +118,25 @@ export interface AgentEvent {
 }
 
 // Artifact created by session
+export interface SessionEventMetadata {
+  terminal?: boolean
+  serverName?: string
+}
+
+export interface SessionArtifactMetadata {
+  mode?: "manual_pr"
+  head?: string
+  base?: string
+  createPrUrl?: string
+  provider?: string
+  prNumber?: number
+}
+
 export interface SessionArtifact {
   id: string
   type: ArtifactType
   url: string | null
-  metadata: Record<string, unknown> | null
+  metadata: SessionArtifactMetadata | null
   createdAt: number
 }
 
@@ -168,7 +182,7 @@ export interface McpDiscoveryErrorLike {
   serverName?: string | null
   error?: string | null
   discoveryReason?: McpDiscoveryErrorReason | null
-  metadata?: Record<string, unknown> | null
+  metadata?: SessionEventMetadata | null
 }
 
 function getMcpDiscoveryServerName(event: McpDiscoveryErrorLike): string {

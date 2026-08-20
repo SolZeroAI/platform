@@ -7,6 +7,8 @@ import type {
   McpDiscoveryErrorReason,
   RuntimeActivityEvent,
   SandboxStatus,
+  SessionArtifactMetadata,
+  SessionEventMetadata,
   SessionRuntimeCapabilities,
   SessionStatus,
 } from "./types"
@@ -35,7 +37,7 @@ export interface SessionEventCommon {
   sha?: string
   artifactType?: string
   url?: string
-  metadata?: Record<string, unknown>
+  metadata?: SessionEventMetadata
   author?: {
     participantId: string
     name: string
@@ -262,7 +264,7 @@ type SessionEventPayload =
       messageId: string
       sandboxId: string
       timestamp: number
-      metadata?: Record<string, unknown>
+      metadata?: SessionEventMetadata
     }
   | {
       type: "step_limit_warning"
@@ -327,7 +329,7 @@ type SessionEventPayload =
       type: "artifact"
       artifactType: string
       url?: string
-      metadata?: Record<string, unknown>
+      metadata?: SessionArtifactMetadata
       messageId?: string
       sandboxId: string
       timestamp: number
@@ -432,7 +434,7 @@ export type ServerMessage =
         id: string
         type: string
         url: string | null
-        metadata?: Record<string, unknown> | null
+        metadata?: SessionArtifactMetadata | null
         prNumber?: number
         createdAt: number
       }

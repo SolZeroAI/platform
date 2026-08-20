@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { userMcpcfServerConfigs } from "../../effect/db/schema"
 import { d1Error, UserMcpcfMigrationError, type D1Error } from "./errors"
 
@@ -106,8 +106,8 @@ function isMissingUserMcpcfConfigTableError(errorValue: unknown): boolean {
 export class UserMcpcfServerConfigStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   get = Effect.fn("db.userMcpcf.get")(function* (
@@ -279,7 +279,7 @@ export interface UserMcpcfServerConfigStorePromise {
 export function createUserMcpcfServerConfigStoreFromD1(
   db: D1Database,
 ): UserMcpcfServerConfigStorePromise {
-  const store = new UserMcpcfServerConfigStore(db)
+  const store = new UserMcpcfServerConfigStore(makeD1Drizzle(db))
   return {
     listByUserAndServerIds: (userId, serverIds) =>
       runUserMcpcfEffect(store.listByUserAndServerIds(userId, serverIds)),

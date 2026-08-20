@@ -27,7 +27,7 @@ const handleStaleSessionIndex = Effect.fn("sessions.archive.handleStale")(functi
 
 export function archive({ params }: { params: IdParams }) {
   return runControlPlane(
-    Effect.fn("sessions.archive")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.archive")(function* ({ request, env, db, principal }) {
       const access = yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
@@ -36,7 +36,7 @@ export function archive({ params }: { params: IdParams }) {
         headers: { "Content-Type": "application/json" },
         body: stringifyJson({ userId: access.userId }),
       })
-      const store = new SessionIndexStore(env.DB)
+      const store = new SessionIndexStore(db)
       const staleResponse = yield* Match.value(response.status === 404).pipe(
         Match.when(true, () => handleStaleSessionIndex(store, params.id)),
         Match.orElse(() => Effect.succeed(Option.none<Response>())),

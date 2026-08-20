@@ -8,6 +8,7 @@ import type {
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
 } from "@solzero/api"
+import { makeD1Drizzle } from "../../db/d1-drizzle"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
 import {
@@ -288,10 +289,9 @@ export function mcpcfServers() {
 
       const servers = yield* registry.listAvailableServers()
       const serverIds = servers.map((server) => server.id)
-      const userConfigs = yield* new UserMcpcfServerConfigStore(env.DB).listByUserAndServerIds(
-        userId,
-        serverIds,
-      )
+      const userConfigs = yield* new UserMcpcfServerConfigStore(
+        makeD1Drizzle(env.DB),
+      ).listByUserAndServerIds(userId, serverIds)
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
       )
@@ -579,10 +579,9 @@ export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) 
       const contextForgeUrl = config.baseUrl.trim()
       const contextForgeApiKeysUrl = getContextForgeApiKeysUrl(contextForgeUrl)
       const serverIds = servers.map((server) => server.id)
-      const userConfigs = yield* new UserMcpcfServerConfigStore(env.DB).listByUserAndServerIds(
-        userId,
-        serverIds,
-      )
+      const userConfigs = yield* new UserMcpcfServerConfigStore(
+        makeD1Drizzle(env.DB),
+      ).listByUserAndServerIds(userId, serverIds)
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
       )
@@ -836,7 +835,7 @@ export function updateMcpcfSettings({
         400,
       )
 
-      const userConfigStore = new UserMcpcfServerConfigStore(env.DB)
+      const userConfigStore = new UserMcpcfServerConfigStore(makeD1Drizzle(env.DB))
       const existing = yield* userConfigStore.get(userId, server.id)
       const existingKey = Option.getOrNull(
         Option.flatMap(existing, (record) => Option.fromNullishOr(record.authTokenSecretKey)),

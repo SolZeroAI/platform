@@ -1,6 +1,7 @@
 import {
   WORKFLOW_NODE_CATALOG,
   WORKFLOW_TEMPLATES,
+  WorkflowManifestSchema,
   validateWorkflowDraft,
   type WorkflowDraftValidationResult,
   type WorkflowManifest,
@@ -8,9 +9,10 @@ import {
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import { prefixStorageKeyWithUserId } from "../../lib/better-auth"
 import type { Env } from "../../background/types"
-import { decodeJsonRecord, stringifyJson } from "../../lib/json"
+import { decodeJson, stringifyJson } from "../../lib/json"
 
 const WORKFLOW_BUILDER_DRAFT_TTL_SECONDS = 24 * 60 * 60
 
@@ -31,15 +33,21 @@ export interface WorkflowBuilderContext {
 interface StoredWorkflowBuilderDraft {
   sessionId: string
   userId: string
-  manifest: unknown
+  manifest: WorkflowManifest
   submittedAt: string
 }
 
-const readStringField = (record: Record<string, unknown>, key: string) =>
-  Match.value(record[key]).pipe(
-    Match.when(Match.string, (value) => value),
-    Match.orElse(() => ""),
-  )
+const StoredWorkflowBuilderDraftSchema = Schema.Struct({
+  sessionId: Schema.String,
+  userId: Schema.String,
+  manifest: WorkflowManifestSchema,
+  submittedAt: Schema.String,
+})
+
+const decodeStoredWorkflowBuilderDraft = Schema.decodeUnknownOption(
+  StoredWorkflowBuilderDraftSchema,
+  { onExcessProperty: "ignore" },
+)
 
 const logWorkflowBuilderInfo = (message: string, fields: Record<string, unknown>) =>
   Effect.logInfo(message).pipe(Effect.annotateLogs(fields))
@@ -47,28 +55,8 @@ const logWorkflowBuilderInfo = (message: string, fields: Record<string, unknown>
 const logWorkflowBuilderWarn = (message: string, fields: Record<string, unknown>) =>
   Effect.logWarning(message).pipe(Effect.annotateLogs(fields))
 
-function storedDraftFromRecord(
-  parsed: Record<string, unknown>,
-): Option.Option<StoredWorkflowBuilderDraft> {
-  const sessionId = readStringField(parsed, "sessionId")
-  const userId = readStringField(parsed, "userId")
-  const submittedAt = readStringField(parsed, "submittedAt")
-  const complete = sessionId.length > 0 && userId.length > 0 && submittedAt.length > 0
-  return Match.value(complete).pipe(
-    Match.when(true, () =>
-      Option.some({
-        sessionId,
-        userId,
-        manifest: parsed.manifest,
-        submittedAt,
-      }),
-    ),
-    Match.orElse(() => Option.none<StoredWorkflowBuilderDraft>()),
-  )
-}
-
 function parseStoredWorkflowBuilderDraft(raw: string): Option.Option<StoredWorkflowBuilderDraft> {
-  return decodeJsonRecord(raw).pipe(Option.flatMap(storedDraftFromRecord))
+  return Option.flatMap(decodeJson(raw), decodeStoredWorkflowBuilderDraft)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
