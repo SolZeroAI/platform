@@ -1,25 +1,13 @@
 core:changelogs:
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Route model traffic through Cloudflare AI Gateway\n\n<!-- creative: {\"title\":\"Send every model through one reliable gateway.\",\"bullets\":[\"Route SolZero agents through Cloudflare AI Gateway.\",\"Manage models and provider keys from one catalog.\"],\"workType\":\"feature\"} -->\n\nSolZero now provisions Cloudflare AI Gateway as its default model gateway. Each deployment profile\ncan set a model allowlist and choose its default model. Sessions that run in Isolate, OpenCode,\nCodex, or Claude Code can select a compatible gateway model.\n\nAdministrators can supply provider keys through deployment-managed secrets or the Admin dashboard.\nA user can also set a personal provider-key override. SolZero keeps injected container credentials\nin trusted Worker code.\n\nDeployment owners must grant the Cloudflare API token edit access to AI Gateway and Secrets Store\nbefore provisioning.\n"
-    filename: 2026-08-11-cloudflare-ai-gateway.md
+  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Bots can create standing and temporary routines\n\nEach bot can create its own routines. Standing routines keep running until the bot deletes them. Temporary routines watch finite work such as pull request checks and are deleted when that work is done or when the deadline passes.\n"
+    filename: 2026-08-19-bot-routines.md
     v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Publish branded release visuals\n\n<!-- creative: {\"title\":\"Give milestone releases a launch moment.\",\"bullets\":[\"Publish a polished social card for minor and major releases.\",\"Render each card directly from structured release data.\"],\"workType\":\"feature\"} -->\n\nSolZero minor and major releases now include a branded release-notes card. The card uses the SolZero\nlogo, Manrope font, and Kumo colors. Two layouts support feature summaries with different content\ndensity. Short social copy can sit beside the full technical release note. Work-type badges and\nhigh-contrast bullets make each highlight easier to scan. The structured templates keep each\nrelease image simple and consistent.\n\nTegami sends the release data to Takumi during minor and major version preparation. Takumi renders\nthe image through its native Node binding. The version pull request includes the result, and the\nGitHub release notes display the card from the release tag. Patch releases use text-only notes.\n"
-    filename: 2026-08-11-creative-release-assets.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Choose between two SolZero loader treatments\n\n<!-- creative: {\"title\":\"See SolZero come alive.\",\"bullets\":[\"Use Clean clockwise as the primary loading indicator.\",\"Preview Form spin as an alternative treatment.\"],\"workType\":\"ux\"} -->\n\nClean clockwise is now the primary loader across the web app. The Learn More Assets section also\nshows Form spin as an alternative treatment. The earlier motion study gallery has been removed so\nthe page presents only these selected loaders.\n"
-    filename: 2026-08-11-loader-motion-studies.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Show sign-in failures in a toast\n\nSolZero now shows failed sign-in messages in a Kumo error toast. The sign-in form stays stable while\nthe message remains visible and accessible.\n"
-    filename: 2026-08-17-sign-in-error-toast.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Source and releases live at SolZeroAI/platform\n\nThe SolZero platform repository is https://github.com/SolZeroAI/platform. Clone the repository, file\nissues, and read GitHub Releases at that URL. After an organization owner renames the GitHub\nrepository, GitHub redirects https://github.com/SolZeroAI/solzero to the new name.\n"
-    filename: 2026-08-18-platform-repository.md
+  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Safer decode at bot, session, workflow, and alarm edges\n\nSolZero now parses untrusted bot, session, workflow, and alarm payloads before they reach runtime code. Operators see safer decode of stored rows, manifests, and artifact metadata.\n"
+    filename: 2026-08-20-safer-boundary-decode.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-08-11-cloudflare-ai-gateway.md
-      - 2026-08-11-creative-release-assets.md
-      - 2026-08-11-loader-motion-studies.md
-      - 2026-08-17-sign-in-error-toast.md
-      - 2026-08-18-platform-repository.md
+      - 2026-08-19-bot-routines.md
+      - 2026-08-20-safer-boundary-decode.md
     id: release:solzero
     updated: true
