@@ -1,8 +1,9 @@
 # AGENTS.md
 
-Instructions for AI coding agents working with this codebase.
+## Voice
 
-All responses and output content must follow these writing style rules: write in ASD-STE100 style English that's easy to read. No antithesis. No corrective negation. No paragraph pinning. No parataxis. No summary beats. No rhetorical crutches. No negative parallelisms. No negative anaphoras. No contrasting pairs. No rule of three. No em dashes. No throat-clearing openers. No landing sentences. No setup/payoff constructions. No parallel sentence structures within a paragraph. Vary sentence length unpredictably. No stacked noun phrases. No filler intensifiers (genuinely, really, truly, actually). No corporate-register verbs (leverage, underscore, reflect). No nominalization. No hedging qualifiers. Write for the spoken voice. No performed enthusiasm.
+Use Simplified Technical English in formal, operational, and other sensible components of the document where you’re establishing specifics.
+Use Plain Language in introductory, expository, friendly, and other sensible components of the document where you’re drawing the reader in or keeping them engaged.
 
 ## Validation
 
