@@ -1,3 +1,13 @@
+## solzero@1.6.0
+
+### Bots can create standing and temporary routines
+
+Each bot can create its own routines. Standing routines keep running until the bot deletes them. Temporary routines watch finite work such as pull request checks and are deleted when that work is done or when the deadline passes.
+
+### Safer decode at bot, session, workflow, and alarm edges
+
+SolZero now parses untrusted bot, session, workflow, and alarm payloads before they reach runtime code. Operators see safer decode of stored rows, manifests, and artifact metadata.
+
 ## solzero@1.5.0
 
 ### Route model traffic through Cloudflare AI Gateway
