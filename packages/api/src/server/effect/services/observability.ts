@@ -20,6 +20,7 @@ import {
   runCloudflarePromiseSpan,
   runEffectInCloudflareSpan,
   setCloudflareSpanAttributes,
+  spanAttributeInput,
   toSpanAttributes,
   type CloudflareSpan,
   type CloudflareTracing,
@@ -302,7 +303,10 @@ export function withApiSurfaceSpan<A>(
 ): Promise<A> {
   async function runSurfaceSpan(span: CloudflareSpan): Promise<A> {
     const result = await handler()
-    setCloudflareSpanAttributes(span, compact(options.attributes?.(result) ?? {}))
+    setCloudflareSpanAttributes(
+      span,
+      spanAttributeInput(compact(options.attributes?.(result) ?? {})),
+    )
     const resultValue: unknown = result
     const response = Option.getOrUndefined(
       Option.orElse(Option.fromNullishOr(options.response?.(result)), () =>
@@ -405,7 +409,7 @@ export function withObservedSpan<A, E, R>(
   return Effect.gen(function* () {
     const currentContext = yield* Effect.context<R | RequestObservability>()
     const observability = yield* RequestObservability
-    const spanAttributes = toSpanAttributes(attributes)
+    const spanAttributes = toSpanAttributes(spanAttributeInput(attributes))
     yield* Effect.annotateCurrentSpan(spanAttributes)
     let deactivateCloudflareSpan: () => void = () => undefined
 
@@ -422,13 +426,19 @@ export function withObservedSpan<A, E, R>(
       }),
     )
 
+    const completedAttributes = Option.match(Option.fromNullishOr(options.completedAttributes), {
+      onNone: () => undefined,
+      onSome: (resolveCompletedAttributes) => (exit: Exit.Exit<A, E>, durationMs: number) =>
+        spanAttributeInput(resolveCompletedAttributes(exit, durationMs)),
+    })
+
     return yield* runEffectInCloudflareSpan({
       name,
       tracing: observability.tracing,
       attributes: spanAttributes,
       context: currentContext,
       effect: instrumented,
-      completedAttributes: options.completedAttributes,
+      completedAttributes,
       onSpanEnd: () => {
         deactivateCloudflareSpan()
       },
@@ -526,7 +536,7 @@ function runCloudflareSpan<A>(
   attributes: Record<string, unknown>,
   handler: (span: CloudflareSpan) => Promise<A>,
 ): Promise<A> {
-  return runCloudflarePromiseSpan(span, attributes, handler)
+  return runCloudflarePromiseSpan(span, spanAttributeInput(attributes), handler)
 }
 
 export function createApiRequestObserver(
@@ -552,7 +562,7 @@ export function createApiRequestObserver(
   const annotateRequestSpan = (fields: Record<string, unknown>) =>
     Option.match(activeSpan, {
       onNone: () => undefined,
-      onSome: (span) => setCloudflareSpanAttributes(span, fields),
+      onSome: (span) => setCloudflareSpanAttributes(span, spanAttributeInput(fields)),
     })
 
   const logCore = createRequestLogCore(context, annotateRequestSpan)

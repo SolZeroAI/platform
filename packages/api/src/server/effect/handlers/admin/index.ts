@@ -180,7 +180,7 @@ const performStopSession = Effect.fn("admin.performStopSession")(function* (
   context: ControlPlaneContext,
   sessionId: string,
 ) {
-  const store = new AdminStore(context.env.DB)
+  const store = new AdminStore(context.db)
   const record = yield* store.getSession(sessionId)
   yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
@@ -201,7 +201,7 @@ const performArchiveSession = Effect.fn("admin.performArchiveSession")(function*
   context: ControlPlaneContext,
   sessionId: string,
 ) {
-  const store = new AdminStore(context.env.DB)
+  const store = new AdminStore(context.db)
   const record = yield* store.getSession(sessionId)
   const resolved = yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
@@ -224,7 +224,7 @@ const performUnarchiveSession = Effect.fn("admin.performUnarchiveSession")(funct
   context: ControlPlaneContext,
   sessionId: string,
 ) {
-  const store = new AdminStore(context.env.DB)
+  const store = new AdminStore(context.db)
   const record = yield* store.getSession(sessionId)
   const resolved = yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
@@ -247,7 +247,7 @@ const performDeleteSession = Effect.fn("admin.performDeleteSession")(function* (
   context: ControlPlaneContext,
   sessionId: string,
 ) {
-  const store = new AdminStore(context.env.DB)
+  const store = new AdminStore(context.db)
   const session = yield* store.getSession(sessionId)
   yield* IsolateSessionRuntime.clearSubagentRunsBeforeDelete({
     env: context.env,
@@ -263,7 +263,7 @@ const performDeleteSession = Effect.fn("admin.performDeleteSession")(function* (
 const performGithubAccountCleanup = Effect.fn("admin.performGithubAccountCleanup")(function* (
   context: ControlPlaneContext,
 ) {
-  const result = yield* new AdminStore(context.env.DB).cleanupGitHubAccounts()
+  const result = yield* new AdminStore(context.db).cleanupGitHubAccounts()
   return json({
     status: "deleted",
     affectedUsers: result.affectedUsers,
@@ -332,7 +332,7 @@ export function summary() {
   return runControlPlane(
     Effect.fn("admin.summary")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const result = yield* new AdminStore(context.env.DB).getSummary()
+      const result = yield* new AdminStore(context.db).getSummary()
       return json(result)
     }),
   )
@@ -351,7 +351,7 @@ export function sessions({ query }: { query: AdminListQuery }) {
   return runControlPlane(
     Effect.fn("admin.sessions")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const result = yield* new AdminStore(context.env.DB).listSessions(query)
+      const result = yield* new AdminStore(context.db).listSessions(query)
       return json(result)
     }),
   )
@@ -361,7 +361,7 @@ export function session({ params }: { params: AdminIdParams }) {
   return runControlPlane(
     Effect.fn("admin.session")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const store = new AdminStore(context.env.DB)
+      const store = new AdminStore(context.db)
       const record = yield* store.getSession(params.id)
       const resolved = yield* requireOption(record, "Session not found", 404)
       return yield* buildAdminSessionResponse(context, params.id, resolved)
@@ -473,7 +473,7 @@ export function workflows({ query }: { query: AdminWorkflowListQuery }) {
   return runControlPlane(
     Effect.fn("admin.workflows")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const result = yield* new AdminStore(context.env.DB).listWorkflows(query)
+      const result = yield* new AdminStore(context.db).listWorkflows(query)
       const serverUrl = getInfraServerUrl(context.env)
       return json({
         ...result,
@@ -487,7 +487,7 @@ export function workflowRuns({ params }: { params: AdminIdParams }) {
   return runControlPlane(
     Effect.fn("admin.workflowRuns")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const store = new AdminStore(context.env.DB)
+      const store = new AdminStore(context.db)
       const workflow = yield* store.getWorkflow(params.id)
       yield* requireOption(workflow, "Workflow not found", 404)
       const runs = yield* store.listWorkflowRuns(params.id)
@@ -500,7 +500,7 @@ export function workflowRunEvents({ params }: { params: AdminWorkflowRunParams }
   return runControlPlane(
     Effect.fn("admin.workflowRunEvents")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const store = new AdminStore(context.env.DB)
+      const store = new AdminStore(context.db)
       const run = yield* store.getWorkflowRun(params.id, params.runId)
       yield* requireOption(run, "Workflow run not found", 404)
       const events = yield* store.listWorkflowRunEvents(params.id, params.runId)
@@ -513,7 +513,7 @@ export function githubAccountCleanupPreview() {
   return runControlPlane(
     Effect.fn("admin.githubAccountCleanupPreview")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
-      const preview = yield* new AdminStore(context.env.DB).previewGitHubAccountCleanup()
+      const preview = yield* new AdminStore(context.db).previewGitHubAccountCleanup()
       return json(preview)
     }),
   )

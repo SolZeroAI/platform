@@ -17,7 +17,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { sessions, workflowSessionReuseKeys } from "../../effect/db/schema"
 import type { SessionStatus } from "../types"
 import { d1Error, type D1Error } from "./errors"
@@ -124,8 +124,8 @@ export interface UpsertWorkflowSessionReuseKeyInput extends WorkflowSessionReuse
 export class SessionIndexStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   private toRecord(row: typeof sessions.$inferSelect): SessionIndexRecord {
@@ -516,7 +516,7 @@ export interface SessionIndexStorePromise {
 }
 
 export function createSessionIndexStoreFromD1(db: D1Database): SessionIndexStorePromise {
-  const store = new SessionIndexStore(db)
+  const store = new SessionIndexStore(makeD1Drizzle(db))
   return {
     getById: (id) => runSessionIndexOption(store.getById(id)),
     getWorkflowSessionReuseSessionId: (input) =>

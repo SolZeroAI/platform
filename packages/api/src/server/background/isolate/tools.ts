@@ -6,6 +6,7 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import {
   buildSessionToolRuntimePlan,
+  WorkflowManifestDraftSchema,
   type AiSearchSessionTool,
   type CreateBotRoutineInput,
   type PullRequest,
@@ -13,6 +14,7 @@ import {
 } from "@solzero/shared"
 import { BotRoutineService } from "../bots/service"
 import { BotNotFoundError } from "../db/errors"
+import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { runAiSearchMcpTool, type AiSearchMcpRuntimeContext } from "../../mcp/ai-search-runtime"
 import {
   getWorkflowBuilderCatalog,
@@ -20,11 +22,7 @@ import {
   validateWorkflowBuilderManifest,
 } from "../../mcp/workflow-builder/runtime"
 import { AiSearchRegistryStore, AiSearchSourceUnavailableError } from "../db/ai-search"
-import {
-  BackgroundTracing,
-  makeBackgroundTracingLayer,
-  type CloudflareTracing,
-} from "../observability/tracing"
+import { BackgroundTracing, type BackgroundTracingLayer } from "../observability/tracing"
 import type { Env } from "../types"
 
 const DEFAULT_GLOB_PATTERN = "**/*"
@@ -86,7 +84,7 @@ class DocsSearchToolInput extends Schema.Class<DocsSearchToolInput>("DocsSearchT
 class WorkflowManifestToolInput extends Schema.Class<WorkflowManifestToolInput>(
   "WorkflowManifestToolInput",
 )({
-  manifest: Schema.Unknown,
+  manifest: WorkflowManifestDraftSchema,
 }) {}
 
 class CreateBotRoutineToolInput extends Schema.Class<CreateBotRoutineToolInput>(
@@ -132,7 +130,7 @@ function createRoutineInputFromTool(input: CreateBotRoutineToolInput): CreateBot
 }
 
 function botRoutineService(context: IsolateToolContext) {
-  return new BotRoutineService(context.env)
+  return new BotRoutineService(context.env, context.db)
 }
 
 function requireSessionBot(context: IsolateToolContext) {
@@ -150,6 +148,7 @@ function requireSessionBot(context: IsolateToolContext) {
 }
 
 function inputSchema<S extends Schema.Decoder<unknown, never>>(schema: S) {
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- AI SDK tool input arrives as unknown. Schema.decodeUnknownResult already parses it at this boundary.
   const validate = (value: unknown): ValidationResult<S["Type"]> =>
     Schema.decodeUnknownResult(schema)(value).pipe(
       Result.match({
@@ -201,18 +200,19 @@ export interface IsolateWorkspaceRuntime {
 
 export interface IsolateToolContext {
   env: Env
+  db: D1DrizzleDatabase
   runtime: IsolateWorkspaceRuntime
   sessionId: string
   userId: string
   selectedTools: SessionToolSpec[]
   docsRuntimeContext: AiSearchMcpRuntimeContext
-  tracing?: CloudflareTracing
+  tracingLayer: BackgroundTracingLayer
 }
 
 function runIsolateTool<A, E>(
   context: IsolateToolContext,
   toolName: string,
-  attributes: Record<string, unknown>,
+  attributes: Record<string, string | number | boolean>,
   // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span runner: the `Effect<A, E>` parameter channel is intrinsic to forwarding the caller's tool effect into BackgroundTracing.
   run: Effect.Effect<A, E>,
 ) {
@@ -228,7 +228,7 @@ function runIsolateTool<A, E>(
       },
       run,
     )
-  }).pipe(Effect.provide(makeBackgroundTracingLayer({ tracing: context.tracing })))
+  }).pipe(Effect.provide(context.tracingLayer))
 }
 
 function aiSearchSourceSearchEffect(

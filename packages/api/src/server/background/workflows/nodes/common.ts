@@ -1,3 +1,4 @@
+import type { WorkflowNodeOptions } from "@solzero/shared"
 import { stringifyJson } from "../../../lib/json"
 import { raise } from "../../../lib/effect-errors"
 import type { RequestLogger } from "../../../effect/services/observability"
@@ -17,7 +18,7 @@ export interface WorkflowNodeExecutionInput {
     id: string
     type: string
     label: string
-    options?: Record<string, unknown>
+    options?: WorkflowNodeOptions
   }
   inputs: Record<string, unknown>
   trigger: WorkflowTriggerPayload

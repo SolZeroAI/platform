@@ -11,6 +11,7 @@ import {
   parseStoredOpenCodeMcpServers,
   parseStoredSessionTools,
   type RuntimeActivityEvent,
+  type SessionArtifactMetadata,
   type SessionKind,
   type SessionRuntimeCapabilities,
   type OpenCodeMcpServers,
@@ -51,6 +52,7 @@ import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object query-archive is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -297,7 +299,7 @@ export function serializeArtifact(
   id: string
   type: string
   url: string | null
-  metadata: Record<string, unknown> | null
+  metadata: SessionArtifactMetadata | null
   prNumber?: number
   createdAt: number
 } {
@@ -341,7 +343,7 @@ export function serializeRuntimeActivity(
     statusTo: row.statusTo,
     keepAlive: row.keepAlive,
     reason: row.reason,
-    data: parseArtifactMetadata(row.dataJson) ?? {},
+    data: Option.getOrElse(decodeJsonRecord(row.dataJson), () => ({})),
     createdAt: row.createdAt,
     durationSincePreviousMs: Option.getOrNull(
       Option.map(Option.fromNullishOr(previousCreatedAt), (previous) =>

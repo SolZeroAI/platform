@@ -5,6 +5,7 @@ import { resolveOktaUserId } from "../../lib/better-auth"
 import type { RequestLogger } from "../../effect/services/observability"
 import type { Env } from "../types"
 import { executeWorkflowNodeWithAdapters } from "./nodes/registry"
+import type { WorkflowManifestNode } from "@solzero/shared"
 import type { WorkflowActionsEntrypoint, WorkflowTriggerPayload } from "./runner"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -14,12 +15,7 @@ interface WorkflowNodeExecutionInput {
   workflowId: string
   runId: string
   manifestVersion?: number
-  node: {
-    id: string
-    type: string
-    label: string
-    options?: Record<string, unknown>
-  }
+  node: WorkflowManifestNode
   inputs: Record<string, unknown>
   trigger: WorkflowTriggerPayload
   userId: string

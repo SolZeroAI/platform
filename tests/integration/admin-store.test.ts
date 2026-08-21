@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import * as Effect from "effect/Effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { AdminStore } from "../../packages/api/src/server/background/db/admin"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 import {
   requireAdmin,
   withAudit,
@@ -302,7 +303,7 @@ describe("AdminStore", () => {
     sqlite = new DatabaseSync(":memory:")
     applyMigrations(sqlite)
     seedAdminRows(sqlite)
-    store = new AdminStore(new SqliteD1Database(sqlite))
+    store = new AdminStore(makeD1Drizzle(new SqliteD1Database(sqlite)))
   })
 
   afterEach(() => {
@@ -450,8 +451,10 @@ describe("AdminStore", () => {
       contentHash: "sha256-content",
       defaultEnabled: true,
     })
+    const db = new SqliteD1Database(sqlite)
     const context = {
-      env: { DB: new SqliteD1Database(sqlite) },
+      env: { DB: db },
+      db: makeD1Drizzle(db),
     } as unknown as ControlPlaneContext
 
     const response = await Effect.runPromise(

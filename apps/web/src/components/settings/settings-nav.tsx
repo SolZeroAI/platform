@@ -57,7 +57,15 @@ export function getSettingsCategoryLabel(category: SettingsCategory): string {
   return SETTINGS_NAV_ITEMS.find((item) => item.id === category)?.label ?? "Settings"
 }
 
-export function getSettingsCategoryFromSearch(search: Record<string, unknown>): SettingsCategory {
+export function getSettingsCategoryFromSearch(search: {
+  category?: string
+  githubSetup?: string
+  oktaReconnect?: string
+  slackUserId?: string
+  mcpQuery?: string
+  mcpServerId?: string
+  mcpServerLabel?: string
+}): SettingsCategory {
   if (search.githubSetup || search.oktaReconnect || search.slackUserId) {
     return "api-access"
   }

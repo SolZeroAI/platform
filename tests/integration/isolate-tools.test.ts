@@ -2,8 +2,11 @@ import * as Effect from "effect/Effect"
 import { describe, expect, it } from "vitest"
 import type { McpcfServerDefinition } from "../../packages/shared/src/session-tools"
 import type { Env } from "../../packages/api/src/server/background/types"
+import { makeBackgroundTracingLayer } from "../../packages/api/src/server/background/observability/tracing"
+import type { D1DrizzleDatabase } from "../../packages/api/src/server/effect/db/d1-drizzle"
 import {
   buildIsolateTools,
+  type IsolateToolContext,
   type IsolateWorkspaceRuntime,
 } from "../../packages/api/src/server/background/isolate/tools"
 import {
@@ -46,6 +49,18 @@ const MCPCF_SERVERS: McpcfServerDefinition[] = [
 
 const runtime = {} as IsolateWorkspaceRuntime
 const env = {} as Env
+const db = {} as D1DrizzleDatabase
+const tracingLayer = makeBackgroundTracingLayer()
+
+function isolateToolContext(
+  input: Omit<IsolateToolContext, "db" | "tracingLayer">,
+): IsolateToolContext {
+  return {
+    ...input,
+    db,
+    tracingLayer,
+  }
+}
 const prodStageEnv = compiledStageEnv("prod")
 const docsRuntimeContext = { log: { error() {} } }
 const timeMcpServer = {
@@ -112,14 +127,16 @@ function createTestMcpManager(
 
 describe("isolate tools", () => {
   it("exposes docs search without requiring an attached repository", () => {
-    const tools = buildIsolateTools({
-      env,
-      runtime,
-      sessionId: "session-docs-only",
-      userId: "user-1",
-      selectedTools: [{ kind: "ai_search", sourceId: "product-docs" }],
-      docsRuntimeContext,
-    })
+    const tools = buildIsolateTools(
+      isolateToolContext({
+        env,
+        runtime,
+        sessionId: "session-docs-only",
+        userId: "user-1",
+        selectedTools: [{ kind: "ai_search", sourceId: "product-docs" }],
+        docsRuntimeContext,
+      }),
+    )
 
     expect(Object.keys(tools)).toEqual([
       "docs_search",
@@ -131,14 +148,16 @@ describe("isolate tools", () => {
   })
 
   it("exposes repository tools only when a repository is attached", () => {
-    const tools = buildIsolateTools({
-      env,
-      runtime,
-      sessionId: "session-with-repo",
-      userId: "user-1",
-      selectedTools: [{ kind: "github_repo", repoOwner: "example-org", repoName: "ai" }],
-      docsRuntimeContext,
-    })
+    const tools = buildIsolateTools(
+      isolateToolContext({
+        env,
+        runtime,
+        sessionId: "session-with-repo",
+        userId: "user-1",
+        selectedTools: [{ kind: "github_repo", repoOwner: "example-org", repoName: "ai" }],
+        docsRuntimeContext,
+      }),
+    )
 
     expect(Object.keys(tools)).toEqual([
       "read_file",
@@ -157,14 +176,16 @@ describe("isolate tools", () => {
   })
 
   it("exposes workflow builder tools without requiring an attached repository", () => {
-    const tools = buildIsolateTools({
-      env,
-      runtime,
-      sessionId: "session-workflow-builder",
-      userId: "user-1",
-      selectedTools: [{ kind: "workflow_builder" }],
-      docsRuntimeContext,
-    })
+    const tools = buildIsolateTools(
+      isolateToolContext({
+        env,
+        runtime,
+        sessionId: "session-workflow-builder",
+        userId: "user-1",
+        selectedTools: [{ kind: "workflow_builder" }],
+        docsRuntimeContext,
+      }),
+    )
 
     expect(Object.keys(tools)).toEqual([
       "get_workflow_node_catalog",
@@ -178,14 +199,16 @@ describe("isolate tools", () => {
   })
 
   it("does not require MCP Context Forge registry records for internal isolate tools", () => {
-    const tools = buildIsolateTools({
-      env,
-      runtime,
-      sessionId: "session-mcpcf-only",
-      userId: "user-1",
-      selectedTools: [{ kind: "mcpcf_server", serverId: "server_grafana" }],
-      docsRuntimeContext,
-    })
+    const tools = buildIsolateTools(
+      isolateToolContext({
+        env,
+        runtime,
+        sessionId: "session-mcpcf-only",
+        userId: "user-1",
+        selectedTools: [{ kind: "mcpcf_server", serverId: "server_grafana" }],
+        docsRuntimeContext,
+      }),
+    )
 
     expect(Object.keys(tools)).toEqual([
       "create_bot_routine",

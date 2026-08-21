@@ -31,6 +31,20 @@ import type {
   SessionRow,
 } from "./types"
 import { toRuntimeActivityRow, toRuntimeLifecycleRow } from "./types"
+import {
+  decodeArtifactRows,
+  decodeMessageRows,
+  decodeParticipantRows,
+  decodeRuntimeActivityCreatedAtRows,
+  decodeSandboxActivityRows,
+  decodeSandboxRows,
+  decodeSessionRows,
+  decodeParticipantTokenStats,
+  decodeSqlChangeCount,
+  decodeWsClientIdRows,
+  decodeWsClientMappingRows,
+  SessionRowSchema,
+} from "./row-schemas"
 import { generateId } from "../auth/crypto"
 import { stringifyJson } from "../../lib/json"
 import { SessionEventRepository } from "./repository-events"
@@ -72,9 +86,13 @@ export class SessionRepository {
   }
 
   private getLatestRuntimeActivityCreatedAt(): Option.Option<number> {
-    const result = this.sql
-      .exec("SELECT created_at FROM sandbox_activity ORDER BY created_at DESC, rowid DESC LIMIT 1")
-      .toArray() as Array<{ created_at: number }>
+    const result = decodeRuntimeActivityCreatedAtRows(
+      this.sql
+        .exec(
+          "SELECT created_at FROM sandbox_activity ORDER BY created_at DESC, rowid DESC LIMIT 1",
+        )
+        .toArray(),
+    )
     return Option.map(Option.fromNullishOr(result[0]), (row) => row.created_at)
   }
 
@@ -166,7 +184,7 @@ export class SessionRepository {
   }
 
   getSession(): Option.Option<SessionRow> {
-    const result = this.sql.exec("SELECT * FROM session LIMIT 1").toArray() as SessionRow[]
+    const result = decodeSessionRows(this.sql.exec("SELECT * FROM session LIMIT 1").toArray())
     return Option.map(Option.fromNullishOr(result[0]), normalizeSessionRow)
   }
 
@@ -286,7 +304,7 @@ export class SessionRepository {
   }
 
   getSandbox(): Option.Option<SandboxRow> {
-    const result = this.sql.exec("SELECT * FROM sandbox LIMIT 1").toArray() as SandboxRow[]
+    const result = decodeSandboxRows(this.sql.exec("SELECT * FROM sandbox LIMIT 1").toArray())
     return Option.fromNullishOr(result[0])
   }
 
@@ -445,29 +463,30 @@ export class SessionRepository {
   }
 
   listRuntimeActivity(limit: number): RuntimeActivityRow[] {
-    return this.sql
-      .exec(
-        `SELECT id, sandbox_id, type, summary, status_from, status_to, keep_alive, reason, data, created_at FROM (
+    return decodeSandboxActivityRows(
+      this.sql
+        .exec(
+          `SELECT id, sandbox_id, type, summary, status_from, status_to, keep_alive, reason, data, created_at FROM (
            SELECT rowid AS activity_rowid, * FROM sandbox_activity
            ORDER BY created_at DESC, rowid DESC LIMIT ?1
          ) sub ORDER BY created_at ASC, activity_rowid ASC`,
-        limit,
-      )
-      .toArray()
-      .map((row) => toRuntimeActivityRow(row as SandboxActivityRow))
+          limit,
+        )
+        .toArray(),
+    ).map(toRuntimeActivityRow)
   }
 
   getParticipantByUserId(userId: string): Option.Option<ParticipantRow> {
-    const result = this.sql
-      .exec("SELECT * FROM participants WHERE user_id = ?1 LIMIT 1", userId)
-      .toArray() as ParticipantRow[]
+    const result = decodeParticipantRows(
+      this.sql.exec("SELECT * FROM participants WHERE user_id = ?1 LIMIT 1", userId).toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
   getParticipantById(participantId: string): Option.Option<ParticipantRow> {
-    const result = this.sql
-      .exec("SELECT * FROM participants WHERE id = ?1 LIMIT 1", participantId)
-      .toArray() as ParticipantRow[]
+    const result = decodeParticipantRows(
+      this.sql.exec("SELECT * FROM participants WHERE id = ?1 LIMIT 1", participantId).toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
@@ -476,20 +495,22 @@ export class SessionRepository {
     now: number,
     tokenTtlMs: number,
   ): Option.Option<ParticipantRow> {
-    const result = this.sql
-      .exec(
-        `SELECT p.*
+    const result = decodeParticipantRows(
+      this.sql
+        .exec(
+          `SELECT p.*
          FROM participant_ws_tokens t
          JOIN participants p ON p.id = t.participant_id
          WHERE t.token_hash = ?1 AND t.expires_at >= ?2
          LIMIT 1`,
-        tokenHash,
-        now,
-      )
-      .toArray() as ParticipantRow[]
+          tokenHash,
+          now,
+        )
+        .toArray(),
+    )
     return Option.orElse(Option.fromNullishOr(result[0]), () =>
       Option.fromNullishOr(
-        (
+        decodeParticipantRows(
           this.sql
             .exec(
               `SELECT * FROM participants
@@ -498,7 +519,7 @@ export class SessionRepository {
               tokenHash,
               now - tokenTtlMs,
             )
-            .toArray() as ParticipantRow[]
+            .toArray(),
         )[0],
       ),
     )
@@ -511,21 +532,18 @@ export class SessionRepository {
     latestTokenCreatedAt: number | null
     latestTokenAgeMs: number | null
   } {
-    const row = this.sql
-      .exec(
-        `SELECT
+    const row = decodeParticipantTokenStats(
+      this.sql
+        .exec(
+          `SELECT
           (SELECT COUNT(*) FROM participants) AS participant_count,
           (SELECT COUNT(*) FROM participant_ws_tokens WHERE expires_at >= ?1) AS active_token_count,
           (SELECT COUNT(*) FROM participant_ws_tokens) AS stored_token_count,
           (SELECT MAX(created_at) FROM participant_ws_tokens) AS latest_token_created_at`,
-        now,
-      )
-      .one() as {
-      participant_count: number
-      active_token_count: number
-      stored_token_count: number
-      latest_token_created_at: number | null
-    } | null
+          now,
+        )
+        .one() ?? {},
+    )
 
     const latestTokenCreatedAt = Option.getOrNull(
       Option.map(Option.fromNullishOr(row?.latest_token_created_at), (value) => Number(value)),
@@ -596,9 +614,9 @@ export class SessionRepository {
   }
 
   listParticipants(): ParticipantRow[] {
-    return this.sql
-      .exec("SELECT * FROM participants ORDER BY joined_at ASC")
-      .toArray() as ParticipantRow[]
+    return decodeParticipantRows(
+      this.sql.exec("SELECT * FROM participants ORDER BY joined_at ASC").toArray(),
+    )
   }
 
   createMessage(input: {
@@ -635,37 +653,41 @@ export class SessionRepository {
     const result = this.sql.exec(
       "SELECT COUNT(*) as count FROM messages WHERE status IN ('pending', 'processing')",
     )
-    return (result.one() as { count: number } | undefined)?.count ?? 0
+    return Number(decodeSqlChangeCount(result.one() ?? {}).count ?? 0)
   }
 
   getProcessingMessage(): Option.Option<MessageRow> {
-    const result = this.sql
-      .exec("SELECT * FROM messages WHERE status = 'processing' LIMIT 1")
-      .toArray() as MessageRow[]
+    const result = decodeMessageRows(
+      this.sql.exec("SELECT * FROM messages WHERE status = 'processing' LIMIT 1").toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
   getMessageById(messageId: string): Option.Option<MessageRow> {
-    const result = this.sql
-      .exec("SELECT * FROM messages WHERE id = ?1 LIMIT 1", messageId)
-      .toArray() as MessageRow[]
+    const result = decodeMessageRows(
+      this.sql.exec("SELECT * FROM messages WHERE id = ?1 LIMIT 1", messageId).toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
   listMessagesByStatus(status: MessageStatus, limit: number): MessageRow[] {
-    return this.sql
-      .exec(
-        "SELECT * FROM messages WHERE status = ?1 ORDER BY created_at DESC LIMIT ?2",
-        status,
-        limit,
-      )
-      .toArray() as MessageRow[]
+    return decodeMessageRows(
+      this.sql
+        .exec(
+          "SELECT * FROM messages WHERE status = ?1 ORDER BY created_at DESC LIMIT ?2",
+          status,
+          limit,
+        )
+        .toArray(),
+    )
   }
 
   getNextPendingMessage(): Option.Option<MessageRow> {
-    const result = this.sql
-      .exec("SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1")
-      .toArray() as MessageRow[]
+    const result = decodeMessageRows(
+      this.sql
+        .exec("SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1")
+        .toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
@@ -704,13 +726,13 @@ export class SessionRepository {
 
   getMessageCount(): number {
     const result = this.sql.exec("SELECT COUNT(*) as count FROM messages")
-    return (result.one() as { count: number } | undefined)?.count ?? 0
+    return Number(decodeSqlChangeCount(result.one() ?? {}).count ?? 0)
   }
 
   listMessages(limit: number): MessageRow[] {
-    return this.sql
-      .exec("SELECT * FROM messages ORDER BY created_at DESC LIMIT ?1", limit)
-      .toArray() as MessageRow[]
+    return decodeMessageRows(
+      this.sql.exec("SELECT * FROM messages ORDER BY created_at DESC LIMIT ?1", limit).toArray(),
+    )
   }
 
   createArtifact(input: {
@@ -731,12 +753,14 @@ export class SessionRepository {
   }
 
   getLatestArtifactByType(type: string): Option.Option<ArtifactRow> {
-    const result = this.sql
-      .exec(
-        "SELECT * FROM artifacts WHERE type = ?1 ORDER BY created_at DESC, id DESC LIMIT 1",
-        type,
-      )
-      .toArray() as ArtifactRow[]
+    const result = decodeArtifactRows(
+      this.sql
+        .exec(
+          "SELECT * FROM artifacts WHERE type = ?1 ORDER BY created_at DESC, id DESC LIMIT 1",
+          type,
+        )
+        .toArray(),
+    )
     return Option.fromNullishOr(result[0])
   }
 
@@ -794,9 +818,9 @@ export class SessionRepository {
   }
 
   listArtifacts(): ArtifactRow[] {
-    return this.sql
-      .exec("SELECT * FROM artifacts ORDER BY created_at DESC")
-      .toArray() as ArtifactRow[]
+    return decodeArtifactRows(
+      this.sql.exec("SELECT * FROM artifacts ORDER BY created_at DESC").toArray(),
+    )
   }
 
   upsertWsClientMapping(input: {
@@ -816,9 +840,9 @@ export class SessionRepository {
   }
 
   hasWsClientMapping(wsId: string): boolean {
-    const rows = this.sql
-      .exec("SELECT ws_id FROM ws_client_mapping WHERE ws_id = ?1 LIMIT 1", wsId)
-      .toArray() as Array<{ ws_id: string }>
+    const rows = decodeWsClientIdRows(
+      this.sql.exec("SELECT ws_id FROM ws_client_mapping WHERE ws_id = ?1 LIMIT 1", wsId).toArray(),
+    )
     return rows.length > 0
   }
 
@@ -829,21 +853,17 @@ export class SessionRepository {
     github_name: string | null
     github_login: string | null
   }> {
-    const rows = this.sql
-      .exec(
-        `SELECT m.participant_id, m.client_id, p.user_id, p.github_name, p.github_login
+    const rows = decodeWsClientMappingRows(
+      this.sql
+        .exec(
+          `SELECT m.participant_id, m.client_id, p.user_id, p.github_name, p.github_login
          FROM ws_client_mapping m
          JOIN participants p ON p.id = m.participant_id
          WHERE m.ws_id = ?1 LIMIT 1`,
-        wsId,
-      )
-      .toArray() as Array<{
-      participant_id: string
-      client_id: string
-      user_id: string
-      github_name: string | null
-      github_login: string | null
-    }>
+          wsId,
+        )
+        .toArray(),
+    )
     return Option.fromNullishOr(rows[0])
   }
 }
@@ -896,13 +916,19 @@ export function toSessionRuntimeRepository(
   }
 }
 
-function normalizeSessionRow(row: SessionRow): SessionRow {
+function normalizeSessionRow(row: typeof SessionRowSchema.Type): SessionRow {
   return {
     ...row,
     agent_runtime: resolveAgentRuntime({
-      agentRuntime: row.agent_runtime,
+      agentRuntime: row.agent_runtime ?? undefined,
       sessionKind: row.session_kind,
     }),
+    github_installation_id: row.github_installation_id ?? null,
+    github_repo_id: row.github_repo_id ?? null,
+    repo_default_branch: row.repo_default_branch ?? null,
+    branch_name: row.branch_name ?? null,
+    secret_keys_json: row.secret_keys_json ?? "[]",
+    isolate_step_limit: normalizeIsolateStepLimit(row.isolate_step_limit),
     subagents: resolveSessionSubagentMode(row.session_kind, row.subagents),
   }
 }

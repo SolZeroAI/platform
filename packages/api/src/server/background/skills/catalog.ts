@@ -10,7 +10,7 @@ import {
   AgentSkillValidationError,
   d1Error,
 } from "../db/errors"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { agentSkills, userAgentSkillPreferences } from "../../effect/db/schema"
 import { S0_CREATE_PR_SKILL_ID, S0_CREATE_PR_SKILL_MD } from "./built-ins"
 
@@ -117,8 +117,8 @@ function runtimeScopeCondition(runtimeScope: "harness" | "isolate") {
 export class AgentSkillStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   listActiveGlobal = Effect.fn("db.agentSkills.listActiveGlobal")(function* (
@@ -580,7 +580,7 @@ export async function createAdminGlobalSkill(input: {
 }): Promise<AgentSkillRecord> {
   const parsed = parseAgentSkillMarkdown(input.skillMd)
   const contentHash = await hashSkillContent(input.skillMd)
-  const store = new AgentSkillStore(input.db)
+  const store = new AgentSkillStore(makeD1Drizzle(input.db))
   const existing = await Effect.runPromise(store.getActiveGlobalBySlug(parsed.name))
   if (Option.isSome(existing)) {
     throw new AgentSkillConflictError({ message: `Skill '${parsed.name}' already exists` })
@@ -614,7 +614,7 @@ export async function resolveRuntimeSkillPackages(input: {
   bucket: R2Bucket
   userId: string
 }): Promise<RuntimeSkillPackage[]> {
-  const store = new AgentSkillStore(input.db)
+  const store = new AgentSkillStore(makeD1Drizzle(input.db))
   const effective = await Effect.runPromise(store.listEffectiveGlobal(input.userId, "harness"))
   return Promise.all(
     effective
@@ -633,12 +633,12 @@ export async function listEffectiveGlobalSkills(input: {
   userId: string
 }): Promise<EffectiveAgentSkill[]> {
   return Effect.runPromise(
-    new AgentSkillStore(input.db).listEffectiveGlobal(input.userId, "harness"),
+    new AgentSkillStore(makeD1Drizzle(input.db)).listEffectiveGlobal(input.userId, "harness"),
   )
 }
 
 export async function listAdminGlobalSkills(db: D1Database): Promise<AgentSkillRecord[]> {
-  return Effect.runPromise(new AgentSkillStore(db).listActiveGlobal("harness"))
+  return Effect.runPromise(new AgentSkillStore(makeD1Drizzle(db)).listActiveGlobal("harness"))
 }
 
 export async function listIsolateGlobalSkillNames(input: {
@@ -646,7 +646,7 @@ export async function listIsolateGlobalSkillNames(input: {
   userId: string
 }): Promise<string[]> {
   const effective = await Effect.runPromise(
-    new AgentSkillStore(input.db).listEffectiveGlobal(input.userId, "isolate"),
+    new AgentSkillStore(makeD1Drizzle(input.db)).listEffectiveGlobal(input.userId, "isolate"),
   )
   return effective.filter((skill) => skill.enabled).map((skill) => skill.name)
 }

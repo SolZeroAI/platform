@@ -7,6 +7,8 @@ import type {
   McpDiscoveryErrorReason,
   RuntimeActivityEvent,
   SandboxStatus,
+  SessionArtifactMetadata,
+  SessionEventMetadata,
   SessionRuntimeCapabilities,
   SessionStatus,
 } from "./types"
@@ -18,6 +20,7 @@ export interface SessionEventCommon {
   assistantMessageId?: string
   content?: string
   tool?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Live MCP and tool calls send open JSON argument bags. A closed args schema would reject those calls.
   args?: Record<string, unknown>
   callId?: string
   serverName?: string
@@ -35,7 +38,7 @@ export interface SessionEventCommon {
   sha?: string
   artifactType?: string
   url?: string
-  metadata?: Record<string, unknown>
+  metadata?: SessionEventMetadata
   author?: {
     participantId: string
     name: string
@@ -234,6 +237,7 @@ type SessionEventPayload =
   | {
       type: "tool_call"
       tool: string
+      // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Live MCP and tool calls send open JSON argument bags. A closed args schema would reject those calls.
       args: Record<string, unknown>
       callId: string
       messageId: string
@@ -262,7 +266,7 @@ type SessionEventPayload =
       messageId: string
       sandboxId: string
       timestamp: number
-      metadata?: Record<string, unknown>
+      metadata?: SessionEventMetadata
     }
   | {
       type: "step_limit_warning"
@@ -327,7 +331,7 @@ type SessionEventPayload =
       type: "artifact"
       artifactType: string
       url?: string
-      metadata?: Record<string, unknown>
+      metadata?: SessionArtifactMetadata
       messageId?: string
       sandboxId: string
       timestamp: number
@@ -432,7 +436,7 @@ export type ServerMessage =
         id: string
         type: string
         url: string | null
-        metadata?: Record<string, unknown> | null
+        metadata?: SessionArtifactMetadata | null
         prNumber?: number
         createdAt: number
       }

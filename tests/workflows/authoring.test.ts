@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest"
+import * as Option from "effect/Option"
 import {
   WORKFLOW_MANIFEST_VERSION,
   WORKFLOW_TEMPLATES,
   getWorkflowExecutionOrder,
   parseWorkflowExport,
+  parseWorkflowManifest,
+  parseWorkflowNodeOptions,
   serializeWorkflowExport,
   validateWorkflowDraft,
   type WorkflowManifest,
@@ -500,5 +503,16 @@ describe("workflow authoring helpers", () => {
           node.options.eventTypes.includes("channel_created"),
       ),
     ).toBe(true)
+  })
+
+  it("parses workflow node option bags and complete manifests", () => {
+    expect(parseWorkflowNodeOptions({ prompt: "Investigate the alert", extra: true })).toEqual({
+      prompt: "Investigate the alert",
+    })
+    expect(parseWorkflowNodeOptions("not-an-object")).toEqual({})
+    expect(Option.getOrUndefined(parseWorkflowManifest(storageManifest()))).toEqual(
+      storageManifest(),
+    )
+    expect(Option.isNone(parseWorkflowManifest({ name: "incomplete" }))).toBe(true)
   })
 })

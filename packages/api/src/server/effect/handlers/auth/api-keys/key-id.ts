@@ -11,13 +11,13 @@ import {
 
 export function deleteApiKey({ params }: { params: KeyIdParams }) {
   return runControlPlane(
-    Effect.fn("auth.apiKeys.delete")(function* ({ request, env, principal }) {
+    Effect.fn("auth.apiKeys.delete")(function* ({ request, db, principal }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing acting user context",
         401,
       )
-      const store = new UserApiKeyStore(env.DB)
+      const store = new UserApiKeyStore(db)
       const deleted = yield* store.revoke(userId, params.keyId)
       yield* failUnless(deleted, "API key not found", 404)
       return json({ status: "deleted", keyId: params.keyId })

@@ -101,7 +101,7 @@ export function adminPathForView(view: AdminView): AdminRoutePath {
 
 export function adminViewFromPath(
   pathname: string | undefined,
-  search?: Record<string, unknown>,
+  search?: { view?: string },
 ): AdminView {
   if (pathname?.startsWith("/admin/workflows")) {
     return "workflows"
@@ -173,7 +173,7 @@ export function normalizeAdminSearch(
   }
 }
 
-function parseAdminView(search: Record<string, unknown>): AdminView {
+function parseAdminView(search: { view?: unknown }): AdminView {
   return search.view === "sessions" ||
     search.view === "workflows" ||
     search.view === "ai-search" ||

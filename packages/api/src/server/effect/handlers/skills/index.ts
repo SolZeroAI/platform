@@ -58,7 +58,7 @@ export function setPreference({
   return runControlPlane(
     Effect.fn("skills.setPreference")(function* (context: ControlPlaneContext) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
-      yield* new AgentSkillStore(context.env.DB)
+      yield* new AgentSkillStore(context.db)
         .setPreference(userId, params.skillId, payload.enabled)
         .pipe(Effect.mapError(skillFailure))
       return yield* listForUser(context, userId)
@@ -70,7 +70,7 @@ export function clearPreference({ params }: { params: AgentSkillParams }) {
   return runControlPlane(
     Effect.fn("skills.clearPreference")(function* (context: ControlPlaneContext) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
-      yield* new AgentSkillStore(context.env.DB)
+      yield* new AgentSkillStore(context.db)
         .clearPreference(userId, params.skillId)
         .pipe(Effect.mapError(skillFailure))
       return yield* listForUser(context, userId)

@@ -50,23 +50,6 @@ import {
 import { buildLitellmCatalogProviders, getLitellmConfigWithPresence } from "./ai-providers/litellm"
 import { INTERNAL_AI_SEARCH_MCP_SERVER_NAME } from "./session/mcp-config"
 
-type SharedOverrideInput = {
-  providerId: string
-  displayName: string
-  apiKey?: string
-  clearApiKey?: boolean
-}
-
-type CustomProviderInput = {
-  providerId: string
-  name: string
-  npm?: string
-  options?: Record<string, unknown>
-  models: Record<string, ProviderModelDefinition>
-  apiKey?: string
-  clearApiKey?: boolean
-}
-
 class SharedOverrideInputSchema extends Schema.Class<SharedOverrideInputSchema>(
   "SharedOverrideInput",
 )({
@@ -108,6 +91,7 @@ interface ResolvedProviderRecord {
   providerId: string
   name: string
   npm?: string
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   source: "shared" | "custom"
@@ -150,12 +134,12 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
   ])
 
   const seenSharedProviderIds = new Set<string>()
-  const sharedOverrides = Arr.map(parsed.sharedOverrides as SharedOverrideInput[], (rawOverride) =>
+  const sharedOverrides = Arr.map(parsed.sharedOverrides, (rawOverride) =>
     normalizeSharedOverride(rawOverride, sharedProviderIds, seenSharedProviderIds),
   )
 
   const seenCustomProviderIds = new Set<string>()
-  const customProviders = Arr.map(parsed.customProviders as CustomProviderInput[], (rawProvider) =>
+  const customProviders = Arr.map(parsed.customProviders, (rawProvider) =>
     normalizeCustomProvider(rawProvider, sharedProviderIds, seenCustomProviderIds),
   )
 
@@ -174,7 +158,7 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
 }
 
 function normalizeSharedOverride(
-  rawOverride: SharedOverrideInput,
+  rawOverride: SharedOverrideInputSchema,
   sharedProviderIds: ReadonlySet<string>,
   seenSharedProviderIds: Set<string>,
 ): UserProviderSharedOverrideInput {
@@ -198,7 +182,7 @@ function normalizeSharedOverride(
 }
 
 function normalizeCustomProvider(
-  rawProvider: CustomProviderInput,
+  rawProvider: CustomProviderInputSchema,
   sharedProviderIds: ReadonlySet<string>,
   seenCustomProviderIds: Set<string>,
 ): UserProviderCustomInput {
@@ -478,6 +462,7 @@ async function compiledProviderOptions(
     selectedProviderId: string
     selectedModelId: string
   },
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
 ): Promise<Record<string, unknown>> {
   const cloudflareOptions = await compileCloudflareAiGatewayProviderOptions({
     env: selection.env,
@@ -497,6 +482,7 @@ async function compiledProviderOptions(
 function defaultCompiledProviderOptions(
   provider: ResolvedProviderRecord,
   sharedProviderCredentialMode: SharedProviderCredentialMode,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
 ): Record<string, unknown> {
   const credentialOptions = Match.value(provider.credentialSource).pipe(
     Match.when("binding", () =>
@@ -511,6 +497,7 @@ function defaultCompiledProviderOptions(
       apiKey: compiledProviderApiKey(provider, sharedProviderCredentialMode),
     })),
   )
+  // oxlint-disable-next-line anti-slop/no-known-value-widening -- Provider catalog owner is open provider JSON. The compiled options bag stays open so live provider configs keep working.
   return {
     ...provider.options,
     ...credentialOptions,

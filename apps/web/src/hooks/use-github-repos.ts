@@ -1,5 +1,6 @@
 "use client"
 
+import { getErrorMessage } from "@solzero/shared"
 import { useCallback, useEffect, useState } from "react"
 import type { RepoQueryState } from "@/components/home-git-repo-dialog"
 
@@ -27,10 +28,6 @@ export const INITIAL_GITHUB_REPO_QUERY: RepoQueryState = {
   order: "desc",
   page: 1,
   perPage: 10,
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Request failed"
 }
 
 export function useGitHubRepos(options: { enabled?: boolean } = {}) {
@@ -90,7 +87,7 @@ export function useGitHubRepos(options: { enabled?: boolean } = {}) {
       setRepoPagination(data.pagination ?? null)
       setGithubAppInstallUrl(data.githubAppInstallUrl ?? null)
     } catch (errorValue) {
-      setRepoLoadError(getErrorMessage(errorValue))
+      setRepoLoadError(getErrorMessage(errorValue, "Request failed"))
     } finally {
       setLoadingRepos(false)
     }

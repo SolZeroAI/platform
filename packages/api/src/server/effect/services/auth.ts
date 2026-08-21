@@ -12,6 +12,7 @@ import {
   type AuthPrincipal,
 } from "@solzero/api"
 import { UserApiKeyStore } from "../../background/db/user-api-keys"
+import { makeD1Drizzle } from "../db/d1-drizzle"
 import { getSessionContextFromHeaders } from "../../lib/better-auth"
 import { CloudflareContext } from "./cloudflare"
 
@@ -20,7 +21,7 @@ const API_KEY_PREFIX = "oiak_"
 export const CurrentRequest = HttpServerRequest.HttpServerRequest
 
 const verifyApiKey = Effect.fn("auth.verifyApiKey")(function* (rawApiKey: string, env: ApiEnv) {
-  const store = new UserApiKeyStore(env.DB)
+  const store = new UserApiKeyStore(makeD1Drizzle(env.DB))
   const verified = yield* store
     .verify(rawApiKey)
     .pipe(

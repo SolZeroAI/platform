@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import * as Effect from "effect/Effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { GlobalSecretsStore } from "../../packages/api/src/server/background/db/repo-secrets"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -113,7 +114,7 @@ describe("GlobalSecretsStore D1 filtering", () => {
   beforeEach(async () => {
     const sqlite = new DatabaseSync(":memory:")
     applyMigrations(sqlite)
-    store = new GlobalSecretsStore(new SqliteD1Database(sqlite), ENCRYPTION_KEY)
+    store = new GlobalSecretsStore(makeD1Drizzle(new SqliteD1Database(sqlite)), ENCRYPTION_KEY)
 
     await Effect.runPromise(
       store.setSecrets(

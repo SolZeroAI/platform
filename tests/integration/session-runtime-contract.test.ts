@@ -11,6 +11,7 @@ import {
   RunSessionResponse,
 } from "../../packages/api/src"
 import { SessionIndexStore } from "../../packages/api/src/server/background/db/session-index"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 import { SessionRepository } from "../../packages/api/src/server/background/session/repository"
 import { collectPromptResult } from "../../packages/api/src/server/effect/handlers/shared/control-plane/sessions"
 import { InternalRequests } from "../../packages/api/src/server/effect/handlers/shared/control-plane"
@@ -599,13 +600,15 @@ describe("session runtime contract", () => {
       raw: vi.fn(),
     }
     const prepare = vi.fn((_query: string) => statement)
-    const store = new SessionIndexStore({
-      prepare,
-      batch: vi.fn(),
-      exec: vi.fn(),
-      withSession: vi.fn(),
-      dump: vi.fn(),
-    })
+    const store = new SessionIndexStore(
+      makeD1Drizzle({
+        prepare,
+        batch: vi.fn(),
+        exec: vi.fn(),
+        withSession: vi.fn(),
+        dump: vi.fn(),
+      } as D1Database),
+    )
 
     await Effect.runPromise(
       store.create({
@@ -666,13 +669,15 @@ describe("session runtime contract", () => {
       raw: vi.fn(),
     }
     const prepare = vi.fn((_query: string) => statement)
-    const store = new SessionIndexStore({
-      prepare,
-      batch: vi.fn(),
-      exec: vi.fn(),
-      withSession: vi.fn(),
-      dump: vi.fn(),
-    })
+    const store = new SessionIndexStore(
+      makeD1Drizzle({
+        prepare,
+        batch: vi.fn(),
+        exec: vi.fn(),
+        withSession: vi.fn(),
+        dump: vi.fn(),
+      } as D1Database),
+    )
 
     await Effect.runPromise(
       store.upsertWorkflowSessionReuseKey({

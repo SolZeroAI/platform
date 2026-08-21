@@ -13,6 +13,7 @@ import type {
   SessionKind,
   SessionToolSpec,
   SubagentMode,
+  WorkflowNodeOptions,
   SubagentRunSummary,
 } from "@solzero/shared"
 import {
@@ -530,7 +531,7 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
   input: WorkflowSessionNodeExecutionInput
   sessionKind: SessionKind
   resolvedWorkflow: { name: string; user_id: string }
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
   content: string
   cacheKey: Option.Option<RenderedWorkflowSessionKey>
   cacheTtl: Option.Option<number>

@@ -5,9 +5,11 @@ import {
   parseRoutineAlarmWorkflowId,
   routineAlarmWorkflowId,
   type BotRoutineSummary,
+  type WorkflowNodeOptions,
 } from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
 import { BotStore } from "../db/bots"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -17,6 +19,18 @@ import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
+
+const StoredScheduleSchema = Schema.Struct({
+  workflowId: Schema.String,
+  nodeId: Schema.String,
+  kind: Schema.optional(Schema.Literals(["datetime", "cron"])),
+  scheduledAt: Schema.String,
+  userId: Schema.String,
+  cron: Schema.optional(Schema.NullOr(Schema.String)),
+  target: Schema.optional(Schema.Literals(["workflow", "routine"])),
+})
+type StoredScheduleInput = typeof StoredScheduleSchema.Type
 
 interface StoredSchedule {
   workflowId: string
@@ -26,6 +40,24 @@ interface StoredSchedule {
   userId: string
   cron?: string | null
   target?: "workflow" | "routine"
+}
+
+function storedScheduleFromDecoded(decoded: StoredScheduleInput): StoredSchedule {
+  return {
+    workflowId: decoded.workflowId,
+    nodeId: decoded.nodeId,
+    kind: Match.value(decoded.kind).pipe(
+      Match.when("cron", () => "cron" as const),
+      Match.orElse(() => "datetime" as const),
+    ),
+    scheduledAt: decoded.scheduledAt,
+    userId: decoded.userId,
+    cron: decoded.cron,
+    target: Match.value(decoded.target).pipe(
+      Match.when("routine", () => "routine" as const),
+      Match.orElse(() => "workflow" as const),
+    ),
+  }
 }
 
 interface WorkflowAlarmStorage {
@@ -204,12 +236,7 @@ export function nextCronDate(expression: string, after: Date): Date {
 
 const scheduleValidAlarm = Effect.fn("workflows.scheduleValidAlarm")(function* (input: {
   storage: WorkflowAlarmStorage
-  body: Partial<StoredSchedule> & {
-    workflowId: string
-    nodeId: string
-    scheduledAt: string
-    userId: string
-  }
+  body: StoredScheduleInput
 }) {
   const timestamp = Date.parse(input.body.scheduledAt)
   return yield* Match.value(Number.isFinite(timestamp)).pipe(
@@ -224,35 +251,21 @@ const scheduleValidAlarm = Effect.fn("workflows.scheduleValidAlarm")(function* (
 
 const persistAlarmSchedule = Effect.fn("workflows.persistAlarmSchedule")(function* (input: {
   storage: WorkflowAlarmStorage
-  body: Partial<StoredSchedule> & {
-    workflowId: string
-    nodeId: string
-    scheduledAt: string
-    userId: string
-  }
+  body: StoredScheduleInput
   timestamp: number
 }) {
-  const kind = Match.value(input.body.kind).pipe(
-    Match.when("cron", () => "cron" as const),
-    Match.orElse(() => "datetime" as const),
-  )
-  const cron = Match.value(input.body.cron).pipe(
-    Match.when(Match.string, (value) => value),
-    Match.orElse(() => null),
-  )
-  const target = Match.value(input.body.target).pipe(
-    Match.when("routine", () => "routine" as const),
-    Match.orElse(() => "workflow" as const),
-  )
-  const schedule: StoredSchedule = {
+  const schedule = storedScheduleFromDecoded({
     workflowId: input.body.workflowId,
     nodeId: input.body.nodeId,
-    kind,
+    kind: input.body.kind,
     scheduledAt: new Date(input.timestamp).toISOString(),
     userId: input.body.userId,
-    cron,
-    target,
-  }
+    cron: Match.value(input.body.cron).pipe(
+      Match.when(Match.string, (value) => value),
+      Match.orElse(() => null),
+    ),
+    target: input.body.target,
+  })
   yield* Effect.tryPromise({
     try: () => input.storage.put("schedule", schedule),
     catch: toError,
@@ -268,29 +281,21 @@ const scheduleAlarmRequest = Effect.fn("workflows.scheduleAlarmRequest")(functio
   request: Request
   storage: WorkflowAlarmStorage
 }) {
-  const body = (yield* Effect.tryPromise({
-    try: () => input.request.json() as Promise<Partial<StoredSchedule>>,
+  const body = yield* Effect.tryPromise({
+    try: () => input.request.json(),
     catch: toError,
-  })) as Partial<StoredSchedule>
-  const valid = Boolean(body.workflowId && body.nodeId && body.scheduledAt && body.userId)
-  return yield* Match.value(valid).pipe(
-    Match.when(false, () =>
+  })
+  return yield* Option.match(Schema.decodeUnknownOption(StoredScheduleSchema)(body), {
+    onNone: () =>
       Effect.succeed(
         json({ error: "workflowId, nodeId, userId, and scheduledAt are required" }, 400),
       ),
-    ),
-    Match.orElse(() =>
+    onSome: (decoded) =>
       scheduleValidAlarm({
         storage: input.storage,
-        body: body as Partial<StoredSchedule> & {
-          workflowId: string
-          nodeId: string
-          scheduledAt: string
-          userId: string
-        },
+        body: decoded,
       }),
-    ),
-  )
+  })
 })
 
 const cancelAlarmRequest = Effect.fn("workflows.cancelAlarmRequest")(function* (input: {
@@ -391,15 +396,24 @@ const handleWorkflowAlarmEffect = Effect.fn("workflows.handleAlarm")(function* (
   env: Env
   storage: WorkflowAlarmStorage
 }) {
-  const schedule = yield* Effect.tryPromise({
-    try: () => input.storage.get<StoredSchedule>("schedule"),
+  const stored = yield* Effect.tryPromise({
+    try: () => input.storage.get("schedule"),
     catch: toError,
   })
-  yield* Option.match(Option.fromNullishOr(schedule), {
-    onNone: () => Effect.void,
-    onSome: (resolved) =>
-      handleScheduledAlarm({ env: input.env, storage: input.storage, schedule: resolved }),
-  })
+  yield* Option.match(
+    Option.flatMap(Option.fromNullishOr(stored), (value) =>
+      Schema.decodeUnknownOption(StoredScheduleSchema)(value),
+    ),
+    {
+      onNone: () => Effect.void,
+      onSome: (decoded) =>
+        handleScheduledAlarm({
+          env: input.env,
+          storage: input.storage,
+          schedule: storedScheduleFromDecoded(decoded),
+        }),
+    },
+  )
 })
 
 const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(function* (input: {
@@ -486,7 +500,7 @@ const handleScheduledRoutineAlarm = Effect.fn("workflows.handleScheduledRoutineA
     schedule: StoredSchedule
     routineId: string
   }) {
-    const store = new BotStore(input.env.DB)
+    const store = new BotStore(makeD1Drizzle(input.env.DB))
     const routineOption = yield* store.getRoutineById(input.routineId)
     yield* Option.match(routineOption, {
       onNone: () =>
@@ -685,7 +699,7 @@ const scheduleTriggerNode = Effect.fn("workflows.scheduleTriggerNode")(function*
   env: Env
   workflowId: string
   userId: string
-  node: { id: string; type: string; options: Record<string, unknown> }
+  node: { id: string; type: string; options: WorkflowNodeOptions }
 }) {
   const cron = Match.value(input.node.options.cron).pipe(
     Match.when(Match.string, (value) => value.trim()),
@@ -726,7 +740,7 @@ export const scheduleWorkflowDateTriggers = Effect.fn("workflows.scheduleDateTri
     env: Env
     workflowId: string
     userId: string
-    nodes: Array<{ id: string; type: string; options: Record<string, unknown> }>
+    nodes: Array<{ id: string; type: string; options: WorkflowNodeOptions }>
   }) {
     const triggerNodes = Arr.filter(
       input.nodes,

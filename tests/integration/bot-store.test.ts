@@ -6,6 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { BotStore } from "../../packages/api/src/server/background/db/bots"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -75,8 +76,9 @@ class SqliteD1Statement implements D1PreparedStatement {
 
   async raw<T = unknown[]>(): Promise<T[]> {
     const statement = this.db.prepare(this.query)
-    const columns = statement.columns().map((column) => column.name)
     const rows = statement.all(...this.params) as Record<string, unknown>[]
+    const firstRow = rows[0]
+    const columns = firstRow === undefined ? [] : Object.keys(firstRow)
     return rows.map((row) => columns.map((column) => row[column])) as T[]
   }
 }
@@ -117,7 +119,7 @@ describe("bot store", () => {
   beforeEach(() => {
     sqlite = new DatabaseSync(":memory:")
     applyMigrations(sqlite)
-    store = new BotStore(new SqliteD1Database(sqlite) as unknown as D1Database)
+    store = new BotStore(makeD1Drizzle(new SqliteD1Database(sqlite) as unknown as D1Database))
   })
 
   afterEach(() => {
@@ -140,7 +142,7 @@ describe("bot store", () => {
         kind: "temporary",
         cadence: { kind: "interval", intervalSeconds: 120 },
         prompt: "Check lint and validation on PR 12",
-        until: Date.parse("2026-08-20T12:00:00.000Z"),
+        until: Date.now() + 60 * 60 * 1000,
         watch: {
           kind: "github_pull_request",
           owner: "SolZeroAI",

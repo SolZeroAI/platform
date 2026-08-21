@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { userApiKeys } from "../../effect/db/schema"
 import { generateId, hashToken } from "../auth/crypto"
 import { d1Error } from "./errors"
@@ -35,8 +35,8 @@ interface VerifiedApiKey {
 export class UserApiKeyStore {
   private readonly drizzle
 
-  constructor(private readonly db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   create = Effect.fn("db.userApiKeys.create")(function* (

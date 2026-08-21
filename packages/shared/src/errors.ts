@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-unknown-parameters -- Shared Promise/catch helpers. Callers pass rejected values that stay unknown until these functions parse Error and string. */
 import * as Match from "effect/Match"
 import * as P from "effect/Predicate"
 

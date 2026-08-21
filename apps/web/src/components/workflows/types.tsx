@@ -5,6 +5,7 @@ import {
   WORKFLOW_NODE_CATALOG,
   type WorkflowManifest,
   type WorkflowManifestNode,
+  type WorkflowNodeOptions,
   type WorkflowNodeCategory,
   type WorkflowNodeDefinition,
   type WorkflowNodeType,
@@ -425,13 +426,13 @@ export type WorkflowSaveRevertAction =
   | {
       kind: "node-input-values"
       nodeId: string
-      previousInputValues: Record<string, unknown>
+      previousInputValues: Record<string, string>
     }
   | {
       kind: "node-options"
       nodeId: string
-      previousOptions: Record<string, unknown>
-      optionKeys: string[]
+      previousOptions: WorkflowNodeOptions
+      optionKeys: Array<keyof WorkflowNodeOptions>
     }
   | {
       kind: "node-position"

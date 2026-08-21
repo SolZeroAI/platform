@@ -178,6 +178,7 @@ function formatApiError(message: string | undefined, fallback: string): string {
   return message
 }
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Local fallback helper at a fetch catch boundary. The catch value stays unknown until this helper reads Error.message.
 function formatCaughtError(errorValue: unknown, fallback: string): string {
   const message = errorValue instanceof Error ? errorValue.message : String(errorValue)
   return formatApiError(message, fallback)

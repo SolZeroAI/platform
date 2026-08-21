@@ -3,7 +3,12 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
-import { runEffectInCloudflareSpan, toSpanAttributes, type CloudflareTracing } from "./span"
+import {
+  runEffectInCloudflareSpan,
+  toSpanAttributes,
+  type CloudflareTracing,
+  type SpanAttributeInput,
+} from "./span"
 
 export type { CloudflareTracing } from "./span"
 
@@ -29,7 +34,7 @@ export interface BackgroundTracingService {
   readonly currentContext: ReturnType<typeof currentSpanContext>
   readonly withSpan: <A, E, R>(
     name: string,
-    attributes: Record<string, unknown>,
+    attributes: SpanAttributeInput,
     // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span service method forwards the caller's Effect channels unchanged.
     effect: Effect.Effect<A, E, R>,
     options?: BackgroundSpanOptions,
@@ -108,6 +113,8 @@ export function makeBackgroundTracingLayer(options: BackgroundTracingLayerOption
   return Layer.succeed(BackgroundTracing, makeBackgroundTracing(options))
 }
 
+export type BackgroundTracingLayer = ReturnType<typeof makeBackgroundTracingLayer>
+
 export function localSpanHeaders(context: LocalSpanContext): Record<string, string> {
   return {
     [LOCAL_TRACE_ID_HEADER]: context.traceId,
@@ -131,7 +138,7 @@ export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext 
 
 const runBackgroundSpan = <A, E, R>(
   name: string,
-  attributes: Record<string, unknown>,
+  attributes: SpanAttributeInput,
   // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
   effect: Effect.Effect<A, E, R>,
   options: BackgroundSpanOptions & { readonly tracing?: CloudflareTracing } = {},
@@ -183,7 +190,7 @@ const runBackgroundSpan = <A, E, R>(
 
 export function aiTelemetrySettings(
   functionId: string,
-  metadata: Record<string, unknown>,
+  metadata: SpanAttributeInput,
 ): TelemetryOptions & { readonly metadata: Record<string, string | number | boolean> } {
   const attributes = toSpanAttributes(metadata)
   return {

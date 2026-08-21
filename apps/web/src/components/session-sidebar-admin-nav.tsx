@@ -10,7 +10,7 @@ export const ADMIN_SIDEBAR_ITEMS: Array<{ id: AdminView; label: string; to: Admi
 
 export function getAdminViewFromLocation(
   pathname: string | undefined,
-  search: Record<string, unknown>,
+  search?: { view?: string },
 ): AdminView {
   return adminViewFromPath(pathname, search)
 }

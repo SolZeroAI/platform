@@ -11,6 +11,7 @@ import {
 } from "../../packages/api/src/server/mcp/mcpcf-server"
 import { createJsonRpcErrorResponse } from "../../packages/api/src/server/mcp/json-rpc-error"
 import { GlobalSecretsStore } from "../../packages/api/src/server/background/db/repo-secrets"
+import { makeD1Drizzle } from "../../packages/api/src/server/effect/db/d1-drizzle"
 import {
   getUserMcpcfAuthTokenSecretKey,
   getUserMcpcfGatewayApiTokenSecretKey,
@@ -54,7 +55,7 @@ describe("MCP Context Forge MCP server", () => {
         authType: "token",
       })
       await Effect.runPromise(
-        new GlobalSecretsStore(db, "test-repo-secrets-key-32-chars").setSecrets(
+        new GlobalSecretsStore(makeD1Drizzle(db), "test-repo-secrets-key-32-chars").setSecrets(
           {
             [getUserMcpcfGatewayApiTokenSecretKey()]: "user_contextforge_api_token",
           },
@@ -104,14 +105,14 @@ describe("MCP Context Forge MCP server", () => {
       })
       const secretKey = getUserMcpcfAuthTokenSecretKey("server_runbooks")
       await Effect.runPromise(
-        new UserMcpcfServerConfigStore(db).upsert({
+        new UserMcpcfServerConfigStore(makeD1Drizzle(db)).upsert({
           userId: "user_1",
           serverId: "server_runbooks",
           authTokenSecretKey: secretKey,
         }),
       )
       await Effect.runPromise(
-        new GlobalSecretsStore(db, "test-repo-secrets-key-32-chars").setSecrets(
+        new GlobalSecretsStore(makeD1Drizzle(db), "test-repo-secrets-key-32-chars").setSecrets(
           {
             [secretKey]: "user_runbook_token",
             [getUserMcpcfGatewayApiTokenSecretKey()]: "user_contextforge_api_token",

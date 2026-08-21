@@ -15,6 +15,7 @@ import {
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
 import {
   BackgroundTracing,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate model.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
   type CloudflareTracing,
 } from "../observability/tracing"

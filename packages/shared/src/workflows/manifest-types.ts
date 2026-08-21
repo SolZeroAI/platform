@@ -1,14 +1,38 @@
 import type { OpenCodeMcpServers } from "../provider-config"
 import type { SessionToolSpec } from "../session-tools"
 import type { SubagentMode } from "../subagents"
-import type {
-  WorkflowKvNamespaceBinding,
-  WorkflowNodeType,
-  WorkflowR2BucketBinding,
-} from "../workflow-nodes"
+import type { WorkflowNodeType } from "../workflow-nodes"
 
 export const WORKFLOW_MANIFEST_VERSION = 4 as const
 export const WORKFLOW_SUBAGENTS_MANIFEST_VERSION = 4 as const
+
+export interface WorkflowNodeOptions
+  extends
+    WorkflowSessionNodeOptions,
+    WorkflowJavaScriptNodeOptions,
+    WorkflowIfElseNodeOptions,
+    WorkflowJsonObjectOptions,
+    WorkflowDateTimeTriggerOptions,
+    WorkflowCronTriggerOptions,
+    WorkflowHttpRequestOptions,
+    WorkflowR2PutObjectOptions,
+    WorkflowR2GetObjectOptions,
+    WorkflowKvPutOptions,
+    WorkflowKvGetOptions,
+    WorkflowGetSecretOptions,
+    WorkflowUserApprovalOptions,
+    WorkflowSlackNotificationOptions,
+    WorkflowSlackTriggerOptions,
+    WorkflowSlackSendMessageOptions,
+    WorkflowSlackJoinChannelOptions,
+    WorkflowSlackFetchThreadOptions,
+    WorkflowSlackAddReactionOptions,
+    WorkflowSlackRemoveReactionOptions,
+    WorkflowEmailNotificationOptions {
+  title?: string
+  encoding?: string
+  inputValues?: Record<string, string>
+}
 
 export interface WorkflowManifestNode {
   id: string
@@ -18,7 +42,7 @@ export interface WorkflowManifestNode {
     x: number
     y: number
   }
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
 }
 
 export interface WorkflowManifestEdge {
@@ -114,15 +138,15 @@ export interface WorkflowHttpRequestOptions {
 }
 
 export interface WorkflowR2PutObjectOptions {
-  bucket?: WorkflowR2BucketBinding
+  bucket?: string
   key?: string
   contentType?: string
 }
 
 export interface WorkflowKvPutOptions {
-  namespace?: WorkflowKvNamespaceBinding
+  namespace?: string
   key?: string
-  expirationTtl?: number
+  expirationTtl?: number | string
 }
 
 export interface WorkflowUserApprovalOptions {
@@ -150,11 +174,15 @@ export interface WorkflowSlackTriggerOptions {
   actionIds?: string[]
 }
 
+export interface WorkflowSlackBlock {
+  type: string
+}
+
 export interface WorkflowSlackSendMessageOptions {
   channel?: string
   text?: string
   threadTs?: string
-  blocks?: unknown
+  blocks?: string | WorkflowSlackBlock[]
 }
 
 export interface WorkflowSlackJoinChannelOptions {
@@ -187,13 +215,13 @@ export interface WorkflowEmailNotificationOptions {
 }
 
 export interface WorkflowR2GetObjectOptions {
-  bucket?: WorkflowR2BucketBinding
+  bucket?: string
   key?: string
   responseType?: "auto" | "json" | "text"
 }
 
 export interface WorkflowKvGetOptions {
-  namespace?: WorkflowKvNamespaceBinding
+  namespace?: string
   key?: string
   responseType?: "auto" | "json" | "text"
 }

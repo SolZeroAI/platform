@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { generateId } from "../auth/crypto"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { cronRuns } from "../../effect/db/schema"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
 import { d1Error } from "./errors"
@@ -76,8 +76,8 @@ export function sanitizeCronErrorMessage(value: unknown): string {
 export class CronRunsStore {
   private readonly drizzle
 
-  constructor(db: D1Database) {
-    this.drizzle = makeD1Drizzle(db)
+  constructor(drizzle: D1DrizzleDatabase) {
+    this.drizzle = drizzle
   }
 
   insertRun = Effect.fn("db.cronRuns.insertRun")(function* (

@@ -7,6 +7,7 @@ import {
   type WorkflowManifestEdge,
   type WorkflowManifestNode,
 } from "./workflows/manifest-types"
+import { parseWorkflowNodeOptions } from "./workflows/manifest-schema"
 import {
   getWorkflowNodeDefinition,
   getWorkflowNodeDefinitionForNode,
@@ -77,6 +78,7 @@ export type {
   WorkflowManifest,
   WorkflowManifestEdge,
   WorkflowManifestNode,
+  WorkflowNodeOptions,
   WorkflowR2GetObjectOptions,
   WorkflowR2PutObjectOptions,
   WorkflowSessionNodeOptions,
@@ -92,6 +94,17 @@ export type {
   WorkflowTemplateComplexity,
   WorkflowUserApprovalOptions,
 } from "./workflows/manifest-types"
+export {
+  parseWorkflowManifest,
+  parseWorkflowManifestDraft,
+  parseWorkflowNodeOptions,
+  SessionToolSpecSchema,
+  WorkflowManifestDraftSchema,
+  WorkflowManifestSchema,
+  WorkflowNodeOptionsSchema,
+} from "./workflows/manifest-schema"
+export type { WorkflowManifestDraft } from "./workflows/manifest-schema"
+export type { WorkflowSlackBlock } from "./workflows/manifest-types"
 export { WORKFLOW_TEMPLATES } from "./workflows/templates"
 const WORKFLOW_R2_CONTENT_ENCODING_MANIFEST_VERSION = 2
 
@@ -134,7 +147,7 @@ function normalizeWorkflowDraftNode(value: unknown, index: number): WorkflowMani
       x: readNumber(position.x, 120 + index * 80),
       y: readNumber(position.y, 120 + index * 40),
     },
-    options: isRecord(value.options) ? value.options : {},
+    options: parseWorkflowNodeOptions(value.options),
   }
 }
 

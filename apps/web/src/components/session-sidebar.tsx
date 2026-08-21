@@ -33,6 +33,7 @@ import {
   HOME_PREVIOUS_SESSIONS_HASH,
   isHomePreviousSessionsHash,
 } from "@/lib/home-route-search"
+import { parseSidebarLocationSearch } from "@/lib/sidebar-location-search"
 import { getAppVersion } from "@/lib/runtime-config"
 import { getS0Brand } from "@/lib/brand"
 import { useTheme } from "@/lib/theme"
@@ -49,7 +50,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
   const pathname = useLocation({ select: (location) => location.pathname })
   const locationHash = useLocation({ select: (location) => location.hash })
   const locationSearch = useLocation({
-    select: (location) => location.search as Record<string, unknown>,
+    select: (location) => parseSidebarLocationSearch(location.search),
   })
   const { isDark, toggle: toggleTheme } = useTheme()
 

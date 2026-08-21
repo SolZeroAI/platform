@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import {
   DEFAULT_ISOLATE_STEP_LIMIT,
   isOktaReconnectMcpDiscoveryError,
+  getErrorMessage,
   type OpenCodeInteractionResponse,
   type SandboxEvent,
 } from "@solzero/shared"
@@ -813,6 +814,4 @@ export function FinalAssistantMessageItem({
   )
 }
 
-export function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
+export { getErrorMessage }

@@ -1,6 +1,6 @@
-import { parseJsonRecord, stringifyJson } from "./json"
 import { isSubagentMode } from "./subagents"
 
+import type { WorkflowNodeOptions } from "./workflows/manifest-types"
 import {
   WORKFLOW_KV_NAMESPACE_OPTIONS,
   WORKFLOW_NODE_CATALOG,
@@ -8,13 +8,10 @@ import {
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
   type WorkflowActionNodeType,
-  type WorkflowKvNamespaceBinding,
   type WorkflowNodeDefinition,
   type WorkflowNodeRuntimeSupport,
   type WorkflowNodeType,
   type WorkflowNodeValidationSupport,
-  type WorkflowR2BucketBinding,
-  type WorkflowStorageEncoding,
   type WorkflowTriggerNodeType,
 } from "./workflow-nodes/definitions"
 
@@ -53,7 +50,7 @@ export const WORKFLOW_JSON_OBJECT_FIELD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*
 interface WorkflowNodeOptionTarget {
   id: string
   type: string
-  options: Record<string, unknown>
+  options: WorkflowNodeOptions
 }
 
 interface WorkflowNodeValidationGraph {
@@ -67,7 +64,7 @@ interface WorkflowNodeValidationGraph {
 export function getWorkflowNodeDefaultOptions(
   type: string,
   options: { now?: Date | number } = {},
-): Record<string, unknown> {
+): WorkflowNodeOptions {
   if (!isWorkflowNodeType(type)) {
     return {}
   }
@@ -103,10 +100,10 @@ export function getWorkflowJsonObjectFields(
   return uniqueFields
 }
 
-const workflowNodeTypeSet = new Set<WorkflowNodeType>(WORKFLOW_NODE_TYPES)
+const workflowNodeTypeSet = new Set<string>(WORKFLOW_NODE_TYPES)
 
 export function isWorkflowNodeType(value: string): value is WorkflowNodeType {
-  return workflowNodeTypeSet.has(value as WorkflowNodeType)
+  return workflowNodeTypeSet.has(value)
 }
 
 export function isWorkflowTriggerNodeType(
@@ -263,13 +260,14 @@ function getWorkflowNodeValidationSupport(type: string): WorkflowNodeValidationS
   return isWorkflowNodeType(type) ? getWorkflowNodeDefinition(type).validation : null
 }
 
-function cloneWorkflowNodeDefaultOptions(
-  options: Record<string, unknown>,
-): Record<string, unknown> {
-  return parseJsonRecord(stringifyJson(options))
+function cloneWorkflowNodeDefaultOptions(options: WorkflowNodeOptions): WorkflowNodeOptions {
+  return structuredClone(options)
 }
 
-function getBindingValue(options: Record<string, unknown>, key: string): string | null {
+function getBindingValue(
+  options: WorkflowNodeOptions,
+  key: "bucket" | "encoding" | "namespace" | "key",
+): string | null {
   const value = options[key]
   return typeof value === "string" && value.trim() ? value.trim() : null
 }
@@ -286,29 +284,29 @@ function keyLooksUserScoped(value: string): boolean {
 
 function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
   const errors: string[] = []
-  const r2Bindings = new Set(WORKFLOW_R2_BUCKET_OPTIONS.map((option) => option.binding))
-  const kvBindings = new Set(WORKFLOW_KV_NAMESPACE_OPTIONS.map((option) => option.binding))
+  const r2Bindings = new Set<string>(WORKFLOW_R2_BUCKET_OPTIONS.map((option) => option.binding))
+  const kvBindings = new Set<string>(WORKFLOW_KV_NAMESPACE_OPTIONS.map((option) => option.binding))
 
   if (node.type === "r2-put-object" || node.type === "r2-get-object") {
     const bucket = getBindingValue(node.options, "bucket")
-    if (bucket && !r2Bindings.has(bucket as WorkflowR2BucketBinding)) {
+    if (bucket && !r2Bindings.has(bucket)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 bucket '${bucket}'`)
     }
   }
 
   if (node.type === "r2-put-object") {
     const encoding = getBindingValue(node.options, "encoding")
-    const storageEncodings = new Set(
+    const storageEncodings = new Set<string>(
       WORKFLOW_STORAGE_ENCODING_OPTIONS.map((option) => option.value),
     )
-    if (encoding && !storageEncodings.has(encoding as WorkflowStorageEncoding)) {
+    if (encoding && !storageEncodings.has(encoding)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 content encoding '${encoding}'`)
     }
   }
 
   if (node.type === "kv-put" || node.type === "kv-get") {
     const namespace = getBindingValue(node.options, "namespace")
-    if (namespace && !kvBindings.has(namespace as WorkflowKvNamespaceBinding)) {
+    if (namespace && !kvBindings.has(namespace)) {
       errors.push(`Workflow node '${node.id}' uses unsupported KV namespace '${namespace}'`)
     }
   }

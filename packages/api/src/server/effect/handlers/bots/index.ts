@@ -8,7 +8,6 @@ import type {
 import { BotRoutineValidationError } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
-import * as Option from "effect/Option"
 import { BotRoutineService } from "../../../background/bots/service"
 import { BotNotFoundError, BotRoutineNotFoundError } from "../../../background/db/errors"
 import {
@@ -22,29 +21,17 @@ import {
 } from "../shared/control-plane"
 
 function botFailure(cause: unknown): ControlPlaneFailure {
-  const tag = Option.fromNullishOr(cause).pipe(
-    Option.filter(
-      (candidate): candidate is { _tag: unknown } =>
-        typeof candidate === "object" && "_tag" in candidate,
-    ),
-    Option.map((tagged) => String(tagged._tag)),
-    Option.getOrElse(() => ""),
-  )
-  const status = Match.value(tag).pipe(
-    Match.when("BotNotFoundError", () => 404),
-    Match.when("BotRoutineNotFoundError", () => 404),
-    Match.orElse(() =>
-      Match.value(cause instanceof BotRoutineValidationError).pipe(
-        Match.when(true, () => 400),
-        Match.orElse(() => 500),
-      ),
-    ),
+  const status = Match.value(cause).pipe(
+    Match.when(Match.instanceOf(BotNotFoundError), () => 404),
+    Match.when(Match.instanceOf(BotRoutineNotFoundError), () => 404),
+    Match.when(Match.instanceOf(BotRoutineValidationError), () => 400),
+    Match.orElse(() => 500),
   )
   return new ControlPlaneFailure({ payload: { error: describeError(cause) }, status })
 }
 
 function service(context: ControlPlaneContext) {
-  return new BotRoutineService(context.env)
+  return new BotRoutineService(context.env, context.db)
 }
 
 export function list() {
