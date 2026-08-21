@@ -142,7 +142,7 @@ describe("bot store", () => {
         kind: "temporary",
         cadence: { kind: "interval", intervalSeconds: 120 },
         prompt: "Check lint and validation on PR 12",
-        until: Date.parse("2026-08-20T12:00:00.000Z"),
+        until: Date.now() + 60 * 60 * 1000,
         watch: {
           kind: "github_pull_request",
           owner: "SolZeroAI",

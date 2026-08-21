@@ -33,7 +33,7 @@ describe("bot routines", () => {
   })
 
   it("accepts a temporary GitHub pull request watch", () => {
-    const until = Date.parse("2026-08-20T12:00:00.000Z")
+    const until = Date.now() + 60 * 60 * 1000
     const routine = normalizeCreateBotRoutineInput({
       name: "Watch PR 12 CI",
       kind: "temporary",
@@ -78,9 +78,9 @@ describe("bot routines", () => {
         kind: "standing",
         cadence: { kind: "cron", cron: "0 * * * *" },
         prompt: "Hourly check",
-        until: "2026-08-20T12:00:00.000Z",
+        until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       }),
-    ).toThrow(BotRoutineValidationError)
+    ).toThrow("standing routines cannot set until")
   })
 
   it("expires a temporary routine after its deadline", () => {
