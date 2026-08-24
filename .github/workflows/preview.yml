@@ -51,7 +51,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
         with:
           # Full history and tags let the deploy compute the release offset
           # label, for example v1.5.0+2-bbb222.
@@ -116,49 +116,30 @@ jobs:
           CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
           WRANGLER_SEND_METRICS: "false"
 
-      # GitHub-owned action so this template can start on SolZeroAI/platform.
+      - name: Find existing comment
+        if: ${{ github.event_name == 'pull_request' }}
+        id: find-comment
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- infra-preview -->"
+
       - name: Create or update PR comment
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
-        env:
-          PREVIEW_URL: ${{ steps.preview-target.outputs.website_url }}
-          PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+        uses: peter-evans/create-or-update-comment@v5
         with:
-          script: |
-            const marker = "<!-- infra-preview -->"
-            const body = `${marker}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            <!-- infra-preview -->
             ## Preview Deployed
             Your preview is ready.
-            **Preview URL:** ${process.env.PREVIEW_URL}
-            This preview was built from commit ${process.env.PREVIEW_SHA}
+            **Preview URL:** ${{ steps.preview-target.outputs.website_url }}
+            This preview was built from commit ${{ github.event.pull_request.head.sha }}
             ---
-            <sub>This comment will be updated automatically when you push new commits to this PR.</sub>`
-            const { owner, repo } = context.repo
-            const issue_number = context.issue.number
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number,
-            })
-            const existing = comments.find((comment) =>
-              comment.user?.login === "github-actions[bot]" &&
-              comment.body?.includes(marker)
-            )
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body,
-              })
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body,
-              })
-            }
+            <sub>This comment will be updated automatically when you push new commits to this PR.</sub>
+          edit-mode: replace
 
   cleanup-preview:
     name: Clean up preview stage
@@ -172,7 +153,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.4.0
@@ -235,34 +216,24 @@ jobs:
           CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
           WRANGLER_SEND_METRICS: "false"
 
-      # GitHub-owned action so this template can start on SolZeroAI/platform.
-      - name: Update comment with cleanup status
+      - name: Find existing comment
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        id: find-comment
+        uses: peter-evans/find-comment@v4
         with:
-          script: |
-            const marker = "<!-- infra-preview -->"
-            const body = `${marker}
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- infra-preview -->"
+
+      - name: Update comment with cleanup status
+        if: steps.find-comment.outputs.comment-id != ''
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          body: |
+            <!-- infra-preview -->
             ## Preview Cleaned Up
             The preview for this PR has been cleaned up because the PR was closed.
             ---
-            <sub>Preview resources have been removed from Cloudflare.</sub>`
-            const { owner, repo } = context.repo
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: context.issue.number,
-            })
-            const existing = comments.find((comment) =>
-              comment.user?.login === "github-actions[bot]" &&
-              comment.body?.includes(marker)
-            )
-            if (!existing) {
-              return
-            }
-            await github.rest.issues.updateComment({
-              owner,
-              repo,
-              comment_id: existing.id,
-              body,
-            })
+            <sub>Preview resources have been removed from Cloudflare.</sub>
+          edit-mode: replace
