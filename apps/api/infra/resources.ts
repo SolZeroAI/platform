@@ -143,7 +143,7 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
 
     const db = yield* Cloudflare.D1.Database("db", {
       name: `${appName}-db-${stageMetadata.name}`,
-      migrationsDir,
+      migrations: migrationsDir,
     })
 
     const repoCache = yield* Cloudflare.KV.Namespace("repo-cache", {

@@ -1,7 +1,7 @@
 diff --git a/lib/Cloudflare/AI/SearchInstance.js b/lib/Cloudflare/AI/SearchInstance.js
 --- a/lib/Cloudflare/AI/SearchInstance.js
 +++ b/lib/Cloudflare/AI/SearchInstance.js
-@@ -417,7 +417,7 @@
+@@ -418,7 +418,7 @@
              name: output.namespace,
              id: output.instanceId,
          })
@@ -10,7 +10,7 @@ diff --git a/lib/Cloudflare/AI/SearchInstance.js b/lib/Cloudflare/AI/SearchInsta
      }),
  });
  /**
-@@ -463,12 +463,13 @@
+@@ -464,12 +464,13 @@
  const resolveNamespace = (namespace) => namespace ?? "default";
  /**
   * Read an instance by id within its namespace, mapping "gone" to
@@ -53,7 +53,7 @@ diff --git a/lib/Cloudflare/Containers/ContainerApplication.d.ts b/lib/Cloudflar
 diff --git a/lib/Cloudflare/Containers/ContainerBundle.d.ts b/lib/Cloudflare/Containers/ContainerBundle.d.ts
 --- a/lib/Cloudflare/Containers/ContainerBundle.d.ts
 +++ b/lib/Cloudflare/Containers/ContainerBundle.d.ts
-@@ -68,7 +68,7 @@
+@@ -78,7 +78,7 @@
   * then appends the statements that copy the bundled program and set the
   * entrypoint.
   */
@@ -65,7 +65,7 @@ diff --git a/lib/Cloudflare/Containers/ContainerBundle.d.ts b/lib/Cloudflare/Con
 diff --git a/lib/Cloudflare/Containers/ContainerBundle.js b/lib/Cloudflare/Containers/ContainerBundle.js
 --- a/lib/Cloudflare/Containers/ContainerBundle.js
 +++ b/lib/Cloudflare/Containers/ContainerBundle.js
-@@ -142,7 +142,10 @@
+@@ -156,7 +156,10 @@
   * then appends the statements that copy the bundled program and set the
   * entrypoint.
   */
@@ -77,7 +77,7 @@ diff --git a/lib/Cloudflare/Containers/ContainerBundle.js b/lib/Cloudflare/Conta
      const base = envPreamble ??
          (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
      const runtimeBin = runtime === "bun" ? "bun" : "node";
-@@ -365,7 +368,7 @@
+@@ -379,7 +382,7 @@
      yield* validateContainerImageProps(news);
      const runtime = news.runtime ?? "bun";
      const context = yield* getStableContextDir(process.cwd(), dotAlchemy, `${id}-container`);
@@ -110,60 +110,7 @@ diff --git a/lib/Cloudflare/Containers/ContainerProvider.js b/lib/Cloudflare/Con
 diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/WorkerProvider.js
 --- a/lib/Cloudflare/Workers/WorkerProvider.js
 +++ b/lib/Cloudflare/Workers/WorkerProvider.js
-@@ -2,7 +2,6 @@
- import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
- import * as workers from "@distilled.cloud/cloudflare/workers";
- import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
--import * as zones from "@distilled.cloud/cloudflare/zones";
- import * as Config from "effect/Config";
- import * as Data from "effect/Data";
- import * as Effect from "effect/Effect";
-@@ -30,7 +29,7 @@
- import { localRuntimeServices } from "../LocalRuntime.js";
- import { detachQueueConsumersOfScript } from "../Queues/Consumer.js";
- import { CloudflareLogs } from "../Logs.js";
--import { resolveZoneId } from "../Zone/lookup.js";
-+import { findZoneByName, resolveZoneId } from "../Zone/lookup.js";
- import { getAssetsPathPrefix, mergeAssetsConfigFiles, readAssets, readAssetsConfigFiles, uploadAssets, } from "./Assets.js";
- import { getCompatibility } from "./Compatibility.js";
- import { isDurableObjectExport } from "./DurableObject.js";
-@@ -838,25 +837,24 @@
-         return normalizeCrons(result.schedules.map((schedule) => schedule.cron));
-     });
-     /**
--     * Infer the Cloudflare Zone ID for a given hostname by listing the
--     * account's zones and matching the hostname against each zone's name —
--     * walking up the DNS label hierarchy until a match is found.
-+     * Infer the Cloudflare Zone ID for a hostname by checking candidate
-+     * parent zone names from most-specific to least-specific.
-      */
--    const inferZoneIdForHostname = (hostname, zoneCache) => Effect.gen(function* () {
-+    const inferZoneIdForHostname = (accountId, hostname, zoneCache) => Effect.gen(function* () {
-         const cached = zoneCache.get(hostname);
-         if (cached)
-             return cached;
--        const zoneList = yield* zones
--            .listZones({})
--            .pipe(Effect.map((response) => response.result ?? []));
--        for (const zone of zoneList) {
--            zoneCache.set(zone.name, zone.id);
--        }
-         const parts = hostname.split(".");
-         for (let i = 0; i < parts.length - 1; i++) {
-             const candidate = parts.slice(i).join(".");
--            const match = zoneList.find((z) => z.name === candidate);
-+            const candidateCached = zoneCache.get(candidate);
-+            if (candidateCached) {
-+                zoneCache.set(hostname, candidateCached);
-+                return candidateCached;
-+            }
-+            const match = yield* findZoneByName({ accountId, name: candidate });
-             if (match) {
-+                zoneCache.set(candidate, match.id);
-                 zoneCache.set(hostname, match.id);
-                 return match.id;
-             }
-@@ -894,7 +892,7 @@
+@@ -947,7 +947,7 @@
          const toRemove = liveAll.filter((d) => !desiredSet.has(d.hostname));
          yield* Effect.all(toRemove.map((d) => workers
              .deleteDomain({ accountId, domainId: d.id })
@@ -172,25 +119,16 @@ diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/W
          if (desired.length === 0)
              return [];
          const zoneCache = new Map();
-@@ -926,7 +924,7 @@
-                     `it is already attached to Worker '${otherOwner.service ?? "<unknown>"}'. ` +
-                     `Detach it from that Worker first, or pick a different hostname.`));
+@@ -975,7 +975,7 @@
+                 // then recreate it below with the explicitly requested zone.
+                 yield* workers
+                     .deleteDomain({ accountId, domainId: live.id })
+-                    .pipe(Effect.catchTag("DomainNotFound", () => Effect.void));
++                    .pipe(Effect.catchCause(() => Effect.void));
              }
--            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
-+            const zoneId = yield* inferZoneIdForHostname(accountId, hostname, zoneCache);
-             // Same eventual-consistency window as `setWorkerSubdomain`:
-             // PUT /accounts/.../workers/domains right after `putScript`
-             // can return `WorkerNotFound` until Cloudflare's script
-@@ -1210,7 +1208,7 @@
-                         zone: route.zone ?? route.zoneName,
-                         hostname: hostnameFromPattern(pattern),
-                     })
--                    : yield* inferZoneIdForHostname(hostnameFromPattern(pattern), zoneCache);
-+                    : yield* inferZoneIdForHostname(accountId, hostnameFromPattern(pattern), zoneCache);
-             const key = routeKey({ pattern, zoneId });
-             if (seen.has(key))
-                 continue;
-@@ -3773,7 +3771,7 @@
+             // Not attached to this Worker — but it could still belong
+             // to another Worker. Check before we try to PUT so we can
+@@ -3908,7 +3908,7 @@
                              accountId: output.accountId,
                              domainId: d.id,
                          })
@@ -202,7 +140,7 @@ diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/W
 diff --git a/src/Cloudflare/AI/SearchInstance.ts b/src/Cloudflare/AI/SearchInstance.ts
 --- a/src/Cloudflare/AI/SearchInstance.ts
 +++ b/src/Cloudflare/AI/SearchInstance.ts
-@@ -777,7 +777,7 @@
+@@ -778,7 +778,7 @@
          })
          .pipe(
            Effect.catchTag(
@@ -211,7 +149,7 @@ diff --git a/src/Cloudflare/AI/SearchInstance.ts b/src/Cloudflare/AI/SearchInsta
              () => Effect.void,
            ),
          );
-@@ -838,15 +838,17 @@
+@@ -839,15 +839,17 @@
 
  /**
   * Read an instance by id within its namespace, mapping "gone" to
@@ -259,7 +197,7 @@ diff --git a/src/Cloudflare/Containers/ContainerApplication.ts b/src/Cloudflare/
 diff --git a/src/Cloudflare/Containers/ContainerBundle.ts b/src/Cloudflare/Containers/ContainerBundle.ts
 --- a/src/Cloudflare/Containers/ContainerBundle.ts
 +++ b/src/Cloudflare/Containers/ContainerBundle.ts
-@@ -203,7 +203,12 @@
+@@ -220,7 +220,12 @@
    runtime: "bun" | "node",
    external: string[] = [],
    autoInstallExternals = true,
@@ -272,7 +210,7 @@ diff --git a/src/Cloudflare/Containers/ContainerBundle.ts b/src/Cloudflare/Conta
    const base =
      envPreamble ??
      (runtime === "bun" ? "FROM oven/bun:1" : "FROM node:22-slim");
-@@ -491,6 +496,7 @@
+@@ -508,6 +513,7 @@
      runtime,
      news.external,
      news.autoInstallExternals,
@@ -302,65 +240,7 @@ diff --git a/src/Cloudflare/Containers/ContainerProvider.ts b/src/Cloudflare/Con
 diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/WorkerProvider.ts
 --- a/src/Cloudflare/Workers/WorkerProvider.ts
 +++ b/src/Cloudflare/Workers/WorkerProvider.ts
-@@ -2,7 +2,6 @@
- import * as rulesets from "@distilled.cloud/cloudflare/rulesets";
- import * as workers from "@distilled.cloud/cloudflare/workers";
- import * as wfp from "@distilled.cloud/cloudflare/workers-for-platforms";
--import * as zones from "@distilled.cloud/cloudflare/zones";
- import * as Config from "effect/Config";
- import * as Data from "effect/Data";
- import * as Effect from "effect/Effect";
-@@ -31,7 +30,7 @@
- import { localRuntimeServices } from "../LocalRuntime.ts";
- import { detachQueueConsumersOfScript } from "../Queues/Consumer.ts";
- import { CloudflareLogs } from "../Logs.ts";
--import { resolveZoneId } from "../Zone/lookup.ts";
-+import { findZoneByName, resolveZoneId } from "../Zone/lookup.ts";
- import {
-   getAssetsPathPrefix,
-   mergeAssetsConfigFiles,
-@@ -1210,11 +1209,11 @@
-         });
-
-       /**
--       * Infer the Cloudflare Zone ID for a given hostname by listing the
--       * account's zones and matching the hostname against each zone's name —
--       * walking up the DNS label hierarchy until a match is found.
-+       * Infer the Cloudflare Zone ID for a hostname by checking candidate
-+       * parent zone names from most-specific to least-specific.
-        */
-       const inferZoneIdForHostname = (
-+        accountId: string,
-         hostname: string,
-         zoneCache: Map<string, string>,
-       ) =>
-@@ -1222,18 +1221,17 @@
-           const cached = zoneCache.get(hostname);
-           if (cached) return cached;
-
--          const zoneList = yield* zones
--            .listZones({})
--            .pipe(Effect.map((response) => response.result ?? []));
--          for (const zone of zoneList) {
--            zoneCache.set(zone.name, zone.id);
--          }
--
-           const parts = hostname.split(".");
-           for (let i = 0; i < parts.length - 1; i++) {
-             const candidate = parts.slice(i).join(".");
--            const match = zoneList.find((z) => z.name === candidate);
-+            const candidateCached = zoneCache.get(candidate);
-+            if (candidateCached) {
-+              zoneCache.set(hostname, candidateCached);
-+              return candidateCached;
-+            }
-+            const match = yield* findZoneByName({ accountId, name: candidate });
-             if (match) {
-+              zoneCache.set(candidate, match.id);
-               zoneCache.set(hostname, match.id);
-               return match.id;
-             }
-@@ -1286,7 +1284,7 @@
+@@ -1380,7 +1380,7 @@
              toRemove.map((d) =>
                workers
                  .deleteDomain({ accountId, domainId: d.id })
@@ -369,28 +249,16 @@ diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/W
              ),
              { concurrency: "unbounded" },
            );
-@@ -1336,7 +1334,11 @@
-               );
+@@ -1417,7 +1417,7 @@
+               // then recreate it below with the explicitly requested zone.
+               yield* workers
+                 .deleteDomain({ accountId, domainId: live.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void));
++                .pipe(Effect.catchCause(() => Effect.void));
              }
 
--            const zoneId = yield* inferZoneIdForHostname(hostname, zoneCache);
-+            const zoneId = yield* inferZoneIdForHostname(
-+              accountId,
-+              hostname,
-+              zoneCache,
-+            );
-             // Same eventual-consistency window as `setWorkerSubdomain`:
-             // PUT /accounts/.../workers/domains right after `putScript`
-             // can return `WorkerNotFound` until Cloudflare's script
-@@ -1721,6 +1723,7 @@
-                     hostname: hostnameFromPattern(pattern),
-                   })
-                 : yield* inferZoneIdForHostname(
-+                    accountId,
-                     hostnameFromPattern(pattern),
-                     zoneCache,
-                   );
-@@ -5061,7 +5064,7 @@
+             // Not attached to this Worker — but it could still belong
+@@ -5273,7 +5273,7 @@
                            domainId: d.id,
                          })
                          .pipe(
