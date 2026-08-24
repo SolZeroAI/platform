@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
-import packageJson from "../../../package.json" with { type: "json" }
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 
 const UNKNOWN_COMMIT_SHA = "unknown"
 
@@ -54,12 +55,22 @@ function getCommitSha(env: NodeJS.ProcessEnv, repoRoot: string): string {
   )
 }
 
+/**
+ * The public product version lives in the repo-root VERSION file. Workspace
+ * package.json versions stay at 0.0.0 and never describe the release.
+ */
+function readProductVersion(repoRoot: string): string {
+  return readFileSync(resolve(repoRoot, "VERSION"), "utf8")
+}
+
 export function createDeploymentMetadata(
   options: CreateDeploymentMetadataOptions,
 ): DeploymentMetadata {
   // oxlint-disable-next-line effect/avoid-process-env -- CLI callers may omit env; tests pass explicit env.
   const env = options.env ?? process.env
-  const packageVersion = normalizePackageVersion(options.packageVersion ?? packageJson.version)
+  const packageVersion = normalizePackageVersion(
+    options.packageVersion ?? readProductVersion(options.repoRoot),
+  )
   const commitSha = getCommitSha(env, options.repoRoot)
 
   return {

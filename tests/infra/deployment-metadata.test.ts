@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { createDeploymentMetadata } from "infra/deploymentMetadata"
 
@@ -57,5 +59,17 @@ describe("createDeploymentMetadata", () => {
 
     expect(metadata.appVersion).toBe(`v4.5.6-${readGitShortSha()}`)
     expect(metadata.commitSha).toBe(readGitShortSha())
+  })
+
+  it("reads the product version from the VERSION file by default", () => {
+    const productVersion = readFileSync(resolve(repoRoot, "VERSION"), "utf8").trim()
+    const metadata = createDeploymentMetadata({
+      env: { GITHUB_SHA: "fedcba0123456789" },
+      repoRoot,
+    })
+
+    expect(productVersion).not.toBe("0.0.0")
+    expect(metadata.packageVersion).toBe(productVersion)
+    expect(metadata.appVersion).toBe(`v${productVersion}-fedcba`)
   })
 })

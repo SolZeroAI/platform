@@ -1,13 +1,16 @@
 /* oxlint-disable effect/avoid-process-env, s0-lint/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
+import dotenv from "dotenv"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
 import { format } from "oxfmt"
 import * as JsonSchema from "effect/JsonSchema"
 import * as Schema from "effect/Schema"
 import {
+  getStageMetadataFromConfigSync,
   S0_CONFIG_STAGE_NAMES,
   S0ConfigFileSchema,
+  s0ActiveSecretReferences,
   s0ConfigPathForStage,
   resolveS0Config,
 } from "@solzero/shared"
@@ -69,14 +72,50 @@ async function writeSchema(): Promise<void> {
   process.stdout.write("Updated config/s0.config.schema.json\n")
 }
 
+function dotenvQuote(value: string): string {
+  return `"${value
+    .replaceAll("\\", "\\\\")
+    .replaceAll("\r", "\\r")
+    .replaceAll("\n", "\\n")
+    .replaceAll('"', '\\"')}"`
+}
+
+function writeStageVars(stage: string, outputPath: string): void {
+  const config = resolveS0Config(readConfigFile(stage))
+  const resolvedOutputPath = resolve(repoRoot, outputPath)
+  const existing = existsSync(resolvedOutputPath)
+    ? dotenv.parse(readFileSync(resolvedOutputPath))
+    : {}
+  const names = [
+    ...new Set(s0ActiveSecretReferences(config).map((reference) => reference.env)),
+  ].sort()
+  const contents = names
+    .map((name) => `${name}=${dotenvQuote(process.env[name] ?? existing[name] ?? "")}`)
+    .join("\n")
+  writeFileSync(resolvedOutputPath, `${contents}\n`, { mode: 0o600 })
+  process.stdout.write(`Wrote ${names.length} secret references to ${outputPath}\n`)
+}
+
+function printStageWebUrl(stage: string): void {
+  const config = resolveS0Config(readConfigFile(stage))
+  const metadata = getStageMetadataFromConfigSync(stage, config.deployment, config.application)
+  process.stdout.write(`${metadata.infra.authBaseUrl}\n`)
+}
+
 const args = process.argv.slice(2).filter((argument) => argument !== "--")
-const [command, profileFlag, profile] = args
+const [command, second, third] = args
 if (command === "check" && args.length === 1) {
   await checkConfig()
-} else if (command === "check" && profileFlag === "--profile" && profile && args.length === 3) {
-  await checkConfig(profile)
+} else if (command === "check" && second === "--profile" && third && args.length === 3) {
+  await checkConfig(third)
 } else if (command === "schema" && args.length === 1) {
   await writeSchema()
+} else if (command === "write-stage-vars" && second && third && args.length === 3) {
+  writeStageVars(second, third)
+} else if (command === "stage-url" && second && args.length === 2) {
+  printStageWebUrl(second)
 } else {
-  throw new Error("Usage: s0-config.ts check [--profile <name>] | schema")
+  throw new Error(
+    "Usage: s0-config.ts check [--profile <name>] | schema | write-stage-vars <stage> <output-path> | stage-url <stage>",
+  )
 }

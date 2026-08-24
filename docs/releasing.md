@@ -56,8 +56,9 @@ combined version and release-note preview. A change with no observable effect ca
 ## Automated release flow
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
-2. Wait for `Validate` to pass on `master`. The `Release` workflow then runs `nub run tegami ci` and
-   opens or updates `tegami/version-packages`.
+2. Wait for `Deploy Preview` to pass on `master`. That workflow validates the commit and deploys the
+   `pre` preview stage. The `Release` workflow then runs `nub run tegami ci` and opens or updates
+   `tegami/version-packages`.
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
