@@ -209,6 +209,8 @@ For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. 
 
 Public GitHub Actions on SolZeroAI/platform run secret-less checks only (`config:check`, typecheck, lint, format, and actionlint). Keep `preview.yml` as valid YAML. On this public repository, disable it with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Disabled state is per-repo; fork owners enable the workflow on their Actions page. GitHub disables scheduled workflows on public forks by default. Jobs that use secrets also have an invert guard (`github.repository != 'SolZeroAI/platform'`), so they skip on the public repo even if the workflow is enabled. Do not comment the YAML out. Any repository that is not SolZeroAI/platform can run those jobs without editing the file. Sync secrets only on a private deploy fork with `nub run github:sync-env-secrets`.
 
+Manual `Deploy` lives in `.github/workflows/deploy.yml`. It is `workflow_dispatch` only. On the private deploy fork (`jonbeckman/solzero`), open Actions → Deploy → Run workflow and choose `pre` or `prod`. The job runs only when `github.repository != 'SolZeroAI/platform'`. Do not run `Deploy` on SolZeroAI/platform. This public repository stays on secret-less `Validate`.
+
 SolZero validates the `dev`, `test`, `pre`, and `prod` profiles. Keep every profile in the repository to preserve this contract.
 
 ## Common commands

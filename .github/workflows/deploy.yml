@@ -1,0 +1,85 @@
+# Template for the private deploy fork. Keep this file valid YAML. Do not comment it out.
+# The invert guard skips this job on SolZeroAI/platform, so the public repository never deploys.
+# Do not add secrets on SolZeroAI/platform.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Stage to deploy"
+        required: true
+        type: choice
+        options:
+          - pre
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    if: ${{ github.repository != 'SolZeroAI/platform' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          # Full history and tags let the deploy compute the release offset
+          # label, for example v1.5.0+2-bbb222.
+          fetch-depth: 0
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Create stage vars file
+        env:
+          S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
+          S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY }}
+          S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN: ${{ secrets.S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN }}
+          MCPCF_PROXY_SIGNING_SECRET: ${{ secrets.MCPCF_PROXY_SIGNING_SECRET }}
+          TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+          REPO_SECRETS_ENCRYPTION_KEY: ${{ secrets.REPO_SECRETS_ENCRYPTION_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+        run: |
+          nub run config:write-stage-vars -- ${{ inputs.environment }} config/.${{ inputs.environment }}.vars
+
+      - name: Deploy
+        run: |
+          ALCHEMY_STAGE=${{ inputs.environment }} nub run --cwd packages/infra deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+          WRANGLER_SEND_METRICS: "false"
