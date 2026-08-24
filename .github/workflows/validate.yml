@@ -1,20 +1,16 @@
 name: Validate
 
 on:
-  pull_request:
-    branches:
-      - master
-  push:
-    branches:
-      - master
+  workflow_call:
+    inputs:
+      checkout_ref:
+        description: "Git ref to validate"
+        required: false
+        type: string
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: validate-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
@@ -24,6 +20,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref }}
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.4.0

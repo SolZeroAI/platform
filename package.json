@@ -40,6 +40,8 @@
     "auth:admin-password": "tsx scripts/print-admin-password.ts",
     "config:check": "tsx scripts/s0-config.ts check",
     "config:schema": "tsx scripts/s0-config.ts schema",
+    "config:stage-url": "tsx scripts/s0-config.ts stage-url",
+    "config:write-stage-vars": "tsx scripts/s0-config.ts write-stage-vars",
     "creative:release-card": "nub run --filter @solzero/background-web render:release",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "tegami": "tsx scripts/tegami.mts",
