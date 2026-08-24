@@ -58,7 +58,10 @@ combined version and release-note preview. A change with no observable effect ca
 1. Merge a feature pull request with its pending `.tegami/` entries.
 2. Wait for `Validate` to pass on `master`. That workflow runs the secret-less checks. The `Release`
    workflow then runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
-   deploys stay on the private fork and are not required for a GitHub Release.
+   deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
+   with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
+   YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
+   workflow is enabled. Fork owners enable it on their own Actions page.
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and

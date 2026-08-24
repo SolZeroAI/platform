@@ -56,8 +56,12 @@ nub run build
 run at `warn`. Lint loads the GitHub package through `tsx` because that package ships
 TypeScript source.
 
-GitHub Actions on SolZeroAI/platform runs `config:check`, `typecheck`, `lint`, and `format`. Tests that
-need Cloudflare tokens and Deploy Preview run only on the private deploy fork.
+GitHub Actions on SolZeroAI/platform runs `config:check`, `typecheck`, `lint`, `format`, and actionlint.
+Tests that need Cloudflare tokens and Deploy Preview skip on this public repository
+(`github.repository != 'SolZeroAI/platform'`). Keep `preview.yml` as valid YAML and disable it here
+with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Disabled state
+is per-repo. Fork owners enable it on their Actions page. GitHub disables scheduled workflows on
+public forks by default. Do not comment the workflow YAML out.
 
 If a check cannot run in your environment, explain why in the pull request.
 

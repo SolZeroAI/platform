@@ -56,10 +56,22 @@ jobs:
       - name: Check formatting
         run: nub run format
 
+      - name: Lint GitHub Actions workflows
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum --check
+          tar -xzf actionlint.tar.gz actionlint
+          ./actionlint -color .github/workflows/*.yml
+
       - name: Test
-        if: github.repository == 'jonbeckman/solzero'
+        if: github.repository != 'SolZeroAI/platform'
         run: nub run test
 
       - name: Build
-        if: github.repository == 'jonbeckman/solzero'
+        if: github.repository != 'SolZeroAI/platform'
         run: nub run build
