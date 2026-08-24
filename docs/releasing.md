@@ -61,11 +61,14 @@ combined version and release-note preview. A change with no observable effect ca
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
-   workflow is enabled. Fork owners enable it on their own Actions page. Manual `Deploy`
-   (`deploy.yml`) is `workflow_dispatch` with a required `environment` choice of `pre` or `prod`. It
-   runs only when `github.repository != 'SolZeroAI/platform'` (the private deploy fork
-   `jonbeckman/solzero`). Do not run `Deploy` on SolZeroAI/platform. Public `Validate` stays
-   secret-less.
+   workflow is enabled. Fork owners enable it on their own Actions page. Do not run `Deploy Preview`
+   or `Deploy` on SolZeroAI/platform. Public `Validate` stays secret-less. On the private fork, **Run
+   workflow** on `Deploy Preview` can refresh standing Alchemy stage `pre` (`deploy-standing-pre`)
+   or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a `stage` that starts with
+   `pre-`). Exact `pre` is rejected so a click cannot destroy the standing preview. Manual `Deploy`
+   (`deploy.yml`) stays a separate `workflow_dispatch` with a required `environment` choice of `pre`
+   or `prod`. Do not fold those Deploy Preview actions into `Deploy`. It runs only when
+   `github.repository != 'SolZeroAI/platform'` (the private deploy fork `jonbeckman/solzero`).
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
