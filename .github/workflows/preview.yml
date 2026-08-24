@@ -1,3 +1,5 @@
+# Template for the private deploy fork (jonbeckman/solzero).
+# Gated off on the public SolZeroAI/platform repository. Do not add secrets here.
 name: Deploy Preview
 
 on:
@@ -28,7 +30,7 @@ concurrency:
 jobs:
   validate:
     name: Validate
-    if: ${{ (github.event_name != 'pull_request' || github.event.action != 'closed') && github.event_name != 'workflow_dispatch' }}
+    if: ${{ github.repository == 'jonbeckman/solzero' && (github.event_name != 'pull_request' || github.event.action != 'closed') && github.event_name != 'workflow_dispatch' }}
     uses: ./.github/workflows/validate.yml
     permissions:
       contents: read
@@ -36,7 +38,7 @@ jobs:
   deploy-preview:
     name: Deploy preview stage
     needs: validate
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ github.repository == 'jonbeckman/solzero' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: pre
@@ -138,7 +140,7 @@ jobs:
 
   cleanup-preview:
     name: Clean up preview stage
-    if: ${{ (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.stage, 'pre-')) }}
+    if: ${{ github.repository == 'jonbeckman/solzero' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.stage, 'pre-'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: pre

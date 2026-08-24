@@ -1,6 +1,12 @@
 name: Validate
 
 on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
   workflow_call:
     inputs:
       checkout_ref:
@@ -51,7 +57,9 @@ jobs:
         run: nub run format
 
       - name: Test
+        if: github.repository == 'jonbeckman/solzero'
         run: nub run test
 
       - name: Build
+        if: github.repository == 'jonbeckman/solzero'
         run: nub run build

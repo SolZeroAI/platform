@@ -56,6 +56,9 @@ nub run build
 run at `warn`. Lint loads the GitHub package through `tsx` because that package ships
 TypeScript source.
 
+GitHub Actions on SolZeroAI/platform runs `config:check`, `typecheck`, `lint`, and `format`. Tests that
+need Cloudflare tokens and Deploy Preview run only on the private deploy fork.
+
 If a check cannot run in your environment, explain why in the pull request.
 
 ## Pull requests

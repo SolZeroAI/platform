@@ -207,7 +207,7 @@ When your deployment uses sandbox agents, test its selected Codex, Claude Code, 
 
 For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. Run `nub run infra:plan:pre`, followed by `nub run infra:deploy:pre`.
 
-GitHub Actions also deploys previews. The `Deploy Preview` workflow deploys the `pre` stage on each merge to `master`. Each pull request gets an ephemeral `pre-<number>` stage with a preview URL comment, and the workflow destroys that stage when the pull request closes. Sync the required secrets with `nub run github:sync-env-secrets`.
+Public GitHub Actions on this repository run secret-less checks only. The `Deploy Preview` workflow YAML is a template for the private deploy fork (`jonbeckman/solzero`) and is gated off here. That fork deploys the `pre` stage on merge to `master`, comments a `pre-<number>` URL on each pull request, and destroys that stage when the pull request closes. Sync secrets on the private fork with `nub run github:sync-env-secrets`.
 
 SolZero validates the `dev`, `test`, `pre`, and `prod` profiles. Keep every profile in the repository to preserve this contract.
 

@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_run:
     workflows:
-      - Deploy Preview
+      - Validate
     types:
       - completed
     branches:
