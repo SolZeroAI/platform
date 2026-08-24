@@ -1,3 +1,8 @@
+# Copyable Deploy Preview template. Keep this file valid YAML. Do not comment it out.
+# On SolZeroAI/platform, disable it with Actions → Deploy Preview → Disable workflow
+# (`gh workflow disable preview.yml`). Disabled state is per-repo; fork owners enable it
+# on their Actions page. The invert guard below is the belt if the public workflow is enabled.
+# Do not add secrets on SolZeroAI/platform.
 name: Deploy Preview
 
 on:
@@ -28,7 +33,7 @@ concurrency:
 jobs:
   validate:
     name: Validate
-    if: ${{ (github.event_name != 'pull_request' || github.event.action != 'closed') && github.event_name != 'workflow_dispatch' }}
+    if: ${{ github.repository != 'SolZeroAI/platform' && (github.event_name != 'pull_request' || github.event.action != 'closed') && github.event_name != 'workflow_dispatch' }}
     uses: ./.github/workflows/validate.yml
     permissions:
       contents: read
@@ -36,7 +41,7 @@ jobs:
   deploy-preview:
     name: Deploy preview stage
     needs: validate
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ github.repository != 'SolZeroAI/platform' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: pre
@@ -46,7 +51,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
         with:
           # Full history and tags let the deploy compute the release offset
           # label, for example v1.5.0+2-bbb222.
@@ -114,7 +119,7 @@ jobs:
       - name: Find existing comment
         if: ${{ github.event_name == 'pull_request' }}
         id: find-comment
-        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3.1.0
+        uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: "github-actions[bot]"
@@ -122,7 +127,7 @@ jobs:
 
       - name: Create or update PR comment
         if: ${{ github.event_name == 'pull_request' }}
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
@@ -138,7 +143,7 @@ jobs:
 
   cleanup-preview:
     name: Clean up preview stage
-    if: ${{ (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.stage, 'pre-')) }}
+    if: ${{ github.repository != 'SolZeroAI/platform' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.stage, 'pre-'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: pre
@@ -148,7 +153,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.4.0
@@ -214,7 +219,7 @@ jobs:
       - name: Find existing comment
         if: ${{ github.event_name == 'pull_request' }}
         id: find-comment
-        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3.1.0
+        uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: "github-actions[bot]"
@@ -222,7 +227,7 @@ jobs:
 
       - name: Update comment with cleanup status
         if: steps.find-comment.outputs.comment-id != ''
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           body: |

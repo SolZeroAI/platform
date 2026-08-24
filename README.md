@@ -207,7 +207,7 @@ When your deployment uses sandbox agents, test its selected Codex, Claude Code, 
 
 For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. Run `nub run infra:plan:pre`, followed by `nub run infra:deploy:pre`.
 
-GitHub Actions also deploys previews. The `Deploy Preview` workflow deploys the `pre` stage on each merge to `master`. Each pull request gets an ephemeral `pre-<number>` stage with a preview URL comment, and the workflow destroys that stage when the pull request closes. Sync the required secrets with `nub run github:sync-env-secrets`.
+Public GitHub Actions on SolZeroAI/platform run secret-less checks only (`config:check`, typecheck, lint, format, and actionlint). Keep `preview.yml` as valid YAML. On this public repository, disable it with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Disabled state is per-repo; fork owners enable the workflow on their Actions page. GitHub disables scheduled workflows on public forks by default. Jobs that use secrets also have an invert guard (`github.repository != 'SolZeroAI/platform'`), so they skip on the public repo even if the workflow is enabled. Do not comment the YAML out. Any repository that is not SolZeroAI/platform can run those jobs without editing the file. Sync secrets only on a private deploy fork with `nub run github:sync-env-secrets`.
 
 SolZero validates the `dev`, `test`, `pre`, and `prod` profiles. Keep every profile in the repository to preserve this contract.
 

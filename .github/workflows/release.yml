@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_run:
     workflows:
-      - Deploy Preview
+      - Validate
     types:
       - completed
     branches:
@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out validated commit
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
