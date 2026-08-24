@@ -47,6 +47,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
+        with:
+          # Full history and tags let the deploy compute the release offset
+          # label, for example v1.5.0+2-bbb222.
+          fetch-depth: 0
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.4.0
