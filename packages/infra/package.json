@@ -38,7 +38,7 @@
   "dependencies": {
     "@effect/platform-node": "4.0.0-beta.107",
     "@solzero/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.72",
+    "alchemy": "2.0.0-beta.74",
     "dotenv": "^17.4.2",
     "effect": "4.0.0-beta.107",
     "jsonc-parser": "^3.3.1"
