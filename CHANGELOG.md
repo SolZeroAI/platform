@@ -1,3 +1,40 @@
+## solzero@1.6.0
+
+### Bots can create standing and temporary routines
+
+Each bot can create its own routines. Standing routines keep running until the bot deletes them. Temporary routines watch finite work such as pull request checks and are deleted when that work is done or when the deadline passes.
+
+### Safer decode at bot, session, workflow, and alarm edges
+
+SolZero now parses untrusted bot, session, workflow, and alarm payloads before they reach runtime code. Operators see safer decode of stored rows, manifests, and artifact metadata.
+
+### Alchemy 2.0.0-beta.74 and Turbo 2.10.11
+
+SolZero now deploys and builds with Alchemy 2.0.0-beta.74 and Turbo 2.10.11. The next deploy adopts existing D1 migration history into Alchemy's migration table. Operators do not need a special action beyond that deploy.
+
+### Deploy previews from GitHub Actions
+
+The new `Deploy Preview` workflow deploys the `pre` stage on each merge to `master`. Each pull
+request deploys an ephemeral `pre-<number>` stage and posts its preview URL as a pull request
+comment. The workflow destroys the ephemeral stage when the pull request closes. A manual dispatch
+input removes an orphaned `pre-*` stage.
+
+The `Release` workflow now starts after `Deploy Preview` succeeds on `master`. Deployment operators
+must set the GitHub `pre` environment secrets and the repository Cloudflare secrets. Run
+`nub run github:sync-env-secrets` to upload them.
+
+### Show the real product version in the app
+
+The web sidebar and the API health endpoint now display the product version from the repository
+`VERSION` file, followed by the short commit hash of the deployed build, for example
+`v1.5.0-036d0b`. Deployments previously displayed `v0.0.0` because they read the placeholder
+workspace package version.
+
+A build that contains commits after the release tag also shows the unreleased commit count, for
+example `v1.5.0+2-bbb222`. A build deployed from the release tag itself, such as a production
+deployment, keeps the plain `v1.5.0-036d0b` form. The count needs the release tag and full history
+in the deploy checkout; without them the label omits the count.
+
 ## solzero@1.5.0
 
 ### Route model traffic through Cloudflare AI Gateway
