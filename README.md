@@ -203,18 +203,6 @@ curl --fail-with-body https://ai.<zone>/api/auth/config
 
 Open `https://ai.<zone>`. Sign in with the production administrator email. Configure the model gateway, and then repeat the local SolZero Agent smoke test.
 
-When your deployment uses sandbox agents, test its selected Codex, Claude Code, or OpenCode Container runtime.
-
-For a preview deployment, use `config/pre.config.jsonc` and `config/.pre.vars`. Run `nub run infra:plan:pre`, followed by `nub run infra:deploy:pre`.
-
-Public GitHub Actions on SolZeroAI/platform run secret-less checks only (`config:check`, typecheck, lint, format, and actionlint). Keep `preview.yml` as valid YAML. On this public repository, disable it with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Disabled state is per-repo; fork owners enable the workflow on their Actions page. GitHub disables scheduled workflows on public forks by default. Jobs that use secrets also have an invert guard (`github.repository != 'SolZeroAI/platform'`), so they skip on the public repo even if the workflow is enabled. Do not comment the YAML out. Any repository that is not SolZeroAI/platform can run those jobs without editing the file. Sync secrets only on a private deploy fork with `nub run github:sync-env-secrets`. Do not run `Deploy Preview` or `Deploy` on SolZeroAI/platform. Public `Validate` stays secret-less.
-
-On the private deploy fork, `Deploy Preview` deploys standing `pre` on each merge to `master`. Same-repo pull requests deploy `pre-<number>` and comment the preview URL. **Run workflow** on `Deploy Preview` can refresh standing Alchemy stage `pre` (`deploy-standing-pre`, the default) or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a `stage` that starts with `pre-`). Exact `pre` is rejected so a click cannot destroy the standing preview.
-
-Manual `Deploy` stays in `.github/workflows/deploy.yml` as a separate `workflow_dispatch` with a required `environment` choice of `pre` or `prod`. Do not fold Deploy Preview actions into `Deploy`. On the private deploy fork (`jonbeckman/solzero`), open Actions → Deploy → Run workflow and choose `pre` or `prod`. The job runs only when `github.repository != 'SolZeroAI/platform'`.
-
-SolZero validates the `dev`, `test`, `pre`, and `prod` profiles. Keep every profile in the repository to preserve this contract.
-
 ## Common commands
 
 ```sh
