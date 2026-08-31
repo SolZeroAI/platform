@@ -260,13 +260,12 @@ ensure_alchemy_dir() {
 
 ensure_docker() {
   if ! have docker; then
-    echo "control-solzero: docker is not on PATH; Alchemy container runtimes will fail" >&2
-    return 0
+    die "docker is not on PATH. README requires a Docker-compatible engine; without it Alchemy hangs after binding :1337/:3000."
   fi
   if docker info >/dev/null 2>&1; then
     return 0
   fi
-  if have sudo; then
+  if have sudo && have dockerd; then
     sudo dockerd >/tmp/dockerd.log 2>&1 &
     local n=0
     while (( n < 30 )); do
@@ -280,6 +279,7 @@ ensure_docker() {
   if [[ -S /var/run/docker.sock ]]; then
     sudo chmod 666 /var/run/docker.sock || true
   fi
+  docker info >/dev/null 2>&1 || die "docker is on PATH but the engine is not running"
 }
 
 start_detached() {
