@@ -1,18 +1,22 @@
 /* oxlint-disable effect/avoid-process-env -- Local PGLite Hyperdrive origin is an operator-selected process. */
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { PGlite } from "@electric-sql/pglite"
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket"
 import { LOCAL_PGLITE_DATABASE_URL, LOCAL_PGLITE_PORT } from "@solzero/shared"
 
 const repoRoot = process.cwd()
-const migrationPath = resolve(repoRoot, "packages/infra/migrations/pg/0000_control_plane.sql")
+const migrationsFolder = resolve(repoRoot, "packages/infra/migrations/pg")
 
 const host = process.env.PGLITE_HOST ?? "127.0.0.1"
 const port = Number(process.env.PGLITE_PORT ?? LOCAL_PGLITE_PORT)
 
 const db = new PGlite()
-await db.exec(readFileSync(migrationPath, "utf8"))
+for (const filename of readdirSync(migrationsFolder)
+  .filter((name) => name.endsWith(".sql"))
+  .sort()) {
+  await db.exec(readFileSync(resolve(migrationsFolder, filename), "utf8"))
+}
 
 const server = new PGLiteSocketServer({
   db,

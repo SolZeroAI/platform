@@ -41,7 +41,7 @@ function insertIgnoreUserSql(env: Env) {
   return databaseEngineFromEnv(env) === "planetscale"
     ? `INSERT INTO "user"
          ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
-       VALUES (?1, ?2, ?3, 1, ?4, ?4)
+       VALUES (?1, ?2, ?3, TRUE, ?4, ?4)
        ON CONFLICT DO NOTHING`
     : `INSERT OR IGNORE INTO "user"
          ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")

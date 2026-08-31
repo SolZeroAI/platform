@@ -349,7 +349,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   "id" text PRIMARY KEY NOT NULL,
   "name" text NOT NULL,
   "email" text NOT NULL,
-  "emailVerified" integer DEFAULT 0 NOT NULL,
+  "emailVerified" boolean DEFAULT false NOT NULL,
   "image" text,
   "createdAt" text NOT NULL,
   "updatedAt" text NOT NULL

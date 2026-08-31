@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm"
-import { bigint, index, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core"
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
 import { DEFAULT_ISOLATE_STEP_LIMIT, DEFAULT_SUBAGENT_MODE } from "@solzero/shared"
 
 function unixMs(name: string) {
@@ -474,7 +483,7 @@ export const user = pgTable(
     id: text("id").primaryKey().notNull(),
     name: text("name").notNull(),
     email: text("email").notNull(),
-    emailVerified: integer("emailVerified").notNull().default(0),
+    emailVerified: boolean("emailVerified").notNull().default(false),
     image: text("image"),
     createdAt: text("createdAt").notNull(),
     updatedAt: text("updatedAt").notNull(),
