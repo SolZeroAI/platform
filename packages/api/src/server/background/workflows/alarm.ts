@@ -9,7 +9,7 @@ import {
 } from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
 import { BotStore } from "../db/bots"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -444,7 +444,7 @@ const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(functio
 
 const handleScheduledWorkflowAlarm = Effect.fn("workflows.handleScheduledWorkflowAlarm")(
   function* (input: { env: Env; storage: WorkflowAlarmStorage; schedule: StoredSchedule }) {
-    const store = createWorkflowStoreFromD1(input.env.DB)
+    const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
     const workflow = yield* Effect.tryPromise({
       try: () => store.getWorkflow(input.schedule.workflowId),
       catch: toError,
@@ -500,7 +500,7 @@ const handleScheduledRoutineAlarm = Effect.fn("workflows.handleScheduledRoutineA
     schedule: StoredSchedule
     routineId: string
   }) {
-    const store = new BotStore(makeD1Drizzle(input.env.DB))
+    const store = new BotStore(makeControlPlaneFromEnv(input.env))
     const routineOption = yield* store.getRoutineById(input.routineId)
     yield* Option.match(routineOption, {
       onNone: () =>

@@ -19,6 +19,7 @@ import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
@@ -537,8 +538,15 @@ export interface SessionIndexStorePromise {
   upsertWorkflowSessionReuseKey(input: UpsertWorkflowSessionReuseKeyInput): Promise<void>
 }
 
-export function createSessionIndexStoreFromD1(db: D1Database): SessionIndexStorePromise {
-  const store = new SessionIndexStore(makeD1Drizzle(db))
+export function createSessionIndexStoreFromD1(
+  db: D1Database | ControlPlaneDb,
+): SessionIndexStorePromise {
+  const store = new SessionIndexStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+  )
   return {
     getById: (id) => runSessionIndexOption(store.getById(id)),
     getWorkflowSessionReuseSessionId: (input) =>

@@ -15,6 +15,7 @@ import { parseJsonRecord, stringifyJson } from "../../lib/json"
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- UserProviderConfigsStore is a D1 factory. Production callers import at module scope; replacing this constructor needs a Layer-owned D1 capability.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
@@ -205,7 +206,7 @@ export class UserProviderConfigsStore {
 
   constructor(
     db: AppDrizzleDatabase | ControlPlaneDb,
-    private readonly d1: D1Database,
+    private readonly d1: D1Database | undefined,
     private readonly encryptionKey: string,
   ) {
     const handle = resolveControlPlaneHandle(db)
@@ -427,9 +428,21 @@ export class UserProviderConfigsStore {
   ) {
     const existingPreferenceRows = yield* this.getPreferenceWithoutOpenCodePermission(userId)
     const existingPreference = Option.fromNullishOr(existingPreferenceRows[0])
+    const d1 = yield* Option.match(Option.fromNullishOr(this.d1), {
+      onNone: () =>
+        Effect.fail(
+          new D1Error({
+            operation: "db.userProviderConfigs.replaceSettings",
+            cause: new UserProviderPreferenceMigrationError({
+              message: USER_PROVIDER_OPENCODE_PERMISSION_MIGRATION_MESSAGE,
+            }),
+          }),
+        ),
+      onSome: Effect.succeed,
+    })
     yield* Effect.tryPromise({
       try: () =>
-        this.d1
+        d1
           .prepare(
             `INSERT INTO user_provider_preferences (
               user_id,
@@ -697,10 +710,20 @@ export interface UserProviderConfigsStorePromise {
 }
 
 export function createUserProviderConfigsStoreFromD1(
-  db: D1Database,
+  db: D1Database | ControlPlaneDb,
   encryptionKey: string,
 ): UserProviderConfigsStorePromise {
-  const store = new UserProviderConfigsStore(makeD1Drizzle(db), db, encryptionKey)
+  const resolved = Match.value(db).pipe(
+    Match.when(isControlPlaneDb, (handle) => ({
+      db: handle,
+      d1: undefined,
+    })),
+    Match.orElse((d1) => ({
+      db: makeD1Drizzle(d1),
+      d1,
+    })),
+  )
+  const store = new UserProviderConfigsStore(resolved.db, resolved.d1, encryptionKey)
   return {
     getSettingsSnapshot: (userId) =>
       runUserProviderConfigsEffect(store.getSettingsSnapshot(userId)),

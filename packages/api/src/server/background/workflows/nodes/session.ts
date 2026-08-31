@@ -21,6 +21,7 @@ import {
   type SessionIndexStorePromise,
 } from "../../db/session-index"
 import { createWorkflowStoreFromD1 } from "../../db/workflows"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { parseJsonOrText, stringifyJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
 import { runSessionApplication } from "../../../application/session-run"
@@ -542,7 +543,7 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
     onNone: () => workflowNodeFail("Workflow agent node requires an AI Provider model"),
     onSome: Effect.succeed,
   })
-  const sessionIndexStore = createSessionIndexStoreFromD1(params.input.env.DB)
+  const sessionIndexStore = createSessionIndexStoreFromD1(makeControlPlaneFromEnv(params.input.env))
   const sessionKey = yield* renderSessionKey(
     params.input,
     "sessionKey",
@@ -650,7 +651,8 @@ const runSessionNode = Effect.fn("workflows.runSessionNode")(function* (
   sessionKind: SessionKind,
 ) {
   const workflow = yield* Effect.tryPromise({
-    try: () => createWorkflowStoreFromD1(input.env.DB).getWorkflow(input.workflowId),
+    try: () =>
+      createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env)).getWorkflow(input.workflowId),
     catch: toError,
   })
   const resolvedWorkflow = yield* Option.match(Option.fromNullishOr(workflow), {

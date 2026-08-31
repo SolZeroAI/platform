@@ -5,6 +5,7 @@ import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
@@ -288,9 +289,14 @@ export interface UserMcpcfServerConfigStorePromise {
 }
 
 export function createUserMcpcfServerConfigStoreFromD1(
-  db: D1Database,
+  db: D1Database | ControlPlaneDb,
 ): UserMcpcfServerConfigStorePromise {
-  const store = new UserMcpcfServerConfigStore(makeD1Drizzle(db))
+  const store = new UserMcpcfServerConfigStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+  )
   return {
     listByUserAndServerIds: (userId, serverIds) =>
       runUserMcpcfEffect(store.listByUserAndServerIds(userId, serverIds)),

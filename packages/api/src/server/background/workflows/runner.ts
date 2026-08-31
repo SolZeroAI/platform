@@ -7,6 +7,7 @@ import {
   type WorkflowRunRecord,
   type WorkflowRunTriggerKind,
 } from "../db/workflows"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { createApiRequestObserver, type RequestLogger } from "../../effect/services/observability"
 import type { Env } from "../types"
@@ -308,7 +309,8 @@ async function readWorkflowForLoader(input: {
   metadataCodeKey: Option.Option<string>
 }): Promise<WorkflowRecord | null> {
   return Option.match(input.metadataCodeKey, {
-    onNone: () => createWorkflowStoreFromD1(input.env.DB).getWorkflow(input.workflowId),
+    onNone: () =>
+      createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env)).getWorkflow(input.workflowId),
     onSome: () => Promise.resolve(null),
   })
 }
@@ -480,7 +482,7 @@ async function applyTerminalWorkflowRunUpdate(input: {
   run: WorkflowRunRecord
   terminalUpdate: TerminalWorkflowRunUpdate
 }): Promise<WorkflowRunRecord> {
-  const store = createWorkflowStoreFromD1(input.env.DB)
+  const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
   const completedAt = Date.now()
   const eventFields = terminalRunEventFields(input.terminalUpdate)
   await store.addRunEvent({
@@ -572,7 +574,7 @@ function errorFromUnknown(error: unknown): Error {
 }
 
 export async function startWorkflowRun(input: StartWorkflowRunInput) {
-  const store = createWorkflowStoreFromD1(input.env.DB)
+  const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
   const now = Date.now()
   const runId = `wfr_${generateId(12)}`
   const instanceId = `wf_${runId}`

@@ -14,6 +14,7 @@ import {
 } from "@solzero/shared"
 import { BotRoutineService } from "../bots/service"
 import { BotNotFoundError } from "../db/errors"
+import type { ControlPlaneDb } from "../../effect/db/control-plane-db"
 import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import { runAiSearchMcpTool, type AiSearchMcpRuntimeContext } from "../../mcp/ai-search-runtime"
 import {
@@ -200,7 +201,7 @@ export interface IsolateWorkspaceRuntime {
 
 export interface IsolateToolContext {
   env: Env
-  db: D1DrizzleDatabase
+  db: ControlPlaneDb | D1DrizzleDatabase
   runtime: IsolateWorkspaceRuntime
   sessionId: string
   userId: string

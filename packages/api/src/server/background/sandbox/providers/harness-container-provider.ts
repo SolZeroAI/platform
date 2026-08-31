@@ -9,6 +9,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { toError } from "../../../lib/effect-errors"
 import { compileOpenCodeConfigForModel } from "../../provider-catalog"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { resolveRuntimeSkillPackages } from "../../skills/catalog"
 import type { Env, SandboxEvent } from "../../types"
 import type {
@@ -426,7 +427,7 @@ export class HarnessContainerProvider implements SandboxProvider {
       const skills = yield* Effect.tryPromise({
         try: () =>
           resolveRuntimeSkillPackages({
-            db: this.env.DB,
+            db: makeControlPlaneFromEnv(this.env),
             bucket: this.env.AGENT_SKILLS,
             userId: request.author.userId,
           }),

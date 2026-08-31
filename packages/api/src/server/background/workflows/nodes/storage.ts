@@ -8,6 +8,7 @@ import {
 import { parseJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { Env } from "../../types"
 import { prefixStorageKeyWithUserId } from "../../../lib/better-auth"
 import {
@@ -464,7 +465,10 @@ const runGetSecretNode = Effect.fn("workflows.runGetSecretNode")(function* (
   const userId = getActionUserId(input)
   const secrets = yield* Effect.tryPromise({
     try: () =>
-      createGlobalSecretsStoreFromD1(input.env.DB, encryptionKey).getDecryptedSecrets({ userId }),
+      createGlobalSecretsStoreFromD1(
+        makeControlPlaneFromEnv(input.env),
+        encryptionKey,
+      ).getDecryptedSecrets({ userId }),
     catch: toError,
   })
   const value = secrets[key]

@@ -17,6 +17,7 @@ import {
 } from "../../../background/workflows/runner"
 import { prefixStorageKeyWithUserId } from "../../../lib/better-auth"
 import { parseJson, parseJsonOrText, stringifyJson } from "../../../lib/json"
+import type { ControlPlaneDb } from "../../db/control-plane-db"
 import type { D1DrizzleDatabase } from "../../db/d1-drizzle"
 import { EffectRequestLogger, type RequestLogger } from "../../services/observability"
 import {
@@ -378,7 +379,7 @@ const loadKvArtifactResponse = Effect.fn("workflows.loadKvArtifactResponse")(fun
 /** Loads a saved workflow run artifact (R2 or KV) and renders it as a JSON response. */
 const loadRunArtifactResponse = Effect.fn("workflows.loadRunArtifactResponse")(function* (input: {
   env: Env
-  db: D1DrizzleDatabase
+  db: ControlPlaneDb | D1DrizzleDatabase
   log: RequestLogger
   params: { id: string; runId: string; nodeId: string }
 }) {
@@ -425,7 +426,7 @@ const logTerminateFailure = Effect.fn("workflows.deleteRun.terminateFailed")(fun
 /** Builds the SSE response that streams reconciled workflow run snapshots. */
 function createRunEventsStreamResponse(input: {
   env: Env
-  db: D1DrizzleDatabase
+  db: ControlPlaneDb | D1DrizzleDatabase
   workflow: WorkflowRecord
   workflowId: string
   requestedRunId?: string

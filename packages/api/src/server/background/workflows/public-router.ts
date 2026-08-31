@@ -1,4 +1,5 @@
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
 import type { RequestLogger } from "../../effect/services/observability"
@@ -192,7 +193,7 @@ const runWebhookPublicRequest = Effect.fn("workflows.runWebhookPublicRequest")(f
 ) {
   options.setRouteBranch?.("workflow-public")
 
-  const store = createWorkflowStoreFromD1(env.DB)
+  const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(env))
   const workflow = yield* Effect.tryPromise({
     try: () => store.getWorkflowByWebhookId(webhookId),
     catch: toError,

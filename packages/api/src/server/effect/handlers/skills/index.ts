@@ -33,7 +33,7 @@ const listForUser = Effect.fn("skills.listForUser")(function* (
   userId: string,
 ) {
   const skills = yield* Effect.tryPromise({
-    try: () => listEffectiveGlobalSkills({ db: context.env.DB, userId }),
+    try: () => listEffectiveGlobalSkills({ db: context.db, userId }),
     catch: skillFailure,
   })
   return json({ skills })

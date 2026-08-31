@@ -60,7 +60,7 @@ export function agentSkillAuditMetadata(skill: {
 
 const response = Effect.fn("admin.skills.response")(function* (context: ControlPlaneContext) {
   const skills = yield* Effect.tryPromise({
-    try: () => listAdminGlobalSkills(context.env.DB),
+    try: () => listAdminGlobalSkills(context.db),
     catch: skillFailure,
   })
   return json({ skills })
@@ -105,7 +105,7 @@ export function createAgentSkill({ payload }: { payload: AdminAgentSkillCreatePa
         Effect.tryPromise({
           try: () =>
             createAdminGlobalSkill({
-              db: context.env.DB,
+              db: context.db,
               bucket: context.env.AGENT_SKILLS,
               skillMd: payload.skillMd,
               defaultEnabled: payload.defaultEnabled,

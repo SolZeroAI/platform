@@ -5,6 +5,7 @@ import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
@@ -690,8 +691,15 @@ export interface WorkflowSlackAppStorePromise {
   }): Promise<WorkflowSlackDeliveryRecord | null>
 }
 
-export function createWorkflowSlackAppStoreFromD1(db: D1Database): WorkflowSlackAppStorePromise {
-  const store = new WorkflowSlackAppStore(makeD1Drizzle(db))
+export function createWorkflowSlackAppStoreFromD1(
+  db: D1Database | ControlPlaneDb,
+): WorkflowSlackAppStorePromise {
+  const store = new WorkflowSlackAppStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+  )
   return {
     createApp: (input) => runSlackAppStoreEffect(store.createApp(input)),
     getAppById: (id) => runSlackAppStoreOption(store.getAppById(id)),

@@ -7,6 +7,7 @@ import {
   type WorkflowRecord,
   type WorkflowRunRecord,
 } from "../db/workflows"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { parseJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { errorMessageOr, toError } from "../../lib/effect-errors"
@@ -205,7 +206,7 @@ export class WorkflowLifecycle {
     private readonly env: Env,
     adapters: WorkflowLifecycleAdapters = {},
   ) {
-    this.store = adapters.store ?? createWorkflowStoreFromD1(env.DB)
+    this.store = adapters.store ?? createWorkflowStoreFromD1(makeControlPlaneFromEnv(env))
     this.now = adapters.now ?? Date.now
     this.createId = adapters.generateId ?? generateId
     this.normalizeManifest = adapters.normalizeManifest ?? normalizeWorkflowManifest

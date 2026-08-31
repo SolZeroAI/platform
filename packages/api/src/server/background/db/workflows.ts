@@ -4,6 +4,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
@@ -940,8 +941,13 @@ export interface WorkflowStorePromise {
   listRunEvents(workflowId: string, runId: string): Promise<WorkflowRunEventRecord[]>
 }
 
-export function createWorkflowStoreFromD1(db: D1Database): WorkflowStorePromise {
-  const store = new WorkflowStore(makeD1Drizzle(db))
+export function createWorkflowStoreFromD1(db: D1Database | ControlPlaneDb): WorkflowStorePromise {
+  const store = new WorkflowStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+  )
   return {
     createWorkflow: (input) => runWorkflowStoreEffect(store.createWorkflow(input)),
     updateWorkflow: (input) => runWorkflowStoreOption(store.updateWorkflow(input)),

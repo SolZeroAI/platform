@@ -11,7 +11,7 @@ import {
   getS0DeploymentConfig,
   getS0DeploymentSecret,
 } from "../db/s0-config"
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { CronRunsStore, sanitizeCronErrorMessage, type CronRunTrigger } from "../db/cron-runs"
 import {
   LITELLM_AI_SDK_ADAPTERS,
@@ -701,7 +701,7 @@ const insertSyncRun = Effect.fn("aiProviders.litellm.insertSyncRun")(function* (
   },
 ) {
   const finishedAt = Date.now()
-  return yield* new CronRunsStore(makeD1Drizzle(env.DB)).insertRun({
+  return yield* new CronRunsStore(makeControlPlaneFromEnv(env)).insertRun({
     jobId: LITELLM_MODEL_SYNC_JOB_ID,
     cron: input.cron ?? null,
     trigger: input.trigger,
@@ -800,7 +800,7 @@ export const getLitellmProviderSnapshot = Effect.fn("aiProviders.litellm.getProv
         getLitellmConfigWithPresence(env),
         getLitellmModelRegistryWithPresence(env),
         getLitellmApiKeyStatus(env),
-        new CronRunsStore(makeD1Drizzle(env.DB)).getJobStatus(LITELLM_MODEL_SYNC_JOB_ID),
+        new CronRunsStore(makeControlPlaneFromEnv(env)).getJobStatus(LITELLM_MODEL_SYNC_JOB_ID),
       ],
       { concurrency: "unbounded" },
     )

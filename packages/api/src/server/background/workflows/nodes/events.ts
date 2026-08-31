@@ -1,5 +1,6 @@
 import { generateId } from "../../auth/crypto"
 import { createWorkflowStoreFromD1 } from "../../db/workflows"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { toError } from "../../../lib/effect-errors"
 import type { WorkflowNodeExecutionInput } from "./common"
 import * as Effect from "effect/Effect"
@@ -43,7 +44,7 @@ export const recordWorkflowNodeRunEvent = Effect.fn("workflows.recordNodeRunEven
 ) {
   yield* Effect.tryPromise({
     try: () =>
-      createWorkflowStoreFromD1(input.env.DB).addRunEvent({
+      createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env)).addRunEvent({
         id: `wfe_${generateId(12)}`,
         workflowId: input.workflowId,
         runId: input.runId,

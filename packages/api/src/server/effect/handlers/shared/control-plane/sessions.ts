@@ -37,7 +37,7 @@ import * as Option from "effect/Option"
 import { generateId } from "../../../../background/auth/crypto"
 import { McpcfRegistryStore } from "../../../../background/db/mcpcf"
 import { AiSearchRegistryStore } from "../../../../background/db/ai-search"
-import { makeD1Drizzle } from "../../../db/d1-drizzle"
+import { makeControlPlaneFromEnv } from "../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../background/db/session-index"
 import {
   getUserMcpcfAuthTokenSecretKey,
@@ -294,7 +294,7 @@ const validateMcpcfUpstreamTokens = Effect.fn("controlPlane.validateMcpcfUpstrea
     userSecretKeys: Set<string>,
   ) {
     const userConfigs = yield* new UserMcpcfServerConfigStore(
-      makeD1Drizzle(env.DB),
+      makeControlPlaneFromEnv(env),
     ).listByUserAndServerIds(
       userId,
       upstreamTokenServers.map((server) => server.id),
@@ -339,7 +339,7 @@ export const requireSessionAccess = Effect.fn("controlPlane.requireSessionAccess
 
 export const requireSessionAccessForUser = Effect.fn("controlPlane.requireSessionAccessForUser")(
   function* (env: ApiEnv, userId: string, sessionId: string) {
-    const store = new SessionIndexStore(makeD1Drizzle(env.DB))
+    const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
     const access = yield* resolveSessionAccess(store, sessionId, userId)
     return yield* requireOption(access, "Session not found", 404)
   },
@@ -582,7 +582,7 @@ export const createSessionWithIdentity = Effect.fn("controlPlane.createSessionWi
     })
     yield* failUnless(initResponse.ok, "Failed to initialize session", 500)
 
-    const indexStore = new SessionIndexStore(makeD1Drizzle(input.env.DB))
+    const indexStore = new SessionIndexStore(makeControlPlaneFromEnv(input.env))
     yield* indexStore.create({
       id: sessionId,
       userId: input.identity.userId,

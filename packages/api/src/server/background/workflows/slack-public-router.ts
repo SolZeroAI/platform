@@ -7,6 +7,7 @@ import {
   type WorkflowSlackAppStorePromise,
 } from "../db/workflow-slack-apps"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import type { Env } from "../types"
 import { WorkflowLifecycle } from "./lifecycle"
 import { getWorkflowSlackAppSecrets } from "./slack-apps"
@@ -299,8 +300,8 @@ const processCreatedDelivery = Effect.fn("workflows.slack.processCreatedDelivery
 const processSlackRegistration = Effect.fn("workflows.slack.processRegistration")(function* (
   input: ProcessSlackRegistrationInput,
 ) {
-  const slackStore = createWorkflowSlackAppStoreFromD1(input.env.DB)
-  const workflowStore = createWorkflowStoreFromD1(input.env.DB)
+  const slackStore = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
+  const workflowStore = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
   const now = Date.now()
   const delivery = yield* Effect.tryPromise({
     try: () =>
@@ -379,7 +380,7 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
   commandId?: string
   setUserIdentity?: (identity: { userId: string; oktaUserId: string | null }) => void
 }) {
-  const slackStore = createWorkflowSlackAppStoreFromD1(input.env.DB)
+  const slackStore = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
   const registrations = yield* Effect.tryPromise({
     try: () =>
       slackStore.listEnabledRegistrationsForApp({
@@ -579,7 +580,8 @@ const loadSlackApp = Effect.fn("workflows.slack.loadApp")(function* (
   route: SlackRouteMatch,
 ) {
   const app = yield* Effect.tryPromise({
-    try: () => createWorkflowSlackAppStoreFromD1(env.DB).getAppById(route.appId),
+    try: () =>
+      createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(env)).getAppById(route.appId),
     catch: toError,
   })
   return yield* Option.match(Option.fromNullishOr(app), {

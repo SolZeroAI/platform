@@ -1,12 +1,19 @@
-import { and, asc, eq, sql, type SQL } from "drizzle-orm"
+import { and, asc, eq, sql, type SQL, type SQLWrapper } from "drizzle-orm"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Order from "effect/Order"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { globalSecrets } from "../../effect/db/schema"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import {
+  controlPlaneSql,
+  isControlPlaneDb,
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { d1Error, type D1Error } from "./errors"
 
@@ -21,20 +28,12 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `${LIKE_ESCAPE_CHAR}${char}`)
 }
 
-function keyLike(pattern: string): SQL {
-  return sql`${globalSecrets.key} LIKE ${pattern} ESCAPE ${LIKE_ESCAPE_CHAR}`
+function keyLike(column: SQLWrapper, pattern: string): SQL {
+  return sql`${column} LIKE ${pattern} ESCAPE ${LIKE_ESCAPE_CHAR}`
 }
 
-function keyNotLike(pattern: string): SQL {
-  return sql`${globalSecrets.key} NOT LIKE ${pattern} ESCAPE ${LIKE_ESCAPE_CHAR}`
-}
-
-function tagsContainAny(tags: readonly string[]): SQL {
-  const list = sql.join(
-    tags.map((tag) => sql`${tag}`),
-    sql`, `,
-  )
-  return sql`EXISTS (SELECT 1 FROM json_each(${globalSecrets.tags}) WHERE value IN (${list}))`
+function keyNotLike(column: SQLWrapper, pattern: string): SQL {
+  return sql`${column} NOT LIKE ${pattern} ESCAPE ${LIKE_ESCAPE_CHAR}`
 }
 
 export type SecretMetadata = {
@@ -107,12 +106,17 @@ export function filterSecretMetadata(
 
 export class GlobalSecretsStore {
   private readonly drizzle
+  private readonly schema
+  private readonly sql
 
   constructor(
-    drizzle: D1DrizzleDatabase,
+    drizzle: AppDrizzleDatabase | ControlPlaneDb,
     private readonly encryptionKey: string,
   ) {
-    this.drizzle = drizzle
+    const handle = resolveControlPlaneHandle(drizzle)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
+    this.sql = controlPlaneSql(handle)
   }
 
   private getUserSecretPrefix(userId: string): string {
@@ -179,7 +183,7 @@ export class GlobalSecretsStore {
     scopedKey: string,
     entry: SecretWriteEntry,
     now: number,
-    existing: Option.Option<typeof globalSecrets.$inferSelect>,
+    existing: Option.Option<AppSchema["globalSecrets"]["$inferSelect"]>,
   ) {
     const existingEncrypted = Option.getOrUndefined(
       Option.map(existing, (row) => row.encryptedValue),
@@ -203,7 +207,7 @@ export class GlobalSecretsStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(globalSecrets)
+          .insert(this.schema.globalSecrets)
           .values({
             key: scopedKey,
             encryptedValue: encrypted ?? "",
@@ -215,7 +219,7 @@ export class GlobalSecretsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: globalSecrets.key,
+            target: this.schema.globalSecrets.key,
             set: {
               encryptedValue: encrypted ?? existingEncrypted ?? "",
               tags: tagsJson,
@@ -284,11 +288,16 @@ export class GlobalSecretsStore {
     })
     const prefixConditions = Option.match(prefix, {
       onNone: () => [] as SQL[],
-      onSome: () => [keyLike(`${escapedPrefix}%`)],
+      onSome: () => [keyLike(this.schema.globalSecrets.key, `${escapedPrefix}%`)],
     })
     const mcpcfExclusion = Match.value(options?.includeMcpcfManaged === true).pipe(
       Match.when(true, () => [] as SQL[]),
-      Match.orElse(() => [keyNotLike(`${escapedPrefix}${escapeLikePattern(MCPCF_KEY_PREFIX)}%`)]),
+      Match.orElse(() => [
+        keyNotLike(
+          this.schema.globalSecrets.key,
+          `${escapedPrefix}${escapeLikePattern(MCPCF_KEY_PREFIX)}%`,
+        ),
+      ]),
     )
     return [...prefixConditions, ...mcpcfExclusion]
   }
@@ -307,14 +316,16 @@ export class GlobalSecretsStore {
     Option.match(Option.fromNullishOr(options?.q?.trim()).pipe(Option.filter(Boolean)), {
       onNone: () => undefined,
       onSome: (query) => {
-        conditions.push(keyLike(`${escapedPrefix}%${escapeLikePattern(query)}%`))
+        conditions.push(
+          keyLike(this.schema.globalSecrets.key, `${escapedPrefix}%${escapeLikePattern(query)}%`),
+        )
       },
     })
 
     const selectedTags = normalizeTags(options?.tags)
     Match.value(selectedTags.length > 0).pipe(
       Match.when(true, () => {
-        conditions.push(tagsContainAny(selectedTags))
+        conditions.push(this.sql.jsonArrayContainsAny(this.schema.globalSecrets.tags, selectedTags))
       }),
       Match.orElse(() => undefined),
     )
@@ -322,10 +333,10 @@ export class GlobalSecretsStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ key: globalSecrets.key, tags: globalSecrets.tags })
-          .from(globalSecrets)
+          .select({ key: this.schema.globalSecrets.key, tags: this.schema.globalSecrets.tags })
+          .from(this.schema.globalSecrets)
           .where(and(...conditions))
-          .orderBy(asc(globalSecrets.key)),
+          .orderBy(asc(this.schema.globalSecrets.key)),
       catch: d1Error("db.globalSecrets.listSecrets"),
     })
 
@@ -344,11 +355,11 @@ export class GlobalSecretsStore {
     return yield* Effect.tryPromise({
       try: () =>
         this.drizzle.all<{ tag: string; count: number }>(sql`
-      SELECT json_each.value AS tag, COUNT(*) AS count
-      FROM ${globalSecrets}, json_each(${globalSecrets.tags})
+      SELECT ${this.sql.jsonArrayElementValue()} AS tag, COUNT(*) AS count
+      FROM ${this.schema.globalSecrets}, ${this.sql.jsonArrayElementsFrom(this.schema.globalSecrets.tags)}
       WHERE ${where}
-      GROUP BY json_each.value
-      ORDER BY json_each.value ASC
+      GROUP BY ${this.sql.jsonArrayElementValue()}
+      ORDER BY ${this.sql.jsonArrayElementValue()} ASC
     `),
       catch: d1Error("db.globalSecrets.listSecrets"),
     })
@@ -362,9 +373,9 @@ export class GlobalSecretsStore {
     const deleted = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .delete(globalSecrets)
-          .where(eq(globalSecrets.key, this.getSecretKey(key, options)))
-          .returning({ key: globalSecrets.key }),
+          .delete(this.schema.globalSecrets)
+          .where(eq(this.schema.globalSecrets.key, this.getSecretKey(key, options)))
+          .returning({ key: this.schema.globalSecrets.key }),
       catch: d1Error("db.globalSecrets.deleteSecret"),
     })
     return deleted.length > 0
@@ -377,16 +388,17 @@ export class GlobalSecretsStore {
     const prefix = this.resolvePrefix(options)
     const where = Option.match(prefix, {
       onNone: () => undefined,
-      onSome: (resolved) => keyLike(`${escapeLikePattern(resolved)}%`),
+      onSome: (resolved) =>
+        keyLike(this.schema.globalSecrets.key, `${escapeLikePattern(resolved)}%`),
     })
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select({
-            key: globalSecrets.key,
-            encryptedValue: globalSecrets.encryptedValue,
+            key: this.schema.globalSecrets.key,
+            encryptedValue: this.schema.globalSecrets.encryptedValue,
           })
-          .from(globalSecrets)
+          .from(this.schema.globalSecrets)
           .where(where),
       catch: d1Error("db.globalSecrets.getDecryptedSecrets"),
     })
@@ -411,7 +423,11 @@ export class GlobalSecretsStore {
   ) {
     const rows = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.select().from(globalSecrets).where(eq(globalSecrets.key, key)).limit(1),
+        this.drizzle
+          .select()
+          .from(this.schema.globalSecrets)
+          .where(eq(this.schema.globalSecrets.key, key))
+          .limit(1),
       catch: d1Error("db.globalSecrets.setSecrets"),
     })
     return Option.fromNullishOr(rows[0])
@@ -440,10 +456,16 @@ export interface GlobalSecretsStorePromise {
 }
 
 export function createGlobalSecretsStoreFromD1(
-  db: D1Database,
+  db: D1Database | ControlPlaneDb,
   encryptionKey: string,
 ): GlobalSecretsStorePromise {
-  const store = new GlobalSecretsStore(makeD1Drizzle(db), encryptionKey)
+  const store = new GlobalSecretsStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+    encryptionKey,
+  )
   return {
     setSecrets: (secrets, options) => runGlobalSecretsEffect(store.setSecrets(secrets, options)),
     listSecretKeys: (options) => runGlobalSecretsEffect(store.listSecretKeys(options)),

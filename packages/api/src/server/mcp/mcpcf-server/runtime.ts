@@ -15,6 +15,7 @@ import {
   type McpcfServerRecord,
 } from "../../background/db/mcpcf"
 import { createGlobalSecretsStoreFromD1 } from "../../background/db/repo-secrets"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import {
   createUserMcpcfServerConfigStoreFromD1,
   getUserMcpcfAuthTokenSecretKey,
@@ -330,7 +331,10 @@ const getUserMcpcfServerAuthToken = Effect.fn("mcp.mcpcf.userServerAuthToken")(f
 
   const secrets = yield* Effect.tryPromise({
     try: () =>
-      createGlobalSecretsStoreFromD1(env.DB, encryptionKey).getDecryptedSecrets({
+      createGlobalSecretsStoreFromD1(
+        makeControlPlaneFromEnv(env),
+        encryptionKey,
+      ).getDecryptedSecrets({
         userId: input.userId,
       }),
     catch: toError,
@@ -370,7 +374,10 @@ const getUserMcpcfGatewayAccessToken = Effect.fn("mcp.mcpcf.userGatewayAccessTok
 
   const secrets = yield* Effect.tryPromise({
     try: () =>
-      createGlobalSecretsStoreFromD1(env.DB, encryptionKey).getDecryptedSecrets({
+      createGlobalSecretsStoreFromD1(
+        makeControlPlaneFromEnv(env),
+        encryptionKey,
+      ).getDecryptedSecrets({
         userId: input.userId,
       }),
     catch: toError,
@@ -687,7 +694,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
     runtimeContext: McpcfMcpRuntimeContext
   }) {
     const { env, config, servers, userId, runtimeContext } = input
-    const userConfigStore = createUserMcpcfServerConfigStoreFromD1(env.DB)
+    const userConfigStore = createUserMcpcfServerConfigStoreFromD1(makeControlPlaneFromEnv(env))
     const userConfigs = yield* Effect.tryPromise({
       try: () =>
         userConfigStore.listByUserAndServerIds(
