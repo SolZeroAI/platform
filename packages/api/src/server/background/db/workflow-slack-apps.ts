@@ -3,12 +3,13 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
-  workflowSlackApps,
-  workflowSlackDeliveries,
-  workflowSlackTriggerRegistrations,
-} from "../../effect/db/schema"
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { d1Error, WorkflowSlackDeliveryError, type D1Error } from "./errors"
 
 export type WorkflowSlackTriggerSurface = "event" | "command" | "interaction"
@@ -83,12 +84,15 @@ const DELIVERY_DEDUPE_MISSING_MESSAGE = "Workflow Slack delivery dedupe row was 
 
 export class WorkflowSlackAppStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
-  private toAppRecord(row: typeof workflowSlackApps.$inferSelect): WorkflowSlackAppRecord {
+  private toAppRecord(row: AppSchema["workflowSlackApps"]["$inferSelect"]): WorkflowSlackAppRecord {
     return {
       id: row.id,
       workflow_id: row.workflowId,
@@ -102,7 +106,7 @@ export class WorkflowSlackAppStore {
   }
 
   private toTriggerRegistrationRecord(
-    row: typeof workflowSlackTriggerRegistrations.$inferSelect,
+    row: AppSchema["workflowSlackTriggerRegistrations"]["$inferSelect"],
   ): WorkflowSlackTriggerRegistrationRecord {
     return {
       id: row.id,
@@ -125,7 +129,7 @@ export class WorkflowSlackAppStore {
   }
 
   private toDeliveryRecord(
-    row: typeof workflowSlackDeliveries.$inferSelect,
+    row: AppSchema["workflowSlackDeliveries"]["$inferSelect"],
   ): WorkflowSlackDeliveryRecord {
     return {
       id: row.id,
@@ -157,7 +161,7 @@ export class WorkflowSlackAppStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(workflowSlackApps)
+          .insert(this.schema.workflowSlackApps)
           .values({
             id: input.id,
             workflowId: input.workflowId,
@@ -180,7 +184,7 @@ export class WorkflowSlackAppStore {
   ) {
     const rows = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.select().from(workflowSlackApps).where(eq(workflowSlackApps.id, id)).limit(1),
+        this.drizzle.select().from(this.schema.workflowSlackApps).where(eq(this.schema.workflowSlackApps.id, id)).limit(1),
       catch: d1Error("db.workflowSlack.getAppById"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toAppRecord(row))
@@ -194,8 +198,8 @@ export class WorkflowSlackAppStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowSlackApps)
-          .where(eq(workflowSlackApps.workflowId, workflowId))
+          .from(this.schema.workflowSlackApps)
+          .where(eq(this.schema.workflowSlackApps.workflowId, workflowId))
           .limit(1),
       catch: d1Error("db.workflowSlack.getAppByWorkflowId"),
     })
@@ -220,9 +224,9 @@ export class WorkflowSlackAppStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(workflowSlackApps)
+          .update(this.schema.workflowSlackApps)
           .set({ ...appNamePatch, updatedAt: input.updatedAt })
-          .where(eq(workflowSlackApps.id, input.appId))
+          .where(eq(this.schema.workflowSlackApps.id, input.appId))
           .returning(),
       catch: d1Error("db.workflowSlack.updateAppMetadata"),
     })
@@ -234,9 +238,9 @@ export class WorkflowSlackAppStore {
       yield* Effect.tryPromise({
         try: () =>
           this.drizzle
-            .update(workflowSlackTriggerRegistrations)
+            .update(this.schema.workflowSlackTriggerRegistrations)
             .set({ enabled: 0, updatedAt })
-            .where(eq(workflowSlackTriggerRegistrations.workflowId, workflowId)),
+            .where(eq(this.schema.workflowSlackTriggerRegistrations.workflowId, workflowId)),
         catch: d1Error("db.workflowSlack.disableTriggerRegistrations"),
       })
     },
@@ -255,13 +259,13 @@ export class WorkflowSlackAppStore {
     // Slack deliveries or leave triggers permanently disabled. D1 batches run in a
     // single transaction, so the disable and re-enable commit (or roll back) together.
     const disableStatement = this.drizzle
-      .update(workflowSlackTriggerRegistrations)
+      .update(this.schema.workflowSlackTriggerRegistrations)
       .set({ enabled: 0, updatedAt: input.now })
-      .where(eq(workflowSlackTriggerRegistrations.workflowId, input.workflowId))
+      .where(eq(this.schema.workflowSlackTriggerRegistrations.workflowId, input.workflowId))
 
     const upsertStatements = input.registrations.map((registration) =>
       this.drizzle
-        .insert(workflowSlackTriggerRegistrations)
+        .insert(this.schema.workflowSlackTriggerRegistrations)
         .values({
           id: registration.id,
           slackAppId: registration.slackAppId,
@@ -282,8 +286,8 @@ export class WorkflowSlackAppStore {
         })
         .onConflictDoUpdate({
           target: [
-            workflowSlackTriggerRegistrations.workflowId,
-            workflowSlackTriggerRegistrations.nodeId,
+            this.schema.workflowSlackTriggerRegistrations.workflowId,
+            this.schema.workflowSlackTriggerRegistrations.nodeId,
           ],
           set: {
             slackAppId: registration.slackAppId,
@@ -325,12 +329,12 @@ export class WorkflowSlackAppStore {
         try: () =>
           this.drizzle
             .select()
-            .from(workflowSlackTriggerRegistrations)
+            .from(this.schema.workflowSlackTriggerRegistrations)
             .where(
               and(
-                eq(workflowSlackTriggerRegistrations.slackAppId, input.slackAppId),
-                eq(workflowSlackTriggerRegistrations.surface, input.surface),
-                eq(workflowSlackTriggerRegistrations.enabled, 1),
+                eq(this.schema.workflowSlackTriggerRegistrations.slackAppId, input.slackAppId),
+                eq(this.schema.workflowSlackTriggerRegistrations.surface, input.surface),
+                eq(this.schema.workflowSlackTriggerRegistrations.enabled, 1),
               ),
             ),
         catch: d1Error("db.workflowSlack.listEnabledRegistrationsForApp"),
@@ -346,11 +350,11 @@ export class WorkflowSlackAppStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowSlackTriggerRegistrations)
+          .from(this.schema.workflowSlackTriggerRegistrations)
           .where(
             and(
-              eq(workflowSlackTriggerRegistrations.workflowId, workflowId),
-              eq(workflowSlackTriggerRegistrations.enabled, 1),
+              eq(this.schema.workflowSlackTriggerRegistrations.workflowId, workflowId),
+              eq(this.schema.workflowSlackTriggerRegistrations.enabled, 1),
             ),
           ),
       catch: d1Error("db.workflowSlack.listEnabledRegistrationsForWorkflow"),
@@ -364,8 +368,8 @@ export class WorkflowSlackAppStore {
         try: () =>
           this.drizzle
             .select()
-            .from(workflowSlackTriggerRegistrations)
-            .where(eq(workflowSlackTriggerRegistrations.workflowId, workflowId)),
+            .from(this.schema.workflowSlackTriggerRegistrations)
+            .where(eq(this.schema.workflowSlackTriggerRegistrations.workflowId, workflowId)),
         catch: d1Error("db.workflowSlack.listRegistrationsForWorkflow"),
       })
       return rows.map((row) => this.toTriggerRegistrationRecord(row))
@@ -389,7 +393,7 @@ export class WorkflowSlackAppStore {
     const inserted = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(workflowSlackDeliveries)
+          .insert(this.schema.workflowSlackDeliveries)
           .values({
             id: input.id,
             slackAppId: input.slackAppId,
@@ -405,9 +409,9 @@ export class WorkflowSlackAppStore {
           })
           .onConflictDoNothing({
             target: [
-              workflowSlackDeliveries.slackAppId,
-              workflowSlackDeliveries.nodeId,
-              workflowSlackDeliveries.deliveryKey,
+              this.schema.workflowSlackDeliveries.slackAppId,
+              this.schema.workflowSlackDeliveries.nodeId,
+              this.schema.workflowSlackDeliveries.deliveryKey,
             ],
           })
           .returning(),
@@ -442,12 +446,12 @@ export class WorkflowSlackAppStore {
         try: () =>
           this.drizzle
             .select()
-            .from(workflowSlackDeliveries)
+            .from(this.schema.workflowSlackDeliveries)
             .where(
               and(
-                eq(workflowSlackDeliveries.slackAppId, input.slackAppId),
-                eq(workflowSlackDeliveries.nodeId, input.nodeId),
-                eq(workflowSlackDeliveries.deliveryKey, input.deliveryKey),
+                eq(this.schema.workflowSlackDeliveries.slackAppId, input.slackAppId),
+                eq(this.schema.workflowSlackDeliveries.nodeId, input.nodeId),
+                eq(this.schema.workflowSlackDeliveries.deliveryKey, input.deliveryKey),
               ),
             )
             .limit(1),
@@ -482,12 +486,12 @@ export class WorkflowSlackAppStore {
       now: number
     },
     existing: WorkflowSlackDeliveryRecord,
-    existingRow: typeof workflowSlackDeliveries.$inferSelect,
+    existingRow: AppSchema["workflowSlackDeliveries"]["$inferSelect"],
   ) {
     const refreshedRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(workflowSlackDeliveries)
+          .update(this.schema.workflowSlackDeliveries)
           .set({
             workflowId: input.workflowId,
             surface: input.surface,
@@ -499,8 +503,8 @@ export class WorkflowSlackAppStore {
           })
           .where(
             and(
-              eq(workflowSlackDeliveries.id, existing.id),
-              eq(workflowSlackDeliveries.createdAt, existing.created_at),
+              eq(this.schema.workflowSlackDeliveries.id, existing.id),
+              eq(this.schema.workflowSlackDeliveries.createdAt, existing.created_at),
             ),
           )
           .returning(),
@@ -520,14 +524,14 @@ export class WorkflowSlackAppStore {
   private resolveCurrentDelivery = Effect.fn("db.workflowSlack.resolveCurrentDelivery")(function* (
     this: WorkflowSlackAppStore,
     existing: WorkflowSlackDeliveryRecord,
-    existingRow: typeof workflowSlackDeliveries.$inferSelect,
+    existingRow: AppSchema["workflowSlackDeliveries"]["$inferSelect"],
   ) {
     const currentRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select()
-          .from(workflowSlackDeliveries)
-          .where(eq(workflowSlackDeliveries.id, existing.id))
+          .from(this.schema.workflowSlackDeliveries)
+          .where(eq(this.schema.workflowSlackDeliveries.id, existing.id))
           .limit(1),
       catch: d1Error("db.workflowSlack.createDeliveryIfAbsent"),
     })
@@ -551,14 +555,14 @@ export class WorkflowSlackAppStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(workflowSlackDeliveries)
+          .update(this.schema.workflowSlackDeliveries)
           .set({
             runId: input.runId ?? null,
             status: input.status,
             error: input.error ?? null,
             updatedAt: input.updatedAt,
           })
-          .where(eq(workflowSlackDeliveries.id, input.id)),
+          .where(eq(this.schema.workflowSlackDeliveries.id, input.id)),
       catch: d1Error("db.workflowSlack.updateDelivery"),
     })
   })
@@ -576,23 +580,23 @@ export class WorkflowSlackAppStore {
       Option.fromNullishOr(input.excludeDeliveryId).pipe(Option.filter(Boolean)),
       {
         onNone: () => [] as SQL[],
-        onSome: (excludeDeliveryId) => [ne(workflowSlackDeliveries.id, excludeDeliveryId)],
+        onSome: (excludeDeliveryId) => [ne(this.schema.workflowSlackDeliveries.id, excludeDeliveryId)],
       },
     )
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select()
-          .from(workflowSlackDeliveries)
+          .from(this.schema.workflowSlackDeliveries)
           .where(
             and(
-              eq(workflowSlackDeliveries.slackAppId, input.slackAppId),
-              eq(workflowSlackDeliveries.nodeId, input.nodeId),
-              gte(workflowSlackDeliveries.createdAt, input.since),
+              eq(this.schema.workflowSlackDeliveries.slackAppId, input.slackAppId),
+              eq(this.schema.workflowSlackDeliveries.nodeId, input.nodeId),
+              gte(this.schema.workflowSlackDeliveries.createdAt, input.since),
               ...excludeCondition,
             ),
           )
-          .orderBy(desc(workflowSlackDeliveries.createdAt))
+          .orderBy(desc(this.schema.workflowSlackDeliveries.createdAt))
           .limit(1),
       catch: d1Error("db.workflowSlack.getRecentDeliveryForNode"),
     })

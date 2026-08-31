@@ -10,8 +10,13 @@ import {
   AgentSkillValidationError,
   d1Error,
 } from "../db/errors"
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { agentSkills, userAgentSkillPreferences } from "../../effect/db/schema"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import {
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { S0_CREATE_PR_SKILL_ID, S0_CREATE_PR_SKILL_MD } from "./built-ins"
 
 const GLOBAL_SKILLS_PREFIX = "global/"
@@ -87,7 +92,7 @@ export interface RuntimeSkillPackage {
   files: RuntimeSkillFile[]
 }
 
-type AgentSkillRow = typeof agentSkills.$inferSelect
+type AgentSkillRow = AppSchema["agentSkills"]["$inferSelect"]
 
 function rowToRecord(row: AgentSkillRow): AgentSkillRecord {
   return {
@@ -110,29 +115,32 @@ function rowToRecord(row: AgentSkillRow): AgentSkillRecord {
   }
 }
 
-function runtimeScopeCondition(runtimeScope: "harness" | "isolate") {
-  return or(eq(agentSkills.runtimeScope, runtimeScope), eq(agentSkills.runtimeScope, "all"))
+function runtimeScopeCondition(schema: AppSchema, runtimeScope: "harness" | "isolate") {
+  return or(eq(schema.agentSkills.runtimeScope, runtimeScope), eq(schema.agentSkills.runtimeScope, "all"))
 }
 
 export class AgentSkillStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   listActiveGlobal = Effect.fn("db.agentSkills.listActiveGlobal")(function* (
     this: AgentSkillStore,
     runtimeScope?: "harness" | "isolate",
   ) {
-    const runtimeFilter = runtimeScope ? runtimeScopeCondition(runtimeScope) : undefined
+    const runtimeFilter = runtimeScope ? runtimeScopeCondition(this.schema, runtimeScope) : undefined
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select()
-          .from(agentSkills)
-          .where(and(eq(agentSkills.scope, "global"), isNull(agentSkills.deletedAt), runtimeFilter))
-          .orderBy(asc(agentSkills.name)),
+          .from(this.schema.agentSkills)
+          .where(and(eq(this.schema.agentSkills.scope, "global"), isNull(this.schema.agentSkills.deletedAt), runtimeFilter))
+          .orderBy(asc(this.schema.agentSkills.name)),
       catch: d1Error("db.agentSkills.listActiveGlobal"),
     })
     return rows.map(rowToRecord)
@@ -147,25 +155,25 @@ export class AgentSkillStore {
       try: () =>
         this.drizzle
           .select({
-            skill: agentSkills,
-            preferenceEnabled: userAgentSkillPreferences.enabled,
+            skill: this.schema.agentSkills,
+            preferenceEnabled: this.schema.userAgentSkillPreferences.enabled,
           })
-          .from(agentSkills)
+          .from(this.schema.agentSkills)
           .leftJoin(
-            userAgentSkillPreferences,
+            this.schema.userAgentSkillPreferences,
             and(
-              eq(userAgentSkillPreferences.skillId, agentSkills.id),
-              eq(userAgentSkillPreferences.userId, userId),
+              eq(this.schema.userAgentSkillPreferences.skillId, this.schema.agentSkills.id),
+              eq(this.schema.userAgentSkillPreferences.userId, userId),
             ),
           )
           .where(
             and(
-              eq(agentSkills.scope, "global"),
-              isNull(agentSkills.deletedAt),
-              runtimeScopeCondition(runtimeScope),
+              eq(this.schema.agentSkills.scope, "global"),
+              isNull(this.schema.agentSkills.deletedAt),
+              runtimeScopeCondition(this.schema, runtimeScope),
             ),
           )
-          .orderBy(asc(agentSkills.name)),
+          .orderBy(asc(this.schema.agentSkills.name)),
       catch: d1Error("db.agentSkills.listEffectiveGlobal"),
     })
     return rows.map(
@@ -185,8 +193,8 @@ export class AgentSkillStore {
       try: () =>
         this.drizzle
           .select()
-          .from(agentSkills)
-          .where(and(eq(agentSkills.id, skillId), isNull(agentSkills.deletedAt)))
+          .from(this.schema.agentSkills)
+          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt)))
           .limit(1),
       catch: d1Error("db.agentSkills.getActive"),
     })
@@ -201,12 +209,12 @@ export class AgentSkillStore {
       try: () =>
         this.drizzle
           .select()
-          .from(agentSkills)
+          .from(this.schema.agentSkills)
           .where(
             and(
-              eq(agentSkills.scope, "global"),
-              eq(agentSkills.slug, slug),
-              isNull(agentSkills.deletedAt),
+              eq(this.schema.agentSkills.scope, "global"),
+              eq(this.schema.agentSkills.slug, slug),
+              isNull(this.schema.agentSkills.deletedAt),
             ),
           )
           .limit(1),
@@ -228,13 +236,13 @@ export class AgentSkillStore {
     const existing = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ id: agentSkills.id })
-          .from(agentSkills)
+          .select({ id: this.schema.agentSkills.id })
+          .from(this.schema.agentSkills)
           .where(
             and(
-              eq(agentSkills.scope, "global"),
-              eq(agentSkills.slug, input.name),
-              isNull(agentSkills.deletedAt),
+              eq(this.schema.agentSkills.scope, "global"),
+              eq(this.schema.agentSkills.slug, input.name),
+              isNull(this.schema.agentSkills.deletedAt),
             ),
           )
           .limit(1),
@@ -250,7 +258,7 @@ export class AgentSkillStore {
     const id = `skill_${generateId(12)}`
     yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.insert(agentSkills).values({
+        this.drizzle.insert(this.schema.agentSkills).values({
           id,
           scope: "global",
           ownerUserId: null,
@@ -282,9 +290,9 @@ export class AgentSkillStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(agentSkills)
+          .update(this.schema.agentSkills)
           .set({ defaultEnabled: Number(enabled), updatedAt: Date.now() })
-          .where(and(eq(agentSkills.id, skillId), isNull(agentSkills.deletedAt))),
+          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
       catch: d1Error("db.agentSkills.setDefaultEnabled"),
     })
     return yield* this.requireActive(skillId)
@@ -298,9 +306,9 @@ export class AgentSkillStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(agentSkills)
+          .update(this.schema.agentSkills)
           .set({ contentHash, updatedAt: Date.now() })
-          .where(and(eq(agentSkills.id, skillId), isNull(agentSkills.deletedAt))),
+          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
       catch: d1Error("db.agentSkills.updateContentHash"),
     })
   })
@@ -321,7 +329,7 @@ export class AgentSkillStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(userAgentSkillPreferences)
+          .insert(this.schema.userAgentSkillPreferences)
           .values({
             userId,
             skillId,
@@ -330,7 +338,7 @@ export class AgentSkillStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [userAgentSkillPreferences.userId, userAgentSkillPreferences.skillId],
+            target: [this.schema.userAgentSkillPreferences.userId, this.schema.userAgentSkillPreferences.skillId],
             set: { enabled: Number(enabled), updatedAt: now },
           }),
       catch: d1Error("db.agentSkills.setPreference"),
@@ -346,11 +354,11 @@ export class AgentSkillStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .delete(userAgentSkillPreferences)
+          .delete(this.schema.userAgentSkillPreferences)
           .where(
             and(
-              eq(userAgentSkillPreferences.userId, userId),
-              eq(userAgentSkillPreferences.skillId, skillId),
+              eq(this.schema.userAgentSkillPreferences.userId, userId),
+              eq(this.schema.userAgentSkillPreferences.skillId, skillId),
             ),
           ),
       catch: d1Error("db.agentSkills.clearPreference"),
@@ -367,12 +375,12 @@ export class AgentSkillStore {
       try: () =>
         this.drizzle.batch([
           this.drizzle
-            .update(agentSkills)
+            .update(this.schema.agentSkills)
             .set({ deletedAt: now, updatedAt: now })
-            .where(and(eq(agentSkills.id, skillId), isNull(agentSkills.deletedAt))),
+            .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
           this.drizzle
-            .delete(userAgentSkillPreferences)
-            .where(eq(userAgentSkillPreferences.skillId, skillId)),
+            .delete(this.schema.userAgentSkillPreferences)
+            .where(eq(this.schema.userAgentSkillPreferences.skillId, skillId)),
         ]),
       catch: d1Error("db.agentSkills.softDelete"),
     })

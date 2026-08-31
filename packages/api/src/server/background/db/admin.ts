@@ -5,16 +5,12 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonOrText } from "../../lib/json"
-import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import {
-  adminAuditEvents,
-  account as accountRows,
-  sessions as sessionRows,
-  user as userRows,
-  workflowRunEvents,
-  workflowRuns,
-  workflows as workflowRows,
-} from "../../effect/db/schema"
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { d1Error } from "./errors"
 
 export interface AdminStatusCount {
@@ -143,66 +139,74 @@ interface WorkflowSelectRow {
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 100
 
-const sessionSelect = {
-  id: sessionRows.id,
-  userId: sessionRows.userId,
-  userName: userRows.name,
-  userEmail: userRows.email,
-  sessionKind: sessionRows.sessionKind,
-  agentRuntime: sessionRows.agentRuntime,
-  source: sessionRows.source,
-  title: sessionRows.title,
-  repoOwner: sessionRows.repoOwner,
-  repoName: sessionRows.repoName,
-  model: sessionRows.model,
-  reasoningEffort: sessionRows.reasoningEffort,
-  status: sessionRows.status,
-  createdAt: sessionRows.createdAt,
-  updatedAt: sessionRows.updatedAt,
+function sessionSelect(schema: AppSchema) {
+  return {
+    id: schema.sessions.id,
+    userId: schema.sessions.userId,
+    userName: schema.user.name,
+    userEmail: schema.user.email,
+    sessionKind: schema.sessions.sessionKind,
+    agentRuntime: schema.sessions.agentRuntime,
+    source: schema.sessions.source,
+    title: schema.sessions.title,
+    repoOwner: schema.sessions.repoOwner,
+    repoName: schema.sessions.repoName,
+    model: schema.sessions.model,
+    reasoningEffort: schema.sessions.reasoningEffort,
+    status: schema.sessions.status,
+    createdAt: schema.sessions.createdAt,
+    updatedAt: schema.sessions.updatedAt,
+  }
 }
 
-const workflowSelect = {
-  id: workflowRows.id,
-  userId: workflowRows.userId,
-  userName: userRows.name,
-  userEmail: userRows.email,
-  name: workflowRows.name,
-  status: workflowRows.status,
-  manifestVersion: workflowRows.manifestVersion,
-  manifestKey: workflowRows.manifestKey,
-  codeKey: workflowRows.codeKey,
-  webhookId: workflowRows.webhookId,
-  createdAt: workflowRows.createdAt,
-  updatedAt: workflowRows.updatedAt,
+function workflowSelect(schema: AppSchema) {
+  return {
+    id: schema.workflows.id,
+    userId: schema.workflows.userId,
+    userName: schema.user.name,
+    userEmail: schema.user.email,
+    name: schema.workflows.name,
+    status: schema.workflows.status,
+    manifestVersion: schema.workflows.manifestVersion,
+    manifestKey: schema.workflows.manifestKey,
+    codeKey: schema.workflows.codeKey,
+    webhookId: schema.workflows.webhookId,
+    createdAt: schema.workflows.createdAt,
+    updatedAt: schema.workflows.updatedAt,
+  }
 }
 
-const sessionSortColumns = {
-  id: sessionRows.id,
-  title: sessionRows.title,
-  userId: sessionRows.userId,
-  userEmail: userRows.email,
-  sessionKind: sessionRows.sessionKind,
-  agentRuntime: sessionRows.agentRuntime,
-  source: sessionRows.source,
-  repoOwner: sessionRows.repoOwner,
-  repoName: sessionRows.repoName,
-  model: sessionRows.model,
-  status: sessionRows.status,
-  createdAt: sessionRows.createdAt,
-  updatedAt: sessionRows.updatedAt,
-} satisfies Record<string, AnyColumn>
+function sessionSortColumns(schema: AppSchema) {
+  return {
+    id: schema.sessions.id,
+    title: schema.sessions.title,
+    userId: schema.sessions.userId,
+    userEmail: schema.user.email,
+    sessionKind: schema.sessions.sessionKind,
+    agentRuntime: schema.sessions.agentRuntime,
+    source: schema.sessions.source,
+    repoOwner: schema.sessions.repoOwner,
+    repoName: schema.sessions.repoName,
+    model: schema.sessions.model,
+    status: schema.sessions.status,
+    createdAt: schema.sessions.createdAt,
+    updatedAt: schema.sessions.updatedAt,
+  } satisfies Record<string, AnyColumn>
+}
 
-const workflowSortColumns = {
-  id: workflowRows.id,
-  name: workflowRows.name,
-  userId: workflowRows.userId,
-  userEmail: userRows.email,
-  status: workflowRows.status,
-  manifestVersion: workflowRows.manifestVersion,
-  webhookId: workflowRows.webhookId,
-  createdAt: workflowRows.createdAt,
-  updatedAt: workflowRows.updatedAt,
-} satisfies Record<string, AnyColumn>
+function workflowSortColumns(schema: AppSchema) {
+  return {
+    id: schema.workflows.id,
+    name: schema.workflows.name,
+    userId: schema.workflows.userId,
+    userEmail: schema.user.email,
+    status: schema.workflows.status,
+    manifestVersion: schema.workflows.manifestVersion,
+    webhookId: schema.workflows.webhookId,
+    createdAt: schema.workflows.createdAt,
+    updatedAt: schema.workflows.updatedAt,
+  } satisfies Record<string, AnyColumn>
+}
 
 function parseListNumber(value: string | undefined, fallback: number, max: number): number {
   const parsed = Number(value)
@@ -267,7 +271,7 @@ function toSession(row: SessionSelectRow): AdminSessionRecord {
   }
 }
 
-function toWorkflowRun(row: typeof workflowRuns.$inferSelect): AdminWorkflowRunRecord {
+function toWorkflowRun(row: AppSchema["workflowRuns"]["$inferSelect"]): AdminWorkflowRunRecord {
   return {
     id: row.id,
     workflowId: row.workflowId,
@@ -314,7 +318,7 @@ function toWorkflow(
   }
 }
 
-function toWorkflowRunEvent(row: typeof workflowRunEvents.$inferSelect): AdminWorkflowRunEvent {
+function toWorkflowRunEvent(row: AppSchema["workflowRunEvents"]["$inferSelect"]): AdminWorkflowRunEvent {
   return {
     id: row.id,
     workflowId: row.workflowId,
@@ -393,9 +397,12 @@ function orderBy(
 
 export class AdminStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   getSummary = Effect.fn("db.admin.getSummary")(function* (this: AdminStore, now = Date.now()) {
@@ -404,28 +411,28 @@ export class AdminStore {
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: sessionRows.status, count: sql<number>`count(*)` })
-              .from(sessionRows)
-              .groupBy(sessionRows.status)
-              .orderBy(asc(sessionRows.status)),
+              .select({ status: this.schema.sessions.status, count: sql<number>`count(*)` })
+              .from(this.schema.sessions)
+              .groupBy(this.schema.sessions.status)
+              .orderBy(asc(this.schema.sessions.status)),
           catch: d1Error("db.admin.getSummary"),
         }),
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: workflowRows.status, count: sql<number>`count(*)` })
-              .from(workflowRows)
-              .groupBy(workflowRows.status)
-              .orderBy(asc(workflowRows.status)),
+              .select({ status: this.schema.workflows.status, count: sql<number>`count(*)` })
+              .from(this.schema.workflows)
+              .groupBy(this.schema.workflows.status)
+              .orderBy(asc(this.schema.workflows.status)),
           catch: d1Error("db.admin.getSummary"),
         }),
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: workflowRuns.status, count: sql<number>`count(*)` })
-              .from(workflowRuns)
-              .groupBy(workflowRuns.status)
-              .orderBy(asc(workflowRuns.status)),
+              .select({ status: this.schema.workflowRuns.status, count: sql<number>`count(*)` })
+              .from(this.schema.workflowRuns)
+              .groupBy(this.schema.workflowRuns.status)
+              .orderBy(asc(this.schema.workflowRuns.status)),
           catch: d1Error("db.admin.getSummary"),
         }),
         this.listAttentionItems(now),
@@ -450,30 +457,30 @@ export class AdminStore {
     const conditions: SQL[] = []
 
     addLikeFilter(conditions, query.q, [
-      sessionRows.id,
-      sessionRows.title,
-      sessionRows.repoOwner,
-      sessionRows.repoName,
-      userRows.name,
-      userRows.email,
+      this.schema.sessions.id,
+      this.schema.sessions.title,
+      this.schema.sessions.repoOwner,
+      this.schema.sessions.repoName,
+      this.schema.user.name,
+      this.schema.user.email,
     ])
-    addExactFilter(conditions, sessionRows.status, query.status)
-    addExactFilter(conditions, sessionRows.agentRuntime, query.agentRuntime)
-    addExactFilter(conditions, sessionRows.sessionKind, query.kind)
-    addExactFilter(conditions, sessionRows.source, query.source)
-    addExactFilter(conditions, sessionRows.userId, query.userId)
-    addExactFilter(conditions, sessionRows.repoOwner, query.repoOwner)
-    addExactFilter(conditions, sessionRows.repoName, query.repoName)
+    addExactFilter(conditions, this.schema.sessions.status, query.status)
+    addExactFilter(conditions, this.schema.sessions.agentRuntime, query.agentRuntime)
+    addExactFilter(conditions, this.schema.sessions.sessionKind, query.kind)
+    addExactFilter(conditions, this.schema.sessions.source, query.source)
+    addExactFilter(conditions, this.schema.sessions.userId, query.userId)
+    addExactFilter(conditions, this.schema.sessions.repoOwner, query.repoOwner)
+    addExactFilter(conditions, this.schema.sessions.repoName, query.repoName)
 
     const where = combineConditions(conditions)
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select(sessionSelect)
-          .from(sessionRows)
-          .leftJoin(userRows, eq(userRows.id, sessionRows.userId))
+          .select(sessionSelect(this.schema))
+          .from(this.schema.sessions)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.sessions.userId))
           .where(where)
-          .orderBy(orderBy(sessionSortColumns, query, "updatedAt"))
+          .orderBy(orderBy(sessionSortColumns(this.schema), query, "updatedAt"))
           .limit(limit + 1)
           .offset(offset),
       catch: d1Error("db.admin.listSessions"),
@@ -483,8 +490,8 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select({ total: sql<number>`count(*)` })
-          .from(sessionRows)
-          .leftJoin(userRows, eq(userRows.id, sessionRows.userId))
+          .from(this.schema.sessions)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.sessions.userId))
           .where(where),
       catch: d1Error("db.admin.listSessions"),
     })
@@ -508,10 +515,10 @@ export class AdminStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select(sessionSelect)
-          .from(sessionRows)
-          .leftJoin(userRows, eq(userRows.id, sessionRows.userId))
-          .where(eq(sessionRows.id, id))
+          .select(sessionSelect(this.schema))
+          .from(this.schema.sessions)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.sessions.userId))
+          .where(eq(this.schema.sessions.id, id))
           .limit(1),
       catch: d1Error("db.admin.getSession"),
     })
@@ -527,24 +534,24 @@ export class AdminStore {
     const conditions: SQL[] = []
 
     addLikeFilter(conditions, query.q, [
-      workflowRows.id,
-      workflowRows.name,
-      workflowRows.webhookId,
-      userRows.name,
-      userRows.email,
+      this.schema.workflows.id,
+      this.schema.workflows.name,
+      this.schema.workflows.webhookId,
+      this.schema.user.name,
+      this.schema.user.email,
     ])
-    addExactFilter(conditions, workflowRows.status, query.status)
-    addExactFilter(conditions, workflowRows.userId, query.userId)
+    addExactFilter(conditions, this.schema.workflows.status, query.status)
+    addExactFilter(conditions, this.schema.workflows.userId, query.userId)
 
     const where = combineConditions(conditions)
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select(workflowSelect)
-          .from(workflowRows)
-          .leftJoin(userRows, eq(userRows.id, workflowRows.userId))
+          .select(workflowSelect(this.schema))
+          .from(this.schema.workflows)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.workflows.userId))
           .where(where)
-          .orderBy(orderBy(workflowSortColumns, query, "updatedAt"))
+          .orderBy(orderBy(workflowSortColumns(this.schema), query, "updatedAt"))
           .limit(limit + 1)
           .offset(offset),
       catch: d1Error("db.admin.listWorkflows"),
@@ -554,8 +561,8 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select({ total: sql<number>`count(*)` })
-          .from(workflowRows)
-          .leftJoin(userRows, eq(userRows.id, workflowRows.userId))
+          .from(this.schema.workflows)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.workflows.userId))
           .where(where),
       catch: d1Error("db.admin.listWorkflows"),
     })
@@ -583,10 +590,10 @@ export class AdminStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select(workflowSelect)
-          .from(workflowRows)
-          .leftJoin(userRows, eq(userRows.id, workflowRows.userId))
-          .where(eq(workflowRows.id, id))
+          .select(workflowSelect(this.schema))
+          .from(this.schema.workflows)
+          .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.workflows.userId))
+          .where(eq(this.schema.workflows.id, id))
           .limit(1),
       catch: d1Error("db.admin.getWorkflow"),
     })
@@ -622,9 +629,9 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowRuns)
-          .where(eq(workflowRuns.workflowId, workflowId))
-          .orderBy(desc(workflowRuns.updatedAt))
+          .from(this.schema.workflowRuns)
+          .where(eq(this.schema.workflowRuns.workflowId, workflowId))
+          .orderBy(desc(this.schema.workflowRuns.updatedAt))
           .limit(limit),
       catch: d1Error("db.admin.listWorkflowRuns"),
     })
@@ -640,8 +647,8 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowRuns)
-          .where(and(eq(workflowRuns.workflowId, workflowId), eq(workflowRuns.id, runId)))
+          .from(this.schema.workflowRuns)
+          .where(and(eq(this.schema.workflowRuns.workflowId, workflowId), eq(this.schema.workflowRuns.id, runId)))
           .limit(1),
       catch: d1Error("db.admin.getWorkflowRun"),
     })
@@ -657,11 +664,11 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowRunEvents)
+          .from(this.schema.workflowRunEvents)
           .where(
-            and(eq(workflowRunEvents.workflowId, workflowId), eq(workflowRunEvents.runId, runId)),
+            and(eq(this.schema.workflowRunEvents.workflowId, workflowId), eq(this.schema.workflowRunEvents.runId, runId)),
           )
-          .orderBy(asc(workflowRunEvents.sequence)),
+          .orderBy(asc(this.schema.workflowRunEvents.sequence)),
       catch: d1Error("db.admin.listWorkflowRunEvents"),
     })
     return rows.map(toWorkflowRunEvent)
@@ -675,10 +682,10 @@ export class AdminStore {
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(workflowRows)
+          .update(this.schema.workflows)
           .set({ status: "archived", updatedAt })
-          .where(eq(workflowRows.id, id))
-          .returning({ id: workflowRows.id }),
+          .where(eq(this.schema.workflows.id, id))
+          .returning({ id: this.schema.workflows.id }),
       catch: d1Error("db.admin.archiveWorkflow"),
     })
     return updated.length > 0
@@ -692,10 +699,10 @@ export class AdminStore {
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(workflowRows)
+          .update(this.schema.workflows)
           .set({ status: "active", updatedAt })
-          .where(eq(workflowRows.id, id))
-          .returning({ id: workflowRows.id }),
+          .where(eq(this.schema.workflows.id, id))
+          .returning({ id: this.schema.workflows.id }),
       catch: d1Error("db.admin.unarchiveWorkflow"),
     })
     return updated.length > 0
@@ -704,8 +711,8 @@ export class AdminStore {
   deleteSession = Effect.fn("db.admin.deleteSession")(function* (this: AdminStore, id: string) {
     const deleted = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.delete(sessionRows).where(eq(sessionRows.id, id)).returning({
-          id: sessionRows.id,
+        this.drizzle.delete(this.schema.sessions).where(eq(this.schema.sessions.id, id)).returning({
+          id: this.schema.sessions.id,
         }),
       catch: d1Error("db.admin.deleteSession"),
     })
@@ -721,10 +728,10 @@ export class AdminStore {
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(sessionRows)
+          .update(this.schema.sessions)
           .set({ status, updatedAt })
-          .where(eq(sessionRows.id, id))
-          .returning({ id: sessionRows.id }),
+          .where(eq(this.schema.sessions.id, id))
+          .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.admin.updateSessionStatus"),
     })
     return updated.length > 0
@@ -737,10 +744,10 @@ export class AdminStore {
           this.drizzle
             .select({
               linkedAccounts: sql<number>`count(*)`,
-              affectedUsers: sql<number>`count(distinct ${accountRows.userId})`,
+              affectedUsers: sql<number>`count(distinct ${this.schema.account.userId})`,
             })
-            .from(accountRows)
-            .where(eq(accountRows.providerId, "github")),
+            .from(this.schema.account)
+            .where(eq(this.schema.account.providerId, "github")),
         catch: d1Error("db.admin.previewGitHubAccountCleanup"),
       })
 
@@ -755,9 +762,9 @@ export class AdminStore {
     const deleted = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .delete(accountRows)
-          .where(eq(accountRows.providerId, "github"))
-          .returning({ userId: accountRows.userId }),
+          .delete(this.schema.account)
+          .where(eq(this.schema.account.providerId, "github"))
+          .returning({ userId: this.schema.account.userId }),
       catch: d1Error("db.admin.cleanupGitHubAccounts"),
     })
     const userIds = [...new Set(deleted.map((row) => row.userId))]
@@ -787,7 +794,7 @@ export class AdminStore {
   ) {
     yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.insert(adminAuditEvents).values({
+        this.drizzle.insert(this.schema.adminAuditEvents).values({
           id: input.id,
           adminUserId: input.adminUserId,
           adminEmail: input.adminEmail,
@@ -812,9 +819,9 @@ export class AdminStore {
       try: () =>
         this.drizzle
           .select()
-          .from(workflowRuns)
-          .where(eq(workflowRuns.workflowId, workflowId))
-          .orderBy(desc(workflowRuns.updatedAt))
+          .from(this.schema.workflowRuns)
+          .where(eq(this.schema.workflowRuns.workflowId, workflowId))
+          .orderBy(desc(this.schema.workflowRuns.updatedAt))
           .limit(1),
       catch: d1Error("db.admin.getLatestWorkflowRun"),
     })
@@ -828,11 +835,11 @@ export class AdminStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ status: workflowRuns.status, count: sql<number>`count(*)` })
-          .from(workflowRuns)
-          .where(eq(workflowRuns.workflowId, workflowId))
-          .groupBy(workflowRuns.status)
-          .orderBy(asc(workflowRuns.status)),
+          .select({ status: this.schema.workflowRuns.status, count: sql<number>`count(*)` })
+          .from(this.schema.workflowRuns)
+          .where(eq(this.schema.workflowRuns.workflowId, workflowId))
+          .groupBy(this.schema.workflowRuns.status)
+          .orderBy(asc(this.schema.workflowRuns.status)),
       catch: d1Error("db.admin.getWorkflowRunCounts"),
     })
     return rows.map(toStatusCount)
@@ -852,9 +859,9 @@ export class AdminStore {
           try: () =>
             this.drizzle
               .select()
-              .from(workflowRuns)
-              .where(eq(workflowRuns.status, "failed"))
-              .orderBy(desc(workflowRuns.updatedAt))
+              .from(this.schema.workflowRuns)
+              .where(eq(this.schema.workflowRuns.status, "failed"))
+              .orderBy(desc(this.schema.workflowRuns.updatedAt))
               .limit(10),
           catch: d1Error("db.admin.listAttentionItems"),
         }),
@@ -862,11 +869,11 @@ export class AdminStore {
           try: () =>
             this.drizzle
               .select()
-              .from(workflowRuns)
+              .from(this.schema.workflowRuns)
               .where(
-                and(eq(workflowRuns.status, "queued"), lt(workflowRuns.updatedAt, queuedThreshold)),
+                and(eq(this.schema.workflowRuns.status, "queued"), lt(this.schema.workflowRuns.updatedAt, queuedThreshold)),
               )
-              .orderBy(asc(workflowRuns.updatedAt))
+              .orderBy(asc(this.schema.workflowRuns.updatedAt))
               .limit(10),
           catch: d1Error("db.admin.listAttentionItems"),
         }),
@@ -874,30 +881,30 @@ export class AdminStore {
           try: () =>
             this.drizzle
               .select()
-              .from(workflowRuns)
+              .from(this.schema.workflowRuns)
               .where(
                 and(
-                  eq(workflowRuns.status, "running"),
-                  lt(workflowRuns.updatedAt, runningThreshold),
+                  eq(this.schema.workflowRuns.status, "running"),
+                  lt(this.schema.workflowRuns.updatedAt, runningThreshold),
                 ),
               )
-              .orderBy(asc(workflowRuns.updatedAt))
+              .orderBy(asc(this.schema.workflowRuns.updatedAt))
               .limit(10),
           catch: d1Error("db.admin.listAttentionItems"),
         }),
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select(sessionSelect)
-              .from(sessionRows)
-              .leftJoin(userRows, eq(userRows.id, sessionRows.userId))
+              .select(sessionSelect(this.schema))
+              .from(this.schema.sessions)
+              .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.sessions.userId))
               .where(
                 and(
-                  eq(sessionRows.status, "active"),
-                  lt(sessionRows.updatedAt, activeSessionThreshold),
+                  eq(this.schema.sessions.status, "active"),
+                  lt(this.schema.sessions.updatedAt, activeSessionThreshold),
                 ),
               )
-              .orderBy(asc(sessionRows.updatedAt))
+              .orderBy(asc(this.schema.sessions.updatedAt))
               .limit(10),
           catch: d1Error("db.admin.listAttentionItems"),
         }),

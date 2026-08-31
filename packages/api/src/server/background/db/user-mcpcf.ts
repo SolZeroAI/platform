@@ -3,8 +3,13 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { userMcpcfServerConfigs } from "../../effect/db/schema"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import {
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { d1Error, UserMcpcfMigrationError, type D1Error } from "./errors"
 
 export interface UserMcpcfServerConfigRecord {
@@ -25,7 +30,7 @@ export interface UserMcpcfServerConfigUpdate {
   disabledTools?: readonly string[]
 }
 
-type UserMcpcfServerConfigRow = typeof userMcpcfServerConfigs.$inferSelect
+type UserMcpcfServerConfigRow = AppSchema["userMcpcfServerConfigs"]["$inferSelect"]
 
 const USER_MCPCF_GATEWAY_API_TOKEN_SECRET_KEY = "mcpcf/contextforge-api-token"
 const USER_MCPCF_MIGRATION_MESSAGE = "MCP user settings database migration has not been applied."
@@ -105,9 +110,12 @@ function isMissingUserMcpcfConfigTableError(errorValue: unknown): boolean {
 
 export class UserMcpcfServerConfigStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   get = Effect.fn("db.userMcpcf.get")(function* (
@@ -119,11 +127,11 @@ export class UserMcpcfServerConfigStore {
       try: () =>
         this.drizzle
           .select()
-          .from(userMcpcfServerConfigs)
+          .from(this.schema.userMcpcfServerConfigs)
           .where(
             and(
-              eq(userMcpcfServerConfigs.userId, userId),
-              eq(userMcpcfServerConfigs.serverId, serverId),
+              eq(this.schema.userMcpcfServerConfigs.userId, userId),
+              eq(this.schema.userMcpcfServerConfigs.serverId, serverId),
             ),
           )
           .limit(1),
@@ -160,11 +168,11 @@ export class UserMcpcfServerConfigStore {
       try: () =>
         this.drizzle
           .select()
-          .from(userMcpcfServerConfigs)
+          .from(this.schema.userMcpcfServerConfigs)
           .where(
             and(
-              eq(userMcpcfServerConfigs.userId, userId),
-              inArray(userMcpcfServerConfigs.serverId, [...uniqueServerIds]),
+              eq(this.schema.userMcpcfServerConfigs.userId, userId),
+              inArray(this.schema.userMcpcfServerConfigs.serverId, [...uniqueServerIds]),
             ),
           ),
       catch: d1Error("db.userMcpcf.listByUserAndServerIds"),
@@ -221,7 +229,7 @@ export class UserMcpcfServerConfigStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(userMcpcfServerConfigs)
+          .insert(this.schema.userMcpcfServerConfigs)
           .values({
             userId: update.userId,
             serverId: update.serverId,
@@ -232,7 +240,7 @@ export class UserMcpcfServerConfigStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [userMcpcfServerConfigs.userId, userMcpcfServerConfigs.serverId],
+            target: [this.schema.userMcpcfServerConfigs.userId, this.schema.userMcpcfServerConfigs.serverId],
             set: {
               authTokenSecretKey,
               defaultToolsEnabled,

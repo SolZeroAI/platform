@@ -3,8 +3,11 @@ import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { parseJson, stringifyJson } from "../../lib/json"
-import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { repoMetadata } from "../../effect/db/schema"
+import {
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { d1Error } from "./errors"
 
 export interface RepoMetadata {
@@ -50,9 +53,12 @@ function toMetadata(row: RepoMetadataRow): RepoMetadata {
 
 export class RepoMetadataStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   upsert = Effect.fn("db.repoMetadata.upsert")(function* (
@@ -77,7 +83,7 @@ export class RepoMetadataStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(repoMetadata)
+          .insert(this.schema.repoMetadata)
           .values({
             repoOwner: owner,
             repoName: name,
@@ -89,7 +95,7 @@ export class RepoMetadataStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [repoMetadata.repoOwner, repoMetadata.repoName],
+            target: [this.schema.repoMetadata.repoOwner, this.schema.repoMetadata.repoName],
             set: {
               description,
               aliases,
@@ -140,8 +146,8 @@ export class RepoMetadataStore {
       try: () =>
         this.drizzle
           .select()
-          .from(repoMetadata)
-          .orderBy(asc(repoMetadata.repoOwner), asc(repoMetadata.repoName)),
+          .from(this.schema.repoMetadata)
+          .orderBy(asc(this.schema.repoMetadata.repoOwner), asc(this.schema.repoMetadata.repoName)),
       catch: d1Error("db.repoMetadata.list"),
     })
 
@@ -161,8 +167,8 @@ export class RepoMetadataStore {
       try: () =>
         this.drizzle
           .select()
-          .from(repoMetadata)
-          .where(and(eq(repoMetadata.repoOwner, repoOwner), eq(repoMetadata.repoName, repoName)))
+          .from(this.schema.repoMetadata)
+          .where(and(eq(this.schema.repoMetadata.repoOwner, repoOwner), eq(this.schema.repoMetadata.repoName, repoName)))
           .limit(1),
       catch: d1Error("db.repoMetadata.get"),
     })
