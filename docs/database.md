@@ -91,6 +91,42 @@ nub run db:generate:pg
 D1 hand SQL is not applied to postgres. The postgres tree starts at
 `packages/infra/migrations/pg/0000_control_plane.sql`.
 
+## Copy D1 to PlanetScale (one-shot convenience CLI)
+
+This is **not** an online or zero-downtime migration. The operator copies
+control-plane rows once from a D1 dump, then deploys. Production stays on D1
+until that deploy. Writes can still land on D1 during the copy window.
+
+The first-party path is a typed Effect CLI that reuses the same Drizzle schemas
+and `DATABASE` contract as the app. Control-plane tables only. It does not copy
+Durable Object sqlite, R2, or AI Search.
+
+```sh
+# Export the operator D1 database (sqlite dump or SQL).
+wrangler d1 export <D1_NAME> --output ./d1-export.sql --remote
+
+# Dry-run is the default. It plans the copy, prints the jsonc and env unified
+# diff for the next deploy, and writes nothing.
+nub run db:copy-d1-to-planetscale -- --source-sqlite ./d1-export.sql --dest-url "$DATABASE_URL"
+
+# Write the copy. Deploy yourself after it succeeds.
+nub run db:copy-d1-to-planetscale -- --apply --source-sqlite ./d1-export.sql --dest-url "$DATABASE_URL"
+```
+
+After copy succeeds, set process env `DATABASE=planetscale` before the next
+deploy. Missing or empty `DATABASE` stays `d1`. Do not add a second engine
+field to jsonc. For remote PlanetScale also set `PLANETSCALE_SERVICE_TOKEN_ID`,
+`PLANETSCALE_SERVICE_TOKEN`, and `PLANETSCALE_ORGANIZATION`. The dry-run prints
+that jsonc and env diff. It never rewrites the live jsonc and never deploys.
+
+`--apply` reports status, duration, source and destination sizes, and per-table
+row, skip, and conflict counts. The copy fails closed if the destination
+already has conflicting rows unless you pass `--overwrite`.
+
+Official Cloudflare / PlanetScale dump tools (`wrangler d1 export` plus
+`pscale import d1` or pgloader) can still be used. This CLI is the typed
+first-party path.
+
 ## What does not change
 
 - Durable Object sqlite for session messages, events, and artifacts
