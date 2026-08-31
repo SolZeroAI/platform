@@ -49,3 +49,19 @@ export function jsonArrayElementValue(dialect: ControlPlaneDialect): SQL {
     Match.orElse(() => sql`json_each.value`),
   )
 }
+
+/** postgres.js returns COUNT(*) as an int8 string; cast before JS number sorts. */
+export function countStar(dialect: ControlPlaneDialect): SQL {
+  return Match.value(dialect).pipe(
+    Match.when("postgres", () => sql`COUNT(*)::int`),
+    Match.orElse(() => sql`COUNT(*)`),
+  )
+}
+
+export function asFiniteNumber(value: unknown): number {
+  const parsed = Number(value)
+  return Match.value(Number.isFinite(parsed)).pipe(
+    Match.when(true, () => parsed),
+    Match.orElse(() => 0),
+  )
+}

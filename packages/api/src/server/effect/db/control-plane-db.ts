@@ -15,6 +15,8 @@ import {
 import type { ApiEnv } from "infra/types/env"
 import { makeD1Drizzle, type D1DrizzleDatabase } from "./d1-drizzle"
 import {
+  asFiniteNumber,
+  countStar,
   jsonArrayContainsAny,
   jsonArrayElementsFrom,
   jsonArrayElementValue,
@@ -263,6 +265,8 @@ export function controlPlaneSql(db: ControlPlaneDb) {
     jsonArrayElementsFrom: (column: Parameters<typeof jsonArrayElementsFrom>[1]) =>
       jsonArrayElementsFrom(db.dialect, column),
     jsonArrayElementValue: () => jsonArrayElementValue(db.dialect),
+    countStar: () => countStar(db.dialect),
+    asFiniteNumber,
   }
 }
 

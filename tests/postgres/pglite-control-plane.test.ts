@@ -12,19 +12,24 @@ import {
   pgRelations,
   type AppDrizzleDatabase,
 } from "../../packages/api/src/server/effect/db/control-plane-db"
-import { rewriteSqlitePlaceholders } from "../../packages/api/src/server/effect/db/dialect"
+import {
+  asFiniteNumber,
+  rewriteSqlitePlaceholders,
+} from "../../packages/api/src/server/effect/db/dialect"
 import { LOCAL_PGLITE_PORT } from "../../packages/shared/src"
+import { applyPostgresMigrationTree } from "./pg-migrations"
 
 const migrationsFolder = resolve(import.meta.dirname, "../../packages/infra/migrations/pg")
 const encryptionKey = "test-repo-secrets-key-32-chars!!"
 
 async function openMigratedPglite() {
   const client = new PGlite()
-  await client.exec(readFileSync(resolve(migrationsFolder, "0000_control_plane.sql"), "utf8"))
+  await applyPostgresMigrationTree(client)
   const drizzleDb = drizzle({ client, relations: pgRelations })
   return {
     client,
     controlPlane: makePostgresControlPlane(drizzleDb),
+    drizzle: drizzleDb,
   }
 }
 
@@ -93,7 +98,7 @@ describe("PGLite control-plane flavor", () => {
   it("boots pglite-socket as the documented Hyperdrive origin without PlanetScale tokens", async () => {
     const client = new PGlite()
     clients.push(client)
-    await client.exec(readFileSync(resolve(migrationsFolder, "0000_control_plane.sql"), "utf8"))
+    await applyPostgresMigrationTree(client)
     const server = new PGLiteSocketServer({
       db: client,
       host: "127.0.0.1",
@@ -106,9 +111,61 @@ describe("PGLite control-plane flavor", () => {
 
   it("keeps the hand-written postgres SQL aligned with the PlanetScale migration dir", () => {
     const sql = readFileSync(resolve(migrationsFolder, "0000_control_plane.sql"), "utf8")
+    const emailVerified = readFileSync(
+      resolve(migrationsFolder, "0001_email_verified_boolean.sql"),
+      "utf8",
+    )
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS "managed_admin_credential"')
+    expect(sql).toContain('"emailVerified" boolean DEFAULT false NOT NULL')
     expect(sql).toContain("ON CONFLICT")
     expect(sql).not.toContain("json_each")
     expect(sql).not.toContain("INSERT OR IGNORE")
+    expect(emailVerified).toContain('ALTER TABLE "user" ALTER COLUMN "emailVerified" TYPE boolean')
+  })
+
+  it("stores Better Auth emailVerified as a postgres boolean", async () => {
+    const opened = await openMigratedPglite()
+    clients.push(opened.client)
+    await opened.client.query(
+      `INSERT INTO "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
+       VALUES ('admin_1', 'Admin', 'admin@example.com', TRUE, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
+    )
+    const column = await opened.client.query<{ data_type: string; column_default: string }>(
+      `SELECT data_type, column_default
+         FROM information_schema.columns
+        WHERE table_name = 'user' AND column_name = 'emailVerified'`,
+    )
+    expect(column.rows[0]?.data_type).toBe("boolean")
+    const row = await opened.client.query<{ emailVerified: boolean }>(
+      `SELECT "emailVerified" FROM "user" WHERE "id" = 'admin_1'`,
+    )
+    expect(row.rows[0]?.emailVerified).toBe(true)
+  })
+
+  it("sorts popular secret tags by numeric count, not int8 string order", async () => {
+    expect(asFiniteNumber("10")).toBe(10)
+    expect(asFiniteNumber("2")).toBe(2)
+    expect(["10", "2"].sort()[0]).toBe("10")
+    const opened = await openMigratedPglite()
+    clients.push(opened.client)
+    const store = new GlobalSecretsStore(opened.controlPlane, encryptionKey)
+    const popular = Array.from({ length: 10 }, (_, index) => ({
+      key: `POPULAR_${index}`,
+      value: `v${index}`,
+      tags: ["popular"],
+    }))
+    await Effect.runPromise(
+      store.setSecrets(
+        [
+          ...popular,
+          { key: "RARE_1", value: "r1", tags: ["rare"] },
+          { key: "RARE_2", value: "r2", tags: ["rare"] },
+        ],
+        { userId: "user_1" },
+      ),
+    )
+    const stats = await Effect.runPromise(store.listSecretTagStats({ userId: "user_1" }))
+    expect(stats.popularTags[0]).toBe("popular")
+    expect(stats.popularTags).toContain("rare")
   })
 })

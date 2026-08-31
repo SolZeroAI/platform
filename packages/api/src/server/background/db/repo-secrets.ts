@@ -352,10 +352,10 @@ export class GlobalSecretsStore {
     options?: Pick<SecretScopeOptions, "includeMcpcfManaged">,
   ) {
     const where = and(...this.buildScopeConditions(prefix, options))
-    return yield* Effect.tryPromise({
+    const rows = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.all<{ tag: string; count: number }>(sql`
-      SELECT ${this.sql.jsonArrayElementValue()} AS tag, COUNT(*) AS count
+        this.drizzle.all<{ tag: string; count: unknown }>(sql`
+      SELECT ${this.sql.jsonArrayElementValue()} AS tag, ${this.sql.countStar()} AS count
       FROM ${this.schema.globalSecrets}, ${this.sql.jsonArrayElementsFrom(this.schema.globalSecrets.tags)}
       WHERE ${where}
       GROUP BY ${this.sql.jsonArrayElementValue()}
@@ -363,6 +363,10 @@ export class GlobalSecretsStore {
     `),
       catch: d1Error("db.globalSecrets.listSecrets"),
     })
+    return Arr.map(rows, (row) => ({
+      tag: row.tag,
+      count: this.sql.asFiniteNumber(row.count),
+    }))
   })
 
   deleteSecret = Effect.fn("db.globalSecrets.deleteSecret")(function* (
