@@ -16,15 +16,15 @@
     "@ai-sdk/harness-codex": "1.0.43",
     "@ai-sdk/harness-opencode": "1.0.42",
     "@ai-sdk/provider-utils": "5.0.12",
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.36",
     "effect": "4.0.0-beta.107",
-    "ws": "8.21.0",
-    "zod": "^4.1.8"
+    "ws": "8.21.3",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@types/node": "^24.12.4",
-    "@types/ws": "^8.5.13",
+    "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.1",
     "typescript": "^7.0.2"
   }
 }
