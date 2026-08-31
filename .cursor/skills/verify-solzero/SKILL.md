@@ -65,7 +65,7 @@ Order:
    .cursor/skills/verify-solzero/control-solzero http GET /health --out "$ART/health.json"
    .cursor/skills/verify-solzero/control-solzero http GET http://localhost:3000/ --out "$ART/web-root.html"
    ```
-3. UI through Chrome DevTools. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`.
+3. UI through Chrome DevTools. The helper starts `/opt/google/chrome/chrome` with a disposable profile and a free loopback DevTools port. Do not invoke the `google-chrome` wrapper; it can attach to an existing desktop Chrome. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`.
    ```bash
    .cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/ --out "$ART/sign-in.html"
    .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/sign-in.png"

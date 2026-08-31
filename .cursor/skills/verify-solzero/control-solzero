@@ -11,7 +11,7 @@ API_URL="http://localhost:1337"
 HEALTH_URL="$API_URL/health"
 WEB_PORT=3000
 API_PORT=1337
-CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-9333}"
+CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-9334}"
 WAIT_SECS="${SOLZERO_VERIFY_WAIT_SECS:-420}"
 ADMIN_EMAIL="${SOLZERO_VERIFY_ADMIN_EMAIL:-admin@example.com}"
 
@@ -331,9 +331,17 @@ d=json.loads(sys.argv[1])
 assert d.get("status")=="healthy", d
 assert d.get("service")=="s0-agent-control-plane", d' "$health" || die "health payload is not healthy: $health"
 
-  local body
-  body="$(curl -sS --fail-with-body --max-time 20 "$WEB_URL/")" || die "GET $WEB_URL/ failed"
-  printf '%s' "$body" | grep -qiE 'solzero|Welcome to' || die "web HTML did not contain SolZero / Welcome to"
+  local web_tmp
+  web_tmp="$(mktemp)"
+  curl -sS --fail-with-body --max-time 20 -o "$web_tmp" "$WEB_URL/" || {
+    rm -f "$web_tmp"
+    die "GET $WEB_URL/ failed"
+  }
+  grep -qiE 'solzero|Welcome to' "$web_tmp" || {
+    rm -f "$web_tmp"
+    die "web HTML did not contain SolZero / Welcome to"
+  }
+  rm -f "$web_tmp"
 
   if [[ -f "$RUN_DIR/dev.listen-web" && -f "$RUN_DIR/dev.listen-api" ]]; then
     port_is_ours "$WEB_PORT" "$RUN_DIR/dev.listen-web" || die "port $WEB_PORT is not owned by this verification run"
@@ -461,6 +469,25 @@ cmd_http() {
   echo "http $method $url -> $code $out"
 }
 
+pick_free_port() {
+  python3 - "$1" <<'PY'
+import socket, sys
+start = int(sys.argv[1])
+for port in range(start, start + 40):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        print(port)
+        break
+    except OSError:
+        continue
+    finally:
+        s.close()
+else:
+    raise SystemExit("no free CDP port")
+PY
+}
+
 chrome_env() {
   local run_id
   if [[ -f "$RUN_DIR/meta.json" ]]; then
@@ -469,17 +496,32 @@ chrome_env() {
     run_id="${SOLZERO_VERIFY_RUN_ID:-adhoc-$$}"
   fi
   export SOLZERO_VERIFY_CHROME_PROFILE="${SOLZERO_VERIFY_CHROME_PROFILE:-$RUN_DIR/chrome-$run_id}"
-  export SOLZERO_VERIFY_CDP_PORT="$CDP_PORT"
+  export SOLZERO_VERIFY_CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-$(pick_free_port "$CDP_PORT")}"
+  export SOLZERO_VERIFY_CHROME_PID_FILE="$RUN_DIR/chrome.pid"
+  if [[ -z "${SOLZERO_VERIFY_CHROME:-}" ]]; then
+    if [[ -x /opt/google/chrome/chrome ]]; then
+      export SOLZERO_VERIFY_CHROME=/opt/google/chrome/chrome
+    elif have google-chrome; then
+      export SOLZERO_VERIFY_CHROME=google-chrome
+    else
+      die "Chrome binary not found at /opt/google/chrome/chrome and google-chrome is not on PATH"
+    fi
+  fi
 }
 
 cmd_chrome() {
-  have google-chrome || die "google-chrome is not on PATH"
   chrome_env
   local sub="${1:-}"
   shift || true
   local drive="$SKILL_DIR/drive.mjs"
   [[ -x "$drive" || -f "$drive" ]] || die "missing $drive"
-  exec node "$drive" "$sub" "$@"
+  local node_bin
+  node_bin="$(command -v node)"
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    node_bin="$(nvm which current 2>/dev/null || true)"
+  fi
+  [[ -n "$node_bin" ]] || die "node is not on PATH"
+  exec "$node_bin" "$drive" "$sub" "$@"
 }
 
 cmd_admin_password() {
@@ -494,9 +536,7 @@ cmd_cleanup_procs() {
   kill_recorded "$RUN_DIR/dev.pid"
   kill_recorded "$RUN_DIR/dev.listen-api"
   kill_recorded "$RUN_DIR/dev.listen-web"
-  if [[ -n "${SOLZERO_VERIFY_CHROME_PROFILE:-}" ]]; then
-    true
-  fi
+  kill_recorded "$RUN_DIR/chrome.pid"
 }
 
 copy_log_tail() {

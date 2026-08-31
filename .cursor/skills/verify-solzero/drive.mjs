@@ -3,11 +3,11 @@
 // Usage is in SKILL.md. Do not point this at a Chrome profile you did not start.
 
 import { spawn } from "node:child_process"
-import { mkdirSync, writeFileSync } from "node:fs"
+import { createWriteStream, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 
 const chromeBin = process.env.SOLZERO_VERIFY_CHROME || "google-chrome"
-const debugPort = Number(process.env.SOLZERO_VERIFY_CDP_PORT || "9333")
+const debugPort = Number(process.env.SOLZERO_VERIFY_CDP_PORT || "9334")
 const userDataDir = process.env.SOLZERO_VERIFY_CHROME_PROFILE
 const timeoutMs = Number(process.env.SOLZERO_VERIFY_CHROME_TIMEOUT_MS || "45000")
 
@@ -46,6 +46,7 @@ class Cdp {
     this.nextId = 1
     this.pending = new Map()
     this.events = new Map()
+    this.sessionId = undefined
     this.ws.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data))
       if (message.id && this.pending.has(message.id)) {
@@ -61,11 +62,13 @@ class Cdp {
     })
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, sessioned = true) {
     const id = this.nextId++
     return new Promise((resolveSend, reject) => {
       this.pending.set(id, { resolve: resolveSend, reject })
-      this.ws.send(JSON.stringify({ id, method, params }))
+      const payload = { id, method, params }
+      if (sessioned && this.sessionId) payload.sessionId = this.sessionId
+      this.ws.send(JSON.stringify(payload))
     })
   }
 
@@ -81,13 +84,17 @@ class Cdp {
 
 async function connectCdp() {
   if (!userDataDir) die("SOLZERO_VERIFY_CHROME_PROFILE is required")
-  mkdirSync(userDataDir, { recursive: true })
+  const profile = `${userDataDir}-${process.pid}`
+  mkdirSync(profile, { recursive: true })
+  const logPath = process.env.SOLZERO_VERIFY_CHROME_LOG || `${profile}.log`
+  const log = createWriteStream(logPath, { flags: "a" })
 
   const chrome = spawn(
     chromeBin,
     [
       `--remote-debugging-port=${debugPort}`,
-      `--user-data-dir=${userDataDir}`,
+      "--remote-debugging-address=127.0.0.1",
+      `--user-data-dir=${profile}`,
       "--headless=new",
       "--disable-gpu",
       "--no-first-run",
@@ -97,22 +104,59 @@ async function connectCdp() {
       "--window-size=1440,900",
       "about:blank",
     ],
-    { stdio: ["ignore", "ignore", "ignore"] },
+    { stdio: ["ignore", "pipe", "pipe"] },
   )
-
-  const version = await waitForJson(
-    `http://127.0.0.1:${debugPort}/json/version`,
-    "Chrome DevTools",
-  )
-  const ws = new WebSocket(version.webSocketDebuggerUrl)
-  await new Promise((resolveOpen, reject) => {
-    ws.addEventListener("open", resolveOpen)
-    ws.addEventListener("error", () => reject(new Error("Chrome DevTools websocket failed")))
+  chrome.stdout.pipe(log)
+  chrome.stderr.pipe(log)
+  const pidFile = process.env.SOLZERO_VERIFY_CHROME_PID_FILE
+  if (pidFile) writeFileSync(pidFile, `${chrome.pid}\n`)
+  chrome.once("exit", (code, signal) => {
+    console.error(`drive.mjs: chrome exited code=${code} signal=${signal}; see ${logPath}`)
   })
-  const cdp = new Cdp(ws)
-  await cdp.send("Page.enable")
-  await cdp.send("Runtime.enable")
-  return { chrome, cdp, ws }
+
+  let ws
+  try {
+    const started = Date.now()
+    let version
+    while (Date.now() - started < timeoutMs) {
+      if (chrome.exitCode !== null) {
+        die(`chrome exited before DevTools listen (code=${chrome.exitCode}); see ${logPath}`)
+      }
+      try {
+        const response = await fetch(`http://127.0.0.1:${debugPort}/json/version`)
+        if (response.ok) {
+          version = await response.json()
+          break
+        }
+      } catch {
+        // Chrome is still binding the debug port.
+      }
+      await new Promise((resolveWait) => setTimeout(resolveWait, 200))
+    }
+    if (!version?.webSocketDebuggerUrl) {
+      die(`timed out waiting for Chrome DevTools at http://127.0.0.1:${debugPort}/json/version; see ${logPath}`)
+    }
+    ws = new WebSocket(version.webSocketDebuggerUrl)
+    await new Promise((resolveOpen, reject) => {
+      ws.addEventListener("open", resolveOpen)
+      ws.addEventListener("error", () => reject(new Error("Chrome DevTools websocket failed")))
+    })
+    const cdp = new Cdp(ws)
+    const created = await cdp.send("Target.createTarget", { url: "about:blank" }, false)
+    const attached = await cdp.send(
+      "Target.attachToTarget",
+      { targetId: created.targetId, flatten: true },
+      false,
+    )
+    cdp.sessionId = attached.sessionId
+    await cdp.send("Page.enable")
+    await cdp.send("Runtime.enable")
+    return { chrome, cdp, ws }
+  } catch (error) {
+    ws?.close()
+    chrome.kill("SIGTERM")
+    throw error
+  }
 }
 
 async function navigate(cdp, url) {
