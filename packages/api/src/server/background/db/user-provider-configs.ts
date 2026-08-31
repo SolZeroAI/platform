@@ -494,7 +494,10 @@ export class UserProviderConfigsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [this.schema.userProviderConfigs.userId, this.schema.userProviderConfigs.providerId],
+            target: [
+              this.schema.userProviderConfigs.userId,
+              this.schema.userProviderConfigs.providerId,
+            ],
             set: {
               scope: "shared_override",
               displayName: override.displayName,
@@ -550,7 +553,10 @@ export class UserProviderConfigsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [this.schema.userProviderConfigs.userId, this.schema.userProviderConfigs.providerId],
+            target: [
+              this.schema.userProviderConfigs.userId,
+              this.schema.userProviderConfigs.providerId,
+            ],
             set: {
               scope: "custom_provider",
               displayName: provider.name,
@@ -605,7 +611,10 @@ export class UserProviderConfigsStore {
           .select()
           .from(this.schema.userProviderConfigs)
           .where(eq(this.schema.userProviderConfigs.userId, userId))
-          .orderBy(asc(this.schema.userProviderConfigs.scope), asc(this.schema.userProviderConfigs.providerId)),
+          .orderBy(
+            asc(this.schema.userProviderConfigs.scope),
+            asc(this.schema.userProviderConfigs.providerId),
+          ),
       catch: d1Error("db.userProviderConfigs.listConfigRows"),
     })
     return rows.map(

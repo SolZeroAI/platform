@@ -168,7 +168,12 @@ export class RepoMetadataStore {
         this.drizzle
           .select()
           .from(this.schema.repoMetadata)
-          .where(and(eq(this.schema.repoMetadata.repoOwner, repoOwner), eq(this.schema.repoMetadata.repoName, repoName)))
+          .where(
+            and(
+              eq(this.schema.repoMetadata.repoOwner, repoOwner),
+              eq(this.schema.repoMetadata.repoName, repoName),
+            ),
+          )
           .limit(1),
       catch: d1Error("db.repoMetadata.get"),
     })

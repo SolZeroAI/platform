@@ -155,7 +155,12 @@ export class UserApiKeyStore {
             keyHash: this.schema.userApiKeys.keyHash,
           })
           .from(this.schema.userApiKeys)
-          .where(and(eq(this.schema.userApiKeys.keyId, keyId), isNull(this.schema.userApiKeys.revokedAt)))
+          .where(
+            and(
+              eq(this.schema.userApiKeys.keyId, keyId),
+              isNull(this.schema.userApiKeys.revokedAt),
+            ),
+          )
           .limit(1),
       catch: d1Error("db.userApiKeys.verify"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0])))

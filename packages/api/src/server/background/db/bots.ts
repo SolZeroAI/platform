@@ -142,7 +142,12 @@ export class BotStore {
 
   getBySessionId(sessionId: string) {
     return Effect.tryPromise({
-      try: () => this.drizzle.select().from(this.schema.bots).where(eq(this.schema.bots.sessionId, sessionId)).limit(1),
+      try: () =>
+        this.drizzle
+          .select()
+          .from(this.schema.bots)
+          .where(eq(this.schema.bots.sessionId, sessionId))
+          .limit(1),
       catch: d1Error("bots.getBySessionId"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0]).pipe(Option.map(toBotSummary))))
   }
@@ -214,7 +219,12 @@ export class BotStore {
             this.drizzle
               .select()
               .from(this.schema.botRoutines)
-              .where(and(eq(this.schema.botRoutines.botId, botId), eq(this.schema.botRoutines.userId, userId)))
+              .where(
+                and(
+                  eq(this.schema.botRoutines.botId, botId),
+                  eq(this.schema.botRoutines.userId, userId),
+                ),
+              )
               .orderBy(desc(this.schema.botRoutines.updatedAt)),
           catch: d1Error("bots.listRoutines"),
         }),
@@ -254,7 +264,11 @@ export class BotStore {
   getRoutineById(routineId: string) {
     return Effect.tryPromise({
       try: () =>
-        this.drizzle.select().from(this.schema.botRoutines).where(eq(this.schema.botRoutines.id, routineId)).limit(1),
+        this.drizzle
+          .select()
+          .from(this.schema.botRoutines)
+          .where(eq(this.schema.botRoutines.id, routineId))
+          .limit(1),
       catch: d1Error("bots.getRoutineById"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0]).pipe(Option.map(toRoutineSummary))))
   }
@@ -292,7 +306,10 @@ export class BotStore {
 
   deleteRoutineById(routineId: string) {
     return Effect.tryPromise({
-      try: () => this.drizzle.delete(this.schema.botRoutines).where(eq(this.schema.botRoutines.id, routineId)),
+      try: () =>
+        this.drizzle
+          .delete(this.schema.botRoutines)
+          .where(eq(this.schema.botRoutines.id, routineId)),
       catch: d1Error("bots.deleteRoutineById"),
     }).pipe(Effect.map(() => undefined))
   }

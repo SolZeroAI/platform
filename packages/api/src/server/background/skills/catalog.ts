@@ -116,7 +116,10 @@ function rowToRecord(row: AgentSkillRow): AgentSkillRecord {
 }
 
 function runtimeScopeCondition(schema: AppSchema, runtimeScope: "harness" | "isolate") {
-  return or(eq(schema.agentSkills.runtimeScope, runtimeScope), eq(schema.agentSkills.runtimeScope, "all"))
+  return or(
+    eq(schema.agentSkills.runtimeScope, runtimeScope),
+    eq(schema.agentSkills.runtimeScope, "all"),
+  )
 }
 
 export class AgentSkillStore {
@@ -133,13 +136,21 @@ export class AgentSkillStore {
     this: AgentSkillStore,
     runtimeScope?: "harness" | "isolate",
   ) {
-    const runtimeFilter = runtimeScope ? runtimeScopeCondition(this.schema, runtimeScope) : undefined
+    const runtimeFilter = runtimeScope
+      ? runtimeScopeCondition(this.schema, runtimeScope)
+      : undefined
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select()
           .from(this.schema.agentSkills)
-          .where(and(eq(this.schema.agentSkills.scope, "global"), isNull(this.schema.agentSkills.deletedAt), runtimeFilter))
+          .where(
+            and(
+              eq(this.schema.agentSkills.scope, "global"),
+              isNull(this.schema.agentSkills.deletedAt),
+              runtimeFilter,
+            ),
+          )
           .orderBy(asc(this.schema.agentSkills.name)),
       catch: d1Error("db.agentSkills.listActiveGlobal"),
     })
@@ -194,7 +205,9 @@ export class AgentSkillStore {
         this.drizzle
           .select()
           .from(this.schema.agentSkills)
-          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt)))
+          .where(
+            and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt)),
+          )
           .limit(1),
       catch: d1Error("db.agentSkills.getActive"),
     })
@@ -292,7 +305,9 @@ export class AgentSkillStore {
         this.drizzle
           .update(this.schema.agentSkills)
           .set({ defaultEnabled: Number(enabled), updatedAt: Date.now() })
-          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
+          .where(
+            and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt)),
+          ),
       catch: d1Error("db.agentSkills.setDefaultEnabled"),
     })
     return yield* this.requireActive(skillId)
@@ -308,7 +323,9 @@ export class AgentSkillStore {
         this.drizzle
           .update(this.schema.agentSkills)
           .set({ contentHash, updatedAt: Date.now() })
-          .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
+          .where(
+            and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt)),
+          ),
       catch: d1Error("db.agentSkills.updateContentHash"),
     })
   })
@@ -338,7 +355,10 @@ export class AgentSkillStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [this.schema.userAgentSkillPreferences.userId, this.schema.userAgentSkillPreferences.skillId],
+            target: [
+              this.schema.userAgentSkillPreferences.userId,
+              this.schema.userAgentSkillPreferences.skillId,
+            ],
             set: { enabled: Number(enabled), updatedAt: now },
           }),
       catch: d1Error("db.agentSkills.setPreference"),
@@ -377,7 +397,12 @@ export class AgentSkillStore {
           this.drizzle
             .update(this.schema.agentSkills)
             .set({ deletedAt: now, updatedAt: now })
-            .where(and(eq(this.schema.agentSkills.id, skillId), isNull(this.schema.agentSkills.deletedAt))),
+            .where(
+              and(
+                eq(this.schema.agentSkills.id, skillId),
+                isNull(this.schema.agentSkills.deletedAt),
+              ),
+            ),
           this.drizzle
             .delete(this.schema.userAgentSkillPreferences)
             .where(eq(this.schema.userAgentSkillPreferences.skillId, skillId)),

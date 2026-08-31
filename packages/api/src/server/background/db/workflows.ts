@@ -247,7 +247,9 @@ export class WorkflowStore {
     }
   }
 
-  private toRunEventRecord(row: AppSchema["workflowRunEvents"]["$inferSelect"]): WorkflowRunEventRecord {
+  private toRunEventRecord(
+    row: AppSchema["workflowRunEvents"]["$inferSelect"],
+  ): WorkflowRunEventRecord {
     return {
       id: row.id,
       workflow_id: row.workflowId,
@@ -304,7 +306,12 @@ export class WorkflowStore {
             codeKey: input.codeKey,
             updatedAt: input.updatedAt,
           })
-          .where(and(eq(this.schema.workflows.id, input.id), eq(this.schema.workflows.userId, input.userId)))
+          .where(
+            and(
+              eq(this.schema.workflows.id, input.id),
+              eq(this.schema.workflows.userId, input.userId),
+            ),
+          )
           .returning(),
       catch: d1Error("db.workflows.updateWorkflow"),
     })
@@ -323,7 +330,12 @@ export class WorkflowStore {
             name: input.name,
             updatedAt: input.updatedAt,
           })
-          .where(and(eq(this.schema.workflows.id, input.id), eq(this.schema.workflows.userId, input.userId)))
+          .where(
+            and(
+              eq(this.schema.workflows.id, input.id),
+              eq(this.schema.workflows.userId, input.userId),
+            ),
+          )
           .returning(),
       catch: d1Error("db.workflows.updateWorkflowName"),
     })
@@ -412,7 +424,12 @@ export class WorkflowStore {
 
   getWorkflow = Effect.fn("db.workflows.getWorkflow")(function* (this: WorkflowStore, id: string) {
     const rows = yield* Effect.tryPromise({
-      try: () => this.drizzle.select().from(this.schema.workflows).where(eq(this.schema.workflows.id, id)).limit(1),
+      try: () =>
+        this.drizzle
+          .select()
+          .from(this.schema.workflows)
+          .where(eq(this.schema.workflows.id, id))
+          .limit(1),
       catch: d1Error("db.workflows.getWorkflow"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toWorkflowRecord(row))
@@ -441,7 +458,11 @@ export class WorkflowStore {
   ) {
     const rows = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.select().from(this.schema.workflows).where(eq(this.schema.workflows.webhookId, webhookId)).limit(1),
+        this.drizzle
+          .select()
+          .from(this.schema.workflows)
+          .where(eq(this.schema.workflows.webhookId, webhookId))
+          .limit(1),
       catch: d1Error("db.workflows.getWorkflowByWebhookId"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toWorkflowRecord(row))
@@ -468,7 +489,10 @@ export class WorkflowStore {
         conditions.push(eq(this.schema.workflows.status, status))
       },
     })
-    addLikeFilter(conditions, input.q, [this.schema.workflows.name, this.schema.workflows.webhookId])
+    addLikeFilter(conditions, input.q, [
+      this.schema.workflows.name,
+      this.schema.workflows.webhookId,
+    ])
     const where = and(...conditions)
 
     const rows = yield* Effect.tryPromise({
@@ -588,7 +612,10 @@ export class WorkflowStore {
             updatedAt: input.completedAt,
           })
           .where(
-            and(eq(this.schema.workflowRuns.id, input.runId), eq(this.schema.workflowRuns.workflowId, input.workflowId)),
+            and(
+              eq(this.schema.workflowRuns.id, input.runId),
+              eq(this.schema.workflowRuns.workflowId, input.workflowId),
+            ),
           ),
       catch: d1Error("db.workflows.completeRun"),
     })
@@ -604,7 +631,12 @@ export class WorkflowStore {
         this.drizzle
           .select()
           .from(this.schema.workflowRuns)
-          .where(and(eq(this.schema.workflowRuns.workflowId, workflowId), eq(this.schema.workflowRuns.id, runId)))
+          .where(
+            and(
+              eq(this.schema.workflowRuns.workflowId, workflowId),
+              eq(this.schema.workflowRuns.id, runId),
+            ),
+          )
           .limit(1),
       catch: d1Error("db.workflows.getRun"),
     })
@@ -737,7 +769,10 @@ export class WorkflowStore {
         this.drizzle
           .delete(this.schema.workflowRunEvents)
           .where(
-            and(eq(this.schema.workflowRunEvents.workflowId, workflowId), eq(this.schema.workflowRunEvents.runId, runId)),
+            and(
+              eq(this.schema.workflowRunEvents.workflowId, workflowId),
+              eq(this.schema.workflowRunEvents.runId, runId),
+            ),
           ),
       catch: d1Error("db.workflows.deleteRun"),
     })
@@ -746,7 +781,12 @@ export class WorkflowStore {
       try: () =>
         this.drizzle
           .delete(this.schema.workflowRuns)
-          .where(and(eq(this.schema.workflowRuns.workflowId, workflowId), eq(this.schema.workflowRuns.id, runId)))
+          .where(
+            and(
+              eq(this.schema.workflowRuns.workflowId, workflowId),
+              eq(this.schema.workflowRuns.id, runId),
+            ),
+          )
           .returning({ id: this.schema.workflowRuns.id }),
       catch: d1Error("db.workflows.deleteRun"),
     })
@@ -761,7 +801,9 @@ export class WorkflowStore {
     const sequenceRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ sequence: sql<number>`coalesce(max(${this.schema.workflowRunEvents.sequence}), 0) + 1` })
+          .select({
+            sequence: sql<number>`coalesce(max(${this.schema.workflowRunEvents.sequence}), 0) + 1`,
+          })
           .from(this.schema.workflowRunEvents)
           .where(eq(this.schema.workflowRunEvents.runId, input.runId)),
       catch: d1Error("db.workflows.addRunEvent"),
@@ -824,7 +866,10 @@ export class WorkflowStore {
           .select()
           .from(this.schema.workflowRunEvents)
           .where(
-            and(eq(this.schema.workflowRunEvents.workflowId, workflowId), eq(this.schema.workflowRunEvents.runId, runId)),
+            and(
+              eq(this.schema.workflowRunEvents.workflowId, workflowId),
+              eq(this.schema.workflowRunEvents.runId, runId),
+            ),
           )
           .orderBy(this.schema.workflowRunEvents.sequence),
       catch: d1Error("db.workflows.listRunEvents"),

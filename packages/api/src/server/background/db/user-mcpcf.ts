@@ -240,7 +240,10 @@ export class UserMcpcfServerConfigStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [this.schema.userMcpcfServerConfigs.userId, this.schema.userMcpcfServerConfigs.serverId],
+            target: [
+              this.schema.userMcpcfServerConfigs.userId,
+              this.schema.userMcpcfServerConfigs.serverId,
+            ],
             set: {
               authTokenSecretKey,
               defaultToolsEnabled,

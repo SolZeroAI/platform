@@ -318,7 +318,9 @@ function toWorkflow(
   }
 }
 
-function toWorkflowRunEvent(row: AppSchema["workflowRunEvents"]["$inferSelect"]): AdminWorkflowRunEvent {
+function toWorkflowRunEvent(
+  row: AppSchema["workflowRunEvents"]["$inferSelect"],
+): AdminWorkflowRunEvent {
   return {
     id: row.id,
     workflowId: row.workflowId,
@@ -648,7 +650,12 @@ export class AdminStore {
         this.drizzle
           .select()
           .from(this.schema.workflowRuns)
-          .where(and(eq(this.schema.workflowRuns.workflowId, workflowId), eq(this.schema.workflowRuns.id, runId)))
+          .where(
+            and(
+              eq(this.schema.workflowRuns.workflowId, workflowId),
+              eq(this.schema.workflowRuns.id, runId),
+            ),
+          )
           .limit(1),
       catch: d1Error("db.admin.getWorkflowRun"),
     })
@@ -666,7 +673,10 @@ export class AdminStore {
           .select()
           .from(this.schema.workflowRunEvents)
           .where(
-            and(eq(this.schema.workflowRunEvents.workflowId, workflowId), eq(this.schema.workflowRunEvents.runId, runId)),
+            and(
+              eq(this.schema.workflowRunEvents.workflowId, workflowId),
+              eq(this.schema.workflowRunEvents.runId, runId),
+            ),
           )
           .orderBy(asc(this.schema.workflowRunEvents.sequence)),
       catch: d1Error("db.admin.listWorkflowRunEvents"),
@@ -871,7 +881,10 @@ export class AdminStore {
               .select()
               .from(this.schema.workflowRuns)
               .where(
-                and(eq(this.schema.workflowRuns.status, "queued"), lt(this.schema.workflowRuns.updatedAt, queuedThreshold)),
+                and(
+                  eq(this.schema.workflowRuns.status, "queued"),
+                  lt(this.schema.workflowRuns.updatedAt, queuedThreshold),
+                ),
               )
               .orderBy(asc(this.schema.workflowRuns.updatedAt))
               .limit(10),

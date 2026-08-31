@@ -174,7 +174,12 @@ export class SessionIndexStore {
 
   getById = Effect.fn("db.sessionIndex.getById")(function* (this: SessionIndexStore, id: string) {
     const rows = yield* Effect.tryPromise({
-      try: () => this.drizzle.select().from(this.schema.sessions).where(eq(this.schema.sessions.id, id)).limit(1),
+      try: () =>
+        this.drizzle
+          .select()
+          .from(this.schema.sessions)
+          .where(eq(this.schema.sessions.id, id))
+          .limit(1),
       catch: d1Error("db.sessionIndex.getById"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toRecord(row))
@@ -283,7 +288,10 @@ export class SessionIndexStore {
   delete = Effect.fn("db.sessionIndex.delete")(function* (this: SessionIndexStore, id: string) {
     const deleted = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.delete(this.schema.sessions).where(eq(this.schema.sessions.id, id)).returning({ id: this.schema.sessions.id }),
+        this.drizzle
+          .delete(this.schema.sessions)
+          .where(eq(this.schema.sessions.id, id))
+          .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.delete"),
     })
     return deleted.length > 0

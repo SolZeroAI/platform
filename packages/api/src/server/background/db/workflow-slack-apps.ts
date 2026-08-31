@@ -184,7 +184,11 @@ export class WorkflowSlackAppStore {
   ) {
     const rows = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.select().from(this.schema.workflowSlackApps).where(eq(this.schema.workflowSlackApps.id, id)).limit(1),
+        this.drizzle
+          .select()
+          .from(this.schema.workflowSlackApps)
+          .where(eq(this.schema.workflowSlackApps.id, id))
+          .limit(1),
       catch: d1Error("db.workflowSlack.getAppById"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toAppRecord(row))
@@ -580,7 +584,9 @@ export class WorkflowSlackAppStore {
       Option.fromNullishOr(input.excludeDeliveryId).pipe(Option.filter(Boolean)),
       {
         onNone: () => [] as SQL[],
-        onSome: (excludeDeliveryId) => [ne(this.schema.workflowSlackDeliveries.id, excludeDeliveryId)],
+        onSome: (excludeDeliveryId) => [
+          ne(this.schema.workflowSlackDeliveries.id, excludeDeliveryId),
+        ],
       },
     )
     const rows = yield* Effect.tryPromise({
