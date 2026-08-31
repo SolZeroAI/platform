@@ -12,6 +12,12 @@ import {
   type ProviderModelDefinition,
 } from "./provider-config"
 import {
+  DEFAULT_S0_DATABASE_ENGINE,
+  S0_DATABASE_ENGINES,
+  s0DatabaseEngineFromDeployment,
+  type S0DatabaseEngine,
+} from "./database-engine"
+import {
   normalizeSecretReference,
   SecretReferenceSchema,
   type SecretReference,
@@ -20,6 +26,7 @@ import {
 export const S0_CONFIG_SCHEMA_VERSION = 1 as const
 export const S0_CONFIG_STAGE_NAMES = ["dev", "test", "pre", "prod"] as const
 export type S0ConfigStageName = (typeof S0_CONFIG_STAGE_NAMES)[number]
+export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
 
@@ -30,6 +37,12 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   webFqdn: Schema.optional(Schema.String),
   apiFqdn: Schema.optional(Schema.String),
   useApiShield: Schema.Boolean,
+  /**
+   * Control-plane database engine. Omit or set `d1` for the OSS default.
+   * `planetscale` selects PlanetScale Postgres plus Hyperdrive. Durable Object
+   * sqlite, R2, and Cloudflare AI Search stay on both flavors.
+   */
+  databaseEngine: Schema.optional(Schema.Literals([...S0_DATABASE_ENGINES])),
   observability: Schema.Struct({
     logsDestinations: Schema.Array(Schema.String),
     tracesDestinations: Schema.Array(Schema.String),
@@ -347,6 +360,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       decoded.deployment.webFqdn === undefined ? undefined : decoded.deployment.webFqdn.trim(),
     apiFqdn:
       decoded.deployment.apiFqdn === undefined ? undefined : decoded.deployment.apiFqdn.trim(),
+    databaseEngine: s0DatabaseEngineFromDeployment(decoded.deployment.databaseEngine),
     observability: {
       ...decoded.deployment.observability,
       logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),

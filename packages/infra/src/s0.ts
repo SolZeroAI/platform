@@ -4,7 +4,13 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Redacted from "effect/Redacted"
-import { CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS, type StageMetadata } from "@solzero/shared"
+import {
+  CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
+  LOCAL_PGLITE_DATABASE_URL,
+  type AppDbMode,
+  type S0DatabaseEngine,
+  type StageMetadata,
+} from "@solzero/shared"
 import {
   createAgentContainerApplications,
   createAgentContainerNamespaces,
@@ -22,6 +28,9 @@ export interface CreateS0Options {
   appName: string
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
+  databaseEngine: S0DatabaseEngine
+  appDbMode: AppDbMode
+  databaseUrl?: string
   dev: boolean
   cloudflareAccountId: string
   infraDir: string
@@ -121,6 +130,9 @@ export function createS0Api(options: CreateS0ApiOptions) {
       appName,
       stageMetadata,
       deploymentMetadata,
+      databaseEngine,
+      appDbMode,
+      databaseUrl,
       dev,
       cloudflareAccountId,
       infraDir,
@@ -147,6 +159,9 @@ export function createS0Api(options: CreateS0ApiOptions) {
       stageMetadata,
       migrationsDir,
       tokenId: apiEnv.CF_AI_SEARCH_SERVICE_TOKEN_ID,
+      databaseEngine,
+      appDbMode,
+      databaseUrl: databaseUrl ?? LOCAL_PGLITE_DATABASE_URL,
     })
     const api = yield* createApi({
       appName,

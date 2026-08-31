@@ -1,33 +1,20 @@
 import { sql } from "drizzle-orm"
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { bigint, index, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core"
 import { DEFAULT_ISOLATE_STEP_LIMIT, DEFAULT_SUBAGENT_MODE } from "@solzero/shared"
 
-export const repoSecrets = sqliteTable(
-  "repo_secrets",
-  {
-    repoId: integer("repo_id").notNull(),
-    repoOwner: text("repo_owner").notNull(),
-    repoName: text("repo_name").notNull(),
-    key: text("key").notNull(),
-    encryptedValue: text("encrypted_value").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.repoId, table.key] }),
-    index("idx_repo_secrets_repo_name").on(table.repoOwner, table.repoName),
-  ],
-)
+function unixMs(name: string) {
+  return bigint(name, { mode: "number" })
+}
 
-export const globalSecrets = sqliteTable("global_secrets", {
+export const globalSecrets = pgTable("global_secrets", {
   key: text("key").primaryKey().notNull(),
   encryptedValue: text("encrypted_value").notNull(),
   tags: text("tags").notNull().default("[]"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
+  createdAt: unixMs("created_at").notNull(),
+  updatedAt: unixMs("updated_at").notNull(),
 })
 
-export const mcpcfConfig = sqliteTable("mcpcf_config", {
+export const mcpcfConfig = pgTable("mcpcf_config", {
   id: text("id").primaryKey().notNull(),
   enabled: integer("enabled").notNull().default(0),
   baseUrl: text("base_url").notNull().default(""),
@@ -38,11 +25,11 @@ export const mcpcfConfig = sqliteTable("mcpcf_config", {
   expectedIssuer: text("expected_issuer"),
   authTypeAllowlistJson: text("auth_type_allowlist_json").notNull().default("[]"),
   serverBlacklistJson: text("server_blacklist_json").notNull().default("[]"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
+  createdAt: unixMs("created_at").notNull(),
+  updatedAt: unixMs("updated_at").notNull(),
 })
 
-export const mcpcfServers = sqliteTable(
+export const mcpcfServers = pgTable(
   "mcpcf_servers",
   {
     id: text("id").primaryKey().notNull(),
@@ -56,10 +43,10 @@ export const mcpcfServers = sqliteTable(
     filterReason: text("filter_reason"),
     enabled: integer("enabled").notNull().default(1),
     rawMetadataJson: text("raw_metadata_json").notNull().default("{}"),
-    firstSeenAt: integer("first_seen_at").notNull(),
-    lastSeenAt: integer("last_seen_at").notNull(),
-    verifiedAt: integer("verified_at"),
-    updatedAt: integer("updated_at").notNull(),
+    firstSeenAt: unixMs("first_seen_at").notNull(),
+    lastSeenAt: unixMs("last_seen_at").notNull(),
+    verifiedAt: unixMs("verified_at"),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("idx_mcpcf_servers_slug").on(table.slug),
@@ -71,7 +58,7 @@ export const mcpcfServers = sqliteTable(
   ],
 )
 
-export const userMcpcfServerConfigs = sqliteTable(
+export const userMcpcfServerConfigs = pgTable(
   "user_mcpcf_server_configs",
   {
     userId: text("user_id").notNull(),
@@ -79,8 +66,8 @@ export const userMcpcfServerConfigs = sqliteTable(
     authTokenSecretKey: text("auth_token_secret_key"),
     defaultToolsEnabled: integer("default_tools_enabled").notNull().default(1),
     disabledToolsJson: text("disabled_tools_json").notNull().default("[]"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.serverId] }),
@@ -88,7 +75,7 @@ export const userMcpcfServerConfigs = sqliteTable(
   ],
 )
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   "sessions",
   {
     id: text("id").primaryKey().notNull(),
@@ -96,8 +83,8 @@ export const sessions = sqliteTable(
     title: text("title"),
     repoOwner: text("repo_owner").notNull(),
     repoName: text("repo_name").notNull(),
-    githubInstallationId: integer("github_installation_id"),
-    githubRepoId: integer("github_repo_id"),
+    githubInstallationId: unixMs("github_installation_id"),
+    githubRepoId: unixMs("github_repo_id"),
     repoDefaultBranch: text("repo_default_branch"),
     branchName: text("branch_name"),
     toolsJson: text("tools_json").notNull().default("[]"),
@@ -112,8 +99,8 @@ export const sessions = sqliteTable(
     source: text("source").notNull().default("web"),
     incognito: integer("incognito").notNull().default(0),
     status: text("status").notNull().default("created"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     index("idx_sessions_status_updated").on(table.userId, table.status, table.updatedAt),
@@ -122,7 +109,7 @@ export const sessions = sqliteTable(
   ],
 )
 
-export const workflowSessionReuseKeys = sqliteTable(
+export const workflowSessionReuseKeys = pgTable(
   "workflow_session_reuse_keys",
   {
     userId: text("user_id").notNull(),
@@ -131,8 +118,8 @@ export const workflowSessionReuseKeys = sqliteTable(
     sessionKind: text("session_kind").notNull(),
     keyHash: text("key_hash").notNull(),
     sessionId: text("session_id").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     primaryKey({
@@ -142,7 +129,7 @@ export const workflowSessionReuseKeys = sqliteTable(
   ],
 )
 
-export const repoMetadata = sqliteTable(
+export const repoMetadata = pgTable(
   "repo_metadata",
   {
     repoOwner: text("repo_owner").notNull(),
@@ -151,28 +138,28 @@ export const repoMetadata = sqliteTable(
     aliases: text("aliases"),
     channelAssociations: text("channel_associations"),
     keywords: text("keywords"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.repoOwner, table.repoName] })],
 )
 
-export const userApiKeys = sqliteTable(
+export const userApiKeys = pgTable(
   "user_api_keys",
   {
     keyId: text("key_id").primaryKey().notNull(),
     userId: text("user_id").notNull(),
     label: text("label"),
     keyHash: text("key_hash").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-    lastUsedAt: integer("last_used_at"),
-    revokedAt: integer("revoked_at"),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
+    lastUsedAt: unixMs("last_used_at"),
+    revokedAt: unixMs("revoked_at"),
   },
   (table) => [index("idx_user_api_keys_owner").on(table.userId, table.revokedAt, table.createdAt)],
 )
 
-export const userProviderConfigs = sqliteTable(
+export const userProviderConfigs = pgTable(
   "user_provider_configs",
   {
     userId: text("user_id").notNull(),
@@ -182,8 +169,8 @@ export const userProviderConfigs = sqliteTable(
     npm: text("npm"),
     providerJson: text("provider_json").notNull(),
     apiKeyEncrypted: text("api_key_encrypted"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.providerId] }),
@@ -191,18 +178,18 @@ export const userProviderConfigs = sqliteTable(
   ],
 )
 
-export const userProviderPreferences = sqliteTable("user_provider_preferences", {
+export const userProviderPreferences = pgTable("user_provider_preferences", {
   userId: text("user_id").primaryKey().notNull(),
   defaultModel: text("default_model"),
   defaultIsolateStepLimit: integer("default_isolate_step_limit")
     .notNull()
     .default(DEFAULT_ISOLATE_STEP_LIMIT),
   opencodePermissionJson: text("opencode_permission_json"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
+  createdAt: unixMs("created_at").notNull(),
+  updatedAt: unixMs("updated_at").notNull(),
 })
 
-export const agentSkills = sqliteTable(
+export const agentSkills = pgTable(
   "agent_skills",
   {
     id: text("id").primaryKey().notNull(),
@@ -218,9 +205,9 @@ export const agentSkills = sqliteTable(
     contentHash: text("content_hash").notNull(),
     defaultEnabled: integer("default_enabled").notNull().default(0),
     createdByUserId: text("created_by_user_id"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-    deletedAt: integer("deleted_at"),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
+    deletedAt: unixMs("deleted_at"),
   },
   (table) => [
     uniqueIndex("idx_agent_skills_active_global_slug")
@@ -238,7 +225,7 @@ export const agentSkills = sqliteTable(
   ],
 )
 
-export const userAgentSkillPreferences = sqliteTable(
+export const userAgentSkillPreferences = pgTable(
   "user_agent_skill_preferences",
   {
     userId: text("user_id").notNull(),
@@ -246,8 +233,8 @@ export const userAgentSkillPreferences = sqliteTable(
       .notNull()
       .references(() => agentSkills.id, { onDelete: "cascade" }),
     enabled: integer("enabled").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.skillId] }),
@@ -255,7 +242,7 @@ export const userAgentSkillPreferences = sqliteTable(
   ],
 )
 
-export const workflows = sqliteTable(
+export const workflows = pgTable(
   "workflows",
   {
     id: text("id").primaryKey().notNull(),
@@ -266,8 +253,8 @@ export const workflows = sqliteTable(
     manifestKey: text("manifest_key").notNull(),
     codeKey: text("code_key").notNull(),
     webhookId: text("webhook_id").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     index("idx_workflows_owner_updated").on(table.userId, table.status, table.updatedAt),
@@ -275,7 +262,7 @@ export const workflows = sqliteTable(
   ],
 )
 
-export const workflowRuns = sqliteTable(
+export const workflowRuns = pgTable(
   "workflow_runs",
   {
     id: text("id").primaryKey().notNull(),
@@ -289,16 +276,16 @@ export const workflowRuns = sqliteTable(
     inputJson: text("input_json").notNull().default("{}"),
     outputJson: text("output_json"),
     error: text("error"),
-    startedAt: integer("started_at").notNull(),
-    completedAt: integer("completed_at"),
-    updatedAt: integer("updated_at").notNull(),
+    startedAt: unixMs("started_at").notNull(),
+    completedAt: unixMs("completed_at"),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     index("idx_workflow_runs_workflow_updated").on(table.workflowId, table.status, table.updatedAt),
   ],
 )
 
-export const workflowSlackApps = sqliteTable(
+export const workflowSlackApps = pgTable(
   "workflow_slack_apps",
   {
     id: text("id").primaryKey().notNull(),
@@ -307,8 +294,8 @@ export const workflowSlackApps = sqliteTable(
     appName: text("app_name").notNull(),
     signingSecretKey: text("signing_secret_key").notNull(),
     botTokenSecretKey: text("bot_token_secret_key").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("idx_workflow_slack_apps_workflow").on(table.workflowId),
@@ -316,7 +303,7 @@ export const workflowSlackApps = sqliteTable(
   ],
 )
 
-export const workflowSlackTriggerRegistrations = sqliteTable(
+export const workflowSlackTriggerRegistrations = pgTable(
   "workflow_slack_trigger_registrations",
   {
     id: text("id").primaryKey().notNull(),
@@ -333,8 +320,8 @@ export const workflowSlackTriggerRegistrations = sqliteTable(
     cooldownSeconds: integer("cooldown_seconds").notNull().default(0),
     dedupeWindowSeconds: integer("dedupe_window_seconds").notNull().default(300),
     enabled: integer("enabled").notNull().default(1),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("idx_workflow_slack_trigger_node").on(table.workflowId, table.nodeId),
@@ -347,7 +334,7 @@ export const workflowSlackTriggerRegistrations = sqliteTable(
   ],
 )
 
-export const workflowSlackDeliveries = sqliteTable(
+export const workflowSlackDeliveries = pgTable(
   "workflow_slack_deliveries",
   {
     id: text("id").primaryKey().notNull(),
@@ -359,8 +346,8 @@ export const workflowSlackDeliveries = sqliteTable(
     runId: text("run_id"),
     status: text("status").notNull(),
     error: text("error"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("idx_workflow_slack_deliveries_dedupe").on(
@@ -376,7 +363,7 @@ export const workflowSlackDeliveries = sqliteTable(
   ],
 )
 
-export const workflowRunEvents = sqliteTable(
+export const workflowRunEvents = pgTable(
   "workflow_run_events",
   {
     id: text("id").primaryKey().notNull(),
@@ -388,7 +375,7 @@ export const workflowRunEvents = sqliteTable(
     level: text("level").notNull().default("info"),
     message: text("message").notNull(),
     dataJson: text("data_json").notNull().default("{}"),
-    createdAt: integer("created_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
   },
   (table) => [
     index("idx_workflow_run_events_run_sequence").on(table.runId, table.sequence),
@@ -396,7 +383,7 @@ export const workflowRunEvents = sqliteTable(
   ],
 )
 
-export const bots = sqliteTable(
+export const bots = pgTable(
   "bots",
   {
     id: text("id").primaryKey().notNull(),
@@ -405,8 +392,8 @@ export const bots = sqliteTable(
     instructions: text("instructions").notNull().default(""),
     sessionId: text("session_id"),
     status: text("status").notNull().default("active"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     index("idx_bots_owner_updated").on(table.userId, table.status, table.updatedAt),
@@ -414,7 +401,7 @@ export const bots = sqliteTable(
   ],
 )
 
-export const botRoutines = sqliteTable(
+export const botRoutines = pgTable(
   "bot_routines",
   {
     id: text("id").primaryKey().notNull(),
@@ -424,12 +411,12 @@ export const botRoutines = sqliteTable(
     kind: text("kind").notNull(),
     cadenceJson: text("cadence_json").notNull(),
     prompt: text("prompt").notNull(),
-    until: integer("until"),
+    until: unixMs("until"),
     watchJson: text("watch_json").notNull().default('{"kind":"none"}'),
     status: text("status").notNull().default("active"),
-    lastRunAt: integer("last_run_at"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    lastRunAt: unixMs("last_run_at"),
+    createdAt: unixMs("created_at").notNull(),
+    updatedAt: unixMs("updated_at").notNull(),
   },
   (table) => [
     index("idx_bot_routines_bot_updated").on(table.botId, table.status, table.updatedAt),
@@ -437,7 +424,7 @@ export const botRoutines = sqliteTable(
   ],
 )
 
-export const cronRuns = sqliteTable(
+export const cronRuns = pgTable(
   "cron_runs",
   {
     id: text("id").primaryKey().notNull(),
@@ -445,14 +432,14 @@ export const cronRuns = sqliteTable(
     cron: text("cron"),
     trigger: text("trigger").notNull(),
     status: text("status").notNull(),
-    startedAt: integer("started_at").notNull(),
-    finishedAt: integer("finished_at").notNull(),
+    startedAt: unixMs("started_at").notNull(),
+    finishedAt: unixMs("finished_at").notNull(),
     durationMs: integer("duration_ms").notNull(),
     resultJson: text("result_json").notNull().default("{}"),
     errorMessage: text("error_message"),
     actorUserId: text("actor_user_id"),
     actorEmail: text("actor_email"),
-    createdAt: integer("created_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
   },
   (table) => [
     index("idx_cron_runs_job_created").on(table.jobId, table.createdAt),
@@ -460,7 +447,7 @@ export const cronRuns = sqliteTable(
   ],
 )
 
-export const adminAuditEvents = sqliteTable(
+export const adminAuditEvents = pgTable(
   "admin_audit_events",
   {
     id: text("id").primaryKey().notNull(),
@@ -473,7 +460,7 @@ export const adminAuditEvents = sqliteTable(
     result: text("result").notNull(),
     status: integer("status").notNull(),
     message: text("message"),
-    createdAt: integer("created_at").notNull(),
+    createdAt: unixMs("created_at").notNull(),
   },
   (table) => [
     index("idx_admin_audit_events_created").on(table.createdAt),
@@ -481,7 +468,7 @@ export const adminAuditEvents = sqliteTable(
   ],
 )
 
-export const user = sqliteTable(
+export const user = pgTable(
   "user",
   {
     id: text("id").primaryKey().notNull(),
@@ -495,7 +482,7 @@ export const user = sqliteTable(
   (table) => [uniqueIndex("idx_user_email").on(table.email)],
 )
 
-export const session = sqliteTable(
+export const session = pgTable(
   "session",
   {
     id: text("id").primaryKey().notNull(),
@@ -513,7 +500,7 @@ export const session = sqliteTable(
   ],
 )
 
-export const account = sqliteTable(
+export const account = pgTable(
   "account",
   {
     id: text("id").primaryKey().notNull(),
@@ -536,7 +523,7 @@ export const account = sqliteTable(
   ],
 )
 
-export const verification = sqliteTable(
+export const verification = pgTable(
   "verification",
   {
     id: text("id").primaryKey().notNull(),
@@ -549,7 +536,7 @@ export const verification = sqliteTable(
   (table) => [index("idx_verification_identifier").on(table.identifier)],
 )
 
-export const managedAdminCredential = sqliteTable(
+export const managedAdminCredential = pgTable(
   "managed_admin_credential",
   {
     userId: text("userId").primaryKey().notNull(),

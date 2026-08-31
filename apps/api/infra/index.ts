@@ -317,6 +317,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     ...(env.S0_CONFIG_LITELLM ? { S0_CONFIG_LITELLM: jsonBinding(env.S0_CONFIG_LITELLM) } : {}),
     ...(env.S0_CONFIG_MCPCF ? { S0_CONFIG_MCPCF: jsonBinding(env.S0_CONFIG_MCPCF) } : {}),
     S0_DEPLOYMENT_CONFIG_DIGEST: env.S0_DEPLOYMENT_CONFIG_DIGEST,
+    S0_DATABASE_ENGINE: agentResources.databaseEngine,
     CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId,
     GITHUB_APP_CLIENT_ID: env.GITHUB_APP_CLIENT_ID,
     GITHUB_APP_ID: env.GITHUB_APP_ID,
@@ -362,7 +363,13 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     WORKFLOW_ACTIONS: workflowActionsBinding(workerName),
     WORKFLOW_BUCKET: agentResources.workflowBucket,
     AI_SEARCH_CONTENT_BUCKET: agentResources.aiSearchContentBucket,
-    DB: agentResources.db,
+    ...(agentResources.db ? { DB: agentResources.db } : {}),
+    ...(agentResources.appHyperdrive
+      ? {
+          APP_HYPERDRIVE: agentResources.appHyperdrive,
+          APP_DB_MODE: agentResources.appDbMode,
+        }
+      : {}),
     S0_CONFIG: agentResources.s0Config,
     REPOS_CACHE: agentResources.repoCache,
     USER_WORKFLOW_KV: agentResources.userWorkflowKv,

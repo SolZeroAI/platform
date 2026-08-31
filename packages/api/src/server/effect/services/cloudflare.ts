@@ -1,6 +1,7 @@
 import type { ApiEnv } from "infra/types/env"
 import * as Context from "effect/Context"
-import { D1Drizzle, makeD1Drizzle } from "../db/d1-drizzle"
+import { D1Drizzle } from "../db/d1-drizzle"
+import { ControlPlane, makeControlPlaneFromEnv } from "../db/control-plane-db"
 import {
   EffectRequestLogger,
   RequestObservability,
@@ -18,7 +19,12 @@ export class CloudflareContext extends Context.Service<CloudflareContext, Cloudf
 ) {}
 
 export type CloudflareEffectContext = Context.Context<
-  CloudflareContext | RequestObservability | EffectRequestLogger | IdentityProvider | GitHubProvider
+  | CloudflareContext
+  | ControlPlane
+  | RequestObservability
+  | EffectRequestLogger
+  | IdentityProvider
+  | GitHubProvider
 >
 
 export function makeCloudflareContext(
@@ -27,10 +33,12 @@ export function makeCloudflareContext(
   observability: RequestObservabilityService,
 ): CloudflareEffectContext {
   const providers = providerServicesForEnv(env)
+  const controlPlane = makeControlPlaneFromEnv(env)
   return Context.make(CloudflareContext, { env, ctx }).pipe(
     Context.add(RequestObservability, observability),
     Context.add(EffectRequestLogger, observability.effectLog),
-    Context.add(D1Drizzle, makeD1Drizzle(env.DB)),
+    Context.add(ControlPlane, controlPlane),
+    Context.add(D1Drizzle, controlPlane.drizzle),
     Context.add(IdentityProvider, providers.identityProvider),
     Context.add(GitHubProvider, providers.githubProvider),
   )

@@ -45,7 +45,7 @@ flowchart TB
 
     subgraph Data["Data and content"]
       direction LR
-      D1[("D1<br/>auth + sessions + workflows + metadata")]
+      ControlPlaneDb[("Control-plane DB<br/>D1 default or optional PlanetScale Postgres")]
       KV[("KV namespaces<br/>runtime config + registries + caches")]
       R2[("R2 buckets<br/>workflow artifacts + skills + AI Search content")]
     end
@@ -108,13 +108,13 @@ flowchart TB
   ContainerDO --> Containers
   Containers --> ContainerOutbound
 
-  HttpApi --> D1
+  HttpApi --> ControlPlaneDb
   HttpApi --> KV
   HttpApi --> R2
-  McpRoutes --> D1
+  McpRoutes --> ControlPlaneDb
   McpRoutes --> KV
-  SessionDO --> D1
-  DynamicWorkflow --> D1
+  SessionDO --> ControlPlaneDb
+  DynamicWorkflow --> ControlPlaneDb
   DynamicWorkflow --> KV
   DynamicWorkflow --> R2
 

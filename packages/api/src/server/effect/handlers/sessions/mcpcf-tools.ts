@@ -8,7 +8,7 @@ import type {
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
 } from "@solzero/api"
-import { makeControlPlaneFromEnv } from "../../db/control-plane-db"
+import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../db/control-plane-db"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
 import {
@@ -104,18 +104,18 @@ function formatTools(tools: readonly McpcfToolPreview[]) {
 }
 
 async function hasLinkedOAuthAccount(input: {
-  env: { DB: D1Database }
+  env: ApiEnv
   userId: string
   providerId: string
 }): Promise<boolean> {
-  const row = await input.env.DB.prepare(
+  const row = await runControlPlaneSqlFirst<{ id: string }>(
+    input.env,
     `SELECT "id"
        FROM "account"
        WHERE "providerId" = ?1 AND "userId" = ?2
        LIMIT 1`,
+    [input.providerId, input.userId],
   )
-    .bind(input.providerId, input.userId)
-    .first<{ id: string }>()
   return Boolean(row)
 }
 

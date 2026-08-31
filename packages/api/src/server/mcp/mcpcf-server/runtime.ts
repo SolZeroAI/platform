@@ -15,7 +15,7 @@ import {
   type McpcfServerRecord,
 } from "../../background/db/mcpcf"
 import { createGlobalSecretsStoreFromD1 } from "../../background/db/repo-secrets"
-import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
+import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../effect/db/control-plane-db"
 import {
   createUserMcpcfServerConfigStoreFromD1,
   getUserMcpcfAuthTokenSecretKey,
@@ -240,13 +240,13 @@ const mcpcfSelectionFromSession = Effect.fn("mcp.mcpcf.selectionFromSession")(fu
 ) {
   const row = yield* Effect.tryPromise({
     try: () =>
-      env.DB.prepare(
+      runControlPlaneSqlFirst<McpcfSessionRow>(
+        env,
         `SELECT user_id, tools_json
            FROM sessions
-           WHERE id = ?`,
-      )
-        .bind(sessionId)
-        .first<McpcfSessionRow>(),
+           WHERE id = ?1`,
+        [sessionId],
+      ),
     catch: toError,
   })
 

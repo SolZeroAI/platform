@@ -2,6 +2,7 @@ import * as Alchemy from "alchemy"
 import { adopt } from "alchemy/AdoptPolicy"
 import * as Effect from "effect/Effect"
 import { createS0 } from "../s0"
+import { planetscaleStackFlags } from "../stack-flags"
 import { stackOptions, type StackOptionsInput } from "../stack"
 import { s0StackRuntime } from "./runtime"
 
@@ -17,7 +18,7 @@ export const S0Program = Effect.gen(function* () {
 })
 
 export function makeS0Stack(input: StackOptionsInput = {}) {
-  return S0.make(stackOptions<S0StackServices>(input), S0Program)
+  return S0.make(stackOptions<S0StackServices>({ ...planetscaleStackFlags(), ...input }), S0Program)
 }
 
 export default makeS0Stack()

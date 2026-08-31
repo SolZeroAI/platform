@@ -7,6 +7,11 @@ import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
 import type * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import type { ApiEnv } from "infra/types/env"
 import {
+  hasControlPlane,
+  runControlPlaneSql,
+  runControlPlaneSqlFirst,
+} from "../effect/db/control-plane-db"
+import {
   getAuthProviderRegistry,
   type ResolvedAuthProviderConfig,
 } from "../background/db/auth-config"
@@ -25,9 +30,7 @@ type OAuthAccountTokenRow = {
   scope: string | null
 }
 
-type QueryableApiEnv = ApiEnv & {
-  DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement }
-}
+type QueryableApiEnv = ApiEnv
 
 type OAuthAccessTokenResult = {
   accessToken: string
@@ -125,10 +128,8 @@ export class LinkedOAuthReconnectRequiredError extends Error {
   }
 }
 
-function hasQueryableDb(
-  env: ApiEnv,
-): env is ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } } {
-  return Boolean(env.DB && typeof (env.DB as { prepare?: unknown }).prepare === "function")
+function hasQueryableDb(env: ApiEnv): env is QueryableApiEnv {
+  return hasControlPlane(env)
 }
 
 function normalizeIssuerUrlOption(value: string | undefined): Option.Option<string> {
@@ -407,15 +408,15 @@ const getOAuthAccountTokenRow = Effect.fn("auth.oauthTokens.accountTokenRow")(fu
     Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
     Effect.flatMap((dbEnv) =>
       Effect.tryPromise(() =>
-        dbEnv.DB.prepare(
+        runControlPlaneSqlFirst<OAuthAccountTokenRow>(
+          dbEnv,
           `SELECT "id", "accountId", "accessToken", "refreshToken", "accessTokenExpiresAt", "refreshTokenExpiresAt", "scope"
            FROM "account"
            WHERE "providerId" = ?1 AND "userId" = ?2
            ORDER BY "updatedAt" DESC
            LIMIT 1`,
-        )
-          .bind(providerId, userId)
-          .first<OAuthAccountTokenRow>(),
+          [providerId, userId],
+        ),
       ).pipe(Effect.map(Option.fromNullishOr)),
     ),
     Effect.catch(() => Effect.succeed(Option.none<OAuthAccountTokenRow>())),
@@ -621,7 +622,8 @@ const persistOktaAccessTokenRefresh = Effect.fn("auth.oauthTokens.persistOktaAcc
       row.refreshTokenExpiresAt
 
     yield* Effect.tryPromise(() =>
-      env.DB.prepare(
+      runControlPlaneSql(
+        env,
         `UPDATE "account"
        SET "accessToken" = ?1,
            "refreshToken" = ?2,
@@ -630,8 +632,7 @@ const persistOktaAccessTokenRefresh = Effect.fn("auth.oauthTokens.persistOktaAcc
            "scope" = ?5,
            "updatedAt" = ?6
        WHERE "id" = ?7`,
-      )
-        .bind(
+        [
           tokenData.access_token,
           refreshToken,
           accessTokenExpiresAt,
@@ -639,8 +640,8 @@ const persistOktaAccessTokenRefresh = Effect.fn("auth.oauthTokens.persistOktaAcc
           tokenData.scope ?? "",
           new Date().toISOString(),
           row.id,
-        )
-        .run(),
+        ],
+      ),
     )
 
     return Option.some({

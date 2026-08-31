@@ -138,6 +138,8 @@ export function makeS0ApiTestResources(options: S0AlchemyTestOptions) {
       env: process.env,
       repoRoot: REPO_ROOT,
     }),
+    databaseEngine: "d1",
+    appDbMode: "local",
     dev: options.dev,
     infraDir: INFRA_DIR,
     repoRoot: REPO_ROOT,

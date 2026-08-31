@@ -42,6 +42,8 @@
     "config:schema": "tsx scripts/s0-config.ts schema",
     "config:stage-url": "tsx scripts/s0-config.ts stage-url",
     "config:write-stage-vars": "tsx scripts/s0-config.ts write-stage-vars",
+    "db:generate:pg": "drizzle-kit generate --config packages/infra/drizzle.config.ts",
+    "db:pglite": "tsx scripts/pglite-dev-server.ts",
     "creative:release-card": "nub run --filter @solzero/background-web render:release",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "tegami": "tsx scripts/tegami.mts",
@@ -70,6 +72,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
+    "@electric-sql/pglite": "0.4.5",
+    "@electric-sql/pglite-socket": "0.1.5",
     "@mpsuesser/oxlint-plugin-effect": "0.2.2",
     "@oxlint/plugins": "1.80.0",
     "@types/node": "^24.13.3",

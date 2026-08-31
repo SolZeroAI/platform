@@ -6,7 +6,9 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
-import type { StageMetadata } from "@solzero/shared"
+import type { AppDbMode, S0DatabaseEngine, StageMetadata } from "@solzero/shared"
+import { createAppPostgresHyperdrive } from "../../../packages/infra/src/app-postgres-hyperdrive"
+import { createPlanetscaleAppDatabase } from "../../../packages/infra/src/stacks/db"
 import {
   getAiSearchNamespaceName,
   getWorkflowAiSearchNamespaceName,
@@ -109,6 +111,9 @@ export interface CreateAgentResourcesOptions {
   stageMetadata: StageMetadata
   migrationsDir: string
   tokenId: string
+  databaseEngine: S0DatabaseEngine
+  appDbMode: AppDbMode
+  databaseUrl: string
 }
 
 export interface CreateDynamicWorkflowResourceOptions {
@@ -127,8 +132,48 @@ export function createDynamicWorkflowResource(options: CreateDynamicWorkflowReso
   })
 }
 
+function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
+  const { appName, stageMetadata, migrationsDir, databaseEngine, appDbMode, databaseUrl } = options
+  return Match.value(databaseEngine).pipe(
+    Match.when("d1", () =>
+      Effect.gen(function* () {
+        const db = yield* Cloudflare.D1.Database("db", {
+          name: `${appName}-db-${stageMetadata.name}`,
+          migrations: migrationsDir,
+        })
+        return { db, appHyperdrive: undefined, planetscale: undefined }
+      }),
+    ),
+    Match.orElse(() =>
+      Effect.gen(function* () {
+        const planetscale = yield* Match.value(appDbMode).pipe(
+          Match.when("remote", () =>
+            createPlanetscaleAppDatabase({
+              appName,
+              stageName: stageMetadata.name,
+            }),
+          ),
+          Match.orElse(() => Effect.succeed(undefined)),
+        )
+        const appHyperdrive = yield* createAppPostgresHyperdrive({
+          appName,
+          stageName: stageMetadata.name,
+          mode: appDbMode,
+          databaseUrl,
+          appRole: planetscale?.appRole,
+          logicalDatabaseName: Match.value(planetscale).pipe(
+            Match.when(Match.undefined, () => undefined),
+            Match.orElse(() => "s0"),
+          ),
+        })
+        return { db: undefined, appHyperdrive, planetscale }
+      }),
+    ),
+  )
+}
+
 export function createAgentResources(options: CreateAgentResourcesOptions) {
-  const { appName, dev, stageMetadata, migrationsDir } = options
+  const { appName, dev, stageMetadata } = options
 
   return Effect.gen(function* () {
     const sessionNamespace = Cloudflare.DurableObject("session", {
@@ -141,10 +186,7 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
       className: "WorkflowAlarmDO",
     })
 
-    const db = yield* Cloudflare.D1.Database("db", {
-      name: `${appName}-db-${stageMetadata.name}`,
-      migrations: migrationsDir,
-    })
+    const controlPlane = yield* createControlPlaneDatabase(options)
 
     const repoCache = yield* Cloudflare.KV.Namespace("repo-cache", {
       title: `${appName}-repo-cache-${stageMetadata.name}`,
@@ -199,7 +241,10 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
       sessionNamespace,
       isolateSessionNamespace,
       workflowAlarmNamespace,
-      db,
+      databaseEngine: options.databaseEngine,
+      appDbMode: options.appDbMode,
+      db: controlPlane.db,
+      appHyperdrive: controlPlane.appHyperdrive,
       repoCache,
       s0Config,
       userWorkflowKv,

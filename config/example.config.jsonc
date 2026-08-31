@@ -9,6 +9,11 @@
     // "webFqdn": "ai.example.com",
     // "apiFqdn": "api.ai.example.com",
     "useApiShield": false,
+    // Control-plane engine. Omit or "d1" for Cloudflare D1 (OSS default).
+    // "planetscale" selects PlanetScale Postgres plus Hyperdrive. PlanetScale
+    // is paid (~$5/mo) and needs PLANETSCALE_* tokens only for APP_DB_MODE=remote.
+    // Durable Object sqlite, R2, and Cloudflare AI Search stay on both flavors.
+    // "databaseEngine": "d1",
     "observability": {
       "logsDestinations": [],
       "tracesDestinations": [],
