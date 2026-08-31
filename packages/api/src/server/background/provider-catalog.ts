@@ -32,7 +32,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
-import { makeControlPlaneFromEnv } from "../effect/db/control-plane-db"
+import { hasControlPlane, makeControlPlaneFromEnv } from "../effect/db/control-plane-db"
 import type { Env } from "./types"
 import {
   buildCloudflareAiGatewayCatalogProvider,
@@ -563,9 +563,15 @@ export function replaceUserProviderSettings(
 }
 
 function getUserProviderConfigsStore(env: Env): Option.Option<UserProviderConfigsStorePromise> {
-  return Option.fromNullishOr(env.TOKEN_ENCRYPTION_KEY).pipe(
-    Option.filter((value) => value.length > 0),
-    Option.map((key) => createUserProviderConfigsStoreFromD1(makeControlPlaneFromEnv(env), key)),
+  return Option.all({
+    key: Option.fromNullishOr(env.TOKEN_ENCRYPTION_KEY).pipe(
+      Option.filter((value) => value.length > 0),
+    ),
+    controlPlane: Option.liftPredicate(env, hasControlPlane),
+  }).pipe(
+    Option.map(({ key }) =>
+      createUserProviderConfigsStoreFromD1(makeControlPlaneFromEnv(env), key),
+    ),
   )
 }
 

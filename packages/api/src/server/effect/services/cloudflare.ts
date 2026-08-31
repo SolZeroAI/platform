@@ -1,7 +1,9 @@
 import type { ApiEnv } from "infra/types/env"
 import * as Context from "effect/Context"
+import * as Match from "effect/Match"
 import { D1Drizzle } from "../db/d1-drizzle"
-import { ControlPlane, makeControlPlaneFromEnv } from "../db/control-plane-db"
+import { ControlPlane, hasControlPlane, makeControlPlaneFromEnv } from "../db/control-plane-db"
+import "../db/postgres-promise-drizzle"
 import {
   EffectRequestLogger,
   RequestObservability,
@@ -34,12 +36,15 @@ export function makeCloudflareContext(
 ): CloudflareEffectContext {
   const providers = providerServicesForEnv(env)
   const controlPlane = makeControlPlaneFromEnv(env)
-  return Context.make(CloudflareContext, { env, ctx }).pipe(
+  const context = Context.make(CloudflareContext, { env, ctx }).pipe(
     Context.add(RequestObservability, observability),
     Context.add(EffectRequestLogger, observability.effectLog),
     Context.add(ControlPlane, controlPlane),
-    Context.add(D1Drizzle, controlPlane.drizzle),
     Context.add(IdentityProvider, providers.identityProvider),
     Context.add(GitHubProvider, providers.githubProvider),
+  )
+  return Match.value(hasControlPlane(env)).pipe(
+    Match.when(true, () => Context.add(context, D1Drizzle, controlPlane.drizzle)),
+    Match.orElse(() => context),
   )
 }

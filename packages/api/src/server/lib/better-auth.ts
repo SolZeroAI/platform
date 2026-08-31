@@ -17,7 +17,6 @@ import {
   databaseEngineFromEnv,
   hasControlPlane,
   makeControlPlaneFromEnv,
-  requireD1Database,
   runControlPlaneSql,
   runControlPlaneSqlFirst,
 } from "../effect/db/control-plane-db"
@@ -578,7 +577,7 @@ function betterAuthDatabase(env: ApiEnv) {
         camelCase: true,
       }),
     ),
-    Match.orElse(() => requireD1Database(env)),
+    Match.orElse(() => env.DB),
   )
 }
 

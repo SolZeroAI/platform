@@ -46,8 +46,10 @@ PLANETSCALE_API_TOKEN=
 Public CI stays secret-less. PGLite tests do not need these tokens.
 
 Alchemy creates one Postgres cluster, admin and app roles, one logical database named `s0`, and a
-Hyperdrive connection. The Worker binding is `APP_HYPERDRIVE`. Runtime still uses Hyperdrive +
-postgres clients. It does not use `drizzle-orm/pglite` inside the Worker.
+Hyperdrive connection. The Worker binding is `APP_HYPERDRIVE`. Runtime uses Hyperdrive with
+postgres.js for promise Drizzle and Better Auth, plus `@effect/sql-pg` for Effect-native paths. It
+does not use `drizzle-orm/pglite` or Node `pg` inside the Worker. The D1 Worker graph does not load
+the postgres client.
 
 ### `APP_DB_MODE` (postgres flavor only)
 

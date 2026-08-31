@@ -53,14 +53,13 @@
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.0-beta.107",
     "jose": "^6.2.10",
-    "pg": "^8.16.3",
+    "postgres": "^3.4.8",
     "workers-ai-provider": "4.0.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.7",
     "@types/node": "^24.13.3",
-    "@types/pg": "^8.15.5",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }

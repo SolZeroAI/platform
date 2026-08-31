@@ -1,6 +1,5 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Control-plane dialect selection is an imperative adapter boundary between D1 sqlite and Hyperdrive postgres. */
 import { defineRelations } from "drizzle-orm"
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres"
 import * as Context from "effect/Context"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -102,6 +101,49 @@ function rawQueryRows<T>(result: unknown): T[] {
   return []
 }
 
+async function runD1PreparedSql<T>(
+  db: D1Database,
+  sqliteSql: string,
+  binds: unknown[],
+): Promise<T[]> {
+  const statement = db.prepare(sqliteSql).bind(...binds)
+  const all = Reflect.get(statement, "all")
+  if (typeof all === "function") {
+    const result = await all.call(statement)
+    if (result && typeof result === "object" && "results" in result) {
+      return ((result as { results?: T[] }).results ?? []) as T[]
+    }
+    return rawQueryRows<T>(result)
+  }
+  const first = Reflect.get(statement, "first")
+  if (typeof first === "function") {
+    const row = await first.call(statement)
+    return row ? [row as T] : []
+  }
+  const run = Reflect.get(statement, "run")
+  if (typeof run === "function") {
+    await run.call(statement)
+    return []
+  }
+  throw new Error("D1 statement must implement all(), first(), or run()")
+}
+
+async function queryPostgresClient<T>(
+  client: object,
+  text: string,
+  binds: unknown[],
+): Promise<T[]> {
+  const unsafe = Reflect.get(client, "unsafe")
+  if (typeof unsafe === "function") {
+    return rawQueryRows<T>(await unsafe.call(client, text, binds))
+  }
+  const query = Reflect.get(client, "query")
+  if (typeof query === "function") {
+    return rawQueryRows<T>(await query.call(client, text, binds))
+  }
+  throw new Error("Postgres client is required when S0_DATABASE_ENGINE is planetscale")
+}
+
 function withSqliteRawQueryCompat(db: object): AppDrizzleDatabase {
   const execute = Reflect.get(db, "execute")
   const all = async <T>(query: unknown) => {
@@ -112,6 +154,14 @@ function withSqliteRawQueryCompat(db: object): AppDrizzleDatabase {
 }
 
 const postgresControlPlanes = new WeakMap<object, ControlPlaneDb>()
+
+type PostgresControlPlaneFactory = (env: ApiEnv, fallback: AppDbMode) => ControlPlaneDb
+
+let postgresControlPlaneFactory = Option.none<PostgresControlPlaneFactory>()
+
+export function registerPostgresControlPlaneFactory(factory: PostgresControlPlaneFactory) {
+  postgresControlPlaneFactory = Option.some(factory)
+}
 
 export function makePostgresControlPlane(drizzle: object): ControlPlaneDb {
   return {
@@ -144,34 +194,23 @@ export function hyperdriveConnectionString(env: ApiEnv): string {
   )
 }
 
-export function makePgPromiseDrizzle(connectionString: string, maxConnections: number) {
-  return drizzlePg({
-    connection: { connectionString, max: maxConnections },
-    relations: pgRelations,
-  })
-}
-
-function postgresMaxConnections(mode: AppDbMode) {
-  return Match.value(mode).pipe(
-    Match.when("local", () => 1),
-    Match.orElse(() => 4),
-  )
-}
-
 function planetscaleControlPlane(env: ApiEnv, appDbModeFallback: AppDbMode): ControlPlaneDb {
-  return makePostgresControlPlane(
-    makePgPromiseDrizzle(
-      hyperdriveConnectionString(env),
-      postgresMaxConnections(appDbModeFromEnv(env, appDbModeFallback)),
-    ),
-  )
+  return Option.getOrThrowWith(
+    postgresControlPlaneFactory,
+    () =>
+      new Error(
+        "Postgres control-plane factory is not registered. Import @solzero/api/server on the Worker entry.",
+      ),
+  )(env, appDbModeFallback)
 }
 
 function d1ControlPlane(env: ApiEnv): ControlPlaneDb {
   return {
     engine: "d1",
     dialect: "sqlite",
-    drizzle: makeD1Drizzle(requireD1Database(env)),
+    get drizzle() {
+      return makeD1Drizzle(requireD1Database(env))
+    },
     schema: sqliteSchema,
   }
 }
@@ -196,24 +235,15 @@ export async function runControlPlaneSql<T = Record<string, unknown>>(
 ): Promise<T[]> {
   const engine = databaseEngineFromEnv(env)
   if (engine === "d1") {
-    const result = await requireD1Database(env)
-      .prepare(sqliteSql)
-      .bind(...binds)
-      .all<T>()
-    return result.results ?? []
+    return runD1PreparedSql<T>(requireD1Database(env), sqliteSql, binds)
   }
   const db = makeControlPlaneFromEnv(env)
   const rewritten = rewriteSqlitePlaceholders(sqliteSql, "postgres")
-  const client = (
-    db.drizzle as {
-      $client?: { query: (text: string, values: unknown[]) => Promise<{ rows: T[] }> }
-    }
-  ).$client
-  if (!client) {
+  const client = Reflect.get(db.drizzle, "$client")
+  if (!client || typeof client !== "object") {
     throw new Error("Postgres client is required when S0_DATABASE_ENGINE is planetscale")
   }
-  const result = await client.query(rewritten, binds)
-  return result.rows ?? []
+  return queryPostgresClient<T>(client, rewritten, binds)
 }
 
 export async function runControlPlaneSqlFirst<T = Record<string, unknown>>(
