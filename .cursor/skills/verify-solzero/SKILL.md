@@ -27,7 +27,7 @@ Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:
 1. Refuse if `:3000` or `:1337` is already listening and is not this verification run.
 2. Create `config/.env` from `config/.env.example` only when that file is missing, copying `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from the process environment. That file is verification scaffolding. Cleanup removes it only if this run created it.
 3. Create `config/.dev.vars` from `config/.dev.vars.example` only when that file is missing. Same scaffolding rule.
-4. Source `config/.env`, ensure `/.alchemy` exists, and start detached `nub run dev` (Alchemy API + web). Logs go to `.cursor/skills/verify-solzero/.run/dev.log`.
+4. Source `config/.env`, export `CI=1` so Alchemy accepts `CLOUDFLARE_*` env credentials in a non-interactive process, ensure `/.alchemy` exists, and start detached `nub run dev` (Alchemy API + web). Logs go to `.cursor/skills/verify-solzero/.run/dev.log`.
 5. Wait until `GET http://localhost:1337/health` returns JSON `status=healthy` / `service=s0-agent-control-plane` and `GET http://localhost:3000/` returns HTML.
 
 Do not run `nub run infra:deploy:*`. Do not run `db:copy-d1-to-planetscale`. Do not bump Alchemy, Effect, Wrangler, Better Auth, or `ai`/`chat` pins.

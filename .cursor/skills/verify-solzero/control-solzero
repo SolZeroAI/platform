@@ -392,6 +392,9 @@ cmd_launch() {
   fi
   [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || die "CLOUDFLARE_ACCOUNT_ID is empty after sourcing config/.env"
   [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || die "CLOUDFLARE_API_TOKEN is empty after sourcing config/.env"
+  # Alchemy refuses env-var Cloudflare credentials in a non-interactive TTY
+  # unless CI=1. This is verification-only; it is not a product deploy flag.
+  export CI=1
 
   [[ -d "$REPO_ROOT/node_modules" ]] || (cd "$REPO_ROOT" && nub install --frozen-lockfile)
 
