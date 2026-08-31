@@ -93,10 +93,10 @@
     "wrangler": "4.116.0"
   },
   "overrides": {
-    "@cloudflare/codemode": "0.5.1",
+    "@cloudflare/codemode": "0.5.0",
     "@modelcontextprotocol/sdk": "1.30.0",
-    "ai": "7.0.85",
-    "chat": "4.39.0",
+    "ai": "7.0.36",
+    "chat": "4.34.0",
     "workerd": "1.20260730.1"
   },
   "devEngines": {
