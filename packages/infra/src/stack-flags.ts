@@ -1,29 +1,28 @@
-/* oxlint-disable effect/avoid-process-env -- Stack provider selection reads operator stage and APP_DB_MODE before Alchemy context exists. */
-import { APP_DB_MODE_ENV } from "@solzero/shared"
+/* oxlint-disable effect/avoid-process-env, s0-lint/no-if-statement -- Stack flavor selection reads DATABASE and APP_DB_MODE before Alchemy context exists. Service-token bind is only for remote planetscale. */
+import { APP_DB_MODE_ENV, DATABASE_ENV } from "@solzero/shared"
 import {
   appDbModeForStage,
-  databaseEngineFromConfig,
+  bindPlanetscaleAlchemyAuthFromServiceTokens,
+  databaseEngineFromProcessEnv,
   needsPlanetscaleProviders,
 } from "./database-engine"
-import { loadS0ConfigFile, REPO_ROOT } from "./stacks/runtime"
 
 export function planetscaleStackFlags(
   input: {
     readonly stage?: string
-    readonly profile?: string
+    readonly database?: unknown
     readonly appDbMode?: unknown
     readonly alchemyDev?: boolean
   } = {},
 ) {
   const stage = input.stage ?? process.env.ALCHEMY_STAGE ?? process.env.STAGE ?? "dev"
-  const profile = input.profile ?? process.env.S0_CONFIG_PROFILE
-  const config = loadS0ConfigFile(REPO_ROOT, stage, profile)
-  const engine = databaseEngineFromConfig(config)
+  const engine = databaseEngineFromProcessEnv(input.database ?? process.env[DATABASE_ENV])
   const mode = appDbModeForStage(
     stage,
     input.appDbMode ?? process.env[APP_DB_MODE_ENV],
     input.alchemyDev ?? stage === "dev",
   )
   const planetscale = needsPlanetscaleProviders(engine, mode)
+  if (planetscale) bindPlanetscaleAlchemyAuthFromServiceTokens()
   return { planetscale, postgresLogicalDatabase: planetscale }
 }

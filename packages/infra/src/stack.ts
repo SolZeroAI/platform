@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement -- Provider merge is a deployment-time flavor gate so the D1 default never calls Planetscale.providers(). */
+/* oxlint-disable s0-lint/no-if-statement -- DATABASE=planetscale remote is an implementation path. deployment.providers stays Cloudflare only; this merge is Alchemy resource auth, not a cloud provider. */
 import type * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Planetscale from "alchemy/Planetscale"

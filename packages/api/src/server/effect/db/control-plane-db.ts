@@ -7,8 +7,8 @@ import {
   APP_DB_MODE_ENV,
   APP_HYPERDRIVE_BINDING,
   parseAppDbMode,
-  parseS0DatabaseEngine,
-  S0_DATABASE_ENGINE_ENV,
+  DATABASE_ENV,
+  databaseEngineFromRecord,
   type AppDbMode,
   type S0DatabaseEngine,
 } from "@solzero/shared"
@@ -73,8 +73,8 @@ export function controlPlaneDialectForEngine(engine: S0DatabaseEngine): ControlP
   )
 }
 
-export function databaseEngineFromEnv(env: Pick<ApiEnv, typeof S0_DATABASE_ENGINE_ENV> | object) {
-  return parseS0DatabaseEngine((env as Record<string, unknown>)[S0_DATABASE_ENGINE_ENV])
+export function databaseEngineFromEnv(env: Pick<ApiEnv, typeof DATABASE_ENV> | object) {
+  return databaseEngineFromRecord(env)
 }
 
 export function appDbModeFromEnv(env: object, fallback: AppDbMode): AppDbMode {
@@ -141,7 +141,7 @@ async function queryPostgresClient<T>(
   if (typeof query === "function") {
     return rawQueryRows<T>(await query.call(client, text, binds))
   }
-  throw new Error("Postgres client is required when S0_DATABASE_ENGINE is planetscale")
+  throw new Error("Postgres client is required when DATABASE is planetscale")
 }
 
 function withSqliteRawQueryCompat(db: object): AppDrizzleDatabase {
@@ -175,9 +175,7 @@ export function makePostgresControlPlane(drizzle: object): ControlPlaneDb {
 export function requireD1Database(env: ApiEnv): D1Database {
   return Option.fromNullishOr(env.DB).pipe(
     Option.filter((db): db is D1Database => typeof db.prepare === "function"),
-    Option.getOrThrowWith(
-      () => new Error("D1 binding DB is required when S0_DATABASE_ENGINE is d1"),
-    ),
+    Option.getOrThrowWith(() => new Error("D1 binding DB is required when DATABASE is d1")),
   )
 }
 
@@ -188,8 +186,7 @@ export function hyperdriveConnectionString(env: ApiEnv): string {
   return Option.fromNullishOr(hyperdrive?.connectionString).pipe(
     Option.filter((value) => value.length > 0),
     Option.getOrThrowWith(
-      () =>
-        new Error(`${APP_HYPERDRIVE_BINDING} is required when S0_DATABASE_ENGINE is planetscale`),
+      () => new Error(`${APP_HYPERDRIVE_BINDING} is required when DATABASE is planetscale`),
     ),
   )
 }
@@ -241,7 +238,7 @@ export async function runControlPlaneSql<T = Record<string, unknown>>(
   const rewritten = rewriteSqlitePlaceholders(sqliteSql, "postgres")
   const client = Reflect.get(db.drizzle, "$client")
   if (!client || typeof client !== "object") {
-    throw new Error("Postgres client is required when S0_DATABASE_ENGINE is planetscale")
+    throw new Error("Postgres client is required when DATABASE is planetscale")
   }
   return queryPostgresClient<T>(client, rewritten, binds)
 }

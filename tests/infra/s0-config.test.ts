@@ -47,7 +47,7 @@ describe("canonical s0 configuration", () => {
       .filter(([, provider]) => provider.enabled && provider.capabilities.signIn)
       .map(([providerId]) => providerId)
 
-    expect(config.deployment.databaseEngine).toBe("d1")
+    expect(config.deployment).not.toHaveProperty("databaseEngine")
     expect(config.auth.defaultSignInProviderId).toBe("credential")
     expect(enabledSignInProviders).toEqual(["credential"])
     expect(config.aiProviders.cloudflareAiGateway.enabled).toBe(true)
@@ -231,7 +231,7 @@ describe("canonical s0 configuration", () => {
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema")
     expect(schema.type).toBe("object")
     expect(schema.properties).toHaveProperty("auth")
-    expect(schema.properties.deployment.properties).toHaveProperty("databaseEngine")
+    expect(schema.properties.deployment.properties).not.toHaveProperty("databaseEngine")
     expect(schema.properties).not.toHaveProperty("profiles")
     expect(schema).not.toHaveProperty("dialect")
   })

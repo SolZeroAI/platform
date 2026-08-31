@@ -317,7 +317,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     ...(env.S0_CONFIG_LITELLM ? { S0_CONFIG_LITELLM: jsonBinding(env.S0_CONFIG_LITELLM) } : {}),
     ...(env.S0_CONFIG_MCPCF ? { S0_CONFIG_MCPCF: jsonBinding(env.S0_CONFIG_MCPCF) } : {}),
     S0_DEPLOYMENT_CONFIG_DIGEST: env.S0_DEPLOYMENT_CONFIG_DIGEST,
-    S0_DATABASE_ENGINE: agentResources.databaseEngine,
+    DATABASE: agentResources.databaseEngine,
     CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId,
     GITHUB_APP_CLIENT_ID: env.GITHUB_APP_CLIENT_ID,
     GITHUB_APP_ID: env.GITHUB_APP_ID,

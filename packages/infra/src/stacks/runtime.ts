@@ -20,7 +20,7 @@ import {
   type S0ResolvedConfig,
   type SecretReference,
 } from "@solzero/shared"
-import { appDbModeForStage, databaseEngineFromConfig } from "../database-engine"
+import { appDbModeForStage, databaseEngineFromProcessEnv } from "../database-engine"
 import { getApiInfraEnv, type ApiSecretInput } from "../../../../apps/api/infra"
 import { createDeploymentMetadata } from "../deploymentMetadata"
 
@@ -142,7 +142,8 @@ export function s0StackRuntime() {
       s0Config.deployment,
       s0Config.application,
     ).pipe(Effect.orDie)
-    const databaseEngine = databaseEngineFromConfig(s0Config)
+    // oxlint-disable-next-line effect/avoid-process-env -- DATABASE is the alchemy.new engine select. Missing or empty stays d1.
+    const databaseEngine = databaseEngineFromProcessEnv()
     // oxlint-disable-next-line effect/avoid-process-env -- APP_DB_MODE is a local-vs-remote operator switch for the PlanetScale flavor only.
     const appDbMode = appDbModeForStage(stage, process.env[APP_DB_MODE_ENV], context.dev)
 

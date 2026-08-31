@@ -19,7 +19,7 @@ describe("API env types", () => {
     expectTypeOf<ApiEnv["S0_CONFIG_CLOUDFLARE_AI_GATEWAY"]>().toEqualTypeOf<Json>()
     expectTypeOf<ApiEnv["S0_STAGE_METADATA"]>().toEqualTypeOf<Json>()
     expectTypeOf<ApiEnv["S0_DEPLOYMENT_CONFIG_DIGEST"]>().toEqualTypeOf<string>()
-    expectTypeOf<ApiEnv["S0_DATABASE_ENGINE"]>().toEqualTypeOf<string>()
+    expectTypeOf<ApiEnv["DATABASE"]>().toEqualTypeOf<string>()
     expectTypeOf<ApiEnv["S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD"]>().toEqualTypeOf<string>()
     expectTypeOf<ApiEnv["AUTH_SIGN_IN_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>()
     expectTypeOf<ApiEnv["DYNAMIC_WORKFLOW"]>().toEqualTypeOf<Workflow>()

@@ -12,9 +12,6 @@
         "webFqdn": { "$ref": "#/$defs/Union_" },
         "apiFqdn": { "$ref": "#/$defs/Union_" },
         "useApiShield": { "type": "boolean" },
-        "databaseEngine": {
-          "anyOf": [{ "type": "string", "enum": ["d1", "planetscale"] }, { "type": "null" }]
-        },
         "observability": {
           "type": "object",
           "properties": {

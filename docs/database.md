@@ -8,22 +8,26 @@ stay on both flavors. A second database does not move chat.
 
 ## Select a flavor
 
-Set `deployment.databaseEngine` in the stage JSONC file:
+Set process env `DATABASE`. This is the alchemy.new select parameter. Do not invent
+`DATABASE_ENGINE`. Do not use `APP_DB_MODE` as the sqlite-vs-postgres switch.
 
 | Value | Meaning |
 | --- | --- |
-| `d1` or omitted | Cloudflare D1 + sqlite. Existing `packages/infra/d1-migrations/` SQL. No PlanetScale tokens. |
+| omitted, empty, or `d1` | Cloudflare D1 + sqlite. Existing `packages/infra/d1-migrations/` SQL. No PlanetScale tokens. |
 | `planetscale` | PlanetScale Postgres + Hyperdrive. Postgres Drizzle schema and `packages/infra/migrations/pg`. |
 
-Do not use `APP_DB_MODE` as the sqlite-vs-postgres switch. That name is reserved for the postgres
-flavor only.
+`deployment.providers` stays Cloudflare only. PlanetScale is an implementation path, not a cloud
+provider.
 
-When this repository is published through alchemy.new, the template `select` parameter is `d1` or
-`planetscale`, default `d1`. This repository does not edit the SolZeroAI/alchemy.new repo.
+This repository does not edit the SolZeroAI/alchemy.new repo. Consume alchemy.new pull request 39
+as-is: `DATABASE` is `d1` or `planetscale`, default `d1`.
+
+The Worker binding is also `DATABASE`.
 
 ## D1 default
 
-`bun alchemy deploy` / `nub run infra:deploy:*` with no extra database auth stays on D1.
+`bun alchemy deploy` / `nub run infra:deploy:*` with no `DATABASE` value and no PlanetScale tokens
+stays on D1.
 
 - Binding: `DB`
 - Runtime: `drizzle-orm/d1`
@@ -33,17 +37,22 @@ When this repository is published through alchemy.new, the template `select` par
 ## PlanetScale Postgres (paid)
 
 PlanetScale has no free plan. Budget about **$5/month** for a small cluster. Required only when
-`deployment.databaseEngine` is `planetscale` **and** `APP_DB_MODE=remote`.
+`DATABASE=planetscale` **and** `APP_DB_MODE=remote`.
 
-Add these IaC credentials to `config/.env` for remote PlanetScale stages:
+Add these IaC credentials to `config/.env` for remote PlanetScale stages. Names match alchemy.new:
 
 ```sh
+DATABASE=planetscale
+PLANETSCALE_SERVICE_TOKEN_ID=
+PLANETSCALE_SERVICE_TOKEN=
 PLANETSCALE_ORGANIZATION=
-PLANETSCALE_API_TOKEN_ID=
-PLANETSCALE_API_TOKEN=
 ```
 
 Public CI stays secret-less. PGLite tests do not need these tokens.
+
+Alchemy 2.0.0-beta.74 still reads `PLANETSCALE_API_TOKEN_ID` and `PLANETSCALE_API_TOKEN` internally.
+The stack copies the service-token names into those Alchemy names only when the PlanetScale Layers
+merge. Operators should set the service-token names.
 
 Alchemy creates one Postgres cluster, admin and app roles, one logical database named `s0`, and a
 Hyperdrive connection. The Worker binding is `APP_HYPERDRIVE`. Runtime uses Hyperdrive with
@@ -70,8 +79,8 @@ Port **15432** is the single local PGLite port for this repository. Start it wit
 nub run db:pglite
 ```
 
-Then run `nub run dev` with `deployment.databaseEngine` set to `planetscale`. Leave
-`APP_DB_MODE=local` (or omit it in Alchemy dev).
+Then run `nub run dev` with `DATABASE=planetscale`. Leave `APP_DB_MODE=local` (or omit it in Alchemy
+dev). Local PGLite does not need PlanetScale service tokens.
 
 Generate or inspect postgres migrations with:
 
