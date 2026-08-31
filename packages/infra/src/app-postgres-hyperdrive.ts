@@ -75,7 +75,7 @@ function localHyperdriveConnection(input: AppPostgresHyperdriveInput) {
   })
 }
 
-function localHyperdrive(input: AppPostgresHyperdriveInput, context: Alchemy.AlchemyContext) {
+function localHyperdrive(input: AppPostgresHyperdriveInput, context: { readonly dev: boolean }) {
   return Match.value(context.dev).pipe(
     Match.when(false, () =>
       Effect.die(

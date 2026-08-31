@@ -94,11 +94,30 @@ export function hasControlPlane(env: ApiEnv): boolean {
   )
 }
 
-export function makePostgresControlPlane(drizzle: AppDrizzleDatabase): ControlPlaneDb {
+function rawQueryRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[]
+  if (result && typeof result === "object" && "rows" in result) {
+    return ((result as { rows?: T[] }).rows ?? []) as T[]
+  }
+  return []
+}
+
+function withSqliteRawQueryCompat(db: object): AppDrizzleDatabase {
+  const execute = Reflect.get(db, "execute")
+  const all = async <T>(query: unknown) => {
+    if (typeof execute !== "function") return [] as T[]
+    return rawQueryRows<T>(await execute.call(db, query))
+  }
+  return Object.assign(db, { all }) as unknown as AppDrizzleDatabase
+}
+
+const postgresControlPlanes = new WeakMap<object, ControlPlaneDb>()
+
+export function makePostgresControlPlane(drizzle: object): ControlPlaneDb {
   return {
     engine: "planetscale",
     dialect: "postgres",
-    drizzle,
+    drizzle: withSqliteRawQueryCompat(drizzle),
     schema: pgSchema as unknown as AppSchema,
   }
 }
@@ -129,7 +148,7 @@ export function makePgPromiseDrizzle(connectionString: string, maxConnections: n
   return drizzlePg({
     connection: { connectionString, max: maxConnections },
     relations: pgRelations,
-  }) as unknown as AppDrizzleDatabase
+  })
 }
 
 function postgresMaxConnections(mode: AppDbMode) {
@@ -159,7 +178,13 @@ function d1ControlPlane(env: ApiEnv): ControlPlaneDb {
 
 export function makeControlPlaneFromEnv(env: ApiEnv, appDbModeFallback: AppDbMode = "remote") {
   return Match.value(databaseEngineFromEnv(env)).pipe(
-    Match.when("planetscale", () => planetscaleControlPlane(env, appDbModeFallback)),
+    Match.when("planetscale", () => {
+      const cached = postgresControlPlanes.get(env)
+      if (cached) return cached
+      const created = planetscaleControlPlane(env, appDbModeFallback)
+      postgresControlPlanes.set(env, created)
+      return created
+    }),
     Match.orElse(() => d1ControlPlane(env)),
   )
 }
