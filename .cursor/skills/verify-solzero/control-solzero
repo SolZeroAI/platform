@@ -398,7 +398,7 @@ cmd_launch() {
   local run_id="${SOLZERO_VERIFY_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
   write_meta "$run_id" "$created_env" "$created_dev_vars" >/dev/null
 
-  start_detached dev nub run dev
+  start_detached dev run dev
 
   if ! wait_http "$HEALTH_URL" "api health"; then
     fail_launch
