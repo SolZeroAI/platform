@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { D1_MIGRATION_SQL } from "../../packages/api/src/server/background/db/d1-migration-sql"
+import { splitSqlStatements } from "../../packages/api/src/server/background/db/ensure-d1-schema"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -16,6 +17,16 @@ function getMigrationFiles(): string[] {
 }
 
 describe("D1 migrations", () => {
+  it("splits Better Auth SQL into statements local D1 can prepare", () => {
+    const betterAuth = D1_MIGRATION_SQL.find((migration) => migration.id === "0006_better_auth.sql")
+    expect(betterAuth).toBeDefined()
+    const statements = splitSqlStatements(betterAuth!.sql)
+    expect(
+      statements.some((statement) => statement.startsWith('CREATE TABLE IF NOT EXISTS "user"')),
+    ).toBe(true)
+    expect(statements.every((statement) => !statement.includes(";"))).toBe(true)
+  })
+
   it("embeds every on-disk control-plane migration for Worker bootstrap", () => {
     const files = getMigrationFiles()
     expect(D1_MIGRATION_SQL.map((migration) => migration.id)).toEqual(files)

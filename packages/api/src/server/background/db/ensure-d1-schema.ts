@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement -- Schema presence is an imperative D1 persistence boundary. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/prefer-option-over-null, effect/imperative-loops -- Schema presence and SQL splitting are imperative D1 persistence boundaries. */
 import * as Effect from "effect/Effect"
 import { toError } from "../../lib/effect-errors"
 import { D1_MIGRATION_SQL } from "./d1-migration-sql"
@@ -7,7 +7,7 @@ import type { Env } from "../types"
 type QueryableEnv = Env & {
   DB: D1Database & {
     prepare: (...args: unknown[]) => D1PreparedStatement
-    exec: (query: string) => Promise<D1ExecResult>
+    batch: <T = unknown>(statements: D1PreparedStatement[]) => Promise<D1Result<T>[]>
   }
 }
 
@@ -18,9 +18,10 @@ function promiseOrDie<A>(tryPromise: () => Promise<A>) {
 }
 
 function queryableEnv(env: Env): QueryableEnv {
-  if (!env.DB || typeof env.DB.prepare !== "function" || typeof env.DB.exec !== "function") {
+  if (!env.DB) {
     throw new Error("D1 is required to apply the control-plane schema")
   }
+  // SAFETY: Env.DB is the Worker D1 binding; prepare and batch are the apply surface.
   return env as QueryableEnv
 }
 
@@ -31,6 +32,61 @@ async function hasUserTable(db: QueryableEnv["DB"]): Promise<boolean> {
   return Boolean(row?.name)
 }
 
+/**
+ * Split a migration file into executable statements. Local workerd D1 `exec()`
+ * rejects multi-line SQL (`incomplete input`), so the Worker applies one
+ * prepared statement at a time.
+ */
+export function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = []
+  let current = ""
+  let quote = ""
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index]
+    const next = sql[index + 1]
+    if (quote.length > 0) {
+      current += character
+      if (character === quote) {
+        if (next === quote) {
+          current += next
+          index += 1
+        } else {
+          quote = ""
+        }
+      }
+      continue
+    }
+    if (character === "-" && next === "-") {
+      const newline = sql.indexOf("\n", index)
+      if (newline === -1) break
+      index = newline
+      current += "\n"
+      continue
+    }
+    if (character === "'" || character === '"') {
+      quote = character
+      current += character
+      continue
+    }
+    if (character === ";") {
+      const statement = current.trim()
+      if (statement.length > 0) statements.push(statement)
+      current = ""
+      continue
+    }
+    current += character
+  }
+  const trailing = current.trim()
+  if (trailing.length > 0) statements.push(trailing)
+  return statements
+}
+
+function applyMigration(db: QueryableEnv["DB"], sql: string): Promise<void> {
+  const statements = splitSqlStatements(sql)
+  if (statements.length === 0) return Promise.resolve()
+  return db.batch(statements.map((statement) => db.prepare(statement))).then(() => undefined)
+}
+
 export const ensureD1SchemaUncached = Effect.fn("db.ensureD1Schema")(function* (env: Env) {
   const db = queryableEnv(env).DB
   if (yield* promiseOrDie(() => hasUserTable(db))) {
@@ -39,7 +95,7 @@ export const ensureD1SchemaUncached = Effect.fn("db.ensureD1Schema")(function* (
 
   yield* Effect.forEach(
     D1_MIGRATION_SQL,
-    (migration) => promiseOrDie(() => db.exec(migration.sql).then(() => undefined)),
+    (migration) => promiseOrDie(() => applyMigration(db, migration.sql)),
     { concurrency: 1, discard: true },
   )
   yield* Effect.logInfo("Applied D1 control-plane schema").pipe(
