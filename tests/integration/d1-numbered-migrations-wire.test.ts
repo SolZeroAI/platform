@@ -46,9 +46,12 @@ describe("numbered D1 migration apply path", () => {
 
   it("selects Alchemy localState for local stages and Cloudflare.state for pre/prod", () => {
     const stack = readFileSync(stackPath, "utf8")
-    expect(stack).toContain("getAlchemyStateStoreKind")
+    expect(stack).toContain("getStageMetadataFromConfig")
+    expect(stack).toContain("metadata.infra.alchemyStateStore")
     expect(stack).toContain("localState()")
     expect(stack).toContain("Cloudflare.state()")
+    expect(stack).not.toContain("getAlchemyStateStoreKind")
+    expect(stack).not.toContain("alchemyStateStoreKindFromStage")
     expect(stack).not.toContain("localD1HasAppliedMigrationRows")
   })
 

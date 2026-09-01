@@ -18,7 +18,9 @@ export interface StageMetadataEnv {
 
 export type StageMetadataInput = string | StageMetadataEnv
 
-interface StageInfraConfig {
+export type AlchemyStateStoreKind = "local" | "cloudflare"
+
+export interface StageInfraConfig {
   readonly zone: Option.Option<string>
   readonly webFqdn: Option.Option<string>
   readonly apiFqdn: Option.Option<string>
@@ -27,6 +29,7 @@ interface StageInfraConfig {
   readonly apiObservabilityLogsHeadSamplingRate: Option.Option<number>
   readonly apiObservabilityTracesHeadSamplingRate: Option.Option<number>
   readonly useApiShield: Option.Option<boolean>
+  readonly alchemyStateStore: Option.Option<AlchemyStateStoreKind>
 }
 
 const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
@@ -38,7 +41,9 @@ const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
   apiObservabilityLogsHeadSamplingRate: Option.none(),
   apiObservabilityTracesHeadSamplingRate: Option.none(),
   useApiShield: Option.none(),
+  alchemyStateStore: Option.none(),
 }
+
 function nonEmptyStringOption(value: string | undefined): Option.Option<string> {
   return Option.fromNullishOr(value).pipe(
     Option.map((text) => text.trim()),
@@ -58,10 +63,9 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
       config.observability.tracesHeadSamplingRate,
     ),
     useApiShield: Option.some(config.useApiShield),
+    alchemyStateStore: Option.none(),
   }
 }
-
-export type AlchemyStateStoreKind = "local" | "cloudflare"
 
 export interface InfraStageProps {
   readonly zone: string
@@ -296,7 +300,7 @@ function localInfraStageProps(
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
-    alchemyStateStore: "local",
+    alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "local"),
   }
 }
 
@@ -367,7 +371,7 @@ function deployedInfraStageProps(input: {
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
-    alchemyStateStore: "cloudflare",
+    alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "cloudflare"),
   }
 }
 
@@ -550,27 +554,4 @@ export function getWebUrl(input: StageMetadataInput): string {
 
 export function getInternalMcpOrigin(input: StageMetadataInput): string {
   return getStageMetadataSync(input).infra.internalMcpOrigin
-}
-
-/**
- * Select the Alchemy state store for a stage name without loading deployed
- * zone/FQDN config. Local stages persist the resource graph on disk.
- */
-export function getAlchemyStateStoreKind(stage: string): AlchemyStateStoreKind {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for Alchemy stack construction, which chooses a state Layer before the stack Effect can load deployment config.
-  return Effect.runSync(alchemyStateStoreKindFromStage(stage))
-}
-
-function alchemyStateStoreKindFromStage(stage: string) {
-  const lowerCaseStage = stage.toLowerCase()
-  return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => Effect.succeed("local" as const)),
-    Match.when("test", () => Effect.succeed("local" as const)),
-    Match.when("prod", () => Effect.succeed("cloudflare" as const)),
-    Match.when(
-      (value) => value === "pre" || value.startsWith("pre-"),
-      () => Effect.succeed("cloudflare" as const),
-    ),
-    Match.orElse(() => Effect.fail(invalidStageError(stage))),
-  )
 }
