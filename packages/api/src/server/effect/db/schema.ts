@@ -547,3 +547,14 @@ export const verification = sqliteTable(
   },
   (table) => [index("idx_verification_identifier").on(table.identifier)],
 )
+
+export const managedAdminCredential = sqliteTable(
+  "managed_admin_credential",
+  {
+    userId: text("userId").primaryKey().notNull(),
+    email: text("email").notNull(),
+    createdAt: text("createdAt").notNull(),
+    updatedAt: text("updatedAt").notNull(),
+  },
+  (table) => [uniqueIndex("idx_managed_admin_credential_email").on(table.email)],
+)
