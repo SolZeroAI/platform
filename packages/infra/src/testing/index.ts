@@ -8,7 +8,7 @@ import { getStageMetadataSync, type S0AuthConfig } from "@solzero/shared"
 import type { ApiInfraEnv } from "../../../../apps/api/infra/index"
 import { createS0Api } from "../s0"
 import { createDeploymentMetadata } from "../deploymentMetadata"
-import { stackOptions } from "../stack"
+import { stackOptions, stackProviders } from "../stack"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -114,7 +114,7 @@ export function createS0AlchemyTestOptions() {
 
   return {
     dev: true,
-    providers: Cloudflare.providers(),
+    providers: stackProviders(),
     stage: "test",
     state: State.inMemoryState(),
   } as const

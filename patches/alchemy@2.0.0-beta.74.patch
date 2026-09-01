@@ -267,3 +267,166 @@ diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/W
                          ),
                      ]
                    : [],
+diff --git a/src/Cloudflare/D1/Database.ts b/src/Cloudflare/D1/Database.ts
+index ea1785f..ff11dd8 100644
+--- a/src/Cloudflare/D1/Database.ts
++++ b/src/Cloudflare/D1/Database.ts
+@@ -16,8 +16,11 @@ import {
+   diffMigrations,
+   migrationsAttrs,
+   migrationsInputOf,
++  quoteIdentifier,
++  resolveMigrations,
+   runMigrations,
+   stampedOf,
++  tableColumns,
+   type MigrationsInput,
+ } from "../../SQL/Migrations/index.ts";
+ import { hashImports, readSqlFile } from "../../SQL/SqlFile.ts";
+@@ -612,8 +615,10 @@ export const ProviderLocal = () =>
+           if (output.accountId !== accountId) {
+             return { action: "replace" } as const;
+           }
+-          // Detect migration/import file drift — same rules as the live
+-          // provider.
++          // File-hash drift against persisted state still requires an update.
++          // Those hashes live in Cloudflare state and do not describe this
++          // process's workerd SQLite. An empty local DB with matching hashes
++          // used to fall through to Plan.ts `noop` (`[db] noop (local)`).
+           if (yield* diffMigrations({ news, output })) {
+             return { action: "update" } as const;
+           }
+@@ -626,10 +631,26 @@ export const ProviderLocal = () =>
+               return { action: "update" } as const;
+             }
+           }
++          const migrationsInput = migrationsInputOf(news);
++          if (migrationsInput) {
++            const resolved = resolveMigrations({
++              input: migrationsInput,
++              stamped: stampedOf(output),
++            });
++            const applied = yield* localD1HasAppliedMigrationRows(
++              output.databaseId,
++              resolved.table,
++              runtimeContext,
++            );
++            if (!applied) {
++              return { action: "update" } as const;
++            }
++          }
+           // Fall through to the engine's default prop diff.
+         }),
+         read: Effect.fn(function* ({ output }) {
+-          // Purely virtual — the persisted state row is the source of truth.
++          // Purely virtual for identity — migration apply is decided in
++          // `diff` against this process's workerd SQLite bookkeeping.
+           return output ?? undefined;
+         }),
+         reconcile: Effect.fn(function* ({ id, news = {}, output }) {
+@@ -720,6 +741,35 @@ const createDatabaseName = (id: string, name: string | undefined) =>
+ 
+ const rootDir = Effect.sync(() => process.cwd());
+ 
++/**
++ * Observe the stamped applied-migrations table in this process's workerd
++ * SQLite. Cloudflare state's `migrationsHashes` are the wrong skip key for
++ * local D1: they survive across machines while `.alchemy/local/d1` does not.
++ */
++const localD1HasAppliedMigrationRows = (
++  databaseId: string,
++  table: string,
++  runtimeContext: import("effect/Context").Context<
++    RuntimeServices | HttpClient.HttpClient
++  >,
++) =>
++  withLocalD1Executor(databaseId, (raw) =>
++    Effect.gen(function* () {
++      const executor = makeD1MigrationExecutor(raw);
++      const columns = yield* tableColumns(executor, table);
++      if (columns.length === 0) return false;
++      const rows = yield* executor.query(
++        `SELECT name FROM ${quoteIdentifier(table, "sqlite")}`,
++      );
++      return rows.some(
++        (row) => row.name != null && String(row.name).length > 0,
++      );
++    }),
++  ).pipe(
++    Effect.provideContext(runtimeContext),
++    Effect.catch(() => Effect.succeed(false)),
++  );
++
+ /**
+  * Resolve a clone source spec into a concrete database UUID. Looks up by
+  * name through `listDatabases` when only a name is provided.
+diff --git a/lib/Cloudflare/D1/Database.js b/lib/Cloudflare/D1/Database.js
+index 70c17ac..b75fad0 100644
+--- a/lib/Cloudflare/D1/Database.js
++++ b/lib/Cloudflare/D1/Database.js
+@@ -10,7 +10,7 @@ import * as RpcProvider from "../../Local/RpcProvider.js";
+ import { createPhysicalName } from "../../PhysicalName.js";
+ import * as Provider from "../../Provider.js";
+ import { isResourceOfType, Resource } from "../../Resource.js";
+-import { diffMigrations, migrationsAttrs, migrationsInputOf, runMigrations, stampedOf, } from "../../SQL/Migrations/index.js";
++import { diffMigrations, migrationsAttrs, migrationsInputOf, quoteIdentifier, resolveMigrations, runMigrations, stampedOf, tableColumns, } from "../../SQL/Migrations/index.js";
+ import { hashImports, readSqlFile } from "../../SQL/SqlFile.js";
+ import { recordsEqual } from "../../Util/equal.js";
+ import { CloudflareEnvironment } from "../CloudflareEnvironment.js";
+@@ -416,8 +416,10 @@ export const ProviderLocal = () => RpcProvider.effect(Database, LOCAL_ENTRY_URL,
+             if (output.accountId !== accountId) {
+                 return { action: "replace" };
+             }
+-            // Detect migration/import file drift — same rules as the live
+-            // provider.
++            // File-hash drift against persisted state still requires an update.
++            // Those hashes live in Cloudflare state and do not describe this
++            // process's workerd SQLite. An empty local DB with matching hashes
++            // used to fall through to Plan.ts `noop` (`[db] noop (local)`).
+             if (yield* diffMigrations({ news, output })) {
+                 return { action: "update" };
+             }
+@@ -427,10 +429,22 @@ export const ProviderLocal = () => RpcProvider.effect(Database, LOCAL_ENTRY_URL,
+                     return { action: "update" };
+                 }
+             }
++            const migrationsInput = migrationsInputOf(news);
++            if (migrationsInput) {
++                const resolved = resolveMigrations({
++                    input: migrationsInput,
++                    stamped: stampedOf(output),
++                });
++                const applied = yield* localD1HasAppliedMigrationRows(output.databaseId, resolved.table, runtimeContext);
++                if (!applied) {
++                    return { action: "update" };
++                }
++            }
+             // Fall through to the engine's default prop diff.
+         }),
+         read: Effect.fn(function* ({ output }) {
+-            // Purely virtual — the persisted state row is the source of truth.
++            // Purely virtual for identity — migration apply is decided in
++            // `diff` against this process's workerd SQLite bookkeeping.
+             return output ?? undefined;
+         }),
+         reconcile: Effect.fn(function* ({ id, news = {}, output }) {
+@@ -506,6 +520,19 @@ const createDatabaseName = (id, name) => Effect.gen(function* () {
+     return name ?? (yield* createPhysicalName({ id }));
+ });
+ const rootDir = Effect.sync(() => process.cwd());
++/**
++ * Observe the stamped applied-migrations table in this process's workerd
++ * SQLite. Cloudflare state's `migrationsHashes` are the wrong skip key for
++ * local D1: they survive across machines while `.alchemy/local/d1` does not.
++ */
++const localD1HasAppliedMigrationRows = (databaseId, table, runtimeContext) => withLocalD1Executor(databaseId, (raw) => Effect.gen(function* () {
++    const executor = makeD1MigrationExecutor(raw);
++    const columns = yield* tableColumns(executor, table);
++    if (columns.length === 0)
++        return false;
++    const rows = yield* executor.query(`SELECT name FROM ${quoteIdentifier(table, "sqlite")}`);
++    return rows.some((row) => row.name != null && String(row.name).length > 0);
++})).pipe(Effect.provideContext(runtimeContext), Effect.catch(() => Effect.succeed(false)));
+ /**
+  * Resolve a clone source spec into a concrete database UUID. Looks up by
+  * name through `listDatabases` when only a name is provided.

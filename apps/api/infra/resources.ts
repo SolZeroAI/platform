@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import type { Input } from "alchemy/Input"
 import type { InlineDockerfile } from "alchemy/Docker/Dockerfile"
 import * as Cloudflare from "alchemy/Cloudflare"
+import * as Drizzle from "alchemy/Drizzle"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
@@ -107,7 +108,8 @@ export interface CreateAgentResourcesOptions {
   appName: string
   dev: boolean
   stageMetadata: StageMetadata
-  migrationsDir: string
+  drizzleSchemaPath: string
+  drizzleOutDir: string
   tokenId: string
 }
 
@@ -128,7 +130,7 @@ export function createDynamicWorkflowResource(options: CreateDynamicWorkflowReso
 }
 
 export function createAgentResources(options: CreateAgentResourcesOptions) {
-  const { appName, dev, stageMetadata, migrationsDir } = options
+  const { appName, dev, stageMetadata, drizzleSchemaPath, drizzleOutDir } = options
 
   return Effect.gen(function* () {
     const sessionNamespace = Cloudflare.DurableObject("session", {
@@ -141,9 +143,14 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
       className: "WorkflowAlarmDO",
     })
 
+    const schema = yield* Drizzle.Schema("control-plane-schema", {
+      schema: drizzleSchemaPath,
+      out: drizzleOutDir,
+      dialect: "sqlite",
+    })
     const db = yield* Cloudflare.D1.Database("db", {
       name: `${appName}-db-${stageMetadata.name}`,
-      migrations: migrationsDir,
+      migrations: schema,
     })
 
     const repoCache = yield* Cloudflare.KV.Namespace("repo-cache", {
