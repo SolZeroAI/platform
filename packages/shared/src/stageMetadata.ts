@@ -557,18 +557,20 @@ export function getInternalMcpOrigin(input: StageMetadataInput): string {
  * zone/FQDN config. Local stages persist the resource graph on disk.
  */
 export function getAlchemyStateStoreKind(stage: string): AlchemyStateStoreKind {
+  // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for Alchemy stack construction, which chooses a state Layer before the stack Effect can load deployment config.
+  return Effect.runSync(alchemyStateStoreKindFromStage(stage))
+}
+
+function alchemyStateStoreKindFromStage(stage: string) {
   const lowerCaseStage = stage.toLowerCase()
   return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => "local" as const),
-    Match.when("test", () => "local" as const),
-    Match.when("prod", () => "cloudflare" as const),
+    Match.when("dev", () => Effect.succeed("local" as const)),
+    Match.when("test", () => Effect.succeed("local" as const)),
+    Match.when("prod", () => Effect.succeed("cloudflare" as const)),
     Match.when(
       (value) => value === "pre" || value.startsWith("pre-"),
-      () => "cloudflare" as const,
+      () => Effect.succeed("cloudflare" as const),
     ),
-    Match.orElse(() =>
-      // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for Alchemy stack construction, which chooses a state Layer before the stack Effect can load deployment config.
-      Effect.runSync(Effect.fail(invalidStageError(stage))),
-    ),
+    Match.orElse(() => Effect.fail(invalidStageError(stage))),
   )
 }

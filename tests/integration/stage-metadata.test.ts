@@ -38,7 +38,9 @@ describe("stage Slack notification metadata", () => {
     expect(getAlchemyStateStoreKind("pre-42")).toBe("cloudflare")
     expect(getAlchemyStateStoreKind("prod")).toBe("cloudflare")
     expect(getStageMetadataSync(compiledStageEnv("pre")).infra.alchemyStateStore).toBe("cloudflare")
-    expect(getStageMetadataSync(compiledStageEnv("prod")).infra.alchemyStateStore).toBe("cloudflare")
+    expect(getStageMetadataSync(compiledStageEnv("prod")).infra.alchemyStateStore).toBe(
+      "cloudflare",
+    )
   })
 
   it("does not send Slack notifications when the channel is omitted", () => {
