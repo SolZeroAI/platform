@@ -4,9 +4,10 @@ Credential sign-in is the default local welcome screen. An unauthenticated visit
 
 ## Sub-features
 
-- `welcome-form` shows `Welcome to SolZero`, `Give your work an agent`, `#admin-email`, `#admin-password`, and a `Sign In` submit button.
+- `welcome-form` shows `Welcome to SolZero`, `Give your work an agent`, `#admin-email`, `#admin-password`, and a `Sign In` submit button when `/api/auth/config` returns a credential sign-in provider.
+- `unconfigured` shows `Sign-in is not configured for this deployment.` when that config call fails or returns no sign-in providers. `#admin-email` is absent. Record this as unverified sign-in, not as a successful welcome form.
 - `credential-submit` signs in `admin@example.com` with the Alchemy-generated admin password and lands on the Agents composer.
-- `account-menu` exposes `Account menu` and `Sign out` in the sidebar footer after sign-in.
+- `account-menu` exposes `Account menu` and `Sign out` in the sidebar footer after sign-in. `chrome sign-in` does not open the popover.
 
 ## How to get to it (user POV)
 
@@ -23,7 +24,7 @@ ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
 .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/sign-in.png"
 ```
 
-`sign-in.html` and `sign-in.html.text` must contain `Welcome to SolZero`, `admin-email`, `admin-password`, and `Sign In`.
+`sign-in.html` and `sign-in.html.text` must contain `Welcome to SolZero`, `admin-email`, `admin-password`, and `Sign In`. If the text is `Sign-in is not configured for this deployment.` instead, stop and capture `GET /api/auth/config` plus the Worker log. Do not call that a passing welcome form.
 
 To complete sign-in:
 
@@ -44,3 +45,4 @@ Ready when `$ART/signed-in/result.txt` is `signed-in` and `$ART/signed-in/after.
 - `control-solzero admin-password` needs Alchemy local state. If it fails, launch has not finished generating secrets; do not invent a password.
 - Social/OIDC buttons only appear when those providers are enabled in the stage JSONC. Local `dev.config.jsonc` ships credential-only.
 - Do not POST `/api/auth/sign-in/email` from curl and call that a UI proof. HTTP is fine as a side-effect check after the Chrome submit.
+- Each `chrome` command uses a fresh profile. A later dump does not stay signed in. `chrome sign-in` only proves the Agents composer in that one session.

@@ -1,6 +1,6 @@
 # Workflows
 
-Workflows is the builder index at `/workflows`. A signed-in user creates a draft from a template, a natural-language prompt, or a YAML import, then opens `/workflows/$workflowId`.
+Workflows is the builder index at `/workflows`. A signed-in user creates an unsaved draft from a template, a natural-language prompt, or a YAML import. The draft stays on `/workflows` until save. Opening an existing row or saving a draft reaches `/workflows/$workflowId`.
 
 ## Sub-features
 
@@ -25,12 +25,12 @@ ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
 .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/workflows --out "$ART/workflows.png"
 ```
 
-`workflows.html.text` must contain `Create a new Workflow` and the three card titles `Template`, `Build with AI`, and `Import`.
+`workflows.html.text` must contain `Create a new Workflow` and the three card titles `Template`, `Build with AI`, and `Import`. Unauthenticated visits render the welcome form on the same URL. Each `chrome` command uses a fresh profile, so dump `/workflows` after `chrome sign-in` is still signed out.
 
 Build-with-AI needs a model provider. Template selection does not. Prefer Template when proving the index without gateway credentials.
 
 ## Gotchas
 
-- Unauthenticated visits to `/workflows` render the sign-in form on the same origin. If you see `#admin-email`, you are not on Workflows.
+- Unauthenticated visits to `/workflows` render the welcome screen on the same origin. If you see `#admin-email` or `Sign-in is not configured for this deployment.`, you are not on Workflows.
 - Admin workflow tools live under `/admin/workflows`. That is a different page. Do not treat it as this feature.
 - Import expects a SolZero workflow YAML export. Do not upload an arbitrary file and call a rejection a product failure unless the copy is wrong.

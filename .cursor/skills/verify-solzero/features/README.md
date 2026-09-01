@@ -10,6 +10,7 @@ Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `h
 - Stay on `http://localhost:3000`. Refuse if doctor says the ports are not this run.
 - Default credential admin is `admin@example.com`. Get the password with `control-solzero admin-password`.
 - Creating an Isolate session that talks to a model needs a configured Cloudflare AI Gateway or LiteLLM provider. Sign-in, navigation, Workflows empty state, and Bots empty state do not.
+- If the welcome screen shows `Sign-in is not configured for this deployment.` instead of `#admin-email`, stop. `GET /api/auth/config` is not serving a credential provider. Doctor must fail. That is a product/local-dev failure, not a map problem.
 
 ## Features
 
@@ -19,6 +20,6 @@ Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `h
 | [agents.md](agents.md) | Compose a new Isolate agent and open previous sessions |
 | [workflows.md](workflows.md) | Open the workflow index and choose Template, Build with AI, or Import |
 | [bots.md](bots.md) | Open always-on bots and create a named bot |
-| [settings.md](settings.md) | Open Settings categories (AI Providers, Agents, Secrets, Accounts) |
+| [settings.md](settings.md) | Open Settings categories (AI Providers, Agents, Secrets, Accounts, Data Controls, Learn More) |
 
 Drive one file per verification pass unless the change spans two surfaces.
