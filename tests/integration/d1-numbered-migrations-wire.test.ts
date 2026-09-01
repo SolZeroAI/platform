@@ -11,6 +11,7 @@ const migrationsDir = resolve(repoRoot, "packages/infra/d1-migrations")
 const betterAuthMigration = resolve(migrationsDir, "0006_better_auth.sql")
 const resourcesPath = resolve(repoRoot, "apps/api/infra/resources.ts")
 const s0Path = resolve(repoRoot, "packages/infra/src/s0.ts")
+const stackPath = resolve(repoRoot, "packages/infra/src/stack.ts")
 const alchemyPatchPath = resolve(repoRoot, "patches/alchemy@2.0.0-beta.74.patch")
 
 describe("numbered D1 migration apply path", () => {
@@ -43,10 +44,17 @@ describe("numbered D1 migration apply path", () => {
     }
   })
 
-  it("patches local D1 diff to consult workerd applied-migration bookkeeping", () => {
+  it("selects Alchemy localState for local stages and Cloudflare.state for pre/prod", () => {
+    const stack = readFileSync(stackPath, "utf8")
+    expect(stack).toContain("getAlchemyStateStoreKind")
+    expect(stack).toContain("localState()")
+    expect(stack).toContain("Cloudflare.state()")
+    expect(stack).not.toContain("localD1HasAppliedMigrationRows")
+  })
+
+  it("does not patch Alchemy D1 ProviderLocal with a workerd bookkeeping probe", () => {
     const patch = readFileSync(alchemyPatchPath, "utf8")
-    expect(patch).toContain("diff --git a/src/Cloudflare/D1/Database.ts")
-    expect(patch).toContain("localD1HasAppliedMigrationRows")
-    expect(patch).toContain("used to fall through to Plan.ts `noop`")
+    expect(patch).not.toContain("localD1HasAppliedMigrationRows")
+    expect(patch).not.toContain("diff --git a/src/Cloudflare/D1/Database.ts")
   })
 })

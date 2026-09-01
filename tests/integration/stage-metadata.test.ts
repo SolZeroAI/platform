@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { getStageMetadataSync } from "../../packages/shared/src/stageMetadata"
+import {
+  getAlchemyStateStoreKind,
+  getStageMetadataSync,
+} from "../../packages/shared/src/stageMetadata"
 import { compiledStageEnv, TEST_APPLICATION_CONFIG } from "../fixtures/stage-metadata"
 
 describe("stage Slack notification metadata", () => {
@@ -21,6 +24,21 @@ describe("stage Slack notification metadata", () => {
 
     expect(metadata.app.sendSlackNotifications).toBe(true)
     expect(metadata.app.slackChannel).toBe("s0-alerts")
+  })
+
+  it("keeps Alchemy resource graph on disk for local stages", () => {
+    expect(getAlchemyStateStoreKind("dev")).toBe("local")
+    expect(getAlchemyStateStoreKind("test")).toBe("local")
+    expect(getStageMetadataSync("dev").infra.alchemyStateStore).toBe("local")
+    expect(getStageMetadataSync("test").infra.alchemyStateStore).toBe("local")
+  })
+
+  it("keeps Alchemy resource graph in Cloudflare.state for deployed stages", () => {
+    expect(getAlchemyStateStoreKind("pre")).toBe("cloudflare")
+    expect(getAlchemyStateStoreKind("pre-42")).toBe("cloudflare")
+    expect(getAlchemyStateStoreKind("prod")).toBe("cloudflare")
+    expect(getStageMetadataSync(compiledStageEnv("pre")).infra.alchemyStateStore).toBe("cloudflare")
+    expect(getStageMetadataSync(compiledStageEnv("prod")).infra.alchemyStateStore).toBe("cloudflare")
   })
 
   it("does not send Slack notifications when the channel is omitted", () => {

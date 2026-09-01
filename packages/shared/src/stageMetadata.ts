@@ -61,6 +61,8 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
   }
 }
 
+export type AlchemyStateStoreKind = "local" | "cloudflare"
+
 export interface InfraStageProps {
   readonly zone: string
   /** Public origin for the API / control plane for this stage. */
@@ -113,6 +115,11 @@ export interface InfraStageProps {
   readonly apiObservabilityLogsDestinations: readonly string[]
   /** Cloudflare Workers Observability destinations for exported API traces. */
   readonly apiObservabilityTracesDestinations: readonly string[]
+  /**
+   * Where Alchemy persists the resource graph for this stage.
+   * Local stages use disk `.alchemy/` state. Deployed stages use Cloudflare.state().
+   */
+  readonly alchemyStateStore: AlchemyStateStoreKind
 }
 
 export interface AppStageProps {
@@ -153,6 +160,7 @@ const InfraStagePropsSchema = Schema.Struct({
   apiObservabilityConsoleOutputEnabled: Schema.Boolean,
   apiObservabilityLogsDestinations: Schema.Array(Schema.String),
   apiObservabilityTracesDestinations: Schema.Array(Schema.String),
+  alchemyStateStore: Schema.Literals(["local", "cloudflare"]),
 })
 
 // oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
@@ -288,6 +296,7 @@ function localInfraStageProps(
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
+    alchemyStateStore: "local",
   }
 }
 
@@ -358,6 +367,7 @@ function deployedInfraStageProps(input: {
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
+    alchemyStateStore: "cloudflare",
   }
 }
 
@@ -540,4 +550,25 @@ export function getWebUrl(input: StageMetadataInput): string {
 
 export function getInternalMcpOrigin(input: StageMetadataInput): string {
   return getStageMetadataSync(input).infra.internalMcpOrigin
+}
+
+/**
+ * Select the Alchemy state store for a stage name without loading deployed
+ * zone/FQDN config. Local stages persist the resource graph on disk.
+ */
+export function getAlchemyStateStoreKind(stage: string): AlchemyStateStoreKind {
+  const lowerCaseStage = stage.toLowerCase()
+  return Match.value(lowerCaseStage).pipe(
+    Match.when("dev", () => "local" as const),
+    Match.when("test", () => "local" as const),
+    Match.when("prod", () => "cloudflare" as const),
+    Match.when(
+      (value) => value === "pre" || value.startsWith("pre-"),
+      () => "cloudflare" as const,
+    ),
+    Match.orElse(() =>
+      // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for Alchemy stack construction, which chooses a state Layer before the stack Effect can load deployment config.
+      Effect.runSync(Effect.fail(invalidStageError(stage))),
+    ),
+  )
 }
