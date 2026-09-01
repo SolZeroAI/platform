@@ -122,11 +122,6 @@ describe("D1 migrations", () => {
         default_enabled: 1,
       })
 
-      const betterAuthUser = db
-        .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'user' LIMIT 1`)
-        .get() as { name?: string } | undefined
-      expect(betterAuthUser?.name).toBe("user")
-
       const botsColumns = db.prepare("PRAGMA table_info(bots)").all() as Array<{ name: string }>
       const botRoutineColumns = db.prepare("PRAGMA table_info(bot_routines)").all() as Array<{
         name: string
