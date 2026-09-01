@@ -127,8 +127,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
       repoRoot,
       apiEnv,
     } = options
-    const drizzleSchemaPath = resolve(repoRoot, "packages/api/src/server/effect/db/schema.ts")
-    const drizzleOutDir = resolve(infraDir, "drizzle")
+    const migrationsDir = resolve(infraDir, "d1-migrations")
 
     const aiGateway = yield* createCloudflareAiGateway({
       appName,
@@ -146,8 +145,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
       appName,
       dev,
       stageMetadata,
-      drizzleSchemaPath,
-      drizzleOutDir,
+      migrationsDir,
       tokenId: apiEnv.CF_AI_SEARCH_SERVICE_TOKEN_ID,
     })
     const api = yield* createApi({

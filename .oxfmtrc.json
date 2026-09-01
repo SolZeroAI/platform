@@ -7,7 +7,6 @@
     "tsconfig.json",
     "node_modules",
     "nub.lock",
-    "packages/infra/drizzle/**",
     "**/*.gen.ts",
     "**/*.md",
     "**/*.yaml",
