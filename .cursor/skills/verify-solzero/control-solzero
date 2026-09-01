@@ -1,0 +1,618 @@
+#!/usr/bin/env bash
+# Launch, doctor, drive, and tear down a local SolZero verification stack.
+# Usage is in SKILL.md. Do not kill processes by name.
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+RUN_DIR="$SKILL_DIR/.run"
+WEB_URL="http://localhost:3000"
+API_URL="http://localhost:1337"
+HEALTH_URL="$API_URL/health"
+WEB_PORT=3000
+API_PORT=1337
+CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-9334}"
+WAIT_SECS="${SOLZERO_VERIFY_WAIT_SECS:-420}"
+ADMIN_EMAIL="${SOLZERO_VERIFY_ADMIN_EMAIL:-admin@example.com}"
+
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  # shellcheck disable=SC1091
+  . "$NVM_DIR/nvm.sh"
+  nvm use --silent >/dev/null 2>&1 || nvm use >/dev/null
+fi
+export PATH="${HOME}/.nub/bin:${PATH}"
+
+cmd="${1:-}"
+shift || true
+
+mkdir -p "$RUN_DIR"
+
+die() {
+  echo "control-solzero: $*" >&2
+  exit 1
+}
+
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+json_get() {
+  python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+v=d.get(sys.argv[2],"")
+if isinstance(v,bool):
+    print("true" if v else "false")
+else:
+    print(v)' "$1" "$2"
+}
+
+listen_pids() {
+  local port="$1"
+  if have lsof; then
+    lsof -nP "-iTCP:${port}" -sTCP:LISTEN -t 2>/dev/null | sort -u || true
+    return 0
+  fi
+  python3 - "$port" <<'PY'
+import socket, sys
+port = int(sys.argv[1])
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    s.bind(("127.0.0.1", port))
+except OSError:
+    print("unknown")
+finally:
+    s.close()
+PY
+}
+
+pid_alive() {
+  local pid="$1"
+  [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+kill_tree() {
+  local pid="$1"
+  if ! pid_alive "$pid"; then
+    return 0
+  fi
+  local child
+  for child in $(pgrep -P "$pid" 2>/dev/null || true); do
+    kill_tree "$child"
+  done
+  kill "$pid" 2>/dev/null || true
+  sleep 0.2
+  if pid_alive "$pid"; then
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+}
+
+kill_recorded() {
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    kill_tree "$pid"
+  done <"$file"
+}
+
+port_is_ours() {
+  local port="$1"
+  local recorded="$2"
+  local live
+  live="$(listen_pids "$port")"
+  if [[ -z "$live" || "$live" == "unknown" ]]; then
+    return 1
+  fi
+  if [[ ! -f "$recorded" ]]; then
+    return 1
+  fi
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    if printf '%s\n' "$live" | grep -qx "$pid"; then
+      return 0
+    fi
+  done <"$recorded"
+  return 1
+}
+
+refuse_foreign_port() {
+  local port="$1"
+  local live
+  live="$(listen_pids "$port")"
+  if [[ -n "$live" && "$live" != "unknown" ]]; then
+    die "port ${port} is already listening (pids: ${live}). Two SolZero stacks cannot share :3000/:1337. Refusing to hijack a shared instance."
+  fi
+  if [[ "$live" == "unknown" ]]; then
+    if python3 - "$port" <<'PY'
+import socket, sys
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    s.bind(("127.0.0.1", int(sys.argv[1])))
+except OSError:
+    raise SystemExit(1)
+finally:
+    s.close()
+PY
+    then
+      return 0
+    fi
+    die "port ${port} is already bound. Two SolZero stacks cannot share :3000/:1337. Refusing to hijack a shared instance."
+  fi
+}
+
+artifact_dir_from_meta() {
+  local run_id=""
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    run_id="$(json_get "$RUN_DIR/meta.json" runId)"
+  fi
+  if [[ -z "$run_id" ]]; then
+    run_id="${SOLZERO_VERIFY_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
+  fi
+  local dir="$SKILL_DIR/artifacts/$run_id"
+  mkdir -p "$dir"
+  echo "$dir"
+}
+
+write_meta() {
+  local run_id="$1"
+  local created_env="$2"
+  local created_dev_vars="$3"
+  python3 - "$RUN_DIR/meta.json" "$run_id" "$WEB_URL" "$API_URL" "$HEALTH_URL" \
+    "$created_env" "$created_dev_vars" "$REPO_ROOT" "$ADMIN_EMAIL" "$CDP_PORT" <<'PY'
+import json, sys, datetime
+path, run_id, web, api, health, created_env, created_vars, repo, email, cdp = sys.argv[1:]
+json.dump({
+  "runId": run_id,
+  "webUrl": web,
+  "apiUrl": api,
+  "healthUrl": health,
+  "createdEnv": created_env == "true",
+  "createdDevVars": created_vars == "true",
+  "startedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+  "repoRoot": repo,
+  "adminEmail": email,
+  "cdpPort": int(cdp),
+}, open(path, "w"), indent=2)
+print(open(path).read())
+PY
+}
+
+dump_logs() {
+  if [[ -f "$RUN_DIR/dev.log" ]]; then
+    echo "--- dev.log (tail) ---" >&2
+    tail -c 4000 "$RUN_DIR/dev.log" >&2 || true
+    echo >&2
+  fi
+}
+
+wait_http() {
+  local url="$1"
+  local label="$2"
+  local n=0
+  local tmp
+  tmp="$(mktemp)"
+  while (( n < WAIT_SECS )); do
+    local code
+    code="$(curl -sS --max-time 5 -o "$tmp" -w "%{http_code}" "$url" 2>/dev/null || true)"
+    if [[ "$code" =~ ^2 ]]; then
+      rm -f "$tmp"
+      return 0
+    fi
+    n=$((n + 1))
+    sleep 1
+  done
+  rm -f "$tmp"
+  echo "control-solzero: timed out waiting for ${label} at ${url}" >&2
+  dump_logs
+  return 1
+}
+
+ensure_env_file() {
+  local path="$REPO_ROOT/config/.env"
+  if [[ -f "$path" ]]; then
+    echo "false"
+    return 0
+  fi
+  local example="$REPO_ROOT/config/.env.example"
+  [[ -f "$example" ]] || die "missing $example"
+  [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || die "CLOUDFLARE_ACCOUNT_ID is required to create verification scaffolding config/.env"
+  [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || die "CLOUDFLARE_API_TOKEN is required to create verification scaffolding config/.env"
+  python3 - "$example" "$path" "${CLOUDFLARE_ACCOUNT_ID}" "${CLOUDFLARE_API_TOKEN}" <<'PY'
+from pathlib import Path
+import sys
+example, dest, account, token = sys.argv[1:]
+lines = []
+for line in Path(example).read_text().splitlines(keepends=True):
+    if line.startswith("CLOUDFLARE_ACCOUNT_ID="):
+        lines.append(f"CLOUDFLARE_ACCOUNT_ID={account}\n")
+    elif line.startswith("CLOUDFLARE_API_TOKEN="):
+        lines.append(f"CLOUDFLARE_API_TOKEN={token}\n")
+    else:
+        lines.append(line)
+Path(dest).write_text("".join(lines))
+PY
+  echo "true"
+}
+
+ensure_dev_vars() {
+  local path="$REPO_ROOT/config/.dev.vars"
+  if [[ -f "$path" ]]; then
+    echo "false"
+    return 0
+  fi
+  local example="$REPO_ROOT/config/.dev.vars.example"
+  [[ -f "$example" ]] || die "missing $example"
+  cp "$example" "$path"
+  echo "true"
+}
+
+ensure_alchemy_dir() {
+  if [[ ! -d /.alchemy ]]; then
+    sudo mkdir -p /.alchemy
+    sudo chown "$(id -u):$(id -g)" /.alchemy
+  fi
+}
+
+ensure_docker() {
+  if ! have docker; then
+    die "docker is not on PATH. README requires a Docker-compatible engine; without it Alchemy hangs after binding :1337/:3000."
+  fi
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+  if have sudo && have dockerd; then
+    sudo dockerd >/tmp/dockerd.log 2>&1 &
+    local n=0
+    while (( n < 30 )); do
+      if docker info >/dev/null 2>&1; then
+        break
+      fi
+      n=$((n + 1))
+      sleep 1
+    done
+  fi
+  if [[ -S /var/run/docker.sock ]]; then
+    sudo chmod 666 /var/run/docker.sock || true
+  fi
+  docker info >/dev/null 2>&1 || die "docker is on PATH but the engine is not running"
+}
+
+start_detached() {
+  local name="$1"
+  shift
+  local nub_bin
+  nub_bin="$(command -v nub)"
+  [[ -n "$nub_bin" ]] || die "nub is not on PATH after nvm/.nub setup"
+  python3 - "$RUN_DIR/${name}.pid" "$RUN_DIR/${name}.log" "$REPO_ROOT" "$nub_bin" "$@" <<'PY'
+import os, sys
+pid_file, log_file, cwd, *argv = sys.argv[1:]
+r, w = os.pipe()
+pid = os.fork()
+if pid > 0:
+    os.close(w)
+    data = os.read(r, 64)
+    os.close(r)
+    os.waitpid(pid, 0)
+    with open(pid_file, "w") as fh:
+        fh.write(data.decode())
+    sys.exit(0)
+os.close(r)
+os.setsid()
+pid2 = os.fork()
+if pid2 > 0:
+    os._exit(0)
+os.write(w, f"{os.getpid()}\n".encode())
+os.close(w)
+os.chdir(cwd)
+os.umask(0)
+log = os.open(log_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+os.dup2(log, 1)
+os.dup2(log, 2)
+devnull = os.open(os.devnull, os.O_RDONLY)
+os.dup2(devnull, 0)
+os.execvp(argv[0], argv)
+PY
+}
+
+cmd_doctor() {
+  [[ -f "$RUN_DIR/meta.json" ]] || die "no .run/meta.json. This is not a verification instance. Do not drive whatever is on :3000 / :1337."
+
+  local health
+  if ! health="$(curl -sS --fail-with-body --max-time 8 "$HEALTH_URL")"; then
+    die "GET $HEALTH_URL failed"
+  fi
+  python3 -c 'import json,sys
+d=json.loads(sys.argv[1])
+assert d.get("status")=="healthy", d
+assert d.get("service")=="s0-agent-control-plane", d' "$health" || die "health payload is not healthy: $health"
+
+  local web_tmp
+  web_tmp="$(mktemp)"
+  curl -sS --fail-with-body --max-time 20 -o "$web_tmp" "$WEB_URL/" || {
+    rm -f "$web_tmp"
+    die "GET $WEB_URL/ failed"
+  }
+  grep -qiE 'solzero|Welcome to' "$web_tmp" || {
+    rm -f "$web_tmp"
+    die "web HTML did not contain SolZero / Welcome to"
+  }
+  rm -f "$web_tmp"
+
+  if [[ -f "$RUN_DIR/dev.listen-web" && -f "$RUN_DIR/dev.listen-api" ]]; then
+    port_is_ours "$WEB_PORT" "$RUN_DIR/dev.listen-web" || die "port $WEB_PORT is not owned by this verification run"
+    port_is_ours "$API_PORT" "$RUN_DIR/dev.listen-api" || die "port $API_PORT is not owned by this verification run"
+  fi
+
+  local run_id
+  run_id="$(json_get "$RUN_DIR/meta.json" runId)"
+  echo "ok health service=s0-agent-control-plane status=healthy"
+  echo "ok web $WEB_URL contains SolZero"
+  echo "ok isolation runId=$run_id owns :$WEB_PORT :$API_PORT"
+  echo "doctor ok runId=$run_id web=$WEB_URL api=$API_URL"
+  echo "$health"
+}
+
+fail_launch() {
+  local artifacts
+  artifacts="$(artifact_dir_from_meta)"
+  copy_log_tail "$RUN_DIR/dev.log" "$artifacts/dev.log"
+  echo "control-solzero: launch failed; log tail copied to $artifacts" >&2
+  dump_logs
+  cmd_cleanup_procs
+  exit 1
+}
+
+cmd_launch() {
+  have curl || die "curl is not on PATH"
+  have python3 || die "python3 is not on PATH"
+  have nub || die "nub is not on PATH. Install Nub 0.4.11 and put it on PATH."
+
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    if cmd_doctor >/dev/null 2>&1; then
+      echo "already healthy"
+      cat "$RUN_DIR/meta.json"
+      return 0
+    fi
+    echo "control-solzero: stale .run; stopping leftover verification pids" >&2
+    cmd_cleanup_procs
+  fi
+
+  refuse_foreign_port "$API_PORT"
+  refuse_foreign_port "$WEB_PORT"
+
+  ensure_alchemy_dir
+  ensure_docker
+
+  local created_env created_dev_vars
+  created_env="$(ensure_env_file)"
+  created_dev_vars="$(ensure_dev_vars)"
+
+  if [[ -f "$REPO_ROOT/config/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/config/.env"
+    set +a
+  fi
+  [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || die "CLOUDFLARE_ACCOUNT_ID is empty after sourcing config/.env"
+  [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || die "CLOUDFLARE_API_TOKEN is empty after sourcing config/.env"
+  # Alchemy refuses env-var Cloudflare credentials in a non-interactive TTY
+  # unless CI=1. This is verification-only; it is not a product deploy flag.
+  export CI=1
+
+  [[ -d "$REPO_ROOT/node_modules" ]] || (cd "$REPO_ROOT" && nub install --frozen-lockfile)
+
+  local run_id="${SOLZERO_VERIFY_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
+  write_meta "$run_id" "$created_env" "$created_dev_vars" >/dev/null
+
+  start_detached dev run dev
+
+  if ! wait_http "$HEALTH_URL" "api health"; then
+    fail_launch
+  fi
+  if ! wait_http "$WEB_URL/" "web"; then
+    fail_launch
+  fi
+
+  listen_pids "$API_PORT" >"$RUN_DIR/dev.listen-api"
+  listen_pids "$WEB_PORT" >"$RUN_DIR/dev.listen-web"
+
+  echo "ready web=$WEB_URL api=$API_URL health=$HEALTH_URL runId=$run_id"
+  cat "$RUN_DIR/meta.json"
+}
+
+cmd_http() {
+  local method="${1:-GET}"
+  shift || true
+  local url=""
+  local out=""
+  local body=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --out) out="$2"; shift 2 ;;
+      --body) body="$2"; shift 2 ;;
+      --) shift; break ;;
+      http://*|https://*) url="$1"; shift ;;
+      /*) url="$API_URL$1"; shift ;;
+      *)
+        if [[ -z "$url" ]]; then
+          url="$1"
+          shift
+        else
+          die "unexpected http argument: $1"
+        fi
+        ;;
+    esac
+  done
+  [[ -n "$url" ]] || die "http needs a URL or /path (API origin is $API_URL)"
+  if [[ -z "$out" ]]; then
+    out="$(artifact_dir_from_meta)/http-$(date +%H%M%S).txt"
+  elif [[ "$out" != /* ]]; then
+    out="$SKILL_DIR/$out"
+  fi
+  mkdir -p "$(dirname "$out")"
+  local args=(-sS --fail-with-body --max-time 30 -X "$method" -D "$out.headers" -o "$out" -w "%{http_code}" "$url")
+  if [[ -n "$body" ]]; then
+    args+=(-H "content-type: application/json" --data "$body")
+  fi
+  local code
+  if ! code="$(curl "${args[@]}")"; then
+    echo "$code" >"$out.exit"
+    die "http $method $url failed (see $out and $out.headers)"
+  fi
+  printf '%s\n' "$code" >"$out.status"
+  printf '0\n' >"$out.exit"
+  echo "http $method $url -> $code $out"
+}
+
+pick_free_port() {
+  python3 - "$1" <<'PY'
+import socket, sys
+start = int(sys.argv[1])
+for port in range(start, start + 40):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        print(port)
+        break
+    except OSError:
+        continue
+    finally:
+        s.close()
+else:
+    raise SystemExit("no free CDP port")
+PY
+}
+
+chrome_env() {
+  local run_id
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    run_id="$(json_get "$RUN_DIR/meta.json" runId)"
+  else
+    run_id="${SOLZERO_VERIFY_RUN_ID:-adhoc-$$}"
+  fi
+  export SOLZERO_VERIFY_CHROME_PROFILE="${SOLZERO_VERIFY_CHROME_PROFILE:-$RUN_DIR/chrome-$run_id}"
+  export SOLZERO_VERIFY_CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-$(pick_free_port "$CDP_PORT")}"
+  export SOLZERO_VERIFY_CHROME_PID_FILE="$RUN_DIR/chrome.pid"
+  if [[ -z "${SOLZERO_VERIFY_CHROME:-}" ]]; then
+    if [[ -x /opt/google/chrome/chrome ]]; then
+      export SOLZERO_VERIFY_CHROME=/opt/google/chrome/chrome
+    elif have google-chrome; then
+      export SOLZERO_VERIFY_CHROME=google-chrome
+    else
+      die "Chrome binary not found at /opt/google/chrome/chrome and google-chrome is not on PATH"
+    fi
+  fi
+}
+
+cmd_chrome() {
+  chrome_env
+  local sub="${1:-}"
+  shift || true
+  local drive="$SKILL_DIR/drive.mjs"
+  [[ -x "$drive" || -f "$drive" ]] || die "missing $drive"
+  local node_bin
+  node_bin="$(command -v node)"
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    node_bin="$(nvm which current 2>/dev/null || true)"
+  fi
+  [[ -n "$node_bin" ]] || die "node is not on PATH"
+  exec "$node_bin" "$drive" "$sub" "$@"
+}
+
+cmd_admin_password() {
+  local out="$RUN_DIR/admin-password"
+  (cd "$REPO_ROOT" && nub run auth:admin-password -- dev --local) >"$out"
+  chmod 600 "$out"
+  echo "admin-password-file=$out"
+  echo "admin-email=$ADMIN_EMAIL"
+}
+
+cmd_cleanup_procs() {
+  kill_recorded "$RUN_DIR/dev.pid"
+  kill_recorded "$RUN_DIR/dev.listen-api"
+  kill_recorded "$RUN_DIR/dev.listen-web"
+  kill_recorded "$RUN_DIR/chrome.pid"
+}
+
+copy_log_tail() {
+  local src="$1"
+  local dest="$2"
+  if [[ ! -f "$src" ]]; then
+    return 0
+  fi
+  tail -c 200000 "$src" >"$dest"
+}
+
+cmd_cleanup() {
+  local artifacts=""
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    artifacts="$(artifact_dir_from_meta)"
+    copy_log_tail "$RUN_DIR/dev.log" "$artifacts/dev.log"
+  fi
+
+  local created_env=false
+  local created_dev_vars=false
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    created_env="$(json_get "$RUN_DIR/meta.json" createdEnv)"
+    created_dev_vars="$(json_get "$RUN_DIR/meta.json" createdDevVars)"
+  fi
+
+  cmd_cleanup_procs
+
+  if [[ "$created_env" == "true" ]]; then
+    rm -f "$REPO_ROOT/config/.env"
+  fi
+  if [[ "$created_dev_vars" == "true" ]]; then
+    rm -f "$REPO_ROOT/config/.dev.vars"
+  fi
+
+  rm -rf "$RUN_DIR"
+  echo "cleaned verification processes. evidence kept at ${artifacts:-$SKILL_DIR/artifacts}"
+}
+
+cmd_artifact_dir() {
+  artifact_dir_from_meta
+}
+
+cmd_urls() {
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    cat "$RUN_DIR/meta.json"
+  else
+    echo "web=$WEB_URL"
+    echo "api=$API_URL"
+    echo "health=$HEALTH_URL"
+  fi
+}
+
+cmd_paths() {
+  echo "SKILL_DIR=$SKILL_DIR"
+  echo "REPO_ROOT=$REPO_ROOT"
+  echo "RUN_DIR=$RUN_DIR"
+  echo "WEB_URL=$WEB_URL"
+  echo "API_URL=$API_URL"
+  echo "HEALTH_URL=$HEALTH_URL"
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    echo "ARTIFACT_DIR=$(artifact_dir_from_meta)"
+  fi
+}
+
+case "$cmd" in
+  launch) cmd_launch "$@" ;;
+  doctor) cmd_doctor "$@" ;;
+  http) cmd_http "$@" ;;
+  chrome) cmd_chrome "$@" ;;
+  admin-password) cmd_admin_password "$@" ;;
+  cleanup) cmd_cleanup "$@" ;;
+  artifact-dir) cmd_artifact_dir "$@" ;;
+  urls) cmd_urls "$@" ;;
+  paths) cmd_paths "$@" ;;
+  *)
+    echo "Usage: control-solzero launch | doctor | http | chrome | admin-password | cleanup | artifact-dir | urls | paths" >&2
+    exit 2
+    ;;
+esac
