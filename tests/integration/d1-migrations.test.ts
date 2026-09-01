@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { D1_MIGRATION_SQL } from "../../packages/api/src/server/background/db/d1-migration-sql"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -15,6 +16,16 @@ function getMigrationFiles(): string[] {
 }
 
 describe("D1 migrations", () => {
+  it("embeds every on-disk control-plane migration for Worker bootstrap", () => {
+    const files = getMigrationFiles()
+    expect(D1_MIGRATION_SQL.map((migration) => migration.id)).toEqual(files)
+    for (const filename of files) {
+      expect(D1_MIGRATION_SQL.find((migration) => migration.id === filename)?.sql).toBe(
+        readFileSync(resolve(migrationsDir, filename), "utf8"),
+      )
+    }
+  })
+
   it("apply cleanly from scratch", () => {
     const db = new DatabaseSync(":memory:")
 

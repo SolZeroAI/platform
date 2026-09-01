@@ -10,6 +10,7 @@ import {
   effectApiHandler,
   getAuthProviderRegistry,
   getPublicAuthProviderRegistry,
+  ensureD1Schema,
   reconcileManagedAdminCredentials,
   handleAiSearchMcpRequest,
   handleMcpcfMcpRequest,
@@ -310,6 +311,10 @@ export default class Api extends WorkerEntrypoint {
 
     const observer = createApiRequestObserver(request, env, tracedCtx)
     return observer.run(async ({ setRouteBranch, setUserIdentity, observability, log }) => {
+      if (!isSchemaFreePath(url.pathname)) {
+        await ensureD1Schema(env)
+      }
+
       if (isMcpPath(url.pathname)) {
         const shouldDispatchMcp = await shouldDispatchMcpRequest({
           request,
@@ -409,6 +414,15 @@ export default class Api extends WorkerEntrypoint {
   async scheduled(controller: ScheduledController): Promise<void> {
     return cron(controller, this.env, this.ctx)
   }
+}
+
+function isSchemaFreePath(pathname: string): boolean {
+  return (
+    pathname === "/health" ||
+    pathname === "/openapi.json" ||
+    pathname === "/reference" ||
+    pathname === "/reference/"
+  )
 }
 
 function dispatchMcpRequest(
