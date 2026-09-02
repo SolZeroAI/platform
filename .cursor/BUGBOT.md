@@ -52,15 +52,29 @@ The `migrations` field is the directory path.
 The Worker D1 path is query-only.
 `makeD1Drizzle` wraps the binding.
 There is no `ensureD1Schema`.
-There is no Worker apply-on-read.
+There is no Worker apply-on-read for control-plane D1.
 There is no Drizzle.Schema apply.
 Absence of those is intended.
 Do not flag that absence.
+
+`initSchema` in `packages/api/src/server/background/session/schema.ts` applies Durable Object sqlite on SessionDO init.
+That apply-on-read is for Durable Object storage only.
+Do not treat it as a missing D1 Worker apply path.
+
+This repo has three session stores.
+D1 `sessions` is the platform session index.
+D1 `"session"` is the Better Auth session table.
+SessionDO `session` is Durable Object sqlite chat state.
+Do not flag those names as a collision.
 
 Tests apply the numbered SQL in-process with `node:sqlite` `DatabaseSync`.
 That path starts in `tests/integration/d1-migrations.test.ts` and other store tests.
 That is the test apply path.
 That is not a Worker apply path.
+
+Some D1 stores detect a missing migration and return an empty read or a typed write error.
+That fail-closed behavior is intended.
+Do not flag it as a missing Worker DDL apply.
 
 Session chat, events, and artifacts stay in Durable Object sqlite.
 D1 holds the control-plane index.
@@ -82,8 +96,10 @@ Stage JSONC in `config/dev.config.jsonc` and the other stage files sets `auth.de
 The credential provider is enabled.
 
 Welcome UI is `SignInPage` in `apps/web/src/routes/_authenticated.tsx`.
-There is no `/login` route.
+There is no `/login` route. That is intended.
 Signed-out `/` shows Email, Password, `#admin-email`, `#admin-password`, and Sign In.
+The credential banner that recommends social or OIDC is a nudge.
+It is not missing auth.
 
 The exact product-failure copy is `Sign-in is not configured for this deployment.`
 That copy renders when `signInProviders.length === 0`.
@@ -115,6 +131,8 @@ Deployed stages default to `"cloudflare"`.
 Local stages write Alchemy state to disk under `.alchemy/` because `alchemyStateStore` defaults to `"local"`.
 pre and prod use `Cloudflare.state()`.
 Do not flag this split as inconsistent state management.
+`alchemyStateStore` selects where Alchemy stores the resource graph.
+It does not select D1 versus PlanetScale.
 
 ### Public OSS and GitHub Actions
 
@@ -204,7 +222,8 @@ When a PR applies postgres SQL to D1, flag it.
 When a PR invents `DATABASE_ENGINE`, flag it.
 When a PR moves chat out of Durable Object sqlite, flag it.
 When numbered D1 migrations are broken or untested, flag it.
-When Durable Object sqlite schema changes without a matching apply story in `SCHEMA_SQL`, flag it.
+When Durable Object sqlite schema changes without a matching apply story in `SCHEMA_SQL` or `initSchema`, flag it.
+Do not flag SessionDO `initSchema` as a D1 apply-on-read gap.
 When the copy CLI rewrites `config/prod.config.jsonc`, flag it.
 When the copy CLI calls `infra:deploy:*`, flag it.
 
