@@ -1,5 +1,6 @@
 import type { ApiEnv } from "infra/types/env"
 import { getStageMetadataSync, type StageMetadataInput } from "@solzero/shared"
+import { withRequestControlPlane } from "../db/control-plane-db"
 import * as Cause from "effect/Cause"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -619,9 +620,11 @@ export function createApiRequestObserver(
       })
     },
     async run(handler) {
-      const settled: RequestOutcome = await handler(observer).then(
-        (response): RequestOutcome => ({ _tag: "success", response }),
-        (error): RequestOutcome => ({ _tag: "failure", error }),
+      const settled: RequestOutcome = await withRequestControlPlane(env, () =>
+        handler(observer).then(
+          (response): RequestOutcome => ({ _tag: "success", response }),
+          (error): RequestOutcome => ({ _tag: "failure", error }),
+        ),
       )
 
       const telemetryFlush = Promise.allSettled(pendingTelemetryRuns).then(() => undefined)

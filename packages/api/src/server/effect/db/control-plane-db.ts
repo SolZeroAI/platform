@@ -1,4 +1,5 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Control-plane dialect selection is an imperative adapter boundary between D1 sqlite and Hyperdrive postgres. */
+import { AsyncLocalStorage } from "node:async_hooks"
 import { defineRelations } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Match from "effect/Match"
@@ -159,7 +160,7 @@ function withSqliteRawQueryCompat(db: object): AppDrizzleDatabase {
   return Object.assign(db, { all }) as unknown as AppDrizzleDatabase
 }
 
-const postgresControlPlanes = new WeakMap<object, ControlPlaneDb>()
+const requestControlPlane = new AsyncLocalStorage<ControlPlaneDb>()
 
 type PostgresControlPlaneFactory = (env: ApiEnv, fallback: AppDbMode) => ControlPlaneDb
 
@@ -220,15 +221,24 @@ function d1ControlPlane(env: ApiEnv): ControlPlaneDb {
 
 export function makeControlPlaneFromEnv(env: ApiEnv, appDbModeFallback: AppDbMode = "remote") {
   return Match.value(databaseEngineFromEnv(env)).pipe(
-    Match.when("planetscale", () => {
-      const cached = postgresControlPlanes.get(env)
-      if (cached) return cached
-      const created = planetscaleControlPlane(env, appDbModeFallback)
-      postgresControlPlanes.set(env, created)
-      return created
-    }),
+    Match.when("planetscale", () =>
+      Option.getOrElse(Option.fromNullishOr(requestControlPlane.getStore()), () =>
+        planetscaleControlPlane(env, appDbModeFallback),
+      ),
+    ),
     Match.orElse(() => d1ControlPlane(env)),
   )
+}
+
+export function withRequestControlPlane<A>(
+  env: ApiEnv,
+  body: () => A,
+  appDbModeFallback: AppDbMode = "remote",
+): A {
+  return Option.match(Option.fromNullishOr(requestControlPlane.getStore()), {
+    onSome: () => body(),
+    onNone: () => requestControlPlane.run(makeControlPlaneFromEnv(env, appDbModeFallback), body),
+  })
 }
 
 export async function runControlPlaneSql<T = Record<string, unknown>>(

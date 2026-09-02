@@ -8,10 +8,12 @@ import { afterEach, describe, expect, it } from "vitest"
 import { GlobalSecretsStore } from "../../packages/api/src/server/background/db/repo-secrets"
 import {
   controlPlaneSql,
+  makeControlPlaneFromEnv,
   makePostgresControlPlane,
   pgRelations,
   registerPostgresControlPlaneFactory,
   runControlPlaneSql,
+  withRequestControlPlane,
   type AppDrizzleDatabase,
 } from "../../packages/api/src/server/effect/db/control-plane-db"
 import {
@@ -60,6 +62,24 @@ describe("PGLite control-plane flavor", () => {
     expect(names).toContain("user")
     expect(names).toContain("account")
     expect(names).not.toContain("repo_secrets")
+  })
+
+  it("does not reuse a postgres.js client across request scopes", () => {
+    const created: object[] = []
+    registerPostgresControlPlaneFactory(() => {
+      const client = Object.assign(function tagged() {}, { unsafe: async () => [] })
+      created.push(client)
+      return makePostgresControlPlane({ $client: client })
+    })
+    const env = { DATABASE: "planetscale" } as never
+    const first = withRequestControlPlane(env, () => makeControlPlaneFromEnv(env))
+    const second = withRequestControlPlane(env, () => makeControlPlaneFromEnv(env))
+    expect(first).not.toBe(second)
+    expect(created).toHaveLength(2)
+    withRequestControlPlane(env, () => {
+      expect(makeControlPlaneFromEnv(env)).toBe(makeControlPlaneFromEnv(env))
+    })
+    expect(created).toHaveLength(3)
   })
 
   it("runs raw SQL through a postgres.js function $client", async () => {
