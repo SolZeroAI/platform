@@ -7,4 +7,4 @@ export {
   type CreateS0WebOptions,
 } from "./s0"
 export { createDeploymentMetadata, type DeploymentMetadata } from "./deploymentMetadata"
-export { stackOptions, type StackOptionsInput } from "./stack"
+export { stackOptions, stackState, type StackOptionsInput } from "./stack"
