@@ -13,6 +13,8 @@ import {
   pgRelations,
   registerPostgresControlPlaneFactory,
   runControlPlaneSql,
+  serializePostgresDate,
+  serializePostgresDates,
   withRequestControlPlane,
   type AppDrizzleDatabase,
 } from "../../packages/api/src/server/effect/db/control-plane-db"
@@ -62,6 +64,17 @@ describe("PGLite control-plane flavor", () => {
     expect(names).toContain("user")
     expect(names).toContain("account")
     expect(names).not.toContain("repo_secrets")
+  })
+
+  it("serializes Date binds for workerd postgres.js", () => {
+    const date = new Date("2026-09-02T02:10:57.270Z")
+    expect(serializePostgresDate(date)).toBe("2026-09-02T02:10:57.270Z")
+    expect(serializePostgresDate("already")).toBe("already")
+    const serializers: Record<string, (value: unknown) => unknown> = {
+      "1184": (value) => value,
+    }
+    serializePostgresDates({ options: { serializers } })
+    expect(serializers["1184"](date)).toBe("2026-09-02T02:10:57.270Z")
   })
 
   it("does not reuse a postgres.js client across request scopes", () => {

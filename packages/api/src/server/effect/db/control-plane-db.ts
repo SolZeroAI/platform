@@ -131,6 +131,22 @@ async function runD1PreparedSql<T>(
   throw new Error("D1 statement must implement all(), first(), or run()")
 }
 
+const POSTGRES_DATE_OIDS = ["1184", "1082", "1083", "1114", "1182", "1185", "1115", "1231"] as const
+
+export function serializePostgresDate(value: unknown) {
+  return value instanceof Date ? value.toISOString() : value
+}
+
+export function serializePostgresDates(client: {
+  readonly options?: { serializers?: Record<string, (value: unknown) => unknown> }
+}) {
+  const serializers = client.options?.serializers
+  if (!serializers) return
+  for (const oid of POSTGRES_DATE_OIDS) {
+    serializers[oid] = serializePostgresDate
+  }
+}
+
 function isPostgresQueryClient(value: unknown): value is object {
   return typeof value === "function" || (typeof value === "object" && value !== null)
 }

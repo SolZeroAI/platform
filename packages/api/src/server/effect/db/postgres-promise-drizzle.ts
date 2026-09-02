@@ -9,6 +9,7 @@ import {
   makePostgresControlPlane,
   pgRelations,
   registerPostgresControlPlaneFactory,
+  serializePostgresDates,
 } from "./control-plane-db"
 
 function postgresMaxConnections(mode: AppDbMode) {
@@ -24,7 +25,9 @@ export function makePgPromiseDrizzle(connectionString: string, maxConnections: n
     prepare: false,
     fetch_types: false,
   })
-  return drizzle({ client, relations: pgRelations })
+  const db = drizzle({ client, relations: pgRelations })
+  serializePostgresDates(client)
+  return db
 }
 
 function createPlanetscaleControlPlane(env: ApiEnv, fallback: AppDbMode) {
