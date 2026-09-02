@@ -1,13 +1,13 @@
 # Agents
 
-Agents is the signed-in home. A user writes a prompt, picks an Isolate (or sandbox) runtime and model, and sends. Previous sessions live on the same page under a scroll target and a sidebar hash link.
+Agents is the signed-in home. A user writes a prompt, picks an Isolate runtime (or OpenCode, Codex, or Claude Code), picks a model, and sends. Previous sessions live on the same page under a scroll target and a sidebar hash link.
 
 ## Sub-features
 
 - `new-agent-composer` shows the prompt textarea (`Chat, build, and automate with project context`) and a `Send` button.
 - `runtime-toolbar` opens the Agent runtime dialog from the toolbar button labeled `Agent runtime: …`.
 - `previous-sessions` scrolls to `Previous sessions` via the sidebar link or the home cue button (`aria-label="Previous sessions"`).
-- `session-route` opens `/session/$id` after a successful send.
+- `session-route` navigates to `/session/$id?boot=1` as soon as Send has a session id. The prompt POST is fire-and-forget and may fail after navigation.
 
 ## How to get to it (user POV)
 
@@ -26,7 +26,7 @@ ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
 .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/agents-home.png"
 ```
 
-`agents-home.html.text` must contain `Agents`, the composer placeholder, and `Previous sessions`.
+`agents-home.html.text` must contain `Agents`, the composer placeholder, and `Previous sessions`. An unauthenticated dump of `/` is the welcome form, not Agents. Each `chrome` command uses a fresh profile, so a dump after `chrome sign-in` is not a signed-in proof.
 
 Sending a prompt that calls a model needs a configured provider. If the toolbar shows the AI-provider-required control instead of a model name, record that precondition and stop. Do not mark Agents verified by stubbing the gateway.
 
@@ -34,6 +34,7 @@ Sending a prompt that calls a model needs a configured provider. If the toolbar 
 
 ## Gotchas
 
-- `#new-agent` and `#previous-sessions` hashes are cleared after scroll. Drive by visible copy and the textarea class `session-composer-textarea`, not by a lingering hash.
+- `#new-agent` and `#previous-sessions` hashes are cleared after scroll. Drive by visible copy and the textarea class `session-composer-textarea`, not by a lingering hash. The sidebar Agents link is `/` with hash `new-agent`.
 - Repository-backed sessions need a linked GitHub account. Isolate without a repo is the default local path.
-- Mini Apps in the sidebar is `coming soon` and is not a feature to drive.
+- Send stays disabled when the toolbar shows `AI Provider required` (no models). Record that precondition. Do not stub the gateway.
+- Mini Apps in the sidebar is `Mini Apps (coming soon)` and is not a feature to drive.

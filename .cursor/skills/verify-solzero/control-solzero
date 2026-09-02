@@ -319,6 +319,31 @@ os.execvp(argv[0], argv)
 PY
 }
 
+check_auth_config() {
+  local tmp
+  tmp="$(mktemp)"
+  local code
+  code="$(curl -sS --max-time 8 -o "$tmp" -w "%{http_code}" "$API_URL/api/auth/config" 2>/dev/null || true)"
+  if [[ "$code" != "200" ]]; then
+    local body
+    body="$(tr '\n' ' ' <"$tmp" | head -c 200)"
+    rm -f "$tmp"
+    echo "control-solzero: GET $API_URL/api/auth/config returned ${code:-failed}. Credential sign-in is not ready. ${body}" >&2
+    return 1
+  fi
+  if ! python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+providers=d.get("providers")
+assert isinstance(providers, list) and providers, d
+cred=[p for p in providers if isinstance(p, dict) and p.get("kind")=="credential" and (p.get("capabilities") or {}).get("signIn")]
+assert cred, d' "$tmp"; then
+    rm -f "$tmp"
+    echo "control-solzero: GET $API_URL/api/auth/config is 200 but has no credential sign-in provider. Do not drive #admin-email." >&2
+    return 1
+  fi
+  rm -f "$tmp"
+}
+
 cmd_doctor() {
   [[ -f "$RUN_DIR/meta.json" ]] || die "no .run/meta.json. This is not a verification instance. Do not drive whatever is on :3000 / :1337."
 
@@ -343,6 +368,8 @@ assert d.get("service")=="s0-agent-control-plane", d' "$health" || die "health p
   }
   rm -f "$web_tmp"
 
+  check_auth_config || die "auth-config is not ready for credential sign-in"
+
   if [[ -f "$RUN_DIR/dev.listen-web" && -f "$RUN_DIR/dev.listen-api" ]]; then
     port_is_ours "$WEB_PORT" "$RUN_DIR/dev.listen-web" || die "port $WEB_PORT is not owned by this verification run"
     port_is_ours "$API_PORT" "$RUN_DIR/dev.listen-api" || die "port $API_PORT is not owned by this verification run"
@@ -352,6 +379,7 @@ assert d.get("service")=="s0-agent-control-plane", d' "$health" || die "health p
   run_id="$(json_get "$RUN_DIR/meta.json" runId)"
   echo "ok health service=s0-agent-control-plane status=healthy"
   echo "ok web $WEB_URL contains SolZero"
+  echo "ok auth-config credential sign-in enabled"
   echo "ok isolation runId=$run_id owns :$WEB_PORT :$API_PORT"
   echo "doctor ok runId=$run_id web=$WEB_URL api=$API_URL"
   echo "$health"
@@ -415,6 +443,10 @@ cmd_launch() {
     fail_launch
   fi
   if ! wait_http "$WEB_URL/" "web"; then
+    fail_launch
+  fi
+
+  if ! check_auth_config; then
     fail_launch
   fi
 

@@ -5,7 +5,7 @@ description: Drive the SolZero web app (TanStack Start + Kumo on :3000, API Work
 
 # Verify SolZero
 
-SolZero is a platform. A user actually touches the web app at `http://localhost:3000`: credential sign-in, the Isolate Agent composer, Workflows, always-on bots, Settings, and Admin. The Effect API Worker at `http://localhost:1337` is the control plane behind the web `/api` BFF. `nub` scripts and `BackgroundSessionsClient` are operator/library surfaces, not the primary user path.
+SolZero is a platform. A user actually touches the web app at `http://localhost:3000`: credential sign-in, the Isolate Agent composer, Workflows, always-on bots, and Settings. Admin (`/admin/*`) is an admin-gated sidebar disclosure for the same local admin user. It is not a mapped feature file. The Effect API Worker at `http://localhost:1337` is the control plane behind the web `/api` BFF. `nub` scripts and `BackgroundSessionsClient` are operator/library surfaces, not the primary user path.
 
 There is no Playwright or Cypress project. Existing automated harnesses are Vitest unit/integration suites plus `nub run test:e2e` (API-key session runs against `:1337`). Drive the UI with `control-solzero chrome` (headless Chrome DevTools). Drive the control plane with `control-solzero http`. Read `features/README.md` before clicking anything.
 
@@ -20,7 +20,7 @@ From the repo root:
 .cursor/skills/verify-solzero/control-solzero doctor
 ```
 
-Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:1337` and doctor prints only `ok` lines plus `doctor ok`.
+Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:1337` and doctor prints only `ok` lines plus `doctor ok`. Launch and doctor also require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider. Health-only ready is not enough. The local welcome surface is the credential form (`#admin-email`, `#admin-password`, **Sign In**). If that config call fails, doctor must fail closed. An unconfigured welcome (`Sign-in is not configured for this deployment.`) is a product failure, not a mapped feature.
 
 `launch` will:
 
@@ -28,7 +28,7 @@ Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:
 2. Create `config/.env` from `config/.env.example` only when that file is missing, copying `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from the process environment. That file is verification scaffolding. Cleanup removes it only if this run created it.
 3. Create `config/.dev.vars` from `config/.dev.vars.example` only when that file is missing. Same scaffolding rule.
 4. Source `config/.env`, export `CI=1` so Alchemy accepts `CLOUDFLARE_*` env credentials in a non-interactive process, ensure `/.alchemy` exists, require a running Docker engine (README prerequisite; without it workerd binds the ports and then hangs), and start detached `nub run dev` (Alchemy API + web). Logs go to `.cursor/skills/verify-solzero/.run/dev.log`.
-5. Wait until `GET http://localhost:1337/health` returns JSON `status=healthy` / `service=s0-agent-control-plane` and `GET http://localhost:3000/` returns HTML.
+5. Wait until `GET http://localhost:1337/health` returns JSON `status=healthy` / `service=s0-agent-control-plane` and `GET http://localhost:3000/` returns HTML. Then require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider.
 
 Do not run `nub run infra:deploy:*`. Do not run `db:copy-d1-to-planetscale`. Do not bump Alchemy, Effect, Wrangler, Better Auth, or `ai`/`chat` pins.
 
@@ -40,7 +40,7 @@ Teardown is `control-solzero cleanup`. See Cleanup.
 .cursor/skills/verify-solzero/control-solzero doctor
 ```
 
-Exit 0 only when `.run/meta.json` exists, health JSON is healthy, the web origin answers with SolZero HTML, and the listeners on `:1337` and `:3000` are the PIDs recorded at launch.
+Exit 0 only when `.run/meta.json` exists, health JSON is healthy, the web origin answers with SolZero HTML, `GET /api/auth/config` returns a credential sign-in provider, and the listeners on `:1337` and `:3000` are the PIDs recorded at launch.
 
 If doctor fails, stop. Do not click around in whatever happens to be bound to those ports. Dump `.run/dev.log` into the artifact directory, then `cleanup`.
 
@@ -65,7 +65,7 @@ Order:
    .cursor/skills/verify-solzero/control-solzero http GET /health --out "$ART/health.json"
    .cursor/skills/verify-solzero/control-solzero http GET http://localhost:3000/ --out "$ART/web-root.html"
    ```
-3. UI through Chrome DevTools. The helper starts `/opt/google/chrome/chrome` with a disposable profile and a free loopback DevTools port. Do not invoke the `google-chrome` wrapper; it can attach to an existing desktop Chrome. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`.
+3. UI through Chrome DevTools. The helper starts `/opt/google/chrome/chrome` with a disposable profile and a free loopback DevTools port. Do not invoke the `google-chrome` wrapper; it can attach to an existing desktop Chrome. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`. Each `chrome` invocation starts a new headless Chrome with a unique profile (`drive.mjs` appends the process id). Session cookies from `chrome sign-in` do not carry into a later `chrome dump` or `screenshot`. That is a harness gap: do not treat a follow-up dump of `/workflows`, `/bots`, or `/settings` as an authenticated proof.
    ```bash
    .cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/ --out "$ART/sign-in.html"
    .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/sign-in.png"
@@ -78,6 +78,7 @@ Stable handles (from `apps/web/src/routes/_authenticated.tsx` and the sidebar):
 | --- | --- | --- |
 | `Welcome to SolZero` | heading | sign-in and home |
 | `Give your work an agent` | supporting copy | sign-in |
+| `Email` / `Password` | field labels | sign-in |
 | `#admin-email` | email textbox | sign-in |
 | `#admin-password` | password textbox | sign-in |
 | `Sign In` | submit button | sign-in |
