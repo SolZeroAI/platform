@@ -328,7 +328,7 @@ check_auth_config() {
     local body
     body="$(tr '\n' ' ' <"$tmp" | head -c 200)"
     rm -f "$tmp"
-    echo "control-solzero: GET $API_URL/api/auth/config returned ${code:-failed}. Credential sign-in cannot be driven (welcome shows 'Sign-in is not configured'). ${body}" >&2
+    echo "control-solzero: GET $API_URL/api/auth/config returned ${code:-failed}. Credential sign-in is not ready. ${body}" >&2
     return 1
   fi
   if ! python3 -c 'import json,sys

@@ -31,6 +31,6 @@ Build-with-AI needs a model provider. Template selection does not. Prefer Templa
 
 ## Gotchas
 
-- Unauthenticated visits to `/workflows` render the welcome screen on the same origin. If you see `#admin-email` or `Sign-in is not configured for this deployment.`, you are not on Workflows.
+- Unauthenticated visits to `/workflows` render the welcome form on the same origin. If you see `#admin-email`, you are not on Workflows.
 - Admin workflow tools live under `/admin/workflows`. That is a different page. Do not treat it as this feature.
 - Import expects a SolZero workflow YAML export. Do not upload an arbitrary file and call a rejection a product failure unless the copy is wrong.

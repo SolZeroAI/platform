@@ -10,7 +10,7 @@ Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `h
 - Stay on `http://localhost:3000`. Refuse if doctor says the ports are not this run.
 - Default credential admin is `admin@example.com`. Get the password with `control-solzero admin-password`.
 - Creating an Isolate session that talks to a model needs a configured Cloudflare AI Gateway or LiteLLM provider. Sign-in, navigation, Workflows empty state, and Bots empty state do not.
-- If the welcome screen shows `Sign-in is not configured for this deployment.` instead of `#admin-email`, stop. `GET /api/auth/config` is not serving a credential provider. Doctor must fail. That is a product/local-dev failure, not a map problem.
+- Local sign-in is the credential form (`Email`, `Password`, **Sign In**). If doctor fails closed on `/api/auth/config`, stop. An unconfigured welcome is a product failure, not a mapped feature.
 
 ## Features
 

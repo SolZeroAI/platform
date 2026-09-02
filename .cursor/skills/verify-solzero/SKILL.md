@@ -20,7 +20,7 @@ From the repo root:
 .cursor/skills/verify-solzero/control-solzero doctor
 ```
 
-Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:1337` and doctor prints only `ok` lines plus `doctor ok`. Launch and doctor also require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider. Health-only ready is not enough: if that config call is 500 or empty, the welcome screen shows `Sign-in is not configured for this deployment.` and `#admin-email` is absent. That is a product/local-dev failure (often D1 missing the `user` table). Do not paper it over in the feature map.
+Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:1337` and doctor prints only `ok` lines plus `doctor ok`. Launch and doctor also require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider. Health-only ready is not enough. The local welcome surface is the credential form (`#admin-email`, `#admin-password`, **Sign In**). If that config call fails, doctor must fail closed. An unconfigured welcome (`Sign-in is not configured for this deployment.`) is a product failure, not a mapped feature.
 
 `launch` will:
 
@@ -78,7 +78,7 @@ Stable handles (from `apps/web/src/routes/_authenticated.tsx` and the sidebar):
 | --- | --- | --- |
 | `Welcome to SolZero` | heading | sign-in and home |
 | `Give your work an agent` | supporting copy | sign-in |
-| `Sign-in is not configured for this deployment.` | empty-state copy | sign-in when `/api/auth/config` has no providers |
+| `Email` / `Password` | field labels | sign-in |
 | `#admin-email` | email textbox | sign-in |
 | `#admin-password` | password textbox | sign-in |
 | `Sign In` | submit button | sign-in |
