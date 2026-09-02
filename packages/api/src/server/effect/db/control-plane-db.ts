@@ -130,6 +130,10 @@ async function runD1PreparedSql<T>(
   throw new Error("D1 statement must implement all(), first(), or run()")
 }
 
+function isPostgresQueryClient(value: unknown): value is object {
+  return typeof value === "function" || (typeof value === "object" && value !== null)
+}
+
 async function queryPostgresClient<T>(
   client: object,
   text: string,
@@ -239,7 +243,8 @@ export async function runControlPlaneSql<T = Record<string, unknown>>(
   const db = makeControlPlaneFromEnv(env)
   const rewritten = rewriteSqlitePlaceholders(sqliteSql, "postgres")
   const client = Reflect.get(db.drizzle, "$client")
-  if (!client || typeof client !== "object") {
+  // postgres.js clients are tagged-template functions (`typeof` is "function").
+  if (!isPostgresQueryClient(client)) {
     throw new Error("Postgres client is required when DATABASE is planetscale")
   }
   return queryPostgresClient<T>(client, rewritten, binds)

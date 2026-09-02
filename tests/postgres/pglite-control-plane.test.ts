@@ -10,6 +10,8 @@ import {
   controlPlaneSql,
   makePostgresControlPlane,
   pgRelations,
+  registerPostgresControlPlaneFactory,
+  runControlPlaneSql,
   type AppDrizzleDatabase,
 } from "../../packages/api/src/server/effect/db/control-plane-db"
 import {
@@ -58,6 +60,28 @@ describe("PGLite control-plane flavor", () => {
     expect(names).toContain("user")
     expect(names).toContain("account")
     expect(names).not.toContain("repo_secrets")
+  })
+
+  it("runs raw SQL through a postgres.js function $client", async () => {
+    const rows = [{ id: "admin_1" }]
+    const client = Object.assign(
+      function taggedTemplate() {
+        return rows
+      },
+      {
+        unsafe: async () => rows,
+        query: async () => ({ rows }),
+      },
+    )
+    expect(typeof client).toBe("function")
+    registerPostgresControlPlaneFactory(() => makePostgresControlPlane({ $client: client }))
+    await expect(
+      runControlPlaneSql(
+        { DATABASE: "planetscale" } as never,
+        `SELECT "id" FROM "user" WHERE "id" = ?1`,
+        ["admin_1"],
+      ),
+    ).resolves.toEqual(rows)
   })
 
   it("rewrites sqlite placeholders and json_each for postgres", () => {
