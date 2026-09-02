@@ -39,7 +39,7 @@
     "@effect/platform-node": "4.0.0-beta.107",
     "@solzero/shared": "workspace:*",
     "alchemy": "2.0.0-beta.74",
-    "alchemy-planetscale-logical-db": "1.1.0",
+    "alchemy-planetscale-logical-db": "2.0.0",
     "dotenv": "^17.4.2",
     "effect": "4.0.0-beta.107",
     "jsonc-parser": "^3.3.1"

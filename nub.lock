@@ -419,8 +419,8 @@ importers:
         specifier: 2.0.0-beta.74
         version: 2.0.0-beta.74(patch_hash=b595a57a67bc3e8eafeb519825dc0ba3340b57704bec33f4b9bcb02653c36154)(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)))(ws@8.21.0)
       alchemy-planetscale-logical-db:
-        specifier: 1.1.0
-        version: 1.1.0(alchemy@2.0.0-beta.74(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(ws@8.21.0))(effect@4.0.0-beta.107)(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)))
+        specifier: 2.0.0
+        version: 2.0.0(alchemy@2.0.0-beta.74(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(ws@8.21.0))(effect@4.0.0-beta.107)(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)))
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -3825,8 +3825,8 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  alchemy-planetscale-logical-db@1.1.0:
-    resolution: {integrity: sha512-IYGuLXv7PjXgfvJT8dFcmBNw6W0JZAUE90AZokrNsliwNNiq66ezLa/ZnhMf9P3PTZOrsiEOjxVfdUbCRa+4yw==}
+  alchemy-planetscale-logical-db@2.0.0:
+    resolution: {integrity: sha512-IvbO3Z3xDP63AkWmBOGWWbbs1A0+leW0izP6bMIKRa8uSzC14z2cJDHDHbp+9XlxaXez72dxMU9NhGbKkNIwCQ==}
     engines: {node: '>=24.15.0 <25'}
     peerDependencies:
       alchemy: '>=2.0.0-beta.72'
@@ -10117,7 +10117,7 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  alchemy-planetscale-logical-db@1.1.0(alchemy@2.0.0-beta.74(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(ws@8.21.0))(effect@4.0.0-beta.107)(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))):
+  alchemy-planetscale-logical-db@2.0.0(alchemy@2.0.0-beta.74(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(ws@8.21.0))(effect@4.0.0-beta.107)(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))):
     dependencies:
       alchemy: 2.0.0-beta.74(patch_hash=b595a57a67bc3e8eafeb519825dc0ba3340b57704bec33f4b9bcb02653c36154)(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.0-rc.110(effect@4.0.0-beta.107))(@effect/sql-pg@4.0.0-beta.107(effect@4.0.0-beta.107))(@effect/sql-sqlite-do@4.0.0-rc.110(effect@4.0.0-beta.107))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@types/pg@8.23.1)(effect@4.0.0-beta.107)(mysql2@3.23.1(@types/node@22.20.1))(pg@8.22.0)(postgres@3.4.9)(sql.js@1.14.1)(valibot@1.2.0(typescript@7.0.2))(zod@4.4.3))(effect@4.0.0-beta.107)(mongodb@6.21.0)(pg@8.22.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)))(ws@8.21.0)
       effect: 4.0.0-beta.107
