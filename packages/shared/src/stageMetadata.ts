@@ -18,7 +18,9 @@ export interface StageMetadataEnv {
 
 export type StageMetadataInput = string | StageMetadataEnv
 
-interface StageInfraConfig {
+export type AlchemyStateStoreKind = "local" | "cloudflare"
+
+export interface StageInfraConfig {
   readonly zone: Option.Option<string>
   readonly webFqdn: Option.Option<string>
   readonly apiFqdn: Option.Option<string>
@@ -27,6 +29,7 @@ interface StageInfraConfig {
   readonly apiObservabilityLogsHeadSamplingRate: Option.Option<number>
   readonly apiObservabilityTracesHeadSamplingRate: Option.Option<number>
   readonly useApiShield: Option.Option<boolean>
+  readonly alchemyStateStore: Option.Option<AlchemyStateStoreKind>
 }
 
 const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
@@ -38,7 +41,9 @@ const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
   apiObservabilityLogsHeadSamplingRate: Option.none(),
   apiObservabilityTracesHeadSamplingRate: Option.none(),
   useApiShield: Option.none(),
+  alchemyStateStore: Option.none(),
 }
+
 function nonEmptyStringOption(value: string | undefined): Option.Option<string> {
   return Option.fromNullishOr(value).pipe(
     Option.map((text) => text.trim()),
@@ -58,6 +63,7 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
       config.observability.tracesHeadSamplingRate,
     ),
     useApiShield: Option.some(config.useApiShield),
+    alchemyStateStore: Option.none(),
   }
 }
 
@@ -113,6 +119,11 @@ export interface InfraStageProps {
   readonly apiObservabilityLogsDestinations: readonly string[]
   /** Cloudflare Workers Observability destinations for exported API traces. */
   readonly apiObservabilityTracesDestinations: readonly string[]
+  /**
+   * Where Alchemy persists the resource graph for this stage.
+   * Local stages use disk `.alchemy/` state. Deployed stages use Cloudflare.state().
+   */
+  readonly alchemyStateStore: AlchemyStateStoreKind
 }
 
 export interface AppStageProps {
@@ -153,6 +164,7 @@ const InfraStagePropsSchema = Schema.Struct({
   apiObservabilityConsoleOutputEnabled: Schema.Boolean,
   apiObservabilityLogsDestinations: Schema.Array(Schema.String),
   apiObservabilityTracesDestinations: Schema.Array(Schema.String),
+  alchemyStateStore: Schema.Literals(["local", "cloudflare"]),
 })
 
 // oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
@@ -288,6 +300,7 @@ function localInfraStageProps(
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
+    alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "local"),
   }
 }
 
@@ -358,6 +371,7 @@ function deployedInfraStageProps(input: {
       config.apiObservabilityTracesDestinations,
       () => [],
     ),
+    alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "cloudflare"),
   }
 }
 
