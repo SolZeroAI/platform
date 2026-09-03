@@ -12,8 +12,7 @@ const userDataDir = process.env.SOLZERO_VERIFY_CHROME_PROFILE
 const timeoutMs = Number(process.env.SOLZERO_VERIFY_CHROME_TIMEOUT_MS || "45000")
 
 function die(message) {
-  console.error(`drive.mjs: ${message}`)
-  process.exit(1)
+  throw new Error(message)
 }
 
 function argValue(flag) {
@@ -80,6 +79,31 @@ class Cdp {
       })
     })
   }
+}
+
+function attachNetworkTap(cdp, bucket) {
+  cdp.events.set("Network.requestWillBeSent", (params) => {
+    const url = params.request?.url || ""
+    if (url.includes("/api/auth")) {
+      bucket.push({
+        type: "request",
+        url,
+        method: params.request?.method,
+        requestId: params.requestId,
+      })
+    }
+  })
+  cdp.events.set("Network.responseReceived", (params) => {
+    const url = params.response?.url || ""
+    if (url.includes("/api/auth")) {
+      bucket.push({
+        type: "response",
+        url,
+        status: params.response?.status,
+        requestId: params.requestId,
+      })
+    }
+  })
 }
 
 async function connectCdp() {
@@ -151,6 +175,7 @@ async function connectCdp() {
     cdp.sessionId = attached.sessionId
     await cdp.send("Page.enable")
     await cdp.send("Runtime.enable")
+    await cdp.send("Network.enable")
     return { chrome, cdp, ws }
   } catch (error) {
     ws?.close()
@@ -204,7 +229,7 @@ async function waitFor(cdp, expression, label) {
   die(`timed out waiting for ${label}`)
 }
 
-async function dumpPage(cdp, outDir) {
+async function dumpPage(cdp, outDir, extra = {}) {
   const html = await evaluate(cdp, "document.documentElement.outerHTML")
   const text = await evaluate(cdp, "document.body ? document.body.innerText : ''")
   const title = await evaluate(cdp, "document.title")
@@ -216,6 +241,42 @@ async function dumpPage(cdp, outDir) {
   writeOut(resolve(outDir, "after.title"), `${title ?? ""}\n`)
   writeOut(resolve(outDir, "after.href"), `${href ?? ""}\n`)
   writeOut(resolve(outDir, "after.png"), Buffer.from(shot.data, "base64"), undefined)
+  if (extra.network) {
+    writeOut(resolve(outDir, "network.json"), `${JSON.stringify(extra.network, null, 2)}\n`)
+  }
+}
+
+async function fillAndSubmitSignIn(cdp, email, password) {
+  return evaluate(
+    cdp,
+    `(function () {
+      const emailEl = document.getElementById("admin-email");
+      const passwordEl = document.getElementById("admin-password");
+      const form = document.querySelector("form");
+      if (!emailEl || !passwordEl || !form) return { ok: false, reason: "missing-form" };
+      emailEl.focus();
+      emailEl.value = ${JSON.stringify(email)};
+      emailEl.dispatchEvent(new Event("input", { bubbles: true }));
+      emailEl.dispatchEvent(new Event("change", { bubbles: true }));
+      passwordEl.focus();
+      passwordEl.value = ${JSON.stringify(password)};
+      passwordEl.dispatchEvent(new Event("input", { bubbles: true }));
+      passwordEl.dispatchEvent(new Event("change", { bubbles: true }));
+      const values = { emailLen: emailEl.value.length, passwordLen: passwordEl.value.length };
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.submit();
+      return { ok: true, ...values };
+    })()`,
+  )
+}
+
+async function signedInComposer(cdp) {
+  return Boolean(
+    await evaluate(
+      cdp,
+      `Boolean(document.querySelector("textarea.session-composer-textarea") && document.querySelector("nav a[href='/#new-agent']"))`,
+    ),
+  )
 }
 
 async function signInOnPage(cdp, email, password) {
@@ -224,39 +285,22 @@ async function signInOnPage(cdp, email, password) {
     `Boolean(document.getElementById("admin-email") && document.getElementById("admin-password") && document.querySelector("form"))`,
     "sign-in form (#admin-email / #admin-password)",
   )
-  // Client hydration attaches React onSubmit. A click before that does a native GET
-  // and leaves the welcome form on screen with no toast.
-  await waitFor(
-    cdp,
-    `Boolean(document.querySelector("script[src*='tanstack-start-dev-client']") && document.getElementById("admin-email"))`,
-    "TanStack Start client script",
-  )
-  await sleep(1500)
-
-  await evaluate(
-    cdp,
-    `(function () {
-      const email = document.getElementById("admin-email");
-      const password = document.getElementById("admin-password");
-      const form = document.querySelector("form");
-      const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-      nativeSet.call(email, ${JSON.stringify(email)});
-      email.dispatchEvent(new Event("input", { bubbles: true }));
-      email.dispatchEvent(new Event("change", { bubbles: true }));
-      nativeSet.call(password, ${JSON.stringify(password)});
-      password.dispatchEvent(new Event("input", { bubbles: true }));
-      password.dispatchEvent(new Event("change", { bubbles: true }));
-      if (typeof form.requestSubmit === "function") form.requestSubmit();
-      else form.submit();
-      return true;
-    })()`,
-  )
-
-  await waitFor(
-    cdp,
-    `Boolean(document.querySelector("nav a[href='/']") && document.querySelector("textarea.session-composer-textarea"))`,
-    "Agents composer after Sign In",
-  )
+  // Client hydration attaches React onSubmit. Submitting before that does a native GET
+  // and leaves the welcome form on screen with no toast. The client script tag is in
+  // the SSR HTML; it is not a hydration signal. Wait, then retry if still signed out.
+  await sleep(2500)
+  let lastFill = await fillAndSubmitSignIn(cdp, email, password)
+  const started = Date.now()
+  let attempts = 1
+  while (Date.now() - started < timeoutMs) {
+    if (await signedInComposer(cdp)) return lastFill
+    await sleep(1500)
+    if (attempts < 3 && (await evaluate(cdp, `Boolean(document.getElementById("admin-email"))`))) {
+      lastFill = await fillAndSubmitSignIn(cdp, email, password)
+      attempts += 1
+    }
+  }
+  throw new Error("timed out waiting for Agents composer after Sign In")
 }
 
 async function withPage(fn) {
@@ -268,6 +312,7 @@ async function withPage(fn) {
     session.chrome.kill("SIGTERM")
   }
 }
+
 
 async function cmdDump() {
   const url = argValue("--url")
@@ -303,14 +348,16 @@ async function cmdSignIn() {
   if (!password) die("SOLZERO_VERIFY_ADMIN_PASSWORD is empty; refuse to send a blank password")
 
   await withPage(async (cdp) => {
+    const network = []
+    attachNetworkTap(cdp, network)
     await navigate(cdp, url)
     try {
       await signInOnPage(cdp, email, password)
-      await dumpPage(cdp, outDir)
+      await dumpPage(cdp, outDir, { network })
       writeOut(resolve(outDir, "result.txt"), "signed-in\n")
       console.log(`signed-in ${email} -> ${outDir}`)
     } catch (error) {
-      await dumpPage(cdp, outDir)
+      await dumpPage(cdp, outDir, { network })
       writeOut(resolve(outDir, "result.txt"), "sign-in-not-confirmed\n")
       throw error
     }
@@ -325,13 +372,15 @@ async function cmdSignedInOpen() {
   if (!password) die("SOLZERO_VERIFY_ADMIN_PASSWORD is empty; refuse to send a blank password")
 
   await withPage(async (cdp) => {
+    const network = []
+    attachNetworkTap(cdp, network)
     await navigate(cdp, "http://localhost:3000/")
     await signInOnPage(cdp, email, password)
     if (!/^https?:\/\/localhost:3000\/?$/.test(url)) {
       await navigate(cdp, url)
       await sleep(800)
     }
-    await dumpPage(cdp, outDir)
+    await dumpPage(cdp, outDir, { network })
     const text = await evaluate(cdp, "document.body ? document.body.innerText : ''")
     const stillWelcome = Boolean(
       await evaluate(cdp, `Boolean(document.getElementById("admin-email"))`),
@@ -364,42 +413,69 @@ async function cmdCreateBot() {
       `Boolean(document.querySelector("input[aria-label='Bot name']") && document.body.innerText.includes("Always-on bots"))`,
       "Bots index",
     )
-    await evaluate(
-      cdp,
-      `(function () {
-        const nameInput = document.querySelector("input[aria-label='Bot name']");
-        const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-        nativeSet.call(nameInput, ${JSON.stringify(name)});
-        nameInput.dispatchEvent(new Event("input", { bubbles: true }));
-        nameInput.dispatchEvent(new Event("change", { bubbles: true }));
-        const button = [...document.querySelectorAll("button")].find((el) => el.textContent.trim() === "Create bot");
-        if (!button) throw new Error("Create bot button missing");
-        button.click();
-        return true;
-      })()`,
-    )
-    await waitFor(
-      cdp,
-      `Boolean(location.pathname.startsWith("/bots/") && location.pathname !== "/bots")`,
-      "bot detail after create",
-    )
-    await dumpPage(cdp, outDir)
-    writeOut(resolve(outDir, "result.txt"), `created ${name}\n`)
-    console.log(`created-bot ${name} -> ${outDir}`)
+    try {
+      await evaluate(
+        cdp,
+        `(function () {
+          const nameInput = document.querySelector("input[aria-label='Bot name']");
+          const form = nameInput ? nameInput.closest("form") : null;
+          if (!nameInput || !form) throw new Error("Bot name form missing");
+          const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+          nativeSet.call(nameInput, ${JSON.stringify(name)});
+          nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+          nameInput.dispatchEvent(new Event("change", { bubbles: true }));
+          if (typeof form.requestSubmit === "function") form.requestSubmit();
+          else form.submit();
+          return { nameLen: nameInput.value.length };
+        })()`,
+      )
+      const created = `${JSON.stringify(name)}`
+      await waitFor(
+        cdp,
+        `Boolean((location.pathname.startsWith("/bots/") && location.pathname !== "/bots") || document.body.innerText.includes(${created}))`,
+        "created bot URL or card",
+      )
+      const detailReady = Boolean(
+        await evaluate(
+          cdp,
+          `Boolean(document.body.innerText.includes(${created}) && document.body.innerText.includes("Create a routine"))`,
+        ),
+      )
+      if (!detailReady) {
+        await navigate(cdp, "http://localhost:3000/bots")
+        await waitFor(
+          cdp,
+          `Boolean(document.body.innerText.includes(${created}) && document.body.innerText.includes("Always-on bots"))`,
+          `bot card ${name} on /bots`,
+        )
+      }
+      await dumpPage(cdp, outDir)
+      writeOut(resolve(outDir, "result.txt"), `created ${name}\n`)
+      console.log(`created-bot ${name} -> ${outDir}`)
+    } catch (error) {
+      await dumpPage(cdp, outDir)
+      writeOut(resolve(outDir, "result.txt"), "create-bot-not-confirmed\n")
+      throw error
+    }
   })
 }
 
 const command = process.argv[2]
-if (command === "dump") await cmdDump()
-else if (command === "screenshot") await cmdScreenshot()
-else if (command === "sign-in") await cmdSignIn()
-else if (command === "signed-in-open") await cmdSignedInOpen()
-else if (command === "create-bot") await cmdCreateBot()
-else {
-  console.error("Usage: drive.mjs dump --url URL --out FILE")
-  console.error("       drive.mjs screenshot --url URL --out FILE")
-  console.error("       drive.mjs sign-in --url URL --email EMAIL --out-dir DIR")
-  console.error("       drive.mjs signed-in-open --url URL --email EMAIL --out-dir DIR")
-  console.error("       drive.mjs create-bot --name NAME --email EMAIL --out-dir DIR")
-  process.exit(hasFlag("--help") ? 0 : 2)
+try {
+  if (command === "dump") await cmdDump()
+  else if (command === "screenshot") await cmdScreenshot()
+  else if (command === "sign-in") await cmdSignIn()
+  else if (command === "signed-in-open") await cmdSignedInOpen()
+  else if (command === "create-bot") await cmdCreateBot()
+  else {
+    console.error("Usage: drive.mjs dump --url URL --out FILE")
+    console.error("       drive.mjs screenshot --url URL --out FILE")
+    console.error("       drive.mjs sign-in --url URL --email EMAIL --out-dir DIR")
+    console.error("       drive.mjs signed-in-open --url URL --email EMAIL --out-dir DIR")
+    console.error("       drive.mjs create-bot --name NAME --email EMAIL --out-dir DIR")
+    process.exit(hasFlag("--help") ? 0 : 2)
+  }
+} catch (error) {
+  console.error(`drive.mjs: ${error instanceof Error ? error.message : error}`)
+  process.exit(1)
 }

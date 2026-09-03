@@ -82,7 +82,7 @@ Stable handles (from `apps/web/src/routes/_authenticated.tsx` and the sidebar):
 | `#admin-email` | email textbox | sign-in |
 | `#admin-password` | password textbox | sign-in |
 | `Sign In` | submit button | sign-in |
-| `Agents` | sidebar link to `/` | authenticated shell |
+| `Agents` | sidebar link to `/#new-agent` | authenticated shell |
 | `Previous sessions` | sidebar hash link / home cue | `/` |
 | `Workflows` | sidebar link to `/workflows` | authenticated shell |
 | `Bots` | sidebar link to `/bots` | authenticated shell |

@@ -31,7 +31,7 @@ ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
 
 `bots/after.text` must contain `Always-on bots` and `Create bot`. Empty state copy is `No bots yet`. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof. The instructions field accessible name is `Bot instructions`; its placeholder is `Instructions for this bot`.
 
-Create a unique name per run (`verify-bot-<runId>`). `create-bot` is ready when `$ART/bot-created/after.href` is `/bots/$botId` and `after.text` contains the name.
+Create a unique name per run (`verify-bot-<runId>`). `create-bot` is ready when `after.text` contains the name. Prefer the detail page (`Create a routine` plus `/bots/$botId`). If the URL changes before that page paints, the command re-opens `/bots` and waits for the card. Re-open `/bots` with `signed-in-open` to prove persistence.
 
 ## Gotchas
 
