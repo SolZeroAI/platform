@@ -21,11 +21,13 @@ Workflows is the builder index at `/workflows`. A signed-in user creates an unsa
 
 ```bash
 ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-.cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/workflows --out "$ART/workflows.html"
-.cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/workflows --out "$ART/workflows.png"
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
+  --url http://localhost:3000/workflows \
+  --email admin@example.com \
+  --out-dir "$ART/workflows"
 ```
 
-`workflows.html.text` must contain `Create a new Workflow` and the three card titles `Template`, `Build with AI`, and `Import`. Unauthenticated visits render the welcome form on the same URL. Each `chrome` command uses a fresh profile, so dump `/workflows` after `chrome sign-in` is still signed out.
+`workflows/after.text` must contain `Create a new Workflow` and the three card titles `Template`, `Build with AI`, and `Import`. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof.
 
 Build-with-AI needs a model provider. Template selection does not. Prefer Template when proving the index without gateway credentials.
 

@@ -19,13 +19,19 @@ Bots is the always-on bot list at `/bots`. A signed-in user names a bot, adds in
 
 ```bash
 ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-.cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/bots --out "$ART/bots.html"
-.cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/bots --out "$ART/bots.png"
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
+  --url http://localhost:3000/bots \
+  --email admin@example.com \
+  --out-dir "$ART/bots"
+.cursor/skills/verify-solzero/control-solzero chrome create-bot \
+  --name "verify-bot-<runId>" \
+  --email admin@example.com \
+  --out-dir "$ART/bot-created"
 ```
 
-`bots.html.text` must contain `Always-on bots` and `Create bot`. Empty state copy is `No bots yet`. Unauthenticated visits render the welcome form on the same URL. Each `chrome` command uses a fresh profile, so dump `/bots` after `chrome sign-in` is still signed out. The instructions field accessible name is `Bot instructions`; its placeholder is `Instructions for this bot`.
+`bots/after.text` must contain `Always-on bots` and `Create bot`. Empty state copy is `No bots yet`. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof. The instructions field accessible name is `Bot instructions`; its placeholder is `Instructions for this bot`.
 
-Create a unique name per run (`verify-bot-<runId>`). After submit, dump `/bots` again and confirm the new card, or dump the detail URL from the navigation.
+Create a unique name per run (`verify-bot-<runId>`). `create-bot` is ready when `$ART/bot-created/after.href` is `/bots/$botId` and `after.text` contains the name.
 
 ## Gotchas
 

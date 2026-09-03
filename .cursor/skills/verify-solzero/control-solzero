@@ -558,7 +558,83 @@ cmd_chrome() {
 
 cmd_admin_password() {
   local out="$RUN_DIR/admin-password"
-  (cd "$REPO_ROOT" && nub run auth:admin-password -- dev --local) >"$out"
+  # Read the Worker-bound secret from local Alchemy disk state.
+  # Do not call `nub run auth:admin-password` / `alchemy state get`:
+  # those return a different Alchemy.Random attr.text than the binding
+  # S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD, and Better Auth rejects that value.
+  python3 - "$REPO_ROOT" "$out" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+repo, dest = Path(sys.argv[1]), Path(sys.argv[2])
+state_root = repo / "packages/infra/.alchemy/state"
+
+
+def redacted_password(value):
+    if isinstance(value, str) and len(value) >= 12:
+        return value
+    return None
+
+
+def from_admin_password_file(path):
+    data = json.loads(path.read_text())
+    return redacted_password(((data.get("attr") or {}).get("text") or {}).get("__redacted__"))
+
+
+def from_api_binding(path):
+    data = json.loads(path.read_text())
+
+    def walk(node):
+        if isinstance(node, dict):
+            binding = node.get("S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD")
+            if isinstance(binding, dict):
+                found = redacted_password(binding.get("__redacted__"))
+                if found:
+                    return found
+            for child in node.values():
+                found = walk(child)
+                if found:
+                    return found
+        elif isinstance(node, list):
+            for child in node:
+                found = walk(child)
+                if found:
+                    return found
+        return None
+
+    return walk(data)
+
+
+candidates = []
+if (state_root / "S0/dev/admin-password.json").is_file():
+    candidates.append(state_root / "S0/dev/admin-password.json")
+candidates.extend(sorted(state_root.glob("*/dev/admin-password.json")))
+source = None
+password = None
+for path in candidates:
+    password = from_admin_password_file(path)
+    if password:
+        source = path
+        break
+if not password:
+    api_candidates = []
+    if (state_root / "S0/dev/api.json").is_file():
+        api_candidates.append(state_root / "S0/dev/api.json")
+    api_candidates.extend(sorted(state_root.glob("*/dev/api.json")))
+    for path in api_candidates:
+        password = from_api_binding(path)
+        if password:
+            source = path
+            break
+if not password:
+    raise SystemExit(
+        "control-solzero: no Worker-bound admin password in packages/infra/.alchemy/state. "
+        "Launch has not finished writing local Alchemy secrets."
+    )
+dest.write_text(f"{password}\n")
+print(f"admin-password-source={source}")
+PY
   chmod 600 "$out"
   echo "admin-password-file=$out"
   echo "admin-email=$ADMIN_EMAIL"
@@ -645,6 +721,7 @@ case "$cmd" in
   paths) cmd_paths "$@" ;;
   *)
     echo "Usage: control-solzero launch | doctor | http | chrome | admin-password | cleanup | artifact-dir | urls | paths" >&2
+    echo "chrome: dump | screenshot | sign-in | signed-in-open | create-bot" >&2
     exit 2
     ;;
 esac

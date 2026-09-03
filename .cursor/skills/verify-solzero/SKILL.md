@@ -65,7 +65,7 @@ Order:
    .cursor/skills/verify-solzero/control-solzero http GET /health --out "$ART/health.json"
    .cursor/skills/verify-solzero/control-solzero http GET http://localhost:3000/ --out "$ART/web-root.html"
    ```
-3. UI through Chrome DevTools. The helper starts `/opt/google/chrome/chrome` with a disposable profile and a free loopback DevTools port. Do not invoke the `google-chrome` wrapper; it can attach to an existing desktop Chrome. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`. Each `chrome` invocation starts a new headless Chrome with a unique profile (`drive.mjs` appends the process id). Session cookies from `chrome sign-in` do not carry into a later `chrome dump` or `screenshot`. That is a harness gap: do not treat a follow-up dump of `/workflows`, `/bots`, or `/settings` as an authenticated proof.
+3. UI through Chrome DevTools. The helper starts `/opt/google/chrome/chrome` with a disposable profile and a free loopback DevTools port. Do not invoke the `google-chrome` wrapper; it can attach to an existing desktop Chrome. Relative `--out` paths resolve from `.cursor/skills/verify-solzero/` only if you pass them that way; prefer `$ART/...`. Each `chrome` invocation starts a new headless Chrome with a unique profile (`drive.mjs` appends the process id).    Session cookies from `chrome sign-in` do not carry into a later `chrome dump` or `screenshot`. Use `chrome signed-in-open` (same Chrome process: sign in, then open the URL) for authenticated proof of `/workflows`, `/bots`, or `/settings`.
    ```bash
    .cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/ --out "$ART/sign-in.html"
    .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/sign-in.png"
@@ -106,7 +106,13 @@ export SOLZERO_VERIFY_ADMIN_PASSWORD="$(cat .cursor/skills/verify-solzero/.run/a
   --url http://localhost:3000/ \
   --email admin@example.com \
   --out-dir "$ART/signed-in"
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
+  --url http://localhost:3000/workflows \
+  --email admin@example.com \
+  --out-dir "$ART/workflows"
 ```
+
+`admin-password` reads the Worker-bound secret from local Alchemy disk state (`packages/infra/.alchemy/state/S0/dev/admin-password.json`, or the `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD` binding in `api.json`). Do not pipe `nub run auth:admin-password` into the helper. Alchemy `state get` currently returns a different `attr.text` than the bound secret, and `POST /api/auth/sign-in/email` rejects that value.
 
 `nub run test:e2e` needs `S0_API_KEY` and a live model path. It does not prove the web UI. Use it only when the feature file says so.
 
@@ -158,6 +164,8 @@ Script: `.cursor/skills/verify-solzero/control-solzero` (executable). Chrome ste
 .cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out artifacts/<runId>/sign-in.png
 .cursor/skills/verify-solzero/control-solzero admin-password
 .cursor/skills/verify-solzero/control-solzero chrome sign-in --url http://localhost:3000/ --email admin@example.com --out-dir artifacts/<runId>/signed-in
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open --url http://localhost:3000/workflows --email admin@example.com --out-dir artifacts/<runId>/workflows
+.cursor/skills/verify-solzero/control-solzero chrome create-bot --name verify-bot-<runId> --email admin@example.com --out-dir artifacts/<runId>/bot-created
 .cursor/skills/verify-solzero/control-solzero artifact-dir
 .cursor/skills/verify-solzero/control-solzero urls
 .cursor/skills/verify-solzero/control-solzero paths
