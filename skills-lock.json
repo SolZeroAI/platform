@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "pr-lens": {
+      "source": "coldteadotai/pr-lens",
+      "sourceType": "github",
+      "skillPath": "skills/pr-lens/SKILL.md",
+      "computedHash": "fd5435b7d3baeb8302d35d2d1dddd202e401a857aebde6696f81d5c62f38b305"
+    }
+  }
+}
