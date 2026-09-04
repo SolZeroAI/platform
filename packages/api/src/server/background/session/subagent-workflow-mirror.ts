@@ -13,6 +13,7 @@ import {
 } from "@solzero/shared"
 import { decodeJsonRecord, parseJson } from "../../lib/json"
 import { createWorkflowStoreFromD1, type WorkflowStorePromise } from "../db/workflows"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { parseSubagentChunkActivity } from "../isolate/agent/delegation"
 import type { Env } from "../types"
 import type { SessionRepository } from "./repository"
@@ -228,7 +229,7 @@ export async function mirrorSubagentWorkflowEvent(input: {
   sessionId: string
   event: SubagentSessionEvent
 }): Promise<void> {
-  const workflowStore = createWorkflowStoreFromD1(input.env.DB)
+  const workflowStore = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
   const workflow = await authorizedWorkflowContext({
     repository: input.repository,
     workflowStore,

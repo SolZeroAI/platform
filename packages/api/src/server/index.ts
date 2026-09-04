@@ -1,3 +1,5 @@
+import "./effect/db/postgres-promise-drizzle"
+
 export { handleGitHubAppWebhookRequest } from "./background/auth/github-webhook"
 export { getAuthProviderRegistry, getPublicAuthProviderRegistry } from "./background/db/auth-config"
 export { normalizeCloudflareAiGatewayResponse } from "./background/ai-providers/cloudflare-ai-gateway"

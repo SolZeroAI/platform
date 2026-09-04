@@ -17,8 +17,15 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { sessions, workflowSessionReuseKeys } from "../../effect/db/schema"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import {
+  controlPlaneSql,
+  isControlPlaneDb,
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import type { SessionStatus } from "../types"
 import { d1Error, type D1Error } from "./errors"
 
@@ -91,18 +98,20 @@ export interface ListSessionIndexOptions {
   offset: number
 }
 
-const SESSION_SORT_COLUMNS = {
-  updatedAt: sessions.updatedAt,
-  createdAt: sessions.createdAt,
-  title: sessions.title,
-  repoOwner: sessions.repoOwner,
-  repoName: sessions.repoName,
-  status: sessions.status,
-  sessionKind: sessions.sessionKind,
-  agentRuntime: sessions.agentRuntime,
-  source: sessions.source,
-  model: sessions.model,
-} satisfies Record<string, AnyColumn>
+function sessionSortColumns(schema: AppSchema) {
+  return {
+    updatedAt: schema.sessions.updatedAt,
+    createdAt: schema.sessions.createdAt,
+    title: schema.sessions.title,
+    repoOwner: schema.sessions.repoOwner,
+    repoName: schema.sessions.repoName,
+    status: schema.sessions.status,
+    sessionKind: schema.sessions.sessionKind,
+    agentRuntime: schema.sessions.agentRuntime,
+    source: schema.sessions.source,
+    model: schema.sessions.model,
+  } satisfies Record<string, AnyColumn>
+}
 
 function stringifySecretKeys(keys: readonly string[] | null | undefined): string {
   return stringifyJson(Array.from(new Set((keys ?? []).filter((key) => key.length > 0))))
@@ -123,12 +132,17 @@ export interface UpsertWorkflowSessionReuseKeyInput extends WorkflowSessionReuse
 
 export class SessionIndexStore {
   private readonly drizzle
+  private readonly schema
+  private readonly sql
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
+    this.sql = controlPlaneSql(handle)
   }
 
-  private toRecord(row: typeof sessions.$inferSelect): SessionIndexRecord {
+  private toRecord(row: AppSchema["sessions"]["$inferSelect"]): SessionIndexRecord {
     return {
       id: row.id,
       user_id: row.userId,
@@ -164,7 +178,12 @@ export class SessionIndexStore {
 
   getById = Effect.fn("db.sessionIndex.getById")(function* (this: SessionIndexStore, id: string) {
     const rows = yield* Effect.tryPromise({
-      try: () => this.drizzle.select().from(sessions).where(eq(sessions.id, id)).limit(1),
+      try: () =>
+        this.drizzle
+          .select()
+          .from(this.schema.sessions)
+          .where(eq(this.schema.sessions.id, id))
+          .limit(1),
       catch: d1Error("db.sessionIndex.getById"),
     })
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toRecord(row))
@@ -176,7 +195,7 @@ export class SessionIndexStore {
   ) {
     yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.insert(sessions).values({
+        this.drizzle.insert(this.schema.sessions).values({
           id: input.id,
           userId: input.userId,
           title: input.title,
@@ -235,7 +254,7 @@ export class SessionIndexStore {
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(sessions)
+          .update(this.schema.sessions)
           .set({
             repoOwner: input.repoOwner,
             repoName: input.repoName,
@@ -245,8 +264,8 @@ export class SessionIndexStore {
             subagents,
             updatedAt: input.updatedAt,
           })
-          .where(eq(sessions.id, input.id))
-          .returning({ id: sessions.id }),
+          .where(eq(this.schema.sessions.id, input.id))
+          .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.updateTooling"),
     })
     return updated.length > 0
@@ -261,10 +280,10 @@ export class SessionIndexStore {
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(sessions)
+          .update(this.schema.sessions)
           .set({ status, updatedAt })
-          .where(eq(sessions.id, id))
-          .returning({ id: sessions.id }),
+          .where(eq(this.schema.sessions.id, id))
+          .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.updateStatus"),
     })
     return updated.length > 0
@@ -273,7 +292,10 @@ export class SessionIndexStore {
   delete = Effect.fn("db.sessionIndex.delete")(function* (this: SessionIndexStore, id: string) {
     const deleted = yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.delete(sessions).where(eq(sessions.id, id)).returning({ id: sessions.id }),
+        this.drizzle
+          .delete(this.schema.sessions)
+          .where(eq(this.schema.sessions.id, id))
+          .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.delete"),
     })
     return deleted.length > 0
@@ -283,30 +305,30 @@ export class SessionIndexStore {
     this: SessionIndexStore,
     options: ListSessionIndexOptions,
   ) {
-    const conditions: SQL[] = [eq(sessions.userId, options.userId)]
-    addExactFilter(conditions, sessions.status, options.status)
-    addNotEqualFilter(conditions, sessions.status, options.excludeStatus)
-    addExactFilter(conditions, sessions.sessionKind, options.sessionKind)
-    addExactFilter(conditions, sessions.agentRuntime, options.agentRuntime)
-    addExactFilter(conditions, sessions.source, options.source)
-    addLikeFilter(conditions, options.repoOwner, [sessions.repoOwner])
-    addLikeFilter(conditions, options.repoName, [sessions.repoName])
+    const conditions: SQL[] = [eq(this.schema.sessions.userId, options.userId)]
+    addExactFilter(conditions, this.schema.sessions.status, options.status)
+    addNotEqualFilter(conditions, this.schema.sessions.status, options.excludeStatus)
+    addExactFilter(conditions, this.schema.sessions.sessionKind, options.sessionKind)
+    addExactFilter(conditions, this.schema.sessions.agentRuntime, options.agentRuntime)
+    addExactFilter(conditions, this.schema.sessions.source, options.source)
+    addLikeFilter(conditions, options.repoOwner, [this.schema.sessions.repoOwner])
+    addLikeFilter(conditions, options.repoName, [this.schema.sessions.repoName])
     addLikeFilter(conditions, options.q, [
-      sessions.title,
-      sessions.repoOwner,
-      sessions.repoName,
-      sessions.branchName,
-      sessions.model,
-      sessions.reasoningEffort,
-      sessions.sessionKind,
-      sessions.agentRuntime,
-      sessions.source,
-      sessions.toolsJson,
-      sessions.customMcpJson,
+      this.schema.sessions.title,
+      this.schema.sessions.repoOwner,
+      this.schema.sessions.repoName,
+      this.schema.sessions.branchName,
+      this.schema.sessions.model,
+      this.schema.sessions.reasoningEffort,
+      this.schema.sessions.sessionKind,
+      this.schema.sessions.agentRuntime,
+      this.schema.sessions.source,
+      this.schema.sessions.toolsJson,
+      this.schema.sessions.customMcpJson,
     ])
     Match.value(Boolean(options.includeIncognito)).pipe(
       Match.when(false, () => {
-        conditions.push(eq(sessions.incognito, 0))
+        conditions.push(eq(this.schema.sessions.incognito, 0))
       }),
       Match.orElse(() => undefined),
     )
@@ -318,9 +340,9 @@ export class SessionIndexStore {
       try: () =>
         this.drizzle
           .select()
-          .from(sessions)
+          .from(this.schema.sessions)
           .where(where)
-          .orderBy(resolveSessionOrder(options))
+          .orderBy(resolveSessionOrder(this.schema, options))
           .limit(limit + 1)
           .offset(offset),
       catch: d1Error("db.sessionIndex.list"),
@@ -338,15 +360,12 @@ export class SessionIndexStore {
     const countRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ total: sql<number>`count(*)` })
-          .from(sessions)
+          .select({ total: this.sql.countStar() })
+          .from(this.schema.sessions)
           .where(where),
       catch: d1Error("db.sessionIndex.list"),
     })
-    const total = Option.getOrElse(
-      Option.map(Option.fromNullishOr(countRows[0]), (row) => row.total),
-      () => 0,
-    )
+    const total = this.sql.asFiniteNumber(countRows[0]?.total)
 
     return {
       sessions: records,
@@ -360,9 +379,9 @@ export class SessionIndexStore {
       const rows = yield* Effect.tryPromise({
         try: () =>
           this.drizzle
-            .select({ sessionId: workflowSessionReuseKeys.sessionId })
-            .from(workflowSessionReuseKeys)
-            .where(workflowSessionReuseKeyWhere(input))
+            .select({ sessionId: this.schema.workflowSessionReuseKeys.sessionId })
+            .from(this.schema.workflowSessionReuseKeys)
+            .where(workflowSessionReuseKeyWhere(this.schema, input))
             .limit(1),
         catch: d1Error("db.sessionIndex.getWorkflowSessionReuseSessionId"),
       })
@@ -375,7 +394,7 @@ export class SessionIndexStore {
       yield* Effect.tryPromise({
         try: () =>
           this.drizzle
-            .insert(workflowSessionReuseKeys)
+            .insert(this.schema.workflowSessionReuseKeys)
             .values({
               userId: input.userId,
               workflowId: input.workflowId,
@@ -388,11 +407,11 @@ export class SessionIndexStore {
             })
             .onConflictDoUpdate({
               target: [
-                workflowSessionReuseKeys.userId,
-                workflowSessionReuseKeys.workflowId,
-                workflowSessionReuseKeys.nodeId,
-                workflowSessionReuseKeys.sessionKind,
-                workflowSessionReuseKeys.keyHash,
+                this.schema.workflowSessionReuseKeys.userId,
+                this.schema.workflowSessionReuseKeys.workflowId,
+                this.schema.workflowSessionReuseKeys.nodeId,
+                this.schema.workflowSessionReuseKeys.sessionKind,
+                this.schema.workflowSessionReuseKeys.keyHash,
               ],
               set: {
                 sessionId: input.sessionId,
@@ -448,16 +467,20 @@ function combineConditions(conditions: SQL[]) {
   )
 }
 
-function resolveSessionOrder(options: Pick<ListSessionIndexOptions, "sortBy" | "sortDir">): SQL {
+function resolveSessionOrder(
+  schema: AppSchema,
+  options: Pick<ListSessionIndexOptions, "sortBy" | "sortDir">,
+): SQL {
+  const columns = sessionSortColumns(schema)
   const column = Option.match(
     Option.fromNullishOr(options.sortBy).pipe(
-      Option.filter((key): key is keyof typeof SESSION_SORT_COLUMNS =>
-        Object.prototype.hasOwnProperty.call(SESSION_SORT_COLUMNS, key),
+      Option.filter((key): key is keyof typeof columns =>
+        Object.prototype.hasOwnProperty.call(columns, key),
       ),
     ),
     {
-      onNone: () => SESSION_SORT_COLUMNS.updatedAt,
-      onSome: (key) => SESSION_SORT_COLUMNS[key],
+      onNone: () => columns.updatedAt,
+      onSome: (key) => columns[key],
     },
   )
   return Match.value(options.sortDir === "asc").pipe(
@@ -473,13 +496,13 @@ function clampLimit(limit: number): number {
   )
 }
 
-function workflowSessionReuseKeyWhere(input: WorkflowSessionReuseKeyInput) {
+function workflowSessionReuseKeyWhere(schema: AppSchema, input: WorkflowSessionReuseKeyInput) {
   return and(
-    eq(workflowSessionReuseKeys.userId, input.userId),
-    eq(workflowSessionReuseKeys.workflowId, input.workflowId),
-    eq(workflowSessionReuseKeys.nodeId, input.nodeId),
-    eq(workflowSessionReuseKeys.sessionKind, input.sessionKind),
-    eq(workflowSessionReuseKeys.keyHash, input.keyHash),
+    eq(schema.workflowSessionReuseKeys.userId, input.userId),
+    eq(schema.workflowSessionReuseKeys.workflowId, input.workflowId),
+    eq(schema.workflowSessionReuseKeys.nodeId, input.nodeId),
+    eq(schema.workflowSessionReuseKeys.sessionKind, input.sessionKind),
+    eq(schema.workflowSessionReuseKeys.keyHash, input.keyHash),
   )
 }
 
@@ -515,8 +538,15 @@ export interface SessionIndexStorePromise {
   upsertWorkflowSessionReuseKey(input: UpsertWorkflowSessionReuseKeyInput): Promise<void>
 }
 
-export function createSessionIndexStoreFromD1(db: D1Database): SessionIndexStorePromise {
-  const store = new SessionIndexStore(makeD1Drizzle(db))
+export function createSessionIndexStoreFromD1(
+  db: D1Database | ControlPlaneDb,
+): SessionIndexStorePromise {
+  const store = new SessionIndexStore(
+    Match.value(db).pipe(
+      Match.when(isControlPlaneDb, (handle) => handle),
+      Match.orElse((d1) => makeD1Drizzle(d1)),
+    ),
+  )
   return {
     getById: (id) => runSessionIndexOption(store.getById(id)),
     getWorkflowSessionReuseSessionId: (input) =>

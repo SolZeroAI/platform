@@ -1,5 +1,6 @@
 import { skills, type SkillSource } from "@cloudflare/think"
 import type { SessionToolSpec } from "@solzero/shared"
+import type { ControlPlaneDb } from "../../effect/db/control-plane-db"
 import { listIsolateGlobalSkillNames } from "../skills/catalog"
 
 const WORKFLOW_BUILDER_SKILL_NAME = "s0.workflow-builder"
@@ -101,7 +102,7 @@ export function buildIsolateSkillSources(input: {
 }
 
 export async function buildResolvedIsolateSkillSources(input: {
-  db: D1Database
+  db: D1Database | ControlPlaneDb
   tools: readonly SessionToolSpec[] | null | undefined
   skillsBucket?: R2Bucket
   userId?: string | null

@@ -13,8 +13,14 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- UserProviderConfigsStore is a D1 factory. Production callers import at module scope; replacing this constructor needs a Layer-owned D1 capability.
-import { makeD1Drizzle, type D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { userProviderConfigs, userProviderPreferences } from "../../effect/db/schema"
+import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import {
+  isControlPlaneDb,
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { D1Error, UserProviderPreferenceMigrationError, d1Error } from "./errors"
 
@@ -46,11 +52,11 @@ export interface UserProviderSettingsUpdate {
   customProviders: UserProviderCustomInput[]
 }
 
-type UserProviderConfigRow = typeof userProviderConfigs.$inferSelect & {
+type UserProviderConfigRow = AppSchema["userProviderConfigs"]["$inferSelect"] & {
   scope: UserProviderScope
 }
 
-type UserProviderPreferenceRow = typeof userProviderPreferences.$inferSelect
+type UserProviderPreferenceRow = AppSchema["userProviderPreferences"]["$inferSelect"]
 
 interface StoredCustomProviderPayload {
   name: string
@@ -196,13 +202,16 @@ function describeUserProviderD1Error(error: D1Error): string {
 
 export class UserProviderConfigsStore {
   private readonly drizzle
+  private readonly schema
 
   constructor(
-    drizzle: D1DrizzleDatabase,
-    private readonly d1: D1Database,
+    db: AppDrizzleDatabase | ControlPlaneDb,
+    private readonly d1: D1Database | undefined,
     private readonly encryptionKey: string,
   ) {
-    this.drizzle = drizzle
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   getSettingsSnapshot = Effect.fn("db.userProviderConfigs.getSettingsSnapshot")(function* (
@@ -328,11 +337,11 @@ export class UserProviderConfigsStore {
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .delete(userProviderConfigs)
+              .delete(this.schema.userProviderConfigs)
               .where(
                 and(
-                  eq(userProviderConfigs.userId, userId),
-                  eq(userProviderConfigs.providerId, row.providerId),
+                  eq(this.schema.userProviderConfigs.userId, userId),
+                  eq(this.schema.userProviderConfigs.providerId, row.providerId),
                 ),
               ),
           catch: d1Error("db.userProviderConfigs.replaceSettings"),
@@ -384,7 +393,7 @@ export class UserProviderConfigsStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(userProviderPreferences)
+          .insert(this.schema.userProviderPreferences)
           .values({
             userId,
             defaultModel: input.defaultModel,
@@ -397,7 +406,7 @@ export class UserProviderConfigsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: userProviderPreferences.userId,
+            target: this.schema.userProviderPreferences.userId,
             set: {
               defaultModel: input.defaultModel,
               defaultIsolateStepLimit: input.defaultIsolateStepLimit,
@@ -419,9 +428,21 @@ export class UserProviderConfigsStore {
   ) {
     const existingPreferenceRows = yield* this.getPreferenceWithoutOpenCodePermission(userId)
     const existingPreference = Option.fromNullishOr(existingPreferenceRows[0])
+    const d1 = yield* Option.match(Option.fromNullishOr(this.d1), {
+      onNone: () =>
+        Effect.fail(
+          new D1Error({
+            operation: "db.userProviderConfigs.replaceSettings",
+            cause: new UserProviderPreferenceMigrationError({
+              message: USER_PROVIDER_OPENCODE_PERMISSION_MIGRATION_MESSAGE,
+            }),
+          }),
+        ),
+      onSome: Effect.succeed,
+    })
     yield* Effect.tryPromise({
       try: () =>
-        this.d1
+        d1
           .prepare(
             `INSERT INTO user_provider_preferences (
               user_id,
@@ -473,7 +494,7 @@ export class UserProviderConfigsStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(userProviderConfigs)
+          .insert(this.schema.userProviderConfigs)
           .values({
             userId,
             providerId: override.providerId,
@@ -486,7 +507,10 @@ export class UserProviderConfigsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [userProviderConfigs.userId, userProviderConfigs.providerId],
+            target: [
+              this.schema.userProviderConfigs.userId,
+              this.schema.userProviderConfigs.providerId,
+            ],
             set: {
               scope: "shared_override",
               displayName: override.displayName,
@@ -529,7 +553,7 @@ export class UserProviderConfigsStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .insert(userProviderConfigs)
+          .insert(this.schema.userProviderConfigs)
           .values({
             userId,
             providerId: provider.providerId,
@@ -542,7 +566,10 @@ export class UserProviderConfigsStore {
             updatedAt: now,
           })
           .onConflictDoUpdate({
-            target: [userProviderConfigs.userId, userProviderConfigs.providerId],
+            target: [
+              this.schema.userProviderConfigs.userId,
+              this.schema.userProviderConfigs.providerId,
+            ],
             set: {
               scope: "custom_provider",
               displayName: provider.name,
@@ -595,9 +622,12 @@ export class UserProviderConfigsStore {
       try: () =>
         this.drizzle
           .select()
-          .from(userProviderConfigs)
-          .where(eq(userProviderConfigs.userId, userId))
-          .orderBy(asc(userProviderConfigs.scope), asc(userProviderConfigs.providerId)),
+          .from(this.schema.userProviderConfigs)
+          .where(eq(this.schema.userProviderConfigs.userId, userId))
+          .orderBy(
+            asc(this.schema.userProviderConfigs.scope),
+            asc(this.schema.userProviderConfigs.providerId),
+          ),
       catch: d1Error("db.userProviderConfigs.listConfigRows"),
     })
     return rows.map(
@@ -613,8 +643,8 @@ export class UserProviderConfigsStore {
       try: () =>
         this.drizzle
           .select()
-          .from(userProviderPreferences)
-          .where(eq(userProviderPreferences.userId, userId))
+          .from(this.schema.userProviderPreferences)
+          .where(eq(this.schema.userProviderPreferences.userId, userId))
           .limit(1),
       catch: d1Error("db.userProviderConfigs.getPreference"),
     }).pipe(
@@ -633,14 +663,14 @@ export class UserProviderConfigsStore {
       try: () =>
         this.drizzle
           .select({
-            userId: userProviderPreferences.userId,
-            defaultModel: userProviderPreferences.defaultModel,
-            defaultIsolateStepLimit: userProviderPreferences.defaultIsolateStepLimit,
-            createdAt: userProviderPreferences.createdAt,
-            updatedAt: userProviderPreferences.updatedAt,
+            userId: this.schema.userProviderPreferences.userId,
+            defaultModel: this.schema.userProviderPreferences.defaultModel,
+            defaultIsolateStepLimit: this.schema.userProviderPreferences.defaultIsolateStepLimit,
+            createdAt: this.schema.userProviderPreferences.createdAt,
+            updatedAt: this.schema.userProviderPreferences.updatedAt,
           })
-          .from(userProviderPreferences)
-          .where(eq(userProviderPreferences.userId, userId))
+          .from(this.schema.userProviderPreferences)
+          .where(eq(this.schema.userProviderPreferences.userId, userId))
           .limit(1),
       catch: d1Error("db.userProviderConfigs.getPreferenceWithoutOpenCodePermission"),
     })
@@ -680,10 +710,20 @@ export interface UserProviderConfigsStorePromise {
 }
 
 export function createUserProviderConfigsStoreFromD1(
-  db: D1Database,
+  db: D1Database | ControlPlaneDb,
   encryptionKey: string,
 ): UserProviderConfigsStorePromise {
-  const store = new UserProviderConfigsStore(makeD1Drizzle(db), db, encryptionKey)
+  const resolved = Match.value(db).pipe(
+    Match.when(isControlPlaneDb, (handle) => ({
+      db: handle,
+      d1: undefined,
+    })),
+    Match.orElse((d1) => ({
+      db: makeD1Drizzle(d1),
+      d1,
+    })),
+  )
+  const store = new UserProviderConfigsStore(resolved.db, resolved.d1, encryptionKey)
   return {
     getSettingsSnapshot: (userId) =>
       runUserProviderConfigsEffect(store.getSettingsSnapshot(userId)),

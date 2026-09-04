@@ -11,6 +11,7 @@ import {
   ReasoningEffortSchema,
   type ProviderModelDefinition,
 } from "./provider-config"
+import { type S0DatabaseEngine } from "./database-engine"
 import {
   normalizeSecretReference,
   SecretReferenceSchema,
@@ -20,6 +21,7 @@ import {
 export const S0_CONFIG_SCHEMA_VERSION = 1 as const
 export const S0_CONFIG_STAGE_NAMES = ["dev", "test", "pre", "prod"] as const
 export type S0ConfigStageName = (typeof S0_CONFIG_STAGE_NAMES)[number]
+export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
 

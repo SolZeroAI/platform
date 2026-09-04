@@ -11,7 +11,16 @@ import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
 import type * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import type { ApiEnv } from "infra/types/env"
+import {
+  databaseEngineFromEnv,
+  hasControlPlane,
+  makeControlPlaneFromEnv,
+  runControlPlaneSql,
+  runControlPlaneSqlFirst,
+} from "../effect/db/control-plane-db"
+import * as pgSchema from "../effect/db/schema.pg"
 import { getAdminConfig, isAdminEmailForEnv } from "../background/db/admin-config"
 import {
   getAuthProviderRegistry,
@@ -92,7 +101,7 @@ type GitHubAppUserToken = {
 type GitHubAppRefreshInput =
   | {
       kind: "refresh"
-      db: ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } }
+      db: ApiEnv
       clientId: string
       clientSecret: string
       refreshToken: string
@@ -114,10 +123,8 @@ function normalizeBaseUrl(value: string | undefined): string {
   return (value || "http://localhost:3000").replace(/\/+$/, "")
 }
 
-function hasQueryableDb(
-  env: ApiEnv,
-): env is ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } } {
-  return Boolean(env.DB && typeof (env.DB as { prepare?: unknown }).prepare === "function")
+function hasQueryableDb(env: ApiEnv): boolean {
+  return hasControlPlane(env)
 }
 
 function profileString(profile: Record<string, unknown>, key: string): Option.Option<string> {
@@ -323,7 +330,7 @@ function invalidTokenRefreshFailureOption(
 
 function logInvalidGitHubTokenRefresh(
   input: {
-    env: ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } }
+    env: ApiEnv
     row: GitHubAccountTokenRow
     response: HttpClientResponse.HttpClientResponse
   },
@@ -355,15 +362,15 @@ const getGitHubAccountTokenRow = Effect.fn("auth.betterAuth.githubAccountTokenRo
     Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
     Effect.flatMap((dbEnv) =>
       Effect.tryPromise(() =>
-        dbEnv.DB.prepare(
+        runControlPlaneSqlFirst<GitHubAccountTokenRow>(
+          dbEnv,
           `SELECT "id", "accountId", "accessToken", "refreshToken", "accessTokenExpiresAt", "refreshTokenExpiresAt"
            FROM "account"
            WHERE "providerId" = ?1 AND "userId" = ?2
            ORDER BY "updatedAt" DESC
            LIMIT 1`,
-        )
-          .bind(GITHUB_PROVIDER_ID, userId)
-          .first<GitHubAccountTokenRow>(),
+          [GITHUB_PROVIDER_ID, userId],
+        ),
       ).pipe(Effect.map(Option.fromNullishOr)),
     ),
     Effect.catch(() => Effect.succeed(Option.none<GitHubAccountTokenRow>())),
@@ -423,7 +430,7 @@ const refreshGitHubAppUserToken = Effect.fn("auth.betterAuth.refreshGitHubAppUse
 const refreshGitHubAppUserTokenWithCredentials = Effect.fn(
   "auth.betterAuth.refreshGitHubAppUserTokenWithCredentials",
 )(function* (input: {
-  env: ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } }
+  env: ApiEnv
   row: GitHubAccountTokenRow
   clientId: string
   clientSecret: string
@@ -458,7 +465,7 @@ const refreshGitHubAppUserTokenWithCredentials = Effect.fn(
 const refreshGitHubAppUserTokenFromResponse = Effect.fn(
   "auth.betterAuth.refreshGitHubAppUserTokenFromResponse",
 )(function* (input: {
-  env: ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } }
+  env: ApiEnv
   row: GitHubAccountTokenRow
   response: HttpClientResponse.HttpClientResponse
 }) {
@@ -500,7 +507,7 @@ const refreshGitHubAppUserTokenFromResponse = Effect.fn(
 const persistGitHubAppUserTokenRefresh = Effect.fn(
   "auth.betterAuth.persistGitHubAppUserTokenRefresh",
 )(function* (
-  env: ApiEnv & { DB: D1Database & { prepare: (...args: unknown[]) => D1PreparedStatement } },
+  env: ApiEnv,
   row: GitHubAccountTokenRow,
   tokenData: GitHubRefreshTokenResponse & { access_token?: string },
 ) {
@@ -511,7 +518,8 @@ const persistGitHubAppUserTokenRefresh = Effect.fn(
     row.refreshTokenExpiresAt
 
   yield* Effect.tryPromise(() =>
-    env.DB.prepare(
+    runControlPlaneSql(
+      env,
       `UPDATE "account"
        SET "accessToken" = ?1,
            "refreshToken" = ?2,
@@ -520,8 +528,7 @@ const persistGitHubAppUserTokenRefresh = Effect.fn(
            "scope" = ?5,
            "updatedAt" = ?6
        WHERE "id" = ?7`,
-    )
-      .bind(
+      [
         tokenData.access_token,
         refreshToken,
         accessTokenExpiresAt,
@@ -529,8 +536,8 @@ const persistGitHubAppUserTokenRefresh = Effect.fn(
         tokenData.scope ?? "",
         new Date().toISOString(),
         row.id,
-      )
-      .run(),
+      ],
+    ),
   )
 
   return Option.some({
@@ -545,15 +552,34 @@ const deleteGitHubAccountTokenRow = Effect.fn("auth.betterAuth.deleteGitHubAccou
       Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
       Effect.flatMap((dbEnv) =>
         Effect.tryPromise(() =>
-          dbEnv.DB.prepare(`DELETE FROM "account" WHERE "id" = ?1 AND "providerId" = ?2`)
-            .bind(accountRowId, GITHUB_PROVIDER_ID)
-            .run(),
+          runControlPlaneSql(dbEnv, `DELETE FROM "account" WHERE "id" = ?1 AND "providerId" = ?2`, [
+            accountRowId,
+            GITHUB_PROVIDER_ID,
+          ]),
         ),
       ),
       Effect.catch(() => Effect.void),
     )
   },
 )
+
+function betterAuthDatabase(env: ApiEnv) {
+  return Match.value(databaseEngineFromEnv(env)).pipe(
+    Match.when("planetscale", () =>
+      drizzleAdapter(makeControlPlaneFromEnv(env).drizzle, {
+        provider: "pg",
+        schema: {
+          user: pgSchema.user,
+          session: pgSchema.session,
+          account: pgSchema.account,
+          verification: pgSchema.verification,
+        },
+        camelCase: true,
+      }),
+    ),
+    Match.orElse(() => env.DB),
+  )
+}
 
 export function createBetterAuth(env: ApiEnv, authConfig?: ResolvedAuthProviderRegistry) {
   const stageMetadata = getStageMetadataSync(env)
@@ -595,7 +621,7 @@ export function createBetterAuth(env: ApiEnv, authConfig?: ResolvedAuthProviderR
   ]
 
   return betterAuth({
-    database: env.DB,
+    database: betterAuthDatabase(env),
     baseURL,
     basePath: "/api/auth",
     trustedOrigins: [...new Set(stageMetadata.infra.authTrustedOrigins.map(normalizeBaseUrl))],
@@ -636,14 +662,14 @@ export const getLinkedUserIdByProviderAccountId = Effect.fn(
     Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
     Effect.flatMap((dbEnv) =>
       Effect.tryPromise(() =>
-        dbEnv.DB.prepare(
+        runControlPlaneSqlFirst<{ userId: string }>(
+          dbEnv,
           `SELECT "userId"
            FROM "account"
            WHERE "providerId" = ?1 AND "accountId" = ?2
            LIMIT 1`,
-        )
-          .bind(providerId, accountId)
-          .first<{ userId: string }>(),
+          [providerId, accountId],
+        ),
       ).pipe(Effect.map((row) => row?.userId ?? null)),
     ),
     Effect.catch(() => Effect.succeed(null)),
@@ -656,14 +682,14 @@ export const getBetterAuthUserProfile = Effect.fn("auth.betterAuth.getBetterAuth
       Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
       Effect.flatMap((dbEnv) =>
         Effect.tryPromise(() =>
-          dbEnv.DB.prepare(
+          runControlPlaneSqlFirst<BetterAuthUserProfile>(
+            dbEnv,
             `SELECT "id", "name", "email", "image"
              FROM "user"
              WHERE "id" = ?1
              LIMIT 1`,
-          )
-            .bind(userId)
-            .first<BetterAuthUserProfile>(),
+            [userId],
+          ),
         ).pipe(Effect.map((row) => row ?? null)),
       ),
       Effect.catch(() => Effect.succeed(null)),
@@ -678,14 +704,14 @@ export const getLinkedProviderAccountIdForUser = Effect.fn(
     Effect.filterOrFail(hasQueryableDb, () => "missing_db" as const),
     Effect.flatMap((dbEnv) =>
       Effect.tryPromise(() =>
-        dbEnv.DB.prepare(
+        runControlPlaneSqlFirst<{ accountId: string }>(
+          dbEnv,
           `SELECT "accountId"
            FROM "account"
            WHERE "providerId" = ?1 AND "userId" = ?2
            LIMIT 1`,
-        )
-          .bind(providerId, userId)
-          .first<{ accountId: string }>(),
+          [providerId, userId],
+        ),
       ).pipe(Effect.map((row) => row?.accountId ?? null)),
     ),
     Effect.catch(() => Effect.succeed(null)),

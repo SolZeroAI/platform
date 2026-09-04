@@ -15,6 +15,7 @@ import type { GitHubCloneCredentials } from "../../auth/github-clone-auth"
 import { toError } from "../../../lib/effect-errors"
 import { parseJsonArray } from "../../../lib/json"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { SessionRuntimeRepository } from "../../session/repository"
 import { buildResolvedSessionMcpServers } from "../../session/runtime-mcp"
 import type { SessionRuntimeWebSocket } from "../../session/websocket-manager"
@@ -495,7 +496,7 @@ export class SandboxLifecycleManager {
     return Effect.tryPromise({
       try: () =>
         createGlobalSecretsStoreFromD1(
-          this.dependencies.env.DB,
+          makeControlPlaneFromEnv(this.dependencies.env),
           this.dependencies.env.REPO_SECRETS_ENCRYPTION_KEY ?? "",
         ).getDecryptedSecrets({ userId }),
       catch: toError,

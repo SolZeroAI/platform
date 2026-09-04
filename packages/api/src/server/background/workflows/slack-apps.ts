@@ -3,6 +3,7 @@ import { generateId } from "../auth/crypto"
 import { parseJson } from "../../lib/json"
 import { toError } from "../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../db/repo-secrets"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import {
   createWorkflowSlackAppStoreFromD1,
   type UpsertWorkflowSlackTriggerRegistrationInput,
@@ -556,7 +557,7 @@ function requireGlobalSecretsStore(env: Env) {
   return Option.match(Option.fromNullishOr(env.REPO_SECRETS_ENCRYPTION_KEY), {
     onNone: () => slackAppFail("REPO_SECRETS_ENCRYPTION_KEY not configured"),
     onSome: (encryptionKey) =>
-      Effect.succeed(createGlobalSecretsStoreFromD1(env.DB, encryptionKey)),
+      Effect.succeed(createGlobalSecretsStoreFromD1(makeControlPlaneFromEnv(env), encryptionKey)),
   })
 }
 
@@ -619,7 +620,7 @@ export const ensureWorkflowSlackApp = Effect.fn("workflows.ensureSlackApp")(func
   appName?: string
   now?: number
 }) {
-  const store = createWorkflowSlackAppStoreFromD1(input.env.DB)
+  const store = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
   const existing = yield* Effect.tryPromise({
     try: () => store.getAppByWorkflowId(input.workflow.id),
     catch: toError,
@@ -689,7 +690,7 @@ export const registerWorkflowSlackTriggers = Effect.fn("workflows.registerSlackT
     now?: number
   }) {
     const triggerNodes = getSlackTriggerNodes(input.manifest)
-    const store = createWorkflowSlackAppStoreFromD1(input.env.DB)
+    const store = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
     const now = input.now ?? Date.now()
     return yield* Match.value(triggerNodes.length === 0).pipe(
       Match.when(true, () => disableTriggerRegistrationsEmpty(store, input.workflow.id, now)),
@@ -702,10 +703,9 @@ export const disableWorkflowSlackTriggers = Effect.fn("workflows.disableSlackTri
   function* (input: { env: Env; workflowId: string; now?: number }) {
     yield* Effect.tryPromise({
       try: () =>
-        createWorkflowSlackAppStoreFromD1(input.env.DB).disableTriggerRegistrations(
-          input.workflowId,
-          input.now ?? Date.now(),
-        ),
+        createWorkflowSlackAppStoreFromD1(
+          makeControlPlaneFromEnv(input.env),
+        ).disableTriggerRegistrations(input.workflowId, input.now ?? Date.now()),
       catch: toError,
     })
   },
@@ -719,9 +719,9 @@ const disableAndListRegistrations = Effect.fn("workflows.disableAndListRegistrat
     })
     return yield* Effect.tryPromise({
       try: () =>
-        createWorkflowSlackAppStoreFromD1(input.env.DB).listRegistrationsForWorkflow(
-          input.workflow.id,
-        ),
+        createWorkflowSlackAppStoreFromD1(
+          makeControlPlaneFromEnv(input.env),
+        ).listRegistrationsForWorkflow(input.workflow.id),
       catch: toError,
     })
   },
@@ -881,7 +881,9 @@ const resolveStoredSlackBotToken = Effect.fn("workflows.resolveStoredSlackBotTok
   function* (input: { env: Env; workflowId: string }) {
     const app = yield* Effect.tryPromise({
       try: () =>
-        createWorkflowSlackAppStoreFromD1(input.env.DB).getAppByWorkflowId(input.workflowId),
+        createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env)).getAppByWorkflowId(
+          input.workflowId,
+        ),
       catch: toError,
     })
     return yield* Option.match(Option.fromNullishOr(app), {

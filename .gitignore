@@ -37,3 +37,6 @@ config/s0-prod.config.jsonc
 opensrc/
 
 # Sensitive vars
+
+# PR Lens writes its previews here. They are rebuilt on demand.
+.pr-lens/

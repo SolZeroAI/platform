@@ -321,6 +321,7 @@ describe("AdminStore", () => {
       }),
     )
 
+    expect(typeof firstPage.total).toBe("number")
     expect(firstPage).toMatchObject({
       total: 2,
       limit: 1,

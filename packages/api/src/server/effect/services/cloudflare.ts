@@ -1,6 +1,9 @@
 import type { ApiEnv } from "infra/types/env"
 import * as Context from "effect/Context"
-import { D1Drizzle, makeD1Drizzle } from "../db/d1-drizzle"
+import * as Match from "effect/Match"
+import { D1Drizzle } from "../db/d1-drizzle"
+import { ControlPlane, hasControlPlane, makeControlPlaneFromEnv } from "../db/control-plane-db"
+import "../db/postgres-promise-drizzle"
 import {
   EffectRequestLogger,
   RequestObservability,
@@ -18,7 +21,12 @@ export class CloudflareContext extends Context.Service<CloudflareContext, Cloudf
 ) {}
 
 export type CloudflareEffectContext = Context.Context<
-  CloudflareContext | RequestObservability | EffectRequestLogger | IdentityProvider | GitHubProvider
+  | CloudflareContext
+  | ControlPlane
+  | RequestObservability
+  | EffectRequestLogger
+  | IdentityProvider
+  | GitHubProvider
 >
 
 export function makeCloudflareContext(
@@ -27,11 +35,16 @@ export function makeCloudflareContext(
   observability: RequestObservabilityService,
 ): CloudflareEffectContext {
   const providers = providerServicesForEnv(env)
-  return Context.make(CloudflareContext, { env, ctx }).pipe(
+  const controlPlane = makeControlPlaneFromEnv(env)
+  const context = Context.make(CloudflareContext, { env, ctx }).pipe(
     Context.add(RequestObservability, observability),
     Context.add(EffectRequestLogger, observability.effectLog),
-    Context.add(D1Drizzle, makeD1Drizzle(env.DB)),
+    Context.add(ControlPlane, controlPlane),
     Context.add(IdentityProvider, providers.identityProvider),
     Context.add(GitHubProvider, providers.githubProvider),
+  )
+  return Match.value(hasControlPlane(env)).pipe(
+    Match.when(true, () => Context.add(context, D1Drizzle, controlPlane.drizzle)),
+    Match.orElse(() => context),
   )
 }

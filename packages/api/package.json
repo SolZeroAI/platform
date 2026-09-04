@@ -21,6 +21,10 @@
     "./server": {
       "types": "./src/server/index.ts",
       "import": "./src/server/index.ts"
+    },
+    "./schema.pg": {
+      "types": "./src/server/effect/db/schema.pg.ts",
+      "import": "./src/server/effect/db/schema.pg.ts"
     }
   },
   "scripts": {
@@ -49,6 +53,7 @@
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.0-beta.107",
     "jose": "^6.2.10",
+    "postgres": "^3.4.8",
     "workers-ai-provider": "4.0.0",
     "yaml": "^2.9.0"
   },

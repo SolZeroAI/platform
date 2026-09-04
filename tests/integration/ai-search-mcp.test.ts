@@ -536,7 +536,7 @@ describe("AI Search MCP server", () => {
     }
 
     const allowedSources = await resolveAllowedSources(env, headers)
-    expect(prepare).toHaveBeenCalledWith("SELECT tools_json FROM sessions WHERE id = ?")
+    expect(prepare).toHaveBeenCalledWith("SELECT tools_json FROM sessions WHERE id = ?1")
     expect(allowedSources.map((source) => source.id)).toEqual(["product-docs"])
 
     const server = createAiSearchMcpServer(

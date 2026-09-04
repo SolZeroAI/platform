@@ -2,8 +2,11 @@ import { and, desc, eq, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { userApiKeys } from "../../effect/db/schema"
+import {
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { generateId, hashToken } from "../auth/crypto"
 import { d1Error } from "./errors"
 
@@ -34,9 +37,12 @@ interface VerifiedApiKey {
 
 export class UserApiKeyStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   create = Effect.fn("db.userApiKeys.create")(function* (
@@ -52,7 +58,7 @@ export class UserApiKeyStore {
 
     yield* Effect.tryPromise({
       try: () =>
-        this.drizzle.insert(userApiKeys).values({
+        this.drizzle.insert(this.schema.userApiKeys).values({
           keyId,
           userId,
           label: label ?? null,
@@ -81,9 +87,9 @@ export class UserApiKeyStore {
       try: () =>
         this.drizzle
           .select()
-          .from(userApiKeys)
-          .where(eq(userApiKeys.userId, userId))
-          .orderBy(desc(userApiKeys.createdAt)),
+          .from(this.schema.userApiKeys)
+          .where(eq(this.schema.userApiKeys.userId, userId))
+          .orderBy(desc(this.schema.userApiKeys.createdAt)),
       catch: d1Error("db.userApiKeys.listByUserId"),
     })
 
@@ -109,16 +115,16 @@ export class UserApiKeyStore {
     const revoked = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(userApiKeys)
+          .update(this.schema.userApiKeys)
           .set({ revokedAt: now, updatedAt: now })
           .where(
             and(
-              eq(userApiKeys.keyId, keyId),
-              eq(userApiKeys.userId, userId),
-              isNull(userApiKeys.revokedAt),
+              eq(this.schema.userApiKeys.keyId, keyId),
+              eq(this.schema.userApiKeys.userId, userId),
+              isNull(this.schema.userApiKeys.revokedAt),
             ),
           )
-          .returning({ keyId: userApiKeys.keyId }),
+          .returning({ keyId: this.schema.userApiKeys.keyId }),
       catch: d1Error("db.userApiKeys.revoke"),
     })
 
@@ -144,12 +150,17 @@ export class UserApiKeyStore {
       try: () =>
         this.drizzle
           .select({
-            keyId: userApiKeys.keyId,
-            userId: userApiKeys.userId,
-            keyHash: userApiKeys.keyHash,
+            keyId: this.schema.userApiKeys.keyId,
+            userId: this.schema.userApiKeys.userId,
+            keyHash: this.schema.userApiKeys.keyHash,
           })
-          .from(userApiKeys)
-          .where(and(eq(userApiKeys.keyId, keyId), isNull(userApiKeys.revokedAt)))
+          .from(this.schema.userApiKeys)
+          .where(
+            and(
+              eq(this.schema.userApiKeys.keyId, keyId),
+              isNull(this.schema.userApiKeys.revokedAt),
+            ),
+          )
           .limit(1),
       catch: d1Error("db.userApiKeys.verify"),
     }).pipe(Effect.map((rows) => Option.fromNullishOr(rows[0])))
@@ -182,9 +193,9 @@ export class UserApiKeyStore {
     yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .update(userApiKeys)
+          .update(this.schema.userApiKeys)
           .set({ lastUsedAt: now, updatedAt: now })
-          .where(eq(userApiKeys.keyId, row.keyId)),
+          .where(eq(this.schema.userApiKeys.keyId, row.keyId)),
       catch: d1Error("db.userApiKeys.verify"),
     })
     return Option.some<VerifiedApiKey>({ keyId: row.keyId, userId: row.userId })

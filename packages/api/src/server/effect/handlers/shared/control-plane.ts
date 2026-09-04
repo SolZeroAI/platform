@@ -33,7 +33,11 @@ import { localSpanHeaders, type LocalSpanContext } from "../../../background/obs
 import type { RunSessionPromptRequest, RunSessionPromptResponse } from "../../../background/types"
 import { stringifyJson } from "../../../lib/json"
 import * as Context from "effect/Context"
-import { D1Drizzle, makeD1Drizzle, type D1DrizzleDatabase } from "../../db/d1-drizzle"
+import {
+  ControlPlane,
+  makeControlPlaneFromEnv,
+  type ControlPlaneDb,
+} from "../../db/control-plane-db"
 import { getCloudflareBindings } from "../../services/middleware"
 import { authenticateControlPlaneRequest } from "../../services/auth"
 import {
@@ -209,7 +213,7 @@ export const resolveRequestIdentityAnnotation = Effect.fn(
 export function requireGlobalSecretsStore(env: ApiEnv): Option.Option<GlobalSecretsStore> {
   return Option.map(
     Option.fromNullishOr(env.REPO_SECRETS_ENCRYPTION_KEY),
-    (key) => new GlobalSecretsStore(makeD1Drizzle(env.DB), key),
+    (key) => new GlobalSecretsStore(makeControlPlaneFromEnv(env), key),
   )
 }
 
@@ -367,7 +371,7 @@ const fetchAndEnrichReposPage = Effect.fn("controlPlane.fetchAndEnrichReposPage"
   options: RepoListOptions,
 ) {
   const pageResult = yield* fetchReposPage(githubProvider, accessToken, options)
-  const metadataStore = new RepoMetadataStore(makeD1Drizzle(env.DB))
+  const metadataStore = new RepoMetadataStore(makeControlPlaneFromEnv(env))
   const metadataMap = yield* metadataStore
     .getBatch(pageResult.repositories.map((repo) => ({ owner: repo.owner, name: repo.name })))
     .pipe(
@@ -550,7 +554,7 @@ export interface ControlPlaneContext {
   serverRequest: HttpServerRequest.HttpServerRequest
   env: ApiEnv
   ctx: ExecutionContext
-  db: D1DrizzleDatabase
+  db: ControlPlaneDb
   principal: AuthPrincipal | null
   log: RequestLogger
   identityProvider: IdentityProviderShape
@@ -599,7 +603,7 @@ const annotateRequestIdentity = Effect.fn("controlPlane.annotateRequestIdentity"
 export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) {
   const program = Effect.gen(function* () {
     const { env, ctx } = yield* getCloudflareBindings
-    const db = yield* D1Drizzle
+    const db = yield* ControlPlane
     const serverRequest = yield* HttpServerRequest.HttpServerRequest
     const identityProvider = yield* IdentityProvider
     const githubProvider = yield* GitHubProvider

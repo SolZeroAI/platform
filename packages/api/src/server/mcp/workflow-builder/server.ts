@@ -10,6 +10,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { createSessionIndexStoreFromD1 } from "../../background/db/session-index"
+import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { raise } from "../../lib/effect-errors"
 import {
   INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE,
@@ -76,7 +77,9 @@ export async function resolveWorkflowBuilderContext(
     () => new Error("Workflow builder MCP requests require a session id"),
   )
 
-  const session = await createSessionIndexStoreFromD1(env.DB).getById(sessionId)
+  const session = await createSessionIndexStoreFromD1(makeControlPlaneFromEnv(env)).getById(
+    sessionId,
+  )
   const resolved = Option.getOrThrowWith(
     Option.fromNullishOr(session),
     () => new Error("Workflow builder MCP session was not found"),

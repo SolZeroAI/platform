@@ -25,6 +25,7 @@ import {
   parseAllowedAiSearchSources,
 } from "../background/session/mcp-config"
 import type { Env } from "../background/types"
+import { runControlPlaneSqlFirst } from "../effect/db/control-plane-db"
 import { runAiSearchMcpTool, type AiSearchMcpRuntimeContext } from "./ai-search-runtime"
 import type { AiSearchToolMode } from "./ai-search-runtime"
 import { objectInputSchema } from "./tool-input-schema"
@@ -40,15 +41,16 @@ function aiSearchSourceIdsFromTools(tools: SessionToolSpec[]): string[] {
 }
 
 function aiSearchSourcesFromSession(env: Env, sessionId: string): Promise<string[]> {
-  return env.DB.prepare("SELECT tools_json FROM sessions WHERE id = ?")
-    .bind(sessionId)
-    .first<{ tools_json: string | null }>()
-    .then((row) =>
-      Option.match(Option.fromNullishOr(row?.tools_json), {
-        onNone: () => [],
-        onSome: (toolsJson) => aiSearchSourceIdsFromTools(parseStoredSessionTools(toolsJson)),
-      }),
-    )
+  return runControlPlaneSqlFirst<{ tools_json: string | null }>(
+    env,
+    "SELECT tools_json FROM sessions WHERE id = ?1",
+    [sessionId],
+  ).then((row) =>
+    Option.match(Option.fromNullishOr(row?.tools_json), {
+      onNone: () => [],
+      onSome: (toolsJson) => aiSearchSourceIdsFromTools(parseStoredSessionTools(toolsJson)),
+    }),
+  )
 }
 
 function parseAllowedAiSearchSourcesSafe(request: Request): Promise<Option.Option<string[]>> {

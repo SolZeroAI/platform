@@ -8,6 +8,7 @@ import dotenv from "dotenv"
 import * as Effect from "effect/Effect"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
 import {
+  APP_DB_MODE_ENV,
   s0ActiveSecretReferences,
   s0ConfigPathForStage,
   s0ConfigStageForStage,
@@ -19,6 +20,7 @@ import {
   type S0ResolvedConfig,
   type SecretReference,
 } from "@solzero/shared"
+import { appDbModeForStage, databaseEngineFromProcessEnv } from "../database-engine"
 import { getApiInfraEnv, type ApiSecretInput } from "../../../../apps/api/infra"
 import { createDeploymentMetadata } from "../deploymentMetadata"
 
@@ -140,12 +142,20 @@ export function s0StackRuntime() {
       s0Config.deployment,
       s0Config.application,
     ).pipe(Effect.orDie)
+    // oxlint-disable-next-line effect/avoid-process-env -- DATABASE is the alchemy.new engine select. Missing or empty stays d1.
+    const databaseEngine = databaseEngineFromProcessEnv()
+    // oxlint-disable-next-line effect/avoid-process-env -- APP_DB_MODE is a local-vs-remote operator switch for the PlanetScale flavor only.
+    const appDbMode = appDbModeForStage(stage, process.env[APP_DB_MODE_ENV], context.dev)
 
     return {
       appName: s0Config.deployment.appName,
       apiEnv,
       cloudflareAccountId: yield* requiredConfigString("CLOUDFLARE_ACCOUNT_ID"),
       deploymentMetadata: createDeploymentMetadata({ repoRoot: REPO_ROOT }),
+      databaseEngine,
+      appDbMode,
+      // oxlint-disable-next-line effect/avoid-process-env -- Local PGLite Hyperdrive origin is an operator-supplied URL, not a Worker secret.
+      databaseUrl: process.env.DATABASE_URL,
       dev: context.dev,
       infraDir: INFRA_DIR,
       repoRoot: REPO_ROOT,

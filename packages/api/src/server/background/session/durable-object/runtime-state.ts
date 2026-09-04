@@ -61,6 +61,7 @@ import {
   type LocalSpanContext,
 } from "../../observability/tracing"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import {
   decodeJson,
   decodeJsonRecord,
@@ -255,7 +256,7 @@ export async function decryptSecretEnv(
     () => new Error("Secret storage is not configured"),
   )
   const allSecrets = await createGlobalSecretsStoreFromD1(
-    host.env.DB,
+    makeControlPlaneFromEnv(host.env),
     encryptionKey,
   ).getDecryptedSecrets({
     userId,

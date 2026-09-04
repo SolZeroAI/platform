@@ -1,6 +1,7 @@
 import * as Alchemy from "alchemy"
 import * as Effect from "effect/Effect"
 import { createS0Api } from "../s0"
+import { planetscaleStackFlags } from "../stack-flags"
 import { stackOptions, type StackOptionsInput } from "../stack"
 import { s0StackRuntime } from "./runtime"
 
@@ -16,7 +17,10 @@ export const S0ApiProgram = Effect.gen(function* () {
 })
 
 export function makeS0ApiStack(input: StackOptionsInput = {}) {
-  return S0Api.make(stackOptions<S0ApiStackServices>(input), S0ApiProgram)
+  return S0Api.make(
+    stackOptions<S0ApiStackServices>({ ...planetscaleStackFlags(), ...input }),
+    S0ApiProgram,
+  )
 }
 
 export default makeS0ApiStack()

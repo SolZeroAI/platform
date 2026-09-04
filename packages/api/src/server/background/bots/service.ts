@@ -9,6 +9,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { BotStore } from "../db/bots"
+import type { ControlPlaneDb } from "../../effect/db/control-plane-db"
 import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
 import type { Env } from "../types"
 import { cancelRoutineAlarm, nextCronDate, scheduleRoutineAlarm } from "../workflows/alarm"
@@ -35,7 +36,7 @@ function cadenceCron(routine: BotRoutineSummary): Option.Option<string> {
 export class BotRoutineService {
   constructor(
     private readonly env: Env,
-    private readonly drizzle: D1DrizzleDatabase,
+    private readonly drizzle: ControlPlaneDb | D1DrizzleDatabase,
     private readonly adapters: BotRoutineScheduleAdapters = defaultAdapters,
   ) {}
 

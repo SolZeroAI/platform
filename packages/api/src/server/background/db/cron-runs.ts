@@ -3,8 +3,12 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { generateId } from "../auth/crypto"
-import type { D1DrizzleDatabase } from "../../effect/db/d1-drizzle"
-import { cronRuns } from "../../effect/db/schema"
+import {
+  resolveControlPlaneHandle,
+  type AppDrizzleDatabase,
+  type AppSchema,
+  type ControlPlaneDb,
+} from "../../effect/db/control-plane-db"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
 import { d1Error } from "./errors"
 
@@ -47,7 +51,7 @@ export interface CronRunInsert {
   actorEmail?: string | null
 }
 
-function toCronRun(row: typeof cronRuns.$inferSelect): CronRunRecord {
+function toCronRun(row: AppSchema["cronRuns"]["$inferSelect"]): CronRunRecord {
   return {
     id: row.id,
     jobId: row.jobId,
@@ -75,9 +79,12 @@ export function sanitizeCronErrorMessage(value: unknown): string {
 
 export class CronRunsStore {
   private readonly drizzle
+  private readonly schema
 
-  constructor(drizzle: D1DrizzleDatabase) {
-    this.drizzle = drizzle
+  constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
+    const handle = resolveControlPlaneHandle(db)
+    this.drizzle = handle.drizzle
+    this.schema = handle.schema
   }
 
   insertRun = Effect.fn("db.cronRuns.insertRun")(function* (
@@ -102,7 +109,7 @@ export class CronRunsStore {
       createdAt,
     }
     yield* Effect.tryPromise({
-      try: () => this.drizzle.insert(cronRuns).values(row),
+      try: () => this.drizzle.insert(this.schema.cronRuns).values(row),
       catch: d1Error("db.cronRuns.insertRun"),
     })
     return toCronRun(row)
@@ -135,17 +142,17 @@ export class CronRunsStore {
   ) {
     const whereClause = Match.value(Option.fromNullishOr(status)).pipe(
       Match.when(Option.isSome, (resolved) =>
-        and(eq(cronRuns.jobId, jobId), eq(cronRuns.status, resolved.value)),
+        and(eq(this.schema.cronRuns.jobId, jobId), eq(this.schema.cronRuns.status, resolved.value)),
       ),
-      Match.orElse(() => eq(cronRuns.jobId, jobId)),
+      Match.orElse(() => eq(this.schema.cronRuns.jobId, jobId)),
     )
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
           .select()
-          .from(cronRuns)
+          .from(this.schema.cronRuns)
           .where(whereClause)
-          .orderBy(desc(cronRuns.createdAt))
+          .orderBy(desc(this.schema.cronRuns.createdAt))
           .limit(1),
       catch: d1Error("db.cronRuns.getLatestRun"),
     })

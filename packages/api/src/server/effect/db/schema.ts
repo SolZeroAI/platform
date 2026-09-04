@@ -118,6 +118,7 @@ export const sessions = sqliteTable(
   (table) => [
     index("idx_sessions_status_updated").on(table.userId, table.status, table.updatedAt),
     index("idx_sessions_repo").on(table.userId, table.repoOwner, table.repoName, table.updatedAt),
+    index("idx_sessions_github_installation").on(table.githubInstallationId, table.githubRepoId),
   ],
 )
 
@@ -546,4 +547,15 @@ export const verification = sqliteTable(
     updatedAt: text("updatedAt").notNull(),
   },
   (table) => [index("idx_verification_identifier").on(table.identifier)],
+)
+
+export const managedAdminCredential = sqliteTable(
+  "managed_admin_credential",
+  {
+    userId: text("userId").primaryKey().notNull(),
+    email: text("email").notNull(),
+    createdAt: text("createdAt").notNull(),
+    updatedAt: text("updatedAt").notNull(),
+  },
+  (table) => [uniqueIndex("idx_managed_admin_credential_email").on(table.email)],
 )

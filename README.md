@@ -60,14 +60,16 @@ Deployment owners store non-secret platform settings in a JSONC file for each st
 
 ## Tech stack
 
-- Cloudflare Workers, Durable Objects, Workflows, Containers, D1, KV, R2, and AI Search
+- Cloudflare Workers, Durable Objects, Workflows, Containers, D1 (default control-plane database), KV, R2, and AI Search. Optional PlanetScale Postgres for the control-plane index.
 - Effect for the backend API service
 - TanStack Start and Kumo for the web app
 - Better Auth for sign-in
 - Alchemy v2 for infrastructure as code
 - Nub for package management
 
-See [docs/system-diagram.md](docs/system-diagram.md) for the system architecture.
+See [docs/system-diagram.md](docs/system-diagram.md) for the system architecture. See
+[docs/database.md](docs/database.md) to select the default D1 control-plane database or the optional
+PlanetScale Postgres flavor.
 
 ## Get started
 
@@ -214,6 +216,7 @@ nub run test                # workspace and repository tests
 nub run typecheck           # repository type checks
 nub run lint                # repository lint checks
 nub run format              # formatting check
+nub run db:pglite           # local PGLite socket for the PlanetScale flavor (port 15432)
 ```
 
 Run the local API key end-to-end test after you create a user API key:

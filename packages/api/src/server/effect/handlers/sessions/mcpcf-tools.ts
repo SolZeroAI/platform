@@ -8,7 +8,7 @@ import type {
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
 } from "@solzero/api"
-import { makeD1Drizzle } from "../../db/d1-drizzle"
+import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../db/control-plane-db"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
 import {
@@ -104,18 +104,18 @@ function formatTools(tools: readonly McpcfToolPreview[]) {
 }
 
 async function hasLinkedOAuthAccount(input: {
-  env: { DB: D1Database }
+  env: ApiEnv
   userId: string
   providerId: string
 }): Promise<boolean> {
-  const row = await input.env.DB.prepare(
+  const row = await runControlPlaneSqlFirst<{ id: string }>(
+    input.env,
     `SELECT "id"
        FROM "account"
        WHERE "providerId" = ?1 AND "userId" = ?2
        LIMIT 1`,
+    [input.providerId, input.userId],
   )
-    .bind(input.providerId, input.userId)
-    .first<{ id: string }>()
   return Boolean(row)
 }
 
@@ -290,7 +290,7 @@ export function mcpcfServers() {
       const servers = yield* registry.listAvailableServers()
       const serverIds = servers.map((server) => server.id)
       const userConfigs = yield* new UserMcpcfServerConfigStore(
-        makeD1Drizzle(env.DB),
+        makeControlPlaneFromEnv(env),
       ).listByUserAndServerIds(userId, serverIds)
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
@@ -580,7 +580,7 @@ export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) 
       const contextForgeApiKeysUrl = getContextForgeApiKeysUrl(contextForgeUrl)
       const serverIds = servers.map((server) => server.id)
       const userConfigs = yield* new UserMcpcfServerConfigStore(
-        makeD1Drizzle(env.DB),
+        makeControlPlaneFromEnv(env),
       ).listByUserAndServerIds(userId, serverIds)
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
@@ -835,7 +835,7 @@ export function updateMcpcfSettings({
         400,
       )
 
-      const userConfigStore = new UserMcpcfServerConfigStore(makeD1Drizzle(env.DB))
+      const userConfigStore = new UserMcpcfServerConfigStore(makeControlPlaneFromEnv(env))
       const existing = yield* userConfigStore.get(userId, server.id)
       const existingKey = Option.getOrNull(
         Option.flatMap(existing, (record) => Option.fromNullishOr(record.authTokenSecretKey)),

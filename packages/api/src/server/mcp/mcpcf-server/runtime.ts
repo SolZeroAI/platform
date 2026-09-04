@@ -15,6 +15,7 @@ import {
   type McpcfServerRecord,
 } from "../../background/db/mcpcf"
 import { createGlobalSecretsStoreFromD1 } from "../../background/db/repo-secrets"
+import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../effect/db/control-plane-db"
 import {
   createUserMcpcfServerConfigStoreFromD1,
   getUserMcpcfAuthTokenSecretKey,
@@ -239,13 +240,13 @@ const mcpcfSelectionFromSession = Effect.fn("mcp.mcpcf.selectionFromSession")(fu
 ) {
   const row = yield* Effect.tryPromise({
     try: () =>
-      env.DB.prepare(
+      runControlPlaneSqlFirst<McpcfSessionRow>(
+        env,
         `SELECT user_id, tools_json
            FROM sessions
-           WHERE id = ?`,
-      )
-        .bind(sessionId)
-        .first<McpcfSessionRow>(),
+           WHERE id = ?1`,
+        [sessionId],
+      ),
     catch: toError,
   })
 
@@ -330,7 +331,10 @@ const getUserMcpcfServerAuthToken = Effect.fn("mcp.mcpcf.userServerAuthToken")(f
 
   const secrets = yield* Effect.tryPromise({
     try: () =>
-      createGlobalSecretsStoreFromD1(env.DB, encryptionKey).getDecryptedSecrets({
+      createGlobalSecretsStoreFromD1(
+        makeControlPlaneFromEnv(env),
+        encryptionKey,
+      ).getDecryptedSecrets({
         userId: input.userId,
       }),
     catch: toError,
@@ -370,7 +374,10 @@ const getUserMcpcfGatewayAccessToken = Effect.fn("mcp.mcpcf.userGatewayAccessTok
 
   const secrets = yield* Effect.tryPromise({
     try: () =>
-      createGlobalSecretsStoreFromD1(env.DB, encryptionKey).getDecryptedSecrets({
+      createGlobalSecretsStoreFromD1(
+        makeControlPlaneFromEnv(env),
+        encryptionKey,
+      ).getDecryptedSecrets({
         userId: input.userId,
       }),
     catch: toError,
@@ -687,7 +694,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
     runtimeContext: McpcfMcpRuntimeContext
   }) {
     const { env, config, servers, userId, runtimeContext } = input
-    const userConfigStore = createUserMcpcfServerConfigStoreFromD1(env.DB)
+    const userConfigStore = createUserMcpcfServerConfigStoreFromD1(makeControlPlaneFromEnv(env))
     const userConfigs = yield* Effect.tryPromise({
       try: () =>
         userConfigStore.listByUserAndServerIds(
