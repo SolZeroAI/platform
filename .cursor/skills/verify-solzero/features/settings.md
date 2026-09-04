@@ -20,11 +20,13 @@ Settings is the signed-in account console at `/settings`. Categories are query p
 
 ```bash
 ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-.cursor/skills/verify-solzero/control-solzero chrome dump --url "http://localhost:3000/settings?category=providers" --out "$ART/settings-providers.html"
-.cursor/skills/verify-solzero/control-solzero chrome screenshot --url "http://localhost:3000/settings?category=providers" --out "$ART/settings-providers.png"
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
+  --url "http://localhost:3000/settings?category=providers" \
+  --email admin@example.com \
+  --out-dir "$ART/settings-providers"
 ```
 
-`settings-providers.html.text` must contain `Settings` and `AI Providers`. Repeat with `category=agents`, `category=secrets`, `category=api-access`, `category=data-controls`, or `category=learn-more` when those panels changed. Unauthenticated visits render the welcome form on the same URL. Each `chrome` command uses a fresh profile, so a dump after `chrome sign-in` is still signed out.
+`settings-providers/after.text` must contain `Settings` and `AI Providers`. Repeat with `category=agents`, `category=secrets`, `category=api-access`, `category=data-controls`, or `category=learn-more` when those panels changed. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof.
 
 ## Gotchas
 

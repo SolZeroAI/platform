@@ -21,12 +21,13 @@ Agents is the signed-in home. A user writes a prompt, picks an Isolate runtime (
 
 ```bash
 ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-# after sign-in
-.cursor/skills/verify-solzero/control-solzero chrome dump --url http://localhost:3000/ --out "$ART/agents-home.html"
-.cursor/skills/verify-solzero/control-solzero chrome screenshot --url http://localhost:3000/ --out "$ART/agents-home.png"
+.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
+  --url http://localhost:3000/ \
+  --email admin@example.com \
+  --out-dir "$ART/agents-home"
 ```
 
-`agents-home.html.text` must contain `Agents`, the composer placeholder, and `Previous sessions`. An unauthenticated dump of `/` is the welcome form, not Agents. Each `chrome` command uses a fresh profile, so a dump after `chrome sign-in` is not a signed-in proof.
+`agents-home/after.text` must contain `Agents` and `Previous sessions`. `agents-home/after.html` must contain `textarea.session-composer-textarea` and the placeholder `Chat, build, and automate with project context`. An unauthenticated dump of `/` is the welcome form, not Agents. Do not use a later `chrome dump` as a signed-in proof.
 
 Sending a prompt that calls a model needs a configured provider. If the toolbar shows the AI-provider-required control instead of a model name, record that precondition and stop. Do not mark Agents verified by stubbing the gateway.
 

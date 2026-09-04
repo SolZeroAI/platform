@@ -8,7 +8,7 @@ Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `h
 
 - Run `.cursor/skills/verify-solzero/control-solzero launch` then `doctor`.
 - Stay on `http://localhost:3000`. Refuse if doctor says the ports are not this run.
-- Default credential admin is `admin@example.com`. Get the password with `control-solzero admin-password`.
+- Default credential admin is `admin@example.com`. Get the password with `control-solzero admin-password` (Worker-bound Alchemy disk secret). Do not use `nub run auth:admin-password` output.
 - Creating an Isolate session that talks to a model needs a configured Cloudflare AI Gateway or LiteLLM provider. Sign-in, navigation, Workflows empty state, and Bots empty state do not.
 - Local sign-in is the credential form (`Email`, `Password`, **Sign In**). If doctor fails closed on `/api/auth/config`, stop. An unconfigured welcome is a product failure, not a mapped feature.
 
