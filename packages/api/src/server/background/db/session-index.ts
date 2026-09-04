@@ -19,6 +19,7 @@ import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
+  controlPlaneSql,
   isControlPlaneDb,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
@@ -132,11 +133,13 @@ export interface UpsertWorkflowSessionReuseKeyInput extends WorkflowSessionReuse
 export class SessionIndexStore {
   private readonly drizzle
   private readonly schema
+  private readonly sql
 
   constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
     const handle = resolveControlPlaneHandle(db)
     this.drizzle = handle.drizzle
     this.schema = handle.schema
+    this.sql = controlPlaneSql(handle)
   }
 
   private toRecord(row: AppSchema["sessions"]["$inferSelect"]): SessionIndexRecord {
@@ -357,15 +360,12 @@ export class SessionIndexStore {
     const countRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ total: sql<number>`count(*)` })
+          .select({ total: this.sql.countStar() })
           .from(this.schema.sessions)
           .where(where),
       catch: d1Error("db.sessionIndex.list"),
     })
-    const total = Option.getOrElse(
-      Option.map(Option.fromNullishOr(countRows[0]), (row) => row.total),
-      () => 0,
-    )
+    const total = this.sql.asFiniteNumber(countRows[0]?.total)
 
     return {
       sessions: records,

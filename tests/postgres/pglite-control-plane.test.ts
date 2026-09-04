@@ -5,7 +5,9 @@ import { PGLiteSocketServer } from "@electric-sql/pglite-socket"
 import { drizzle } from "drizzle-orm/pglite"
 import * as Effect from "effect/Effect"
 import { afterEach, describe, expect, it } from "vitest"
+import { AdminStore } from "../../packages/api/src/server/background/db/admin"
 import { GlobalSecretsStore } from "../../packages/api/src/server/background/db/repo-secrets"
+import { SessionIndexStore } from "../../packages/api/src/server/background/db/session-index"
 import {
   controlPlaneSql,
   makeControlPlaneFromEnv,
@@ -224,5 +226,41 @@ describe("PGLite control-plane flavor", () => {
     const stats = await Effect.runPromise(store.listSecretTagStats({ userId: "user_1" }))
     expect(stats.popularTags[0]).toBe("popular")
     expect(stats.popularTags).toContain("rare")
+  })
+
+  it("returns numeric admin and session-index counts on postgres", async () => {
+    const opened = await openMigratedPglite()
+    clients.push(opened.client)
+    const sessions = new SessionIndexStore(opened.controlPlane)
+    await Effect.runPromise(
+      sessions.create({
+        id: "session_count",
+        userId: "user_1",
+        title: "Count check",
+        repoOwner: "example-org",
+        repoName: "sre",
+        model: "litellm/gpt-5.4-mini",
+        sessionKind: "isolate",
+        agentRuntime: "isolate",
+        source: "web",
+        status: "active",
+        createdAt: 10,
+        updatedAt: 100,
+      }),
+    )
+    const listed = await Effect.runPromise(
+      sessions.list({
+        userId: "user_1",
+        limit: 10,
+        offset: 0,
+      }),
+    )
+    expect(listed.total).toBe(1)
+    expect(typeof listed.total).toBe("number")
+
+    const admin = new AdminStore(opened.controlPlane)
+    const summary = await Effect.runPromise(admin.getSummary())
+    expect(summary.sessions).toEqual([{ status: "active", count: 1 }])
+    expect(typeof summary.sessions[0]?.count).toBe("number")
   })
 })

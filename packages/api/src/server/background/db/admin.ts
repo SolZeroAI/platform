@@ -6,11 +6,13 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonOrText } from "../../lib/json"
 import {
+  controlPlaneSql,
   resolveControlPlaneHandle,
   type AppDrizzleDatabase,
   type AppSchema,
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
+import { asFiniteNumber } from "../../effect/db/dialect"
 import { d1Error } from "./errors"
 
 export interface AdminStatusCount {
@@ -241,10 +243,10 @@ function parseRecordOption(value: string | null): Option.Option<Record<string, u
   )
 }
 
-function toStatusCount(row: { status: string; count: number }): AdminStatusCount {
+function toStatusCount(row: { status: string; count: unknown }): AdminStatusCount {
   return {
     status: row.status,
-    count: Number(row.count),
+    count: asFiniteNumber(row.count),
   }
 }
 
@@ -400,11 +402,13 @@ function orderBy(
 export class AdminStore {
   private readonly drizzle
   private readonly schema
+  private readonly sql
 
   constructor(db: AppDrizzleDatabase | ControlPlaneDb) {
     const handle = resolveControlPlaneHandle(db)
     this.drizzle = handle.drizzle
     this.schema = handle.schema
+    this.sql = controlPlaneSql(handle)
   }
 
   getSummary = Effect.fn("db.admin.getSummary")(function* (this: AdminStore, now = Date.now()) {
@@ -413,7 +417,7 @@ export class AdminStore {
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: this.schema.sessions.status, count: sql<number>`count(*)` })
+              .select({ status: this.schema.sessions.status, count: this.sql.countStar() })
               .from(this.schema.sessions)
               .groupBy(this.schema.sessions.status)
               .orderBy(asc(this.schema.sessions.status)),
@@ -422,7 +426,7 @@ export class AdminStore {
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: this.schema.workflows.status, count: sql<number>`count(*)` })
+              .select({ status: this.schema.workflows.status, count: this.sql.countStar() })
               .from(this.schema.workflows)
               .groupBy(this.schema.workflows.status)
               .orderBy(asc(this.schema.workflows.status)),
@@ -431,7 +435,7 @@ export class AdminStore {
         Effect.tryPromise({
           try: () =>
             this.drizzle
-              .select({ status: this.schema.workflowRuns.status, count: sql<number>`count(*)` })
+              .select({ status: this.schema.workflowRuns.status, count: this.sql.countStar() })
               .from(this.schema.workflowRuns)
               .groupBy(this.schema.workflowRuns.status)
               .orderBy(asc(this.schema.workflowRuns.status)),
@@ -491,7 +495,7 @@ export class AdminStore {
     const countRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ total: sql<number>`count(*)` })
+          .select({ total: this.sql.countStar() })
           .from(this.schema.sessions)
           .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.sessions.userId))
           .where(where),
@@ -506,7 +510,7 @@ export class AdminStore {
 
     return {
       sessions: pageRows.map(toSession),
-      total: Number(countRows[0]?.total ?? 0),
+      total: asFiniteNumber(countRows[0]?.total),
       limit,
       offset,
       hasMore,
@@ -562,7 +566,7 @@ export class AdminStore {
     const countRows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ total: sql<number>`count(*)` })
+          .select({ total: this.sql.countStar() })
           .from(this.schema.workflows)
           .leftJoin(this.schema.user, eq(this.schema.user.id, this.schema.workflows.userId))
           .where(where),
@@ -581,7 +585,7 @@ export class AdminStore {
 
     return {
       workflows,
-      total: Number(countRows[0]?.total ?? 0),
+      total: asFiniteNumber(countRows[0]?.total),
       limit,
       offset,
       hasMore,
@@ -845,7 +849,7 @@ export class AdminStore {
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
-          .select({ status: this.schema.workflowRuns.status, count: sql<number>`count(*)` })
+          .select({ status: this.schema.workflowRuns.status, count: this.sql.countStar() })
           .from(this.schema.workflowRuns)
           .where(eq(this.schema.workflowRuns.workflowId, workflowId))
           .groupBy(this.schema.workflowRuns.status)

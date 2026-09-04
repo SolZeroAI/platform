@@ -139,6 +139,7 @@ describe("SessionIndexStore.list", () => {
 
     expect(firstPage.sessions.map((session) => session.id)).toEqual(["beta"])
     expect(firstPage.total).toBe(2)
+    expect(typeof firstPage.total).toBe("number")
     expect(firstPage.hasMore).toBe(true)
 
     const secondPage = await Effect.runPromise(
