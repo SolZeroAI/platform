@@ -48,6 +48,7 @@ export interface CopyDestination {
     rows: readonly Record<string, unknown>[],
   ) => Promise<void>
   readonly sizeBytes: () => Promise<number | null>
+  readonly withTransaction: <T>(fn: (dest: CopyDestination) => Promise<T>) => Promise<T>
 }
 
 export class CopyConflictError extends Error {
@@ -83,6 +84,17 @@ type CopyDrizzle = {
   insert: (table: never) => {
     values: (rows: readonly Record<string, unknown>[]) => Promise<unknown>
   }
+  transaction: <T>(fn: (tx: CopyDrizzle) => Promise<T>) => Promise<T>
+}
+
+interface PlannedCopyTable {
+  readonly spec: ControlPlaneCopyTable
+  readonly toInsert: readonly Record<string, unknown>[]
+  readonly toOverwrite: readonly Record<string, unknown>[]
+  readonly sourceRows: number
+  readonly destRowsBefore: number
+  readonly skipped: number
+  readonly conflicts: number
 }
 
 export function makeDrizzleCopyDestination(
@@ -120,6 +132,8 @@ export function makeDrizzleCopyDestination(
       }
     },
     sizeBytes: async () => options?.sizeBytes?.() ?? null,
+    withTransaction: (fn) =>
+      drizzleDb.transaction((tx) => fn(makeDrizzleCopyDestination(tx, options))),
   }
 }
 
@@ -132,6 +146,7 @@ export const copyControlPlane = Effect.fn("cli.copyControlPlane")(function* (inp
   const started = Date.now()
   const sourceNames = sqliteTableNames(input.source)
   const sourceDb = openSqliteCopySource(input.source)
+  const planned: PlannedCopyTable[] = []
   const tables: CopyTableMetrics[] = []
   let inserted = 0
   let skipped = 0
@@ -199,36 +214,48 @@ export const copyControlPlane = Effect.fn("cli.copyControlPlane")(function* (inp
       return yield* Effect.fail(new CopyConflictError(report.error ?? "conflicting rows"))
     }
 
-    if (input.apply) {
-      yield* Effect.tryPromise({
-        try: () => input.dest.insertRows(spec.postgres, toInsert),
-        catch: (cause) =>
-          new Error(`Failed to insert into postgres table ${spec.name}: ${String(cause)}`),
-      })
-      if (input.overwrite && toOverwrite.length > 0) {
-        yield* Effect.tryPromise({
-          try: () => input.dest.upsertRows(spec, toOverwrite),
-          catch: (cause) =>
-            new Error(`Failed to upsert postgres table ${spec.name}: ${String(cause)}`),
-        })
-      }
-    }
-
-    const destAfter = input.apply ? destRows.length + toInsert.length : destRows.length
-    const tableOverwritten = input.apply && input.overwrite ? toOverwrite.length : 0
-    tables.push({
-      table: spec.name,
+    planned.push({
+      spec,
+      toInsert,
+      toOverwrite,
       sourceRows: sourceRows.length,
       destRowsBefore: destRows.length,
-      destRowsAfter: destAfter,
-      inserted: toInsert.length,
       skipped: tableSkipped,
       conflicts: tableConflicts,
+    })
+  }
+
+  if (input.apply) {
+    yield* Effect.tryPromise({
+      try: () =>
+        input.dest.withTransaction(async (tx) => {
+          for (const plan of planned) {
+            await tx.insertRows(plan.spec.postgres, plan.toInsert)
+            if (input.overwrite && plan.toOverwrite.length > 0) {
+              await tx.upsertRows(plan.spec, plan.toOverwrite)
+            }
+          }
+        }),
+      catch: (cause) => new Error(`Failed to apply copy transaction: ${formatCause(cause)}`),
+    })
+  }
+
+  for (const plan of planned) {
+    const destAfter = input.apply ? plan.destRowsBefore + plan.toInsert.length : plan.destRowsBefore
+    const tableOverwritten = input.apply && input.overwrite ? plan.toOverwrite.length : 0
+    tables.push({
+      table: plan.spec.name,
+      sourceRows: plan.sourceRows,
+      destRowsBefore: plan.destRowsBefore,
+      destRowsAfter: destAfter,
+      inserted: plan.toInsert.length,
+      skipped: plan.skipped,
+      conflicts: plan.conflicts,
       overwritten: tableOverwritten,
     })
-    inserted += toInsert.length
-    skipped += tableSkipped
-    conflicts += tableConflicts
+    inserted += plan.toInsert.length
+    skipped += plan.skipped
+    conflicts += plan.conflicts
     overwritten += tableOverwritten
   }
 

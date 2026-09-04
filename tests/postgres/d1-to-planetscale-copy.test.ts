@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { PGlite } from "@electric-sql/pglite"
+import { getTableName } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/pglite"
 import * as Effect from "effect/Effect"
 import { afterEach, describe, expect, it } from "vitest"
@@ -11,6 +12,7 @@ import {
   CopyConflictError,
   copyControlPlane,
   makeDrizzleCopyDestination,
+  type CopyDestination,
 } from "../../packages/api/src/cli/d1-to-planetscale-copy"
 import { mapSqliteCellToPostgres } from "../../packages/api/src/cli/d1-to-planetscale-copy-map"
 import {
@@ -215,6 +217,16 @@ describe("D1 to PlanetScale one-shot copy CLI", () => {
       ),
     ).rejects.toBeInstanceOf(CopyConflictError)
 
+    const leftoverSecrets = await opened.client.query<{ count: string }>(
+      `SELECT COUNT(*)::int AS count FROM "global_secrets"`,
+    )
+    expect(Number(leftoverSecrets.rows[0]?.count)).toBe(0)
+
+    const leftoverUsers = await opened.client.query<{ count: string }>(
+      `SELECT COUNT(*)::int AS count FROM "user" WHERE id <> 'user_verified'`,
+    )
+    expect(Number(leftoverUsers.rows[0]?.count)).toBe(0)
+
     const overwrite = await Effect.runPromise(
       copyControlPlane({
         source: sqlite,
@@ -228,6 +240,44 @@ describe("D1 to PlanetScale one-shot copy CLI", () => {
       `SELECT email, "emailVerified" FROM "user" WHERE id = 'user_verified'`,
     )
     expect(row.rows[0]).toEqual({ email: "verified@example.com", emailVerified: true })
+  })
+
+  it("rolls back earlier apply writes when a later table insert fails", async () => {
+    const sqlite = openFixtureSqlite()
+    sqlites.push(sqlite)
+    const opened = await openCopyDest()
+    clients.push(opened.client)
+    const dest: CopyDestination = {
+      ...opened.dest,
+      withTransaction: (fn) =>
+        opened.dest.withTransaction((tx) =>
+          fn({
+            ...tx,
+            insertRows: async (table, rows) => {
+              await tx.insertRows(table, rows)
+              if (getTableName(table) === "user") {
+                throw new Error("injected apply failure")
+              }
+            },
+          }),
+        ),
+    }
+
+    await expect(
+      Effect.runPromise(
+        copyControlPlane({
+          source: sqlite,
+          dest,
+          apply: true,
+          overwrite: false,
+        }),
+      ),
+    ).rejects.toThrow(/Failed to apply copy transaction/)
+
+    const leftoverSecrets = await opened.client.query<{ count: string }>(
+      `SELECT COUNT(*)::int AS count FROM "global_secrets"`,
+    )
+    expect(Number(leftoverSecrets.rows[0]?.count)).toBe(0)
   })
 
   it("help text states this is not an online migration", async () => {
