@@ -1,3 +1,55 @@
+## solzero@1.7.0
+
+### Optional PlanetScale control-plane database
+
+SolZero now ships two control-plane database flavors in one package. Cloudflare D1 remains the
+default when `DATABASE` is omitted. Operators who outgrow the 10 GB D1 limit can set
+`DATABASE=planetscale`. That path needs `PLANETSCALE_SERVICE_TOKEN_ID`,
+`PLANETSCALE_SERVICE_TOKEN`, and `PLANETSCALE_ORGANIZATION` for remote PlanetScale. Session chat,
+Durable Object sqlite, R2, and Cloudflare AI Search stay on both flavors. PlanetScale is a paid
+service with no free plan and is not a deployment provider.
+
+### One-shot D1 to PlanetScale copy
+
+Operators can copy control-plane rows from a D1 dump into PlanetScale with
+`nub run db:copy-d1-to-planetscale`. This is a convenience copy, not an online
+migration. Production stays on D1 until the operator deploys. The default
+dry-run prints the jsonc and env edits for `DATABASE=planetscale` and writes
+nothing.
+
+### Better Auth email verification on PlanetScale
+
+PlanetScale stores Better Auth `emailVerified` as a boolean so the postgres
+adapter can write true and false.
+
+### Popular secret tag order on PlanetScale
+
+Popular secret tags now sort by numeric count on PlanetScale. A tag used ten
+times ranks above a tag used twice.
+
+### Local admin password matches the running Worker
+
+`nub run auth:admin-password -- dev --local` now reads the same local Alchemy
+state the Worker uses. After local disk state became the default for `dev`,
+the helper still read Cloudflare state, so the printed password did not sign
+in.
+
+### PlanetScale sign-in after a local or Hyperdrive boot
+
+Credential sign-in and `/api/auth/config` now work when `DATABASE=planetscale`.
+The Worker already created a postgres.js client for Hyperdrive; it then rejected
+that client because postgres.js exposes a function, not a plain object. Auth
+config returned 500 and the welcome form could not load.
+
+The Worker also kept that Hyperdrive client on the isolate `env` object and
+reused it on the next request. Cloudflare Workers reject that I/O reuse, so
+sign-in after a successful auth-config request failed. Each request now gets
+its own postgres.js client.
+
+Better Auth session inserts now serialize timestamps as ISO strings. workerd
+rejects postgres.js binds of `Date` objects, so a valid password still returned
+500 after credential check.
+
 ## solzero@1.6.0
 
 ### Bots can create standing and temporary routines

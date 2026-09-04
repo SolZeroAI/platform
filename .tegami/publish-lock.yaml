@@ -1,25 +1,17 @@
 core:changelogs:
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Bots can create standing and temporary routines\n\nEach bot can create its own routines. Standing routines keep running until the bot deletes them. Temporary routines watch finite work such as pull request checks and are deleted when that work is done or when the deadline passes.\n"
-    filename: 2026-08-19-bot-routines.md
+  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Optional PlanetScale control-plane database\n\nSolZero now ships two control-plane database flavors in one package. Cloudflare D1 remains the\ndefault when `DATABASE` is omitted. Operators who outgrow the 10 GB D1 limit can set\n`DATABASE=planetscale`. That path needs `PLANETSCALE_SERVICE_TOKEN_ID`,\n`PLANETSCALE_SERVICE_TOKEN`, and `PLANETSCALE_ORGANIZATION` for remote PlanetScale. Session chat,\nDurable Object sqlite, R2, and Cloudflare AI Search stay on both flavors. PlanetScale is a paid\nservice with no free plan and is not a deployment provider.\n\n## One-shot D1 to PlanetScale copy\n\nOperators can copy control-plane rows from a D1 dump into PlanetScale with\n`nub run db:copy-d1-to-planetscale`. This is a convenience copy, not an online\nmigration. Production stays on D1 until the operator deploys. The default\ndry-run prints the jsonc and env edits for `DATABASE=planetscale` and writes\nnothing.\n\n## Better Auth email verification on PlanetScale\n\nPlanetScale stores Better Auth `emailVerified` as a boolean so the postgres\nadapter can write true and false.\n\n## Popular secret tag order on PlanetScale\n\nPopular secret tags now sort by numeric count on PlanetScale. A tag used ten\ntimes ranks above a tag used twice.\n"
+    filename: 2026-08-31-dual-flavor-database.md
     v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Safer decode at bot, session, workflow, and alarm edges\n\nSolZero now parses untrusted bot, session, workflow, and alarm payloads before they reach runtime code. Operators see safer decode of stored rows, manifests, and artifact metadata.\n"
-    filename: 2026-08-20-safer-boundary-decode.md
+  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Local admin password matches the running Worker\n\n`nub run auth:admin-password -- dev --local` now reads the same local Alchemy\nstate the Worker uses. After local disk state became the default for `dev`,\nthe helper still read Cloudflare state, so the printed password did not sign\nin.\n"
+    filename: 2026-09-02-local-admin-password.md
     v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Alchemy 2.0.0-beta.74 and Turbo 2.10.11\n\nSolZero now deploys and builds with Alchemy 2.0.0-beta.74 and Turbo 2.10.11. The next deploy adopts existing D1 migration history into Alchemy's migration table. Operators do not need a special action beyond that deploy.\n"
-    filename: 2026-08-24-alchemy-turbo-bump.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Deploy previews from GitHub Actions\n\nThe new `Deploy Preview` workflow deploys the `pre` stage on each merge to `master`. Each pull\nrequest deploys an ephemeral `pre-<number>` stage and posts its preview URL as a pull request\ncomment. The workflow destroys the ephemeral stage when the pull request closes. A manual dispatch\ninput removes an orphaned `pre-*` stage.\n\nThe `Release` workflow now starts after `Deploy Preview` succeeds on `master`. Deployment operators\nmust set the GitHub `pre` environment secrets and the repository Cloudflare secrets. Run\n`nub run github:sync-env-secrets` to upload them.\n"
-    filename: 2026-08-24-preview-deployments.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Show the real product version in the app\n\nThe web sidebar and the API health endpoint now display the product version from the repository\n`VERSION` file, followed by the short commit hash of the deployed build, for example\n`v1.5.0-036d0b`. Deployments previously displayed `v0.0.0` because they read the placeholder\nworkspace package version.\n\nA build that contains commits after the release tag also shows the unreleased commit count, for\nexample `v1.5.0+2-bbb222`. A build deployed from the release tag itself, such as a production\ndeployment, keeps the plain `v1.5.0-036d0b` form. The count needs the release tag and full history\nin the deploy checkout; without them the label omits the count.\n"
-    filename: 2026-08-24-product-version-display.md
+  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## PlanetScale sign-in after a local or Hyperdrive boot\n\nCredential sign-in and `/api/auth/config` now work when `DATABASE=planetscale`.\nThe Worker already created a postgres.js client for Hyperdrive; it then rejected\nthat client because postgres.js exposes a function, not a plain object. Auth\nconfig returned 500 and the welcome form could not load.\n\nThe Worker also kept that Hyperdrive client on the isolate `env` object and\nreused it on the next request. Cloudflare Workers reject that I/O reuse, so\nsign-in after a successful auth-config request failed. Each request now gets\nits own postgres.js client.\n\nBetter Auth session inserts now serialize timestamps as ISO strings. workerd\nrejects postgres.js binds of `Date` objects, so a valid password still returned\n500 after credential check.\n"
+    filename: 2026-09-02-planetscale-postgres-client.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-08-19-bot-routines.md
-      - 2026-08-20-safer-boundary-decode.md
-      - 2026-08-24-alchemy-turbo-bump.md
-      - 2026-08-24-preview-deployments.md
-      - 2026-08-24-product-version-display.md
+      - 2026-08-31-dual-flavor-database.md
+      - 2026-09-02-local-admin-password.md
+      - 2026-09-02-planetscale-postgres-client.md
     id: release:solzero
     updated: true
