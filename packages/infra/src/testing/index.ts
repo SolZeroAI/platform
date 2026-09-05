@@ -1,14 +1,11 @@
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as State from "alchemy/State"
-import type * as Effect from "effect/Effect"
 import { getStageMetadataSync, type S0AuthConfig } from "@solzero/shared"
 import type { ApiInfraEnv } from "../../../../apps/api/infra/index"
 import { createS0Api } from "../s0"
 import { createDeploymentMetadata } from "../deploymentMetadata"
-import { stackOptions } from "../stack"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -104,10 +101,6 @@ const S0_ALCHEMY_TEST_PROCESS_ENV = {
 } satisfies Record<string, string>
 
 type S0AlchemyTestOptions = ReturnType<typeof createS0AlchemyTestOptions>
-type S0ApiTestOutput = Effect.Success<ReturnType<typeof createS0Api>>
-type S0StackServices = Effect.Services<ReturnType<typeof createS0Api>>
-
-class S0ApiTest extends Alchemy.Stack<S0ApiTest, S0ApiTestOutput>()("s0-alchemy-test") {}
 
 export function createS0AlchemyTestOptions() {
   setS0AlchemyTestEnv()
@@ -145,16 +138,6 @@ export function makeS0ApiTestResources(options: S0AlchemyTestOptions) {
     repoRoot: REPO_ROOT,
     stageMetadata,
   })
-}
-
-export function makeS0ApiTestStack(options: S0AlchemyTestOptions) {
-  return S0ApiTest.make(
-    stackOptions<S0StackServices>({
-      providers: options.providers,
-      state: options.state,
-    }),
-    makeS0ApiTestResources(options),
-  )
 }
 
 function createS0AlchemyTestApiEnv(): ApiInfraEnv {

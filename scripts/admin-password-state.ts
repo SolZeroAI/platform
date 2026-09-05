@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-export const ADMIN_PASSWORD_STATE_STACKS = ["S0", "S0Api", "S0Web"] as const
+export const ADMIN_PASSWORD_STATE_STACKS = ["S0", "S0Api"] as const
 
 function redactedString(value: unknown): string | undefined {
   if (typeof value !== "object" || value === null) return undefined
