@@ -9,6 +9,7 @@ function serverRequest(input: {
   method?: string
   headers?: Record<string, string>
 }): HttpServerRequest.HttpServerRequest {
+  // SAFETY: fixture supplies only the fields requestFromSource reads.
   return {
     source: input.source,
     url: input.url ?? "https://api.example.test/sessions",
