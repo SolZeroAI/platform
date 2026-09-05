@@ -39,7 +39,7 @@ import {
   type ControlPlaneDb,
 } from "../../db/control-plane-db"
 import { getCloudflareBindings } from "../../services/middleware"
-import { authenticateControlPlaneRequest } from "../../services/auth"
+import { authenticateControlPlaneRequest, requestFromSource } from "../../services/auth"
 import {
   annotateCurrentUserIdentity,
   EffectRequestLogger,
@@ -54,6 +54,8 @@ import {
   type IdentityProviderShape,
 } from "../../services/providers"
 import { requireSessionAccess } from "./control-plane/sessions"
+
+export { requestFromSource }
 
 export type {
   CreateSessionRequest,
@@ -570,13 +572,6 @@ export function toEffectResponse(response: Response) {
     statusText: response.statusText,
     headers: Object.fromEntries(response.headers.entries()),
   })
-}
-
-export function requestFromSource(request: HttpServerRequest.HttpServerRequest) {
-  return Match.value(request.source).pipe(
-    Match.when(Match.instanceOf(Request), (source) => source),
-    Match.orElse(() => new Request(request.url, { method: request.method })),
-  )
 }
 
 const toHandlerResponse = (value: unknown): Response =>
