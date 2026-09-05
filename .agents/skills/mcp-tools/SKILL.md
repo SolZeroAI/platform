@@ -42,13 +42,12 @@ docs in R2 -> Cloudflare AI Search vector index -> shared MCP runtime -> source-
 
 For a new AI Search-backed document source:
 
-1. Create or adopt the R2 + AI Search resource with `createAiSearchR2` in `apps/api/infra/resources.ts`.
-2. Add the source id to the `aiSearchSourceIds` map returned by `createAgentResources`.
-3. Bind the map through `AI_SEARCH_SOURCE_IDS_JSON` in `apps/api/infra/index.ts`.
-4. Add public source metadata in `packages/shared/src/session-tools.ts`.
-5. Add runtime config in `packages/api/src/server/mcp/ai-search-sources.ts`, keeping `maxResults` explicit and source IDs resolved through the shared map.
-6. Register the source in `packages/api/src/server/mcp/ai-search-server.ts`.
-7. Run the MCP integration tests and update any session UI source picker affected by the new source.
+1. Create or adopt the R2 content bucket and AI Search namespaces in `createAgentResources` in `apps/api/infra/resources.ts`.
+2. Bind `AI_SEARCH`, `WORKFLOW_AI_SEARCH`, and `AI_SEARCH_CONTENT_BUCKET` in `apps/api/infra/index.ts`.
+3. Add public source metadata in `packages/shared/src/session-tools.ts`.
+4. Add runtime config in `packages/api/src/server/mcp/ai-search-sources.ts`, keeping `maxResults` explicit and source IDs resolved through the shared map.
+5. Register the source in `packages/api/src/server/mcp/ai-search-server.ts`.
+6. Run the MCP integration tests and update any session UI source picker affected by the new source.
 
 Each AI Search source should expose two MCP tools:
 

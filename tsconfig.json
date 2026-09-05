@@ -47,13 +47,11 @@
     "packages/infra/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.d.ts",
-    "vitest.config.ts",
-    "vitest.alchemy.config.ts"
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "test",
-    "opensrc"
+    "test"
   ]
 }
