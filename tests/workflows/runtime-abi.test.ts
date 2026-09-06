@@ -98,7 +98,9 @@ describe("workflow runtime ABI registry", () => {
     expect(kernelFile).not.toContain("WORKFLOW_RUNTIME_KERNEL_MODULE_NAME")
     expect(kernelFile).not.toMatch(/export const WORKFLOW_RUNTIME_KERNEL_SOURCE\b/)
     expect(WORKFLOW_RUNTIME_KERNEL_V1_SOURCE).not.toContain("slack-trigger")
-    expect(WORKFLOW_RUNTIME_KERNEL_V2_SOURCE).toContain('if (kind === "slack") return "slack-trigger"')
+    expect(WORKFLOW_RUNTIME_KERNEL_V2_SOURCE).toContain(
+      'if (kind === "slack") return "slack-trigger"',
+    )
     expect(getWorkflowRuntimeKernelSourceFingerprint()).toBe("1wfx8c7")
   })
 })
