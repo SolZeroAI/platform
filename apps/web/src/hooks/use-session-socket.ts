@@ -602,7 +602,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         }
       }
     }
-
   }, [sessionId, handleMessage, fetchWsToken])
 
   const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string) => {
