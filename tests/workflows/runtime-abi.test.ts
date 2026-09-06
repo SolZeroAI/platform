@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -100,6 +101,12 @@ describe("workflow runtime ABI registry", () => {
     expect(WORKFLOW_RUNTIME_KERNEL_V1_SOURCE).not.toContain("slack-trigger")
     expect(WORKFLOW_RUNTIME_KERNEL_V2_SOURCE).toContain(
       'if (kind === "slack") return "slack-trigger"',
+    )
+    expect(createHash("sha256").update(WORKFLOW_RUNTIME_KERNEL_V1_SOURCE).digest("hex")).toBe(
+      "cc1c2ca57c858cb84797894b9c38e587f84dc844ed81fd572072f69ddf78ea38",
+    )
+    expect(createHash("sha256").update(WORKFLOW_RUNTIME_KERNEL_V2_SOURCE).digest("hex")).toBe(
+      "94c9a7fadda728e660d9063131e1aabc6d0eac45a502c05b66422315788f3461",
     )
     expect(getWorkflowRuntimeKernelSourceFingerprint()).toBe("1wfx8c7")
   })
