@@ -113,13 +113,3 @@ export const readWorkflowCode = Effect.fn("workflows.readCode")(function* (env: 
     ),
   )
 })
-
-/**
- * Promise-facing read of the compiled workflow code artifact for the non-Effect dynamic workflow
- * runner loader, which deliberately stays Effect-free to keep its imperative Worker-loader path
- * lint-clean. Runs the underlying Effect at this boundary.
- */
-export function readWorkflowCodePromise(env: Env, key: string): Promise<string> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging Effect artifact reads to the non-Effect dynamic workflow runner loader (Worker loader entry).
-  return Effect.runPromise(readWorkflowCode(env, key))
-}
