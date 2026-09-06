@@ -162,7 +162,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     (data: ServerMessage) => {
       switch (data.type) {
         case "subscribed":
-          console.log("WebSocket subscribed to session")
           subscribedRef.current = true
           // Clear existing state since we're about to receive fresh history
           setEvents([])
@@ -387,7 +386,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           break
 
         case "sandbox_error":
-          console.error("Sandbox error:", data.error)
           setSessionState((prev) =>
             prev
               ? {
@@ -406,7 +404,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           break
 
         case "error":
-          console.error("Session error:", data)
           // Reset loading state if a fetch_history request was rejected
           setLoadingHistory(false)
           break
@@ -456,15 +453,12 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
 
     // Use ref to avoid race conditions with React StrictMode
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already open")
       return
     }
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-      console.log("WebSocket already connecting")
       return
     }
     if (connectingRef.current) {
-      console.log("Connection in progress (ref)")
       return
     }
 
@@ -483,7 +477,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           setConnecting(false)
           return
         }
-        console.error("Failed to fetch WS token:", error)
         setAuthError(
           error instanceof WsTokenRequestError && error.status === 401
             ? error.message
@@ -518,7 +511,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       return
     }
     const wsUrl = `${getWebSocketOrigin()}/sessions/${sessionId}/ws`
-    console.log("WebSocket connecting to:", wsUrl)
 
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
@@ -532,7 +524,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         ws.close()
         return
       }
-      console.log("WebSocket connected!")
       connectingRef.current = false
       setConnected(true)
       setConnecting(false)
@@ -555,8 +546,8 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       try {
         const data = JSON.parse(event.data)
         handleMessage(data)
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error)
+      } catch {
+        // Drop unparseable frames
       }
     }
 
@@ -564,11 +555,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
         return
       }
-      console.log("WebSocket closed:", {
-        code: event.code,
-        reason: event.reason,
-        wasClean: event.wasClean,
-      })
       connectingRef.current = false
       subscribedRef.current = false
       setConnected(false)
@@ -604,7 +590,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         if (reconnectAttempts.current < 5) {
           const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
           reconnectAttempts.current++
-          console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`)
 
           reconnectTimeoutRef.current = setTimeout(() => {
             if (mountedRef.current) {
@@ -613,34 +598,23 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           }, delay)
         } else {
           // Exhausted reconnection attempts
-          console.error("WebSocket reconnection failed after 5 attempts")
           setConnectionError("Connection lost. Please check your network and try reconnecting.")
         }
       }
     }
 
-    ws.onerror = (error) => {
-      if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
-        return
-      }
-      console.error("WebSocket error event:", error)
-    }
   }, [sessionId, handleMessage, fetchWsToken])
 
   const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error("WebSocket not connected")
       return
     }
 
     if (!subscribedRef.current) {
-      console.error("Not subscribed yet, waiting...")
       // Retry after a short delay
       setTimeout(() => sendPrompt(content, model, reasoningEffort), 500)
       return
     }
-
-    console.log("Sending prompt:", content, "with model:", model, "reasoning:", reasoningEffort)
 
     // Optimistically set isProcessing for immediate feedback
     // Server will confirm with processing_status message
