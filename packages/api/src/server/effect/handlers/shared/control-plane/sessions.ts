@@ -528,7 +528,7 @@ export const createSessionWithIdentity = Effect.fn("controlPlane.createSessionWi
     const repoName = resolvedRepo?.repoName ?? ""
     const repoDefaultBranch = resolvedRepo?.defaultBranch ?? null
     const branchName = Option.match(resolvedRepoOption, {
-      onSome: () => generateBranchName(sessionId, input.title ?? undefined),
+      onSome: () => generateBranchName(sessionId),
       onNone: () => null,
     })
 
