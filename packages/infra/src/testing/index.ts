@@ -146,7 +146,7 @@ function createS0AlchemyTestApiEnv(): ApiInfraEnv {
   }
 }
 
-export function requireWorkerUrl(appName: string, url: string | undefined) {
+function requireWorkerUrl(appName: string, url: string | undefined) {
   // oxlint-disable-next-line s0-lint/no-if-statement -- Test helper validates deployed Worker output before issuing HTTP requests.
   if (!url) {
     throw new Error(`Expected deployed ${appName} worker URL.`)

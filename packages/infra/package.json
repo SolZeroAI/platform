@@ -36,7 +36,6 @@
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.0-beta.107",
     "@solzero/shared": "workspace:*",
     "alchemy": "2.0.0-beta.74",
     "alchemy-planetscale-logical-db": "2.0.0",

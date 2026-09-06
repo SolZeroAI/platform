@@ -19,9 +19,6 @@
     "@solzero/background-api#build": {
       "outputs": []
     },
-    "@solzero/sandbox#build": {
-      "outputs": []
-    },
     "@solzero/shared#build": {
       "outputs": []
     },

@@ -59,15 +59,3 @@ export function getAiSearchNamespaceName(options: GetAiSearchNamespaceNameOption
 export function getWorkflowAiSearchNamespaceName(options: GetAiSearchNamespaceNameOptions): string {
   return stageQualifiedNamespaceName(`${options.appName}-user-workflow`, options.stageName)
 }
-
-export interface GetAiSearchInstanceNameOptions {
-  appName: string
-  serviceName: string
-  stageName: string
-}
-
-export function getAiSearchInstanceName(options: GetAiSearchInstanceNameOptions): string {
-  const { appName, serviceName, stageName } = options
-
-  return `${appName}-${serviceName}-ais-${stageName}`
-}
