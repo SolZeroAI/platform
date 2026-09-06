@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { WORKFLOW_MANIFEST_VERSION, type WorkflowManifest } from "../../packages/shared/src"
 import {
@@ -12,7 +15,16 @@ import {
   getWorkflowRuntimeLoaderCacheVersion,
   isWorkflowRuntimeAbiVersion,
 } from "../../packages/api/src/server/background/workflows/runtime-abi"
+import {
+  WORKFLOW_RUNTIME_KERNEL_V1_SOURCE,
+  WORKFLOW_RUNTIME_KERNEL_V2_SOURCE,
+} from "../../packages/api/src/server/background/workflows/runtime-kernel"
 import { normalizeWorkflowManifest } from "../../packages/api/src/server/background/workflows/manifest"
+
+const runtimeKernelPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../packages/api/src/server/background/workflows/runtime-kernel.ts",
+)
 
 function manifest(overrides: Partial<WorkflowManifest> = {}): WorkflowManifest {
   return {
@@ -76,6 +88,18 @@ describe("workflow runtime ABI registry", () => {
         "workflow-runtime-kernel.v1.js": `${modules["workflow-runtime-kernel.v1.js"]}\n// cache bust`,
       }),
     ).not.toBe(fingerprint)
+  })
+
+  it("freezes kernel v2 as an independent immutable literal", () => {
+    const kernelFile = readFileSync(runtimeKernelPath, "utf8")
+
+    expect(kernelFile).toMatch(/export const WORKFLOW_RUNTIME_KERNEL_V2_SOURCE = String\.raw`/)
+    expect(kernelFile).not.toContain("createWorkflowRuntimeKernelV2Source")
+    expect(kernelFile).not.toContain("WORKFLOW_RUNTIME_KERNEL_MODULE_NAME")
+    expect(kernelFile).not.toMatch(/export const WORKFLOW_RUNTIME_KERNEL_SOURCE\b/)
+    expect(WORKFLOW_RUNTIME_KERNEL_V1_SOURCE).not.toContain("slack-trigger")
+    expect(WORKFLOW_RUNTIME_KERNEL_V2_SOURCE).toContain('if (kind === "slack") return "slack-trigger"')
+    expect(getWorkflowRuntimeKernelSourceFingerprint()).toBe("1wfx8c7")
   })
 })
 
