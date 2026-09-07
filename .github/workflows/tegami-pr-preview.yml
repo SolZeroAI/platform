@@ -15,7 +15,7 @@ permissions:
 jobs:
   preview:
     name: Build release preview
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Check out pull request
