@@ -41,9 +41,10 @@ Ready when `$ART/signed-in/result.txt` is `signed-in`, `$ART/signed-in/after.tex
 ## Gotchas
 
 - The welcome heading is reused on the signed-in home. Do not treat `Welcome to SolZero` alone as proof of sign-in. Look for `#admin-email` (signed out) versus `textarea.session-composer-textarea` (signed in).
-- `control-solzero admin-password` reads the Worker-bound secret from `packages/infra/.alchemy/state`. If it fails, launch has not finished writing that file; do not invent a password. Do not use `nub run auth:admin-password` / `alchemy state get`: those return a different `attr.text` than `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD`, and Better Auth returns `INVALID_EMAIL_OR_PASSWORD`.
+- `control-solzero admin-password` reads the Worker-bound secret from `packages/infra/.alchemy/state`. If it fails, launch has not finished writing that file; do not invent a password. `nub run auth:admin-password -- dev --local` now reads that same file. Do not use `nub run auth:admin-password` without `--local`, or Cloudflare `alchemy state get`: those can return a different `attr.text` than `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD`, and Better Auth returns `INVALID_EMAIL_OR_PASSWORD`.
 - `chrome sign-in` waits for the TanStack Start client script, then `requestSubmit()`. A click before hydration does a native GET and leaves the welcome form with no toast.
 - Social/OIDC buttons only appear when those providers are enabled in the stage JSONC. Local `dev.config.jsonc` ships credential-only.
 - Do not POST `/api/auth/sign-in/email` from curl and call that a UI proof. HTTP is fine as a side-effect check after the Chrome submit.
 - Each `chrome dump` / `screenshot` uses a fresh profile. A later dump does not stay signed in. Use `chrome signed-in-open` to prove `/workflows`, `/bots`, or `/settings` in the same session as Sign In.
+- Local credential-only welcome may show an info banner recommending social or OIDC via `config/dev.config.jsonc`. That is expected. It is not the unconfigured failure.
 - If the welcome copy is `Sign-in is not configured for this deployment.`, stop. That is a product failure. Doctor should already have failed closed on `/api/auth/config`. It is not a mapped empty state.
