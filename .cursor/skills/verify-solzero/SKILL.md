@@ -112,7 +112,7 @@ export SOLZERO_VERIFY_ADMIN_PASSWORD="$(cat .cursor/skills/verify-solzero/.run/a
   --out-dir "$ART/workflows"
 ```
 
-`admin-password` reads the Worker-bound secret from local Alchemy disk state (`packages/infra/.alchemy/state/S0/dev/admin-password.json`, or the `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD` binding in `api.json`). Do not pipe `nub run auth:admin-password` into the helper. Alchemy `state get` currently returns a different `attr.text` than the bound secret, and `POST /api/auth/sign-in/email` rejects that value.
+`admin-password` reads the Worker-bound secret from local Alchemy disk state (`packages/infra/.alchemy/state/S0/dev/admin-password.json`, or the `S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD` binding in `api.json`). Use this helper. `nub run auth:admin-password -- dev --local` now reads that same disk file. Do not use `nub run auth:admin-password` without `--local`, or Cloudflare `alchemy state get`: those can return a different `attr.text` than the bound secret, and `POST /api/auth/sign-in/email` rejects that value.
 
 `nub run test:e2e` needs `S0_API_KEY` and a live model path. It does not prove the web UI. Use it only when the feature file says so.
 
