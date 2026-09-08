@@ -15,7 +15,7 @@ permissions:
 jobs:
   preview:
     name: Build release preview
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Check out pull request
@@ -29,6 +29,11 @@ jobs:
           nub-version: 0.4.11
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
       - name: Install dependencies
         run: nub install --frozen-lockfile

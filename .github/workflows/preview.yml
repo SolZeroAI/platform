@@ -55,7 +55,7 @@ jobs:
     name: Deploy preview stage
     needs: validate
     if: ${{ github.repository != 'SolZeroAI/platform' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     environment: pre
     permissions:
@@ -166,7 +166,7 @@ jobs:
   cleanup-preview:
     name: Clean up preview stage
     if: ${{ github.repository != 'SolZeroAI/platform' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral')) }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     environment: pre
     permissions:
