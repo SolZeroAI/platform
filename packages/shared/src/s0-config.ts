@@ -465,29 +465,6 @@ export function canonicalS0ConfigJson(config: S0ResolvedConfig): string {
   return JSON.stringify(sortForCanonicalJson(config))
 }
 
-export function s0ConfigSecretReferences(config: S0ResolvedConfig): SecretReference[] {
-  const authProviderSecrets = Object.values(config.auth.providers).flatMap((provider) =>
-    provider.kind === "credential" ? [] : [provider.clientSecret],
-  )
-  return [
-    ...authProviderSecrets,
-    ...(config.aiProviders.litellm?.apiKey ? [config.aiProviders.litellm.apiKey] : []),
-    ...(config.mcpcf?.adminApiToken ? [config.mcpcf.adminApiToken] : []),
-    config.integrations.githubApp.clientSecret,
-    config.integrations.githubApp.privateKey,
-    ...(config.integrations.githubApp.webhookSecret
-      ? [config.integrations.githubApp.webhookSecret]
-      : []),
-    config.integrations.slack.botToken,
-    ...(config.auth.adminPassword ? [config.auth.adminPassword] : []),
-    config.security.betterAuthSecret,
-    config.security.mcpcfProxySigningSecret,
-    config.security.tokenEncryptionKey,
-    config.security.repositorySecretsEncryptionKey,
-    ...(config.aiSearch.serviceTokenId ? [config.aiSearch.serviceTokenId] : []),
-  ]
-}
-
 export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretReference[] {
   const credentialSignInEnabled = Object.values(config.auth.providers).some(
     (provider) =>
