@@ -1,24 +1,26 @@
 ---
 name: c0-config
-description: Use when changing c0 deployment configuration, runtime-editable global settings, auth providers, AI providers, MCP Context Forge, discovered registries, secret references, or open-source deployment configuration.
+description: Use when changing SolZero deployment configuration, runtime-editable global settings, auth providers, AI providers, MCP Context Forge, discovered registries, secret references, or open-source deployment configuration.
 ---
 
-# c0 Config
+# SolZero Config
 
-Use this skill whenever work changes c0 configuration or the boundary between deployment-managed and runtime-managed state.
+Use this skill whenever work changes SolZero configuration or the boundary between deployment-managed and runtime-managed state.
+
+Live names use the `S0_` prefix and `config/s0.config.schema.json`. Do not invent `C0_*` bindings, `C0_CONFIG` KV keys, or `c0.config.schema.json`; those names are retired.
 
 ## Canonical Deployment Configuration
 
 The selected `config/<stage>.config.jsonc` file is the only source of truth for non-secret operator configuration. Keep configuration readable, reviewable, and shareable there rather than encoding objects in environment variables.
 
 - Keep complete, independent `config/dev.config.jsonc`, `config/test.config.jsonc`, `config/pre.config.jsonc`, and `config/prod.config.jsonc` files in the repository's `config/` directory. Do not add cross-file inheritance, partial overrides, or profile merging.
-- Keep the stage JSONC files, `config/example.config.jsonc`, and `config/c0.config.schema.json` tracked. Ignore secret-bearing `config/.env` and `config/.*.vars` files while tracking their example templates.
+- Keep the stage JSONC files, `config/example.config.jsonc`, and `config/s0.config.schema.json` tracked. Ignore secret-bearing `config/.env` and `config/.*.vars` files while tracking their example templates.
 - Map preview stages such as `pre-123` to `config/pre.config.jsonc`. Other supported stages map directly to `config/<stage>.config.jsonc`.
 - Fail before creating Alchemy resources when the selected file does not exist or fails schema validation.
 - Parse and schema-decode only the selected file once at the Alchemy deployment boundary.
 - Use that same resolved object for infrastructure decisions and Worker bindings so build-time and runtime configuration cannot drift structurally.
-- Keep `schemaVersion` explicit and regenerate `config/c0.config.schema.json` when the schema changes.
-- Point every stage file at the generated `config/c0.config.schema.json`. Run `nub run config:check` after editing any stage file or its schema. Run `nub run config:schema` intentionally when the generated schema needs to change.
+- Keep `schemaVersion` explicit and regenerate `config/s0.config.schema.json` when the schema changes.
+- Point every stage file at the generated `config/s0.config.schema.json`. Run `nub run config:check` after editing any stage file or its schema. Run `nub run config:schema` intentionally when the generated schema needs to change.
 - Define the external JSON contract with Effect Schema and generate the editor schema from that same contract. `Schema.Struct` is appropriate for plain JSON DTOs; use `Schema.Class` only when configuration values need class identity, constructors, methods, or branding.
 
 Do not parse stage JSONC in a Worker or web request. Do not add a serialized JSON environment variable or a duplicate defaults layer.
@@ -27,7 +29,7 @@ Do not parse stage JSONC in a Worker or web request. Do not add a serialized JSO
 
 Alchemy compiles the resolved config into bounded bindings:
 
-- Pass cohesive, small server domains as native Cloudflare JSON bindings, such as `C0_CONFIG_AUTH` or `C0_CONFIG_MCPCF`.
+- Pass cohesive, small server domains as native Cloudflare JSON bindings, such as `S0_CONFIG_AUTH` or `S0_CONFIG_MCPCF`.
 - Pass browser-safe values as explicit `VITE_*` scalars. Never expose a secret or the full server configuration to the browser.
 - Do not pass the entire configuration as one large binding. Cloudflare applies binding-count and per-binding size limits.
 - Keep deployment-time binding budget checks close to the infrastructure code.
@@ -42,7 +44,7 @@ Secret values never belong in a stage config file. Reference them explicitly at 
 ```jsonc
 {
   "apiKey": {
-    "env": "C0_LITELLM_API_KEY"
+    "env": "S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY"
   }
 }
 ```
@@ -62,7 +64,7 @@ Secret values never belong in a stage config file. Reference them explicitly at 
 For a domain that supports Admin editing, use this precedence:
 
 1. An explicit domain in the selected stage config is deployment-managed and locked in Admin.
-2. If the domain is omitted, read its editable value from `C0_CONFIG` KV.
+2. If the domain is omitted, read its editable value from `S0_CONFIG` KV.
 3. If neither exists, use the domain's documented default or unconfigured state.
 
 The lock message must identify the active stage config location, for example `config/prod.config.jsonc:aiProviders.litellm`, and explain that the field must be removed from deployment configuration and redeployed before Admin can edit it.
@@ -73,7 +75,7 @@ Authentication is deployment-managed because it defines which providers may esta
 
 ## Runtime-Owned State
 
-Use `C0_CONFIG` KV for runtime-editable settings and externally discovered registries. Keep stable string keys and JSON values.
+Use `S0_CONFIG` KV for runtime-editable settings and externally discovered registries. Keep stable string keys and JSON values.
 
 Runtime-editable setup values:
 
@@ -103,7 +105,7 @@ Compute the deployment digest from canonicalized resolved configuration and expo
 
 ## Storage Boundaries
 
-- Use D1 for c0-owned relational state with a schema we control, especially user-owned rows and reporting tables.
+- Use D1 for SolZero-owned relational state with a schema we control, especially user-owned rows and reporting tables.
 - Keep `user_mcpcf_server_configs` in D1 because it is user-related relational state.
 - Use `USER_WORKFLOW_KV` for user-namespaced workflow `kv-put` and `kv-get` storage.
 - Keep `REPOS_CACHE` for repo/workflow-builder internal caches.

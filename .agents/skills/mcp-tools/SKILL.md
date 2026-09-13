@@ -29,7 +29,7 @@ When adding or changing a tool:
 - Use one MCP server when tools share auth, transport, and runtime dependencies.
 - Expose each selected capability as its own MCP tool in `tools/list`.
 - Keep custom MCP servers separate from predefined internal tools. Reject custom names that collide with reserved internal server names.
-- Keep follow-up streamable HTTP requests working by preserving header-based source selection and the D1 session fallback via `x-c0-session-id`.
+- Keep follow-up streamable HTTP requests working by preserving header-based source selection and the D1 session fallback via `x-s0-session-id`.
 - Keep tool input schemas narrow. Prefer `query: z.string().min(1)` for search tools unless the caller genuinely needs more control.
 
 ## AI Search Source Pattern
@@ -45,8 +45,8 @@ For a new AI Search-backed document source:
 1. Create or adopt the R2 content bucket and AI Search namespaces in `createAgentResources` in `apps/api/infra/resources.ts`.
 2. Bind `AI_SEARCH`, `WORKFLOW_AI_SEARCH`, and `AI_SEARCH_CONTENT_BUCKET` in `apps/api/infra/index.ts`.
 3. Add public source metadata in `packages/shared/src/session-tools.ts`.
-4. Add runtime config in `packages/api/src/server/mcp/ai-search-sources.ts`, keeping `maxResults` explicit and source IDs resolved through the shared map.
-5. Register the source in `packages/api/src/server/mcp/ai-search-server.ts`.
+4. Persist runtime source records through `AiSearchRegistryStore` in `packages/api/src/server/background/db/ai-search.ts`, keeping `maxResults` explicit. Tool names come from `getAiSearchMcpToolNames`.
+5. Keep MCP tool registration in `packages/api/src/server/mcp/ai-search-server.ts`. Dispatch into the shared runtime in `packages/api/src/server/mcp/ai-search-runtime.ts`.
 6. Run the MCP integration tests and update any session UI source picker affected by the new source.
 
 Each AI Search source should expose two MCP tools:
