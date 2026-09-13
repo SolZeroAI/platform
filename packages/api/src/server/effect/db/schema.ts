@@ -2,23 +2,6 @@ import { sql } from "drizzle-orm"
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { DEFAULT_ISOLATE_STEP_LIMIT, DEFAULT_SUBAGENT_MODE } from "@solzero/shared"
 
-export const repoSecrets = sqliteTable(
-  "repo_secrets",
-  {
-    repoId: integer("repo_id").notNull(),
-    repoOwner: text("repo_owner").notNull(),
-    repoName: text("repo_name").notNull(),
-    key: text("key").notNull(),
-    encryptedValue: text("encrypted_value").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.repoId, table.key] }),
-    index("idx_repo_secrets_repo_name").on(table.repoOwner, table.repoName),
-  ],
-)
-
 export const globalSecrets = sqliteTable("global_secrets", {
   key: text("key").primaryKey().notNull(),
   encryptedValue: text("encrypted_value").notNull(),
