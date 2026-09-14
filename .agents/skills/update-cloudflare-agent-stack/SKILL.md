@@ -1,6 +1,6 @@
 ---
 name: update-cloudflare-agent-stack
-description: "Review and upgrade c0's Cloudflare agent stack packages: agents, @cloudflare/think, @cloudflare/codemode, and @cloudflare/shell. Use when asked to update, audit, modernize, or plan upgrades for the Agents SDK, Think, Code Mode, Shell, agent runtime, @callable usage, Agent Skills, MCP agent support, or related Cloudflare agent libraries in this repo."
+description: "Review and upgrade SolZero's Cloudflare agent stack packages: agents, @cloudflare/think, @cloudflare/codemode, and @cloudflare/shell. Use when asked to update, audit, modernize, or plan upgrades for the Agents SDK, Think, Code Mode, Shell, agent runtime, @callable usage, Agent Skills, MCP agent support, or related Cloudflare agent libraries in this repo."
 ---
 
 # Update Cloudflare Agent Stack
@@ -28,9 +28,10 @@ Also inspect dependent or peer packages when the upgrade requires it:
 ## Start With Evidence
 
 1. Read the current package usage in:
-   - `apps/api/package.json`
-   - `packages/api/package.json`
-   - `packages/sandbox/Dockerfile`
+   - `apps/api/package.json` (`@solzero/background-api`)
+   - `packages/api/package.json` (`@solzero/api`)
+   - `packages/agent-container/package.json` (`@solzero/agent-container`)
+   - `packages/agent-container/Dockerfile`
    - `nub.lock`
    - `packages/api/src/server/background/isolate/agent.ts`
    - `packages/api/src/server/background/isolate/runtime.ts`
@@ -59,21 +60,21 @@ Before editing package versions, respond with:
 - Repo surfaces affected.
 - Recommended path, choosing one:
   - **Conservative bump**: minimal package updates and compatibility fixes.
-  - **Targeted refactor**: remove or simplify c0 custom code that the newer library replaces.
+  - **Targeted refactor**: remove or simplify SolZero custom code that the newer library replaces.
   - **Larger modernization**: adopt new library features such as Agent Skills, newer MCP helpers, scheduling, resumable streaming, or changed Think runtime patterns.
 - Validation plan and known risks.
 
-Do not treat release-note summaries as sufficient when c0 uses internals or experimental APIs. Read source/types for those surfaces.
+Do not treat release-note summaries as sufficient when SolZero uses internals or experimental APIs. Read source/types for those surfaces.
 
 ## Implementation Rules
 
 - Work on a separate branch for this upgrade, normally `codex/update-cloudflare-agent-stack`, unless the user requests a different branch name.
 - Use `nub` for dependency changes.
 - Keep package versions aligned where peer ranges imply a stack upgrade.
-- Prefer deleting obsolete c0 glue code over preserving compatibility shims when the new library has an idiomatic replacement.
+- Prefer deleting obsolete SolZero glue code over preserving compatibility shims when the new library has an idiomatic replacement.
 - Reassess `@callable()` and `agents/vite` usage. `@callable()` is for external Agent RPC; same-worker Durable Object RPC should not need the decorators or Agents Vite plugin.
 - If `agents/vite` is still required, confirm whether it returns a single plugin or a plugin array in the target version, and wire it without nested plugin arrays.
-- If package upgrades change MCP server/client APIs, update c0's MCP handlers and isolate MCP manager integration against current types.
+- If package upgrades change MCP server/client APIs, update SolZero MCP handlers and isolate MCP manager integration against current types.
 - If `@cloudflare/shell` or sandbox-facing packages change workspace, git, filesystem, or process APIs, update the runtime provider code rather than adapting with broad casts.
 - If `@cloudflare/codemode` changes agent/tool interfaces, update Code Mode integration and tests around the new contracts.
 
@@ -87,9 +88,9 @@ Run the repo's required checks before handoff:
 
 Run focused checks based on changed surfaces:
 
-- `nub run --filter @c0/background-api typecheck`
-- `nub run --filter @c0/api typecheck`
-- `nub run test:alchemy`
+- `nub run --filter @solzero/background-api typecheck`
+- `nub run --filter @solzero/api typecheck`
+- `nub run --filter @solzero/agent-container typecheck`
 - Relevant MCP, isolate, workflow, sandbox, or e2e tests if touched.
 
 If a validation command fails because of an unrelated pre-existing issue, run the narrowest check that still validates the upgraded surface and report both results.
