@@ -471,27 +471,3 @@ export function buildRuntimeModelOptions(
     })),
   }))
 }
-
-export function getModelReasoningConfig(
-  providers: ReadonlyArray<{
-    providerId: string
-    models: Record<string, ProviderModelDefinition>
-  }>,
-  runtimeModelId: string,
-): Option.Option<ModelReasoningConfig> {
-  const { providerId, modelId } = splitModelId(runtimeModelId)
-  const provider = providers.find((item) => item.providerId === providerId)
-  return Option.fromNullishOr(provider?.models[modelId]?.reasoning)
-}
-
-export function findModelDisplayName(
-  providers: ReadonlyArray<{
-    providerId: string
-    models: Record<string, ProviderModelDefinition>
-  }>,
-  runtimeModelId: string,
-): Option.Option<string> {
-  const { providerId, modelId } = splitModelId(runtimeModelId)
-  const provider = providers.find((item) => item.providerId === providerId)
-  return Option.fromNullishOr(provider?.models[modelId]?.name)
-}
