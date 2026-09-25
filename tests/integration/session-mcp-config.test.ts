@@ -3,7 +3,7 @@ import {
   buildSessionToolRuntimePlan,
   type McpcfServerDefinition,
 } from "../../packages/shared/src/session-tools"
-import { getStageMetadataSync } from "../../packages/shared/src/stageMetadata"
+import { LOCAL_API_PORT, getStageMetadataSync } from "../../packages/shared/src/stageMetadata"
 import {
   buildSessionMcpServers,
   buildSessionMcpServersFromPlan,
@@ -87,12 +87,12 @@ describe("session MCP config", () => {
     })
 
     expect(mcpServers[INTERNAL_AI_SEARCH_MCP_SERVER_NAME]).toMatchObject({
-      url: "http://host.docker.internal:1337/mcp",
+      url: `http://host.docker.internal:${LOCAL_API_PORT}/mcp`,
     })
   })
 
   it("getAiSearchMcpUrl derives URL from stage metadata", () => {
-    expect(getAiSearchMcpUrl("dev")).toBe("http://host.docker.internal:1337/mcp")
+    expect(getAiSearchMcpUrl("dev")).toBe(`http://host.docker.internal:${LOCAL_API_PORT}/mcp`)
     expect(getAiSearchMcpUrl(PROD_STAGE_ENV)).toBe("http://s0-ai-search.internal/mcp")
     expect(getAiSearchMcpUrl(PRE_STAGE_ENV)).toBe("http://s0-ai-search.internal/mcp")
   })
@@ -162,7 +162,9 @@ describe("session MCP config", () => {
   })
 
   it("getMcpcfMcpUrl derives URL from stage metadata", () => {
-    expect(getMcpcfMcpUrl("dev")).toBe("http://host.docker.internal:1337/integrations/mcpcf/mcp")
+    expect(getMcpcfMcpUrl("dev")).toBe(
+      `http://host.docker.internal:${LOCAL_API_PORT}/integrations/mcpcf/mcp`,
+    )
     expect(getMcpcfMcpUrl(PROD_STAGE_ENV)).toBe(
       "http://s0-ai-search.internal/integrations/mcpcf/mcp",
     )
@@ -172,7 +174,9 @@ describe("session MCP config", () => {
   })
 
   it("getMcpcfIsolateMcpUrl uses the worker route in local dev", () => {
-    expect(getMcpcfIsolateMcpUrl("dev")).toBe("http://localhost:1337/integrations/mcpcf/mcp")
+    expect(getMcpcfIsolateMcpUrl("dev")).toBe(
+      `http://localhost:${LOCAL_API_PORT}/integrations/mcpcf/mcp`,
+    )
     expect(getMcpcfIsolateMcpUrl(PROD_STAGE_ENV)).toBe(
       "https://api.ai.example.org/integrations/mcpcf/mcp",
     )

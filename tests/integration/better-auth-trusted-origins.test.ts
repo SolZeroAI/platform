@@ -1,4 +1,5 @@
 import {
+  LOCAL_API_PORT,
   getStageMetadataFromConfigSync,
   getStageMetadataSync,
 } from "../../packages/shared/src/stageMetadata"
@@ -16,10 +17,12 @@ describe("stage auth metadata", () => {
   it("uses the local web app origin for auth URLs in dev", () => {
     const auth = getStageMetadataSync("dev").infra
 
+    expect(LOCAL_API_PORT).toBe(3100)
+    expect(auth.serverUrl).toBe("http://localhost:3100")
     expect(auth.authBaseUrl).toBe("http://localhost:3000")
     expect(auth.authTrustedOrigins).toEqual(
       expect.arrayContaining([
-        "http://localhost:1337",
+        "http://localhost:3100",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://[::1]:3000",

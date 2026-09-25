@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest"
+import { LOCAL_API_PORT } from "../../packages/shared/src/stageMetadata"
 
 const runE2E = process.env.RUN_E2E === "1"
 const testE2E = runE2E ? it : it.skip
 
-const BASE_URL = process.env.BACKGROUND_BASE_URL ?? "http://localhost:1337"
+const BASE_URL = process.env.BACKGROUND_BASE_URL ?? `http://localhost:${LOCAL_API_PORT}`
 const TEST_MODEL = "litellm/gpt-5.4-mini"
 const TEST_PROMPT = "relevant operational runbooks for the coordinator"
 const EMPTY_RESULT_PATTERNS = [

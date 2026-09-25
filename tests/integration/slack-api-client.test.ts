@@ -39,7 +39,7 @@ describe("Slack API client", () => {
   async function createClient() {
     return Effect.runPromise(
       makeS0ApiClient({
-        baseUrl: "http://localhost:1337/",
+        baseUrl: "http://localhost:3100/",
         bearerToken: "oiak_test_user-secret",
       }),
     )
@@ -107,7 +107,7 @@ describe("Slack API client", () => {
     const queueCall = fetchSpy.mock.calls[0]!
     const queueInit = getFetchInit(queueCall)
 
-    expect(getFetchUrl(queueCall)).toBe("http://localhost:1337/slack/sessions/queue")
+    expect(getFetchUrl(queueCall)).toBe("http://localhost:3100/slack/sessions/queue")
     expect(queueInit.method).toBe("POST")
     expect(queueInit.headers).toMatchObject({
       "content-type": "application/json",
@@ -153,7 +153,7 @@ describe("Slack API client", () => {
       setupUrl: "http://localhost:3000/settings?slackUserId=U123",
     })
     expect(fetchSpy).toHaveBeenCalledTimes(1)
-    expect(getFetchUrl(fetchSpy.mock.calls[0]!)).toBe("http://localhost:1337/slack/sessions")
+    expect(getFetchUrl(fetchSpy.mock.calls[0]!)).toBe("http://localhost:3100/slack/sessions")
   })
 
   it("runs the Slack session API with the API-key principal", async () => {
@@ -192,7 +192,7 @@ describe("Slack API client", () => {
     })
     const runCall = fetchSpy.mock.calls[0]!
     const init = getFetchInit(runCall)
-    expect(getFetchUrl(runCall)).toBe("http://localhost:1337/slack/sessions/run")
+    expect(getFetchUrl(runCall)).toBe("http://localhost:3100/slack/sessions/run")
     expect(init.method).toBe("POST")
     expect(init.headers).toMatchObject({
       "content-type": "application/json",

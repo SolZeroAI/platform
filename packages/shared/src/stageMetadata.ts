@@ -7,7 +7,9 @@ import * as Schema from "effect/Schema"
 import type { S0ApplicationConfig, S0DeploymentConfig } from "./s0-config"
 
 const DEFAULT_SANDBOX_INACTIVITY_TIMEOUT_MS = 600_000
-const INTERNAL_MCP_LOCAL_ORIGIN = "http://host.docker.internal:1337"
+/** Local HTTP listen port for the Alchemy API Worker (`nub run dev`). */
+export const LOCAL_API_PORT = 3100
+const INTERNAL_MCP_LOCAL_ORIGIN = `http://host.docker.internal:${LOCAL_API_PORT}`
 const INTERNAL_MCP_INTERNAL_ORIGIN = "http://s0-ai-search.internal"
 const INTERNAL_MCP_INTERNAL_HOST = new URL(INTERNAL_MCP_INTERNAL_ORIGIN).hostname
 
@@ -80,7 +82,7 @@ export interface InfraStageProps {
   /**
    * Origins allowed to initiate Better Auth requests for this stage.
    * In local dev, the web app runs on port 3000 and proxies auth traffic to
-   * the worker on port 1337.
+   * the worker on LOCAL_API_PORT (3100).
    */
   readonly authTrustedOrigins: readonly string[]
   /** Custom domains to bind to the API worker for this stage. */
@@ -268,7 +270,7 @@ function localInfraStageProps(
   consoleOutputEnabled: boolean,
 ): InfraStageProps {
   const zone = "localhost"
-  const serverUrl = `http://${zone}:1337`
+  const serverUrl = `http://${zone}:${LOCAL_API_PORT}`
   const authBaseUrl = "http://localhost:3000"
 
   return {
