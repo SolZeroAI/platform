@@ -1,6 +1,6 @@
 ---
 name: update-cloudflare-agent-stack
-description: "Review and upgrade SolZero's Cloudflare agent stack packages: agents, @cloudflare/think, @cloudflare/codemode, and @cloudflare/shell. Use when asked to update, audit, modernize, or plan upgrades for the Agents SDK, Think, Code Mode, Shell, agent runtime, @callable usage, Agent Skills, MCP agent support, or related Cloudflare agent libraries in this repo."
+description: "Review and upgrade SolZero's Cloudflare agent stack packages: agents, @cloudflare/think, and @cloudflare/shell. @cloudflare/codemode is transitive through that agents stack, not a first-party import. Use when asked to update, audit, modernize, or plan upgrades for the Agents SDK, Think, Shell, agent runtime, @callable usage, Agent Skills, MCP agent support, or related Cloudflare agent libraries in this repo."
 ---
 
 # Update Cloudflare Agent Stack
@@ -13,8 +13,9 @@ Primary packages:
 
 - `agents`
 - `@cloudflare/think`
-- `@cloudflare/codemode`
 - `@cloudflare/shell`
+
+`@cloudflare/codemode` is a transitive `agents` stack package (`agents`, `@cloudflare/think`, and `@cloudflare/shell`). Inspect it when those packages move. Do not add it as a first-party import unless a new SolZero surface requires it. The root `overrides["@cloudflare/codemode"]` pin keeps the transitive stack aligned.
 
 Also inspect dependent or peer packages when the upgrade requires it:
 
@@ -76,7 +77,7 @@ Do not treat release-note summaries as sufficient when SolZero uses internals or
 - If `agents/vite` is still required, confirm whether it returns a single plugin or a plugin array in the target version, and wire it without nested plugin arrays.
 - If package upgrades change MCP server/client APIs, update SolZero MCP handlers and isolate MCP manager integration against current types.
 - If `@cloudflare/shell` or sandbox-facing packages change workspace, git, filesystem, or process APIs, update the runtime provider code rather than adapting with broad casts.
-- If `@cloudflare/codemode` changes agent/tool interfaces, update Code Mode integration and tests around the new contracts.
+- If `@cloudflare/codemode` changes, reassess the consuming `agents` / `@cloudflare/think` / `@cloudflare/shell` surfaces and their tests. Do not add a first-party `@cloudflare/codemode` import unless a new SolZero surface requires it.
 
 ## Validation
 
