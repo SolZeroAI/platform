@@ -33,11 +33,6 @@ export function getMcpTokenSettingsTarget(error: string): McpTokenSettingsTarget
   return null
 }
 
-export function getMcpTokenSettingsServerLabel(error: string): string | null {
-  const target = getMcpTokenSettingsTarget(error)
-  return target?.type === "server" ? target.serverLabel : null
-}
-
 export function buildMcpSettingsSearchForServer(serverLabel: string): McpSettingsSearch {
   const normalizedServerLabel = serverLabel.trim()
   return {

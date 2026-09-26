@@ -8,7 +8,6 @@ import {
   type SessionToolSpec,
   type UnavailableSessionTool,
 } from "@solzero/shared"
-import { isInactiveSession } from "@/lib/time"
 
 export interface SessionItem {
   id: string
@@ -68,16 +67,6 @@ export function getSessionSourceLabel(source: SessionInitiationSource | undefine
     default:
       return "Started from web"
   }
-}
-
-export function isActiveSession(session: Pick<SessionItem, "status" | "createdAt" | "updatedAt">) {
-  if (session.status === "archived") {
-    return false
-  }
-  if (session.status === "active" || session.status === "created") {
-    return true
-  }
-  return !isInactiveSession(session.updatedAt || session.createdAt)
 }
 
 export async function archiveSession(sessionId: string): Promise<ArchiveSessionFailure | null> {
