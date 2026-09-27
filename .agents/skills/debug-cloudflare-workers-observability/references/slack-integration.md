@@ -38,7 +38,7 @@ Interpretation:
           "key": "$metadata.service",
           "operation": "eq",
           "type": "string",
-          "value": "c0-api-pre"
+          "value": "s0-api-pre"
         },
         {
           "key": "$workers.event.request.path",
