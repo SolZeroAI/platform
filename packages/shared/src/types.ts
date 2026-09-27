@@ -4,7 +4,6 @@
 
 import type { AgentRuntime, SessionKind } from "./agent-runtime"
 import type { OpenCodeMcpServers } from "./provider-config"
-import type { SubagentRunSummary } from "./session-events"
 import type { SessionToolSpec } from "./session-tools"
 import type { SubagentMode } from "./subagents"
 
@@ -21,20 +20,7 @@ export type SandboxStatus =
   | "stopped"
   | "stale"
   | "failed"
-export type GitSyncStatus = "pending" | "in_progress" | "completed" | "failed"
-export type MessageStatus = "pending" | "processing" | "completed" | "failed"
-export type MessageSource = "web" | "slack" | "extension" | "github"
 export type SessionInitiationSource = "web" | "slack" | "api"
-export type ArtifactType = "pr" | "screenshot" | "preview" | "branch"
-export type EventType =
-  | "tool_call"
-  | "tool_result"
-  | "token"
-  | "reasoning"
-  | "error"
-  | "git_sync"
-  | "step_limit_warning"
-  | "subagent_event"
 
 export interface SessionRuntimeCapabilities {
   agentRuntime: AgentRuntime
@@ -50,55 +36,6 @@ export interface GitUser {
   email: string
 }
 
-// Participant in a session
-export interface SessionParticipant {
-  id: string
-  userId: string
-  githubLogin: string | null
-  githubName: string | null
-  githubEmail: string | null
-  role: "owner" | "member"
-}
-
-// Session state
-export interface Session {
-  id: string
-  sessionKind: SessionKind
-  agentRuntime: AgentRuntime
-  title: string | null
-  repoOwner: string
-  repoName: string
-  githubInstallationId?: number | null
-  githubRepoId?: number | null
-  tools?: SessionToolSpec[]
-  customMcpServers?: OpenCodeMcpServers
-  secretKeys?: string[]
-  isolateStepLimit?: number
-  subagents?: SubagentMode
-  repoDefaultBranch: string
-  branchName: string | null
-  baseSha: string | null
-  currentSha: string | null
-  opencodeSessionId: string | null
-  incognito?: boolean
-  status: SessionStatus
-  createdAt: number
-  updatedAt: number
-}
-
-// Message in a session
-export interface SessionMessage {
-  id: string
-  authorId: string
-  content: string
-  source: MessageSource
-  attachments: Attachment[] | null
-  status: MessageStatus
-  createdAt: number
-  startedAt: number | null
-  completedAt: number | null
-}
-
 // Attachment to a message
 export interface Attachment {
   type: "file" | "image" | "url"
@@ -108,16 +45,6 @@ export interface Attachment {
   mimeType?: string
 }
 
-// Agent event
-export interface AgentEvent {
-  id: string
-  type: EventType
-  data: Record<string, unknown>
-  messageId: string | null
-  createdAt: number
-}
-
-// Artifact created by session
 export interface SessionEventMetadata {
   terminal?: boolean
   serverName?: string
@@ -130,25 +57,6 @@ export interface SessionArtifactMetadata {
   createPrUrl?: string
   provider?: string
   prNumber?: number
-}
-
-export interface SessionArtifact {
-  id: string
-  type: ArtifactType
-  url: string | null
-  metadata: SessionArtifactMetadata | null
-  createdAt: number
-}
-
-/**
- * Metadata stored on branch artifacts when PR creation falls back to manual flow.
- */
-export interface ManualPullRequestArtifactMetadata {
-  mode: "manual_pr"
-  head: string
-  base: string
-  createPrUrl: string
-  provider?: string
 }
 
 // Pull request info
@@ -211,14 +119,12 @@ export function isOktaReconnectMcpDiscoveryError(event: McpDiscoveryErrorLike): 
   return isMcpContextForge && hasReconnectText
 }
 
-export type RuntimeActivityType =
+type RuntimeActivityType =
   | "created"
   | "status_changed"
   | "keep_alive_changed"
   | "keep_alive_change_failed"
   | "error"
-
-export type SandboxActivityType = RuntimeActivityType
 
 export interface RuntimeActivityEvent {
   id: string
@@ -234,13 +140,9 @@ export interface RuntimeActivityEvent {
   durationSincePreviousMs: number | null
 }
 
-export type SandboxActivityEvent = RuntimeActivityEvent
-
 export interface RuntimeActivityResponse {
   activity: RuntimeActivityEvent[]
 }
-
-export type SandboxActivityResponse = RuntimeActivityResponse
 
 export type {
   ClientMessage,
@@ -275,7 +177,7 @@ export interface EnrichedRepository extends InstallationRepository {
   metadata?: RepoMetadata
 }
 
-export interface GitHubRepositoryPermissions {
+interface GitHubRepositoryPermissions {
   contents: "read" | "write" | null
   pullRequests: "read" | "write" | null
   metadata: "read" | "write" | null
@@ -284,36 +186,6 @@ export interface GitHubRepositoryPermissions {
   userCanAdmin: boolean
   canPush: boolean
   canOpenPullRequests: boolean
-}
-
-// API response types
-export interface CreateSessionRequest {
-  sessionKind?: SessionKind
-  agentRuntime?: AgentRuntime
-  repoOwner?: string
-  repoName?: string
-  tools?: SessionToolSpec[]
-  customMcpServers?: OpenCodeMcpServers
-  secretKeys?: string[]
-  isolateStepLimit?: number
-  subagents?: SubagentMode
-  title?: string
-  model?: string
-  reasoningEffort?: string
-  incognito?: boolean
-}
-
-export interface CreateSessionResponse {
-  sessionId: string
-  sessionKind: SessionKind
-  agentRuntime: AgentRuntime
-  status: SessionStatus
-}
-
-export interface ListSessionsResponse {
-  sessions: Session[]
-  cursor?: string
-  hasMore: boolean
 }
 
 // --- Compatibility types for existing repo consumers ---
@@ -373,33 +245,6 @@ export interface PromptInput {
     url?: string
   }>
   callbackContext?: SlackCallbackContext
-}
-
-export interface PromptResponse {
-  messageId: string
-  status: string
-  output?: string
-  error?: string
-}
-
-export interface RunSessionInput extends CreateSessionInput {
-  sessionId?: string
-  content: string
-  source?: MessageSource
-  attachments?: PromptInput["attachments"]
-  callbackContext?: SlackCallbackContext
-}
-
-export interface RunSessionResponse {
-  sessionId: string
-  sessionKind: SessionKind
-  agentRuntime: AgentRuntime
-  createdSession: boolean
-  messageId: string
-  status: MessageStatus
-  output: string | null
-  subagentRuns?: SubagentRunSummary[]
-  error?: string
 }
 
 export interface WsSubscribePayload {
@@ -465,11 +310,6 @@ export interface WorkflowCallbackContext {
 }
 
 export type SessionCallbackContext = SlackCallbackContext | WorkflowCallbackContext
-
-export interface OAuthSetupLinkResponse {
-  error: string
-  setupUrl: string
-}
 
 export interface UpdateSessionToolsRequest {
   tools?: SessionToolSpec[]
