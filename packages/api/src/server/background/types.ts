@@ -12,7 +12,6 @@ import type {
 export type {
   ClientMessage,
   ParticipantPresence,
-  RuntimeSessionEvent,
   SandboxEvent,
   ServerMessage,
   SessionEvent,

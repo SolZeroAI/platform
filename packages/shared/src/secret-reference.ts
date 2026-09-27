@@ -1,7 +1,7 @@
 /* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-if-statement, s0-lint/no-ternary -- Secret references are synchronously validated while compiling deployment configuration. */
 import * as Schema from "effect/Schema"
 
-export const ENVIRONMENT_BINDING_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/
+const ENVIRONMENT_BINDING_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/
 
 // oxlint-disable-next-line effect/prefer-schema-class -- deployment JSONC uses plain DTOs across infra and Worker boundaries
 export const SecretReferenceSchema = Schema.Struct({
