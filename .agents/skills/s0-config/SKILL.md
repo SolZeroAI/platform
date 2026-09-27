@@ -1,5 +1,5 @@
 ---
-name: c0-config
+name: s0-config
 description: Use when changing SolZero deployment configuration, runtime-editable global settings, auth providers, AI providers, MCP Context Forge, discovered registries, secret references, or open-source deployment configuration.
 ---
 

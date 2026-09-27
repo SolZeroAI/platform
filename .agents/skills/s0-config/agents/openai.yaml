@@ -1,4 +1,4 @@
 interface:
   display_name: "SolZero Config"
   short_description: "Standards for dynamic SolZero configuration"
-  default_prompt: "Use $c0-config to update SolZero dynamic configuration, provider, or registry storage."
+  default_prompt: "Use $s0-config to update SolZero dynamic configuration, provider, or registry storage."

@@ -1,6 +1,6 @@
 ---
 name: workflow-runtime-abi
-description: Guidance for safely changing the c0 Workflow runtime ABI, manifest ABI, runtime kernels, manifest migrations, workflow artifact compatibility, and audit/backfill tooling. Use when modifying workflow runtime contracts, compiled workflow imports, kernel modules, manifest versions, node handle semantics, template context such as nodes.* or trigger.*, workflow artifact loading, in-flight workflow run resume behavior, or any workflow node catalog/default/validation/adapter change where persisted node options, ports, outputs, trigger payloads, or old workflow artifacts could execute differently.
+description: Guidance for safely changing the SolZero Workflow runtime ABI, manifest ABI, runtime kernels, manifest migrations, workflow artifact compatibility, and audit/backfill tooling. Use when modifying workflow runtime contracts, compiled workflow imports, kernel modules, manifest versions, node handle semantics, template context such as nodes.* or trigger.*, workflow artifact loading, in-flight workflow run resume behavior, or any workflow node catalog/default/validation/adapter change where persisted node options, ports, outputs, trigger payloads, or old workflow artifacts could execute differently.
 ---
 
 # Workflow Runtime ABI
