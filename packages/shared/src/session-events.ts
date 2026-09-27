@@ -173,7 +173,7 @@ export interface OpenCodeInteractionQuestion {
 export type OpenCodeInteractionRequest =
   | {
       runtime: "opencode"
-      kind: "permission"
+      kind: Extract<OpenCodeInteractionKind, "permission">
       interactionId: string
       requestId: string
       opencodeSessionId: string
@@ -188,7 +188,7 @@ export type OpenCodeInteractionRequest =
     }
   | {
       runtime: "opencode"
-      kind: "question"
+      kind: Extract<OpenCodeInteractionKind, "question">
       interactionId: string
       requestId: string
       opencodeSessionId: string
@@ -203,14 +203,14 @@ export type OpenCodeInteractionRequest =
 export type OpenCodeInteractionResponse =
   | {
       runtime: "opencode"
-      kind: "permission"
+      kind: Extract<OpenCodeInteractionKind, "permission">
       interactionId: string
       reply: OpenCodePermissionReply
       message?: string
     }
   | {
       runtime: "opencode"
-      kind: "question"
+      kind: Extract<OpenCodeInteractionKind, "question">
       interactionId: string
       answers?: string[][]
       rejected?: boolean
