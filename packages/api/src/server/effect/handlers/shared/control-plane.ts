@@ -60,7 +60,6 @@ export { requestFromSource }
 export type {
   CreateSessionRequest,
   CreateSessionResponse,
-  SlackCreateSessionRequest,
   UpdateSessionToolsRequest,
 } from "@solzero/shared"
 export type { RunSessionPromptRequest, RunSessionPromptResponse }

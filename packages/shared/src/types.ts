@@ -472,35 +472,9 @@ export interface OAuthSetupLinkResponse {
   setupUrl: string
 }
 
-export interface SlackCreateSessionRequest {
-  sessionKind?: SessionKind
-  agentRuntime?: AgentRuntime
-  slackUserId: string
-  repoOwner?: string
-  repoName?: string
-  tools?: SessionToolSpec[]
-  customMcpServers?: OpenCodeMcpServers
-  isolateStepLimit?: number
-  subagents?: SubagentMode
-  title?: string
-  model?: string
-  reasoningEffort?: string
-  githubLogin?: string
-  githubName?: string
-  githubEmail?: string
-  incognito?: boolean
-}
-
 export interface UpdateSessionToolsRequest {
   tools?: SessionToolSpec[]
   customMcpServers?: OpenCodeMcpServers
   isolateStepLimit?: number
   subagents?: SubagentMode
-}
-
-export interface SlackCreateSessionResponse {
-  sessionId: string
-  sessionKind: SessionKind
-  agentRuntime: AgentRuntime
-  status: SessionStatus
 }
