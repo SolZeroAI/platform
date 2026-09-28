@@ -46,7 +46,7 @@
     "@solzero/shared": "workspace:*",
     "agents": "0.19.0",
     "ai": "7.0.93",
-    "better-auth": "1.6.30",
+    "better-auth": "1.6.33",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.0-beta.107",
     "jose": "^6.2.10",
