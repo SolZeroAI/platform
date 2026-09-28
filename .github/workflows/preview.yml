@@ -50,6 +50,8 @@ jobs:
     uses: ./.github/workflows/validate.yml
     permissions:
       contents: read
+      checks: write
+      pull-requests: write
 
   deploy-preview:
     name: Deploy preview stage
