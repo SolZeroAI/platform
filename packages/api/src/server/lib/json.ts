@@ -14,7 +14,6 @@ const decodeArrayOption = Schema.decodeUnknownOption(
 const decodeValueOption = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 const decodeValueSync = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
 const encodeJsonString = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
-const encodeJsonStringOption = Schema.encodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 
 const emptyRecord = (): Record<string, unknown> => ({})
 const emptyArray = (): readonly unknown[] => []
@@ -23,11 +22,6 @@ const emptyArray = (): readonly unknown[] => []
 export const decodeJsonRecord = (
   value: string | null | undefined,
 ): Option.Option<Record<string, unknown>> => decodeRecordOption(value)
-
-/** Parse a JSON array string as an Option, `None` for null/invalid/non-array input. */
-export const decodeJsonArray = (
-  value: string | null | undefined,
-): Option.Option<readonly unknown[]> => decodeArrayOption(value)
 
 /** Parse any JSON string as an Option<unknown>, `None` for null/invalid input. */
 export const decodeJson = (value: string | null | undefined): Option.Option<unknown> =>
@@ -50,12 +44,3 @@ export const parseJsonOrText = (value: string): unknown =>
 
 /** Serialize a value to a compact JSON string (throws on cycles, like `JSON.stringify`). */
 export const stringifyJson = (value: unknown): string => encodeJsonString(value)
-
-/**
- * Serialize a value to a compact JSON string, falling back to `fallback(value)`
- * (default `String(value)`) when the value cannot be serialized. Never throws.
- */
-export const stringifyJsonOr = (
-  value: unknown,
-  fallback: (value: unknown) => string = (input) => String(input),
-): string => Option.getOrElse(encodeJsonStringOption(value), () => fallback(value))
