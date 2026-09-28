@@ -9,17 +9,9 @@
  * - `app.css` sets a global `input, select, textarea { background: #2d2d2d }` rule.
  * - Kumo's `InputGroup` defaults its surface to `bg-kumo-control` (#2d2d2d).
  *
- * The native helpers win on specificity alone; the `InputGroup` helpers use Tailwind v4 important
- * (suffix `!`, not prefix) to override Kumo's own utilities.
+ * The remaining helpers use Tailwind v4 important (suffix `!`, not prefix) to override Kumo's own
+ * utilities.
  */
-
-/** Native `<input>` / `<select>` on a card. Compose with layout, e.g. `` `mt-1 w-full ${recessedFieldClassName}` ``. */
-export const recessedFieldClassName =
-  "rounded-lg border border-kumo-hairline bg-kumo-recessed px-2 py-1.5 text-sm text-kumo-default outline-none focus:ring-2 focus:ring-kumo-focus"
-
-/** Native `<textarea>` on a card. Compose with size, e.g. `` `mt-1 h-28 w-full ${recessedTextareaClassName}` ``. */
-export const recessedTextareaClassName =
-  "resize-none rounded-lg border border-kumo-hairline bg-kumo-recessed px-2 py-1.5 text-sm text-kumo-default outline-none focus:ring-2 focus:ring-kumo-focus"
 
 /**
  * Standalone Kumo `Input` / `InputArea` on a card. When `invalid`, swaps the hairline ring for a
