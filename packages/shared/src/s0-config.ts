@@ -213,7 +213,7 @@ function normalizeCloudflareAiGatewayConfig(
 ): S0CloudflareAiGatewayConfig {
   if (config.cacheTtl !== null && (!Number.isFinite(config.cacheTtl) || config.cacheTtl <= 0)) {
     throw new Error(
-      "Invalid c0 configuration: aiProviders.cloudflareAiGateway.cacheTtl must be null or a positive number of seconds",
+      "Invalid s0 configuration: aiProviders.cloudflareAiGateway.cacheTtl must be null or a positive number of seconds",
     )
   }
 
@@ -222,12 +222,12 @@ function normalizeCloudflareAiGatewayConfig(
     const modelId = rawModelId.trim()
     if (!modelId) {
       throw new Error(
-        "Invalid c0 configuration: aiProviders.cloudflareAiGateway model ids must be non-empty",
+        "Invalid s0 configuration: aiProviders.cloudflareAiGateway model ids must be non-empty",
       )
     }
     if (models[modelId]) {
       throw new Error(
-        `Invalid c0 configuration: duplicate aiProviders.cloudflareAiGateway model '${modelId}'`,
+        `Invalid s0 configuration: duplicate aiProviders.cloudflareAiGateway model '${modelId}'`,
       )
     }
     models[modelId] = {
@@ -239,17 +239,17 @@ function normalizeCloudflareAiGatewayConfig(
   const defaultModel = config.defaultModel.trim()
   if (config.enabled && Object.keys(models).length === 0) {
     throw new Error(
-      "Invalid c0 configuration: enabled aiProviders.cloudflareAiGateway requires at least one model",
+      "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires at least one model",
     )
   }
   if (config.enabled && !defaultModel) {
     throw new Error(
-      "Invalid c0 configuration: enabled aiProviders.cloudflareAiGateway requires a defaultModel",
+      "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires a defaultModel",
     )
   }
   if (defaultModel && !models[defaultModel]) {
     throw new Error(
-      `Invalid c0 configuration: aiProviders.cloudflareAiGateway.defaultModel '${defaultModel}' is not in models`,
+      `Invalid s0 configuration: aiProviders.cloudflareAiGateway.defaultModel '${defaultModel}' is not in models`,
     )
   }
 

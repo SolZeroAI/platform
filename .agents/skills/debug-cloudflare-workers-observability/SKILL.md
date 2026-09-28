@@ -1,6 +1,6 @@
 ---
 name: debug-cloudflare-workers-observability
-description: Debug deployed Cloudflare Workers using the cf_observability MCP, Wrangler, D1/R2 state, repo evidence, and safe live reproduction. Use for preview/prod runtime incidents involving missing or incomplete logs/traces, webhook delivery, Worker request routing, Workflow runs/events/artifacts, Slack app integrations, Slack API errors such as invalid_arguments, duplicate responses, or cases where the user asks to use Cloudflare Worker Observability or cf_observability to debug c0 behavior.
+description: Debug deployed Cloudflare Workers using the cf_observability MCP, Wrangler, D1/R2 state, repo evidence, and safe live reproduction. Use for preview/prod runtime incidents involving missing or incomplete logs/traces, webhook delivery, Worker request routing, Workflow runs/events/artifacts, Slack app integrations, Slack API errors such as invalid_arguments, duplicate responses, or cases where the user asks to use Cloudflare Worker Observability or cf_observability to debug SolZero behavior.
 ---
 
 # Debug Cloudflare Workers Observability
@@ -25,7 +25,7 @@ Start with `observability_keys` scoped to the Worker and an absolute ISO timefra
 
 Common useful fields:
 
-- `$metadata.service`: Worker script name, such as `c0-api-pre`.
+- `$metadata.service`: Worker script name, such as `s0-api-pre`.
 - `$workers.event.request.path`: request path for ingress routing.
 - `$metadata.requestId`: Cloudflare request correlation within one invocation.
 - `$metadata.traceId` and `annotations.trace.id`: useful when populated, but do not assume they are searchable.
@@ -45,7 +45,7 @@ set +a
 nub exec wrangler whoami
 ```
 
-For c0, derive resource names from infra code instead of guessing. In the current pattern, pre resources include `c0-db-pre` and `c0-workflow-artifacts-pre`.
+For SolZero, derive resource names from infra code instead of guessing. In the current pattern, pre resources include `s0-db-pre` and `s0-workflow-artifacts-pre`.
 
 Use D1 for durable truth about runs, registrations, sessions, and configuration. Use R2 for workflow artifacts and generated code. Avoid destructive commands unless the user explicitly approved them.
 
@@ -55,7 +55,7 @@ Load [references/wrangler-d1-r2.md](references/wrangler-d1-r2.md) for command sh
 
 ### Workflows
 
-Use this section when debugging c0 Workflow triggers, workflow overview rows, run failures, node outputs, generated workflow artifacts, or mismatches between the UI and runtime behavior.
+Use this section when debugging SolZero Workflow triggers, workflow overview rows, run failures, node outputs, generated workflow artifacts, or mismatches between the UI and runtime behavior.
 
 Primary evidence order:
 

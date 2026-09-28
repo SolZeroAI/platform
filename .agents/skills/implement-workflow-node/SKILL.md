@@ -1,6 +1,6 @@
 ---
 name: implement-workflow-node
-description: Use when adding, changing, or reviewing Workflow Nodes in the c0 agent repo, including shared node catalog metadata, Workflow Node options and ports, runtime node Adapters, adapter registry routing, compiler inline logic nodes, workflow validation, and tests for Workflow Node execution.
+description: Use when adding, changing, or reviewing Workflow Nodes in this repo, including shared node catalog metadata, Workflow Node options and ports, runtime node Adapters, adapter registry routing, compiler inline logic nodes, workflow validation, and tests for Workflow Node execution.
 ---
 
 # Implement Workflow Node

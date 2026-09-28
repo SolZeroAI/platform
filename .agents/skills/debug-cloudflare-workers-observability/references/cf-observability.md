@@ -15,7 +15,7 @@ Recommended first query:
         "key": "$metadata.service",
         "operation": "eq",
         "type": "string",
-        "value": "c0-api-pre"
+        "value": "s0-api-pre"
       }
     ],
     "limit": 100,
@@ -42,7 +42,7 @@ Then query events by path or message:
           "key": "$metadata.service",
           "operation": "eq",
           "type": "string",
-          "value": "c0-api-pre"
+          "value": "s0-api-pre"
         },
         {
           "key": "$workers.event.request.path",
@@ -76,7 +76,7 @@ Search for specific error text in `message`:
           "key": "$metadata.service",
           "operation": "eq",
           "type": "string",
-          "value": "c0-api-pre"
+          "value": "s0-api-pre"
         },
         {
           "key": "message",

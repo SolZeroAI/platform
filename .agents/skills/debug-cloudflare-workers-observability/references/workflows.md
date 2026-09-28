@@ -1,4 +1,4 @@
-# c0 Workflows Debugging Reference
+# SolZero Workflows Debugging Reference
 
 ## Evidence Order
 
@@ -84,7 +84,7 @@ If one run and one Slack post exist, but the send node input already contains du
 
 ## Validation
 
-For code changes in c0, follow repo validation:
+For code changes in this repo, follow repo validation:
 
 ```bash
 nub run format
