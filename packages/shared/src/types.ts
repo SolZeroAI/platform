@@ -245,7 +245,6 @@ export type SandboxActivityResponse = RuntimeActivityResponse
 export type {
   ClientMessage,
   ParticipantPresence,
-  RuntimeSessionEvent,
   SandboxEvent,
   ServerMessage,
   SessionEvent,

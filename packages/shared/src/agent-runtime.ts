@@ -6,7 +6,7 @@ export type SessionKind = "isolate" | "sandbox"
 
 const AGENT_RUNTIME_VALUES: readonly string[] = AGENT_RUNTIMES
 
-export function isAgentRuntime(value: unknown): value is AgentRuntime {
+function isAgentRuntime(value: unknown): value is AgentRuntime {
   return typeof value === "string" && AGENT_RUNTIME_VALUES.includes(value)
 }
 

@@ -40,7 +40,7 @@ export function resolveSessionSubagentMode(
   )
 }
 
-export interface SessionSubagentModeField {
+interface SessionSubagentModeField {
   readonly subagents?: SubagentMode
 }
 

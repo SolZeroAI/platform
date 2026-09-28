@@ -2,7 +2,7 @@ import { parseJson, stringifyJson } from "./json"
 import { normalizeOpenCodeMcpServers, type OpenCodeMcpServers } from "./provider-config"
 import type { OpenCodeRemoteMcpServer } from "./provider-config"
 
-export const SESSION_TOOL_QUERY_PARAM = "tool"
+const SESSION_TOOL_QUERY_PARAM = "tool"
 
 export const DEFAULT_SESSION_CUSTOM_MCP_SERVERS = normalizeOpenCodeMcpServers({
   time: {
@@ -162,12 +162,6 @@ export function parseCustomMcpToolKey(toolKey: string): {
     serverName: legacySegments.slice(0, hashIndex).join("_"),
     mcpToolName: legacySegments.slice(hashIndex + 1).join("_"),
   }
-}
-
-export interface AiSearchSourceDefinition {
-  id: string
-  label: string
-  description: string
 }
 
 export interface McpcfServerDefinition {
@@ -764,13 +758,6 @@ export function appendSessionToolsToSearchParams(
     searchParams.append(paramName, encodeSessionToolQueryValue(tool))
   })
   return searchParams
-}
-
-export function createSessionToolsSearchParams(
-  tools: readonly SessionToolSpec[] | null | undefined,
-  paramName = SESSION_TOOL_QUERY_PARAM,
-): URLSearchParams {
-  return appendSessionToolsToSearchParams(new URLSearchParams(), tools, paramName)
 }
 
 export function stringifySessionTools(

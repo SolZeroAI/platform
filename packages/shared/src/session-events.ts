@@ -149,8 +149,8 @@ export type SubagentSessionEvent = SubagentSessionEventBase &
       }
   )
 
-export type OpenCodeInteractionKind = "permission" | "question"
-export type OpenCodePermissionReply = "once" | "always" | "reject"
+type OpenCodeInteractionKind = "permission" | "question"
+type OpenCodePermissionReply = "once" | "always" | "reject"
 
 export interface OpenCodeInteractionTool {
   messageID: string
@@ -173,7 +173,7 @@ export interface OpenCodeInteractionQuestion {
 export type OpenCodeInteractionRequest =
   | {
       runtime: "opencode"
-      kind: "permission"
+      kind: Extract<OpenCodeInteractionKind, "permission">
       interactionId: string
       requestId: string
       opencodeSessionId: string
@@ -188,7 +188,7 @@ export type OpenCodeInteractionRequest =
     }
   | {
       runtime: "opencode"
-      kind: "question"
+      kind: Extract<OpenCodeInteractionKind, "question">
       interactionId: string
       requestId: string
       opencodeSessionId: string
@@ -203,14 +203,14 @@ export type OpenCodeInteractionRequest =
 export type OpenCodeInteractionResponse =
   | {
       runtime: "opencode"
-      kind: "permission"
+      kind: Extract<OpenCodeInteractionKind, "permission">
       interactionId: string
       reply: OpenCodePermissionReply
       message?: string
     }
   | {
       runtime: "opencode"
-      kind: "question"
+      kind: Extract<OpenCodeInteractionKind, "question">
       interactionId: string
       answers?: string[][]
       rejected?: boolean
@@ -361,7 +361,6 @@ type SessionEventPayload =
 
 export type SessionEvent = SessionEventPayload & SessionEventCommon
 export type SandboxEvent = SessionEvent
-export type RuntimeSessionEvent = SessionEvent
 
 export type ClientMessage =
   | { type: "ping" }
