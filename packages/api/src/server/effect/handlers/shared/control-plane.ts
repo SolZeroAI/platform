@@ -57,11 +57,6 @@ import { requireSessionAccess } from "./control-plane/sessions"
 
 export { requestFromSource }
 
-export type {
-  CreateSessionRequest,
-  CreateSessionResponse,
-  UpdateSessionToolsRequest,
-} from "@solzero/shared"
 export type { RunSessionPromptRequest, RunSessionPromptResponse }
 
 export interface ResolvedUserIdentity {
