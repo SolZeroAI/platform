@@ -174,7 +174,7 @@ Pinned versions on this master:
 - Effect `4.0.0-beta.107`
 - Alchemy `2.0.0-beta.74`
 - better-auth `1.6.24`
-- wrangler `4.116.0`
+- wrangler `4.143.0`
 - drizzle-orm `1.0.0-rc.5-ab785fc` as a D1 query adapter only
 
 There is no Clerk.

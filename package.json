@@ -88,14 +88,14 @@
     "turbo": "2.11.5",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
-    "wrangler": "4.116.0"
+    "wrangler": "4.143.0"
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.1",
     "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.93",
     "chat": "4.40.0",
-    "workerd": "1.20260730.1"
+    "workerd": "1.20260926.1"
   },
   "devEngines": {
     "packageManager": {
