@@ -39,16 +39,16 @@ Update the OpenCode harness and Cloudflare Containers agent-container stack, val
 - If a repo-root check still fails on unrelated workspace or test issues, also run `nub run --filter @solzero/background-api typecheck`, `nub run --filter @solzero/api typecheck`, and `nub run --filter @solzero/agent-container typecheck` and report those results separately so the upgraded surface is still verified.
 - If TypeScript reports incompatible `McpServer` types from two `@modelcontextprotocol/sdk` versions, align on a single version: root `package.json` → `overrides["@modelcontextprotocol/sdk"]` matching `packages/api` and `packages/agent-container`, then `nub install` and re-run `tsc`.
 - `nub exec vitest run tests/e2e/opencode-workflow.test.ts` (or `nub run test:e2e` from root, which sets `RUN_E2E=1`)
-- The OpenCode e2e uses the current API-key auth flow: set `S0_API_KEY`. Requests send `x-api-key`. The default local seeded user is `user-session-run` unless `E2E_USER_ID` is set. The API base URL defaults to `http://localhost:1337` unless `BACKGROUND_BASE_URL` is set.
+- The OpenCode e2e uses the current API-key auth flow: set `S0_API_KEY`. Requests send `x-api-key`. The default local seeded user is `user-session-run` unless `E2E_USER_ID` is set. The API base URL defaults to `http://localhost:3100` unless `BACKGROUND_BASE_URL` is set.
 - Optional: `nub exec vitest run tests/integration/harness-container-provider.test.ts tests/integration/agent-container-entrypoints.test.ts` for provider and bundle wiring without a live Worker.
 - `docker build -t agent-container-check ./packages/agent-container` to confirm the image still installs `@ai-sdk/harness-opencode` and the derived image builds successfully. OpenCode is a harness package in this image, not a `cloudflare/sandbox-opencode` base.
 - A live local repro that creates a session with `agentRuntime: "opencode"`, sends a prompt, and inspects `/sessions/:id/events` for both `token` and `execution_complete`. A repo-less session is enough to verify the OpenCode workflow; repo-backed sessions additionally require a linked GitHub identity for the acting user.
 - If the Vitest e2e is skipped or incomplete, say that explicitly and do not treat it as sufficient validation by itself.
-- When restarting local dev for validation, confirm port `1337` is free first (on macOS, `lsof -i :1337` may show the service name `menandmice-dns` for that port).
+- When restarting local dev for validation, confirm port `3100` is free first.
 
 ## Environment Gotchas
 - Watch for environment-related failures separately from product failures. Examples from the last investigation:
-- Stale local servers on port `1337`
+- Stale local servers on port `3100`
 - Harness package version mismatches between npm and the container image
 
 ## Final Response

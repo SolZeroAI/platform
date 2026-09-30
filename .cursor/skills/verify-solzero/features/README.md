@@ -2,7 +2,7 @@
 
 This directory is the maintained source for verifying user-facing SolZero behavior. Read the index before driving the app, then use the matching feature file as the recipe.
 
-Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `http://localhost:1337` (health, Better Auth, session APIs). Do not treat Vitest suites as a substitute for a mapped UI feature.
+Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `http://localhost:3100` (health, Better Auth, session APIs). Do not treat Vitest suites as a substitute for a mapped UI feature.
 
 ## Baseline preconditions
 

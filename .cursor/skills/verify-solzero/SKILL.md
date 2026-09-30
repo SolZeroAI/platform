@@ -1,15 +1,15 @@
 ---
 name: verify-solzero
-description: Drive the SolZero web app (TanStack Start + Kumo on :3000, API Worker on :1337) to prove user-facing behavior. Use when verifying sign-in, Agents, Workflows, Bots, or Settings against a local Alchemy `nub run dev` stack.
+description: Drive the SolZero web app (TanStack Start + Kumo on :3000, API Worker on :3100) to prove user-facing behavior. Use when verifying sign-in, Agents, Workflows, Bots, or Settings against a local Alchemy `nub run dev` stack.
 ---
 
 # Verify SolZero
 
-SolZero is a platform. A user actually touches the web app at `http://localhost:3000`: credential sign-in, the Isolate Agent composer, Workflows, always-on bots, and Settings. Admin (`/admin/*`) is an admin-gated sidebar disclosure for the same local admin user. It is not a mapped feature file. The Effect API Worker at `http://localhost:1337` is the control plane behind the web `/api` BFF. `nub` scripts and `BackgroundSessionsClient` are operator/library surfaces, not the primary user path.
+SolZero is a platform. A user actually touches the web app at `http://localhost:3000`: credential sign-in, the Isolate Agent composer, Workflows, always-on bots, and Settings. Admin (`/admin/*`) is an admin-gated sidebar disclosure for the same local admin user. It is not a mapped feature file. The Effect API Worker at `http://localhost:3100` is the control plane behind the web `/api` BFF. `nub` scripts and `BackgroundSessionsClient` are operator/library surfaces, not the primary user path.
 
-There is no Playwright or Cypress project. Existing automated harnesses are Vitest unit/integration suites plus `nub run test:e2e` (API-key session runs against `:1337`). Drive the UI with `control-solzero chrome` (headless Chrome DevTools). Drive the control plane with `control-solzero http`. Read `features/README.md` before clicking anything.
+There is no Playwright or Cypress project. Existing automated harnesses are Vitest unit/integration suites plus `nub run test:e2e` (API-key session runs against `:3100`). Drive the UI with `control-solzero chrome` (headless Chrome DevTools). Drive the control plane with `control-solzero http`. Read `features/README.md` before clicking anything.
 
-Ports `3000` and `1337` are exclusive (`strictPort: true` on the Vite website; the API Worker binds `1337`). Alchemy also uses `/.alchemy` and the repo `.alchemy/` directory. Two stacks cannot run side by side. If those ports already belong to someone else, refuse. Do not double-drive a leftover `nub run dev` you did not start.
+Ports `3000` and `3100` are exclusive (`strictPort: true` on the Vite website; the API Worker binds `3100`). Alchemy also uses `/.alchemy` and the repo `.alchemy/` directory. Two stacks cannot run side by side. If those ports already belong to someone else, refuse. Do not double-drive a leftover `nub run dev` you did not start.
 
 ## Launch
 
@@ -20,15 +20,15 @@ From the repo root:
 .cursor/skills/verify-solzero/control-solzero doctor
 ```
 
-Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:1337` and doctor prints only `ok` lines plus `doctor ok`. Launch and doctor also require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider. Health-only ready is not enough. The local welcome surface is the credential form (`#admin-email`, `#admin-password`, **Sign In**). If that config call fails, doctor must fail closed. An unconfigured welcome (`Sign-in is not configured for this deployment.`) is a product failure, not a mapped feature.
+Ready means launch prints `ready web=http://localhost:3000 api=http://localhost:3100` and doctor prints only `ok` lines plus `doctor ok`. Launch and doctor also require `GET http://localhost:3100/api/auth/config` to return a credential sign-in provider. Health-only ready is not enough. The local welcome surface is the credential form (`#admin-email`, `#admin-password`, **Sign In**). If that config call fails, doctor must fail closed. An unconfigured welcome (`Sign-in is not configured for this deployment.`) is a product failure, not a mapped feature.
 
 `launch` will:
 
-1. Refuse if `:3000` or `:1337` is already listening and is not this verification run.
+1. Refuse if `:3000` or `:3100` is already listening and is not this verification run.
 2. Create `config/.env` from `config/.env.example` only when that file is missing, copying `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from the process environment. That file is verification scaffolding. Cleanup removes it only if this run created it.
 3. Create `config/.dev.vars` from `config/.dev.vars.example` only when that file is missing. Same scaffolding rule.
 4. Source `config/.env`, export `CI=1` so Alchemy accepts `CLOUDFLARE_*` env credentials in a non-interactive process, ensure `/.alchemy` exists, require a running Docker engine (README prerequisite; without it workerd binds the ports and then hangs), and start detached `nub run dev` (Alchemy API + web). Logs go to `.cursor/skills/verify-solzero/.run/dev.log`.
-5. Wait until `GET http://localhost:1337/health` returns JSON `status=healthy` / `service=s0-agent-control-plane` and `GET http://localhost:3000/` returns HTML. Then require `GET http://localhost:1337/api/auth/config` to return a credential sign-in provider.
+5. Wait until `GET http://localhost:3100/health` returns JSON `status=healthy` / `service=s0-agent-control-plane` and `GET http://localhost:3000/` returns HTML. Then require `GET http://localhost:3100/api/auth/config` to return a credential sign-in provider.
 
 Do not run `nub run infra:deploy:*`. Do not run `db:copy-d1-to-planetscale`. Do not bump Alchemy, Effect, Wrangler, Better Auth, or `ai`/`chat` pins.
 
@@ -40,7 +40,7 @@ Teardown is `control-solzero cleanup`. See Cleanup.
 .cursor/skills/verify-solzero/control-solzero doctor
 ```
 
-Exit 0 only when `.run/meta.json` exists, health JSON is healthy, the web origin answers with SolZero HTML, `GET /api/auth/config` returns a credential sign-in provider, and the listeners on `:1337` and `:3000` are the PIDs recorded at launch.
+Exit 0 only when `.run/meta.json` exists, health JSON is healthy, the web origin answers with SolZero HTML, `GET /api/auth/config` returns a credential sign-in provider, and the listeners on `:3100` and `:3000` are the PIDs recorded at launch.
 
 If doctor fails, stop. Do not click around in whatever happens to be bound to those ports. Dump `.run/dev.log` into the artifact directory, then `cleanup`.
 

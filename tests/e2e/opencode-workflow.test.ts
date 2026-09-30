@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { LOCAL_API_PORT } from "../../packages/shared/src/stageMetadata"
 
 const runE2E = process.env.RUN_E2E === "1"
 const testE2E = runE2E ? it : it.skip
@@ -22,7 +23,7 @@ describe("opencode harness workflow (local e2e)", () => {
     "creates session and handles multiple prompts in one session",
     { timeout: 420_000 },
     async () => {
-      const baseUrl = process.env.BACKGROUND_BASE_URL ?? "http://localhost:1337"
+      const baseUrl = process.env.BACKGROUND_BASE_URL ?? `http://localhost:${LOCAL_API_PORT}`
 
       const createSession = await fetch(`${baseUrl}/sessions`, {
         method: "POST",

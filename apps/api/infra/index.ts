@@ -9,6 +9,7 @@ import * as Match from "effect/Match"
 import * as Redacted from "effect/Redacted"
 import type * as Schema from "effect/Schema"
 import {
+  LOCAL_API_PORT,
   MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH,
   s0RuntimeSecretReferences,
   type CloudflareAiGatewayByokProvider,
@@ -426,7 +427,7 @@ export function createApi(options: CreateApiOptions) {
   const workerName = `${getApiResourceName(appName)}-${stageMetadata.name}`
 
   const devConfig = Match.value(dev).pipe(
-    Match.when(true, () => ({ dev: { port: 1337 } })),
+    Match.when(true, () => ({ dev: { port: LOCAL_API_PORT } })),
     Match.orElse(() => ({})),
   )
   const [primaryDomain, ...domainAliases] = stageMetadata.infra.apiDomains

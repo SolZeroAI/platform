@@ -146,12 +146,12 @@ nub exec wrangler whoami
 nub run dev
 ```
 
-The web app runs at <http://localhost:3000>. The API Worker runs at <http://localhost:1337>.
+The web app runs at <http://localhost:3000>. The API Worker runs at <http://localhost:3100>.
 
 In another terminal, check the control plane and get the generated administrator password:
 
 ```sh
-curl --fail-with-body http://localhost:1337/health
+curl --fail-with-body http://localhost:3100/health
 nub run auth:admin-password -- dev --local
 ```
 
@@ -223,7 +223,7 @@ Run the local API key end-to-end test after you create a user API key:
 
 ```sh
 S0_API_KEY="<user API key>" \
-BACKGROUND_BASE_URL=http://localhost:1337 \
+BACKGROUND_BASE_URL=http://localhost:3100 \
 nub run test:e2e
 ```
 

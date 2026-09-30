@@ -7,10 +7,10 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
 RUN_DIR="$SKILL_DIR/.run"
 WEB_URL="http://localhost:3000"
-API_URL="http://localhost:1337"
+API_URL="http://localhost:3100"
 HEALTH_URL="$API_URL/health"
 WEB_PORT=3000
-API_PORT=1337
+API_PORT=3100
 CDP_PORT="${SOLZERO_VERIFY_CDP_PORT:-9334}"
 WAIT_SECS="${SOLZERO_VERIFY_WAIT_SECS:-420}"
 ADMIN_EMAIL="${SOLZERO_VERIFY_ADMIN_EMAIL:-admin@example.com}"
@@ -125,7 +125,7 @@ refuse_foreign_port() {
   local live
   live="$(listen_pids "$port")"
   if [[ -n "$live" && "$live" != "unknown" ]]; then
-    die "port ${port} is already listening (pids: ${live}). Two SolZero stacks cannot share :3000/:1337. Refusing to hijack a shared instance."
+    die "port ${port} is already listening (pids: ${live}). Two SolZero stacks cannot share :3000/:3100. Refusing to hijack a shared instance."
   fi
   if [[ "$live" == "unknown" ]]; then
     if python3 - "$port" <<'PY'
@@ -141,7 +141,7 @@ PY
     then
       return 0
     fi
-    die "port ${port} is already bound. Two SolZero stacks cannot share :3000/:1337. Refusing to hijack a shared instance."
+    die "port ${port} is already bound. Two SolZero stacks cannot share :3000/:3100. Refusing to hijack a shared instance."
   fi
 }
 
@@ -260,7 +260,7 @@ ensure_alchemy_dir() {
 
 ensure_docker() {
   if ! have docker; then
-    die "docker is not on PATH. README requires a Docker-compatible engine; without it Alchemy hangs after binding :1337/:3000."
+    die "docker is not on PATH. README requires a Docker-compatible engine; without it Alchemy hangs after binding :3100/:3000."
   fi
   if docker info >/dev/null 2>&1; then
     return 0
@@ -345,7 +345,7 @@ assert cred, d' "$tmp"; then
 }
 
 cmd_doctor() {
-  [[ -f "$RUN_DIR/meta.json" ]] || die "no .run/meta.json. This is not a verification instance. Do not drive whatever is on :3000 / :1337."
+  [[ -f "$RUN_DIR/meta.json" ]] || die "no .run/meta.json. This is not a verification instance. Do not drive whatever is on :3000 / :3100."
 
   local health
   if ! health="$(curl -sS --fail-with-body --max-time 8 "$HEALTH_URL")"; then

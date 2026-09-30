@@ -14,7 +14,7 @@ describe("BackgroundSessionsClient", () => {
 
     const client = new BackgroundSessionsClient({
       auth: { kind: "api-key", apiKey: `  ${TEST_API_KEY}  ` },
-      baseUrl: "http://localhost:1337",
+      baseUrl: "http://localhost:3100",
     })
 
     const result = await client.prompt("session-1", {
@@ -34,7 +34,7 @@ describe("BackgroundSessionsClient", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     const [, init] = fetchSpy.mock.calls[0]
     const headers = new Headers(init?.headers)
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("http://localhost:1337/sessions/session-1/prompt")
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("http://localhost:3100/sessions/session-1/prompt")
     expect(init?.method).toBe("POST")
     expect(init?.credentials).toBe("omit")
     expect(headers.get("content-type")).toBe("application/json")
@@ -70,7 +70,7 @@ describe("BackgroundSessionsClient", () => {
       () =>
         new BackgroundSessionsClient({
           auth: { kind: "api-key", apiKey: "  " },
-          baseUrl: "http://localhost:1337",
+          baseUrl: "http://localhost:3100",
         }),
     ).toThrow("API key must not be empty")
   })

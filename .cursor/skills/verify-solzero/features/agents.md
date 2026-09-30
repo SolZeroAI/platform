@@ -31,7 +31,7 @@ ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
 
 Sending a prompt that calls a model needs a configured provider. If the toolbar shows the AI-provider-required control instead of a model name, record that precondition and stop. Do not mark Agents verified by stubbing the gateway.
 
-`nub run test:e2e` (`tests/e2e/session-run-api.test.ts`) is an API-key harness against `:1337`. Use it only when the change is the session-run API and `S0_API_KEY` is set. It does not prove the composer.
+`nub run test:e2e` (`tests/e2e/session-run-api.test.ts`) is an API-key harness against `:3100`. Use it only when the change is the session-run API and `S0_API_KEY` is set. It does not prove the composer.
 
 ## Gotchas
 
