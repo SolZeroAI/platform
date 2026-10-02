@@ -1,0 +1,39 @@
+name: Agent container images
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish agent container images
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Build, push, and verify image digests
+        run: nub exec tsx scripts/publish-agent-container-images.ts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}

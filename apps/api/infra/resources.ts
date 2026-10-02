@@ -1,12 +1,10 @@
-import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
 import type { Input } from "alchemy/Input"
-import type { InlineDockerfile } from "alchemy/Docker/Dockerfile"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
 import type { AppDbMode, S0DatabaseEngine, StageMetadata } from "@solzero/shared"
+import { AGENT_CONTAINER_IMAGES } from "../../../packages/agent-container/src/images"
 import { createAppPostgresHyperdrive } from "../../../packages/infra/src/app-postgres-hyperdrive"
 import { createPlanetscaleAppDatabase } from "../../../packages/infra/src/stacks/db"
 import {
@@ -32,18 +30,6 @@ const AGENT_CONTAINER_RESOURCE_IDS = {
   "claude-code": "claude-code-agent-container",
 } satisfies Record<AgentContainerRuntime, string>
 
-const AGENT_CONTAINER_ENTRYPOINTS = {
-  opencode: "opencode.ts",
-  codex: "codex.ts",
-  "claude-code": "claude-code.ts",
-} satisfies Record<AgentContainerRuntime, string>
-
-export const AGENT_CONTAINER_EXTERNAL_PACKAGES = [
-  "@ai-sdk/harness-opencode",
-  "@ai-sdk/harness-codex",
-  "@ai-sdk/harness-claude-code",
-] as const
-
 export const DYNAMIC_WORKFLOW_CLASS_NAME = "DynamicUserWorkflow"
 
 export function getDynamicWorkflowName(appName: string, stageName: string): string {
@@ -53,17 +39,6 @@ export function getDynamicWorkflowName(appName: string, stageName: string): stri
 export interface CreateAgentContainerOptions {
   appName: string
   stageMetadata: StageMetadata
-  repoRoot: string
-}
-
-function getAgentContainerDirectory(repoRoot: string): string {
-  return resolve(repoRoot, "packages/agent-container")
-}
-
-function readAgentContainerDockerfile(repoRoot: string): InlineDockerfile {
-  return {
-    content: readFileSync(resolve(getAgentContainerDirectory(repoRoot), "Dockerfile"), "utf8"),
-  }
 }
 
 export function createAgentContainerNamespace(runtime: AgentContainerRuntime) {
@@ -75,17 +50,12 @@ export function createAgentContainerNamespace(runtime: AgentContainerRuntime) {
 export function createAgentContainerApplication(
   options: CreateAgentContainerOptions & { runtime: AgentContainerRuntime },
 ) {
-  const { appName, repoRoot, stageMetadata } = options
-  const containerDir = getAgentContainerDirectory(repoRoot)
+  const { appName, stageMetadata } = options
 
   return Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {
-    main: resolve(containerDir, "src", AGENT_CONTAINER_ENTRYPOINTS[options.runtime]),
-    dockerfile: readAgentContainerDockerfile(repoRoot),
+    image: AGENT_CONTAINER_IMAGES[options.runtime],
     instanceType: "standard",
-    isExternal: true,
-    external: [...AGENT_CONTAINER_EXTERNAL_PACKAGES],
     name: `${appName}-${options.runtime}-agent-${stageMetadata.name}`,
-    runtime: "node",
   })
 }
 

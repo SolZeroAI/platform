@@ -1,17 +1,9 @@
 core:changelogs:
-  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Optional PlanetScale control-plane database\n\nSolZero now ships two control-plane database flavors in one package. Cloudflare D1 remains the\ndefault when `DATABASE` is omitted. Operators who outgrow the 10 GB D1 limit can set\n`DATABASE=planetscale`. That path needs `PLANETSCALE_SERVICE_TOKEN_ID`,\n`PLANETSCALE_SERVICE_TOKEN`, and `PLANETSCALE_ORGANIZATION` for remote PlanetScale. Session chat,\nDurable Object sqlite, R2, and Cloudflare AI Search stay on both flavors. PlanetScale is a paid\nservice with no free plan and is not a deployment provider.\n\n## One-shot D1 to PlanetScale copy\n\nOperators can copy control-plane rows from a D1 dump into PlanetScale with\n`nub run db:copy-d1-to-planetscale`. This is a convenience copy, not an online\nmigration. Production stays on D1 until the operator deploys. The default\ndry-run prints the jsonc and env edits for `DATABASE=planetscale` and writes\nnothing.\n\n## Better Auth email verification on PlanetScale\n\nPlanetScale stores Better Auth `emailVerified` as a boolean so the postgres\nadapter can write true and false.\n\n## Popular secret tag order on PlanetScale\n\nPopular secret tags now sort by numeric count on PlanetScale. A tag used ten\ntimes ranks above a tag used twice.\n"
-    filename: 2026-08-31-dual-flavor-database.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Local admin password matches the running Worker\n\n`nub run auth:admin-password -- dev --local` now reads the same local Alchemy\nstate the Worker uses. After local disk state became the default for `dev`,\nthe helper still read Cloudflare state, so the printed password did not sign\nin.\n"
-    filename: 2026-09-02-local-admin-password.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## PlanetScale sign-in after a local or Hyperdrive boot\n\nCredential sign-in and `/api/auth/config` now work when `DATABASE=planetscale`.\nThe Worker already created a postgres.js client for Hyperdrive; it then rejected\nthat client because postgres.js exposes a function, not a plain object. Auth\nconfig returned 500 and the welcome form could not load.\n\nThe Worker also kept that Hyperdrive client on the isolate `env` object and\nreused it on the next request. Cloudflare Workers reject that I/O reuse, so\nsign-in after a successful auth-config request failed. Each request now gets\nits own postgres.js client.\n\nBetter Auth session inserts now serialize timestamps as ISO strings. workerd\nrejects postgres.js binds of `Date` objects, so a valid password still returned\n500 after credential check.\n"
-    filename: 2026-09-02-planetscale-postgres-client.md
+  - content: "---\npackages:\n  release:solzero:\n    type: minor\n---\n\n## Deploy SolZero from alchemy.new\n\n<!-- creative: {\"title\":\"Deploy SolZero in one click.\",\"bullets\":[\"Start from a GitHub release on alchemy.new.\",\"Sign in as admin@example.com with the generated password.\"],\"workType\":\"feature\"} -->\n\nSolZero can deploy from a GitHub release on alchemy.new. A fresh Cloudflare account uses workers.dev when the stage zone is localhost. Agent containers start from public GHCR images pinned by digest. Sign in as admin@example.com with the administrator password alchemy.new shows once.\n"
+    filename: 2026-10-02-alchemy-new-deploy.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-08-31-dual-flavor-database.md
-      - 2026-09-02-local-admin-password.md
-      - 2026-09-02-planetscale-postgres-client.md
+      - 2026-10-02-alchemy-new-deploy.md
     id: release:solzero
     updated: true

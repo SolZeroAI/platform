@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
   pull-requests: write
 
 concurrency:
@@ -18,8 +19,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  images:
+    name: Publish agent container images
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    uses: ./.github/workflows/agent-container-images.yml
+    permissions:
+      contents: read
+      packages: write
+
   release:
     name: Version or release SolZero
+    needs: images
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&

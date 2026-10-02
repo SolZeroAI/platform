@@ -515,6 +515,50 @@ export function getStageMetadata(env: StageMetadataEnv) {
     : Effect.succeed(stageMetadataFromBinding(decodeStageMetadataBinding(env.S0_STAGE_METADATA)))
 }
 
+export function deployedApiWorkerName(appName: string, stageName: string): string {
+  return `${appName}-api-${stageName}`
+}
+
+export function deployedWebWorkerName(appName: string, stageName: string): string {
+  return `${appName}-web-${stageName}`
+}
+
+/**
+ * A deployed stage whose zone is `localhost` has no custom domain. Serve the
+ * web and API workers on the account workers.dev subdomain instead.
+ */
+export function withWorkersDevOrigins(
+  metadata: StageMetadata,
+  input: { readonly appName: string; readonly subdomain: string },
+): StageMetadata {
+  const applicable =
+    metadata.infra.alchemyStateStore === "cloudflare" && metadata.infra.zone === "localhost"
+  if (!applicable) return metadata
+
+  const subdomain = input.subdomain.trim().toLowerCase()
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomain)) {
+    throw new Error(
+      `Invalid workers.dev subdomain "${input.subdomain}". Set CLOUDFLARE_WORKERS_SUBDOMAIN to the account label.`,
+    )
+  }
+
+  const serverUrl = `https://${deployedApiWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
+  const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
+  return stageMetadataFromBinding({
+    _tag: metadata._tag,
+    name: metadata.name,
+    app: metadata.app,
+    infra: {
+      ...metadata.infra,
+      serverUrl,
+      authBaseUrl,
+      authTrustedOrigins: [authBaseUrl],
+      apiDomains: [],
+      webDomains: [],
+    },
+  })
+}
+
 export function getStageMetadataFromConfig(
   stage: string,
   deployment: S0DeploymentConfig,

@@ -2,7 +2,7 @@ import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Match from "effect/Match"
 import type * as Schema from "effect/Schema"
-import { resolveS0Brand, type StageMetadata } from "@solzero/shared"
+import { deployedWebWorkerName, resolveS0Brand, type StageMetadata } from "@solzero/shared"
 import type { DeploymentMetadata } from "./deploymentMetadata"
 
 function jsonBinding(value: unknown): Schema.Json {
@@ -36,7 +36,7 @@ export function createWeb(options: CreateWebOptions) {
   const brand = resolveS0Brand(process.env)
 
   return Cloudflare.Website.Vite("web", {
-    name: `${appName}-web-${stageMetadata.name}`,
+    name: deployedWebWorkerName(appName, stageMetadata.name),
     rootDir: resolve(repoRoot, "apps/web"),
     compatibility: {
       date: "2026-04-15",

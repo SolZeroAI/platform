@@ -136,7 +136,6 @@ export function createS0Api(options: CreateS0ApiOptions) {
       dev,
       cloudflareAccountId,
       infraDir,
-      repoRoot,
       apiEnv,
     } = options
     const migrationsDir = resolve(infraDir, "d1-migrations")
@@ -151,7 +150,6 @@ export function createS0Api(options: CreateS0ApiOptions) {
     const agentContainerApplications = createAgentContainerApplications({
       appName,
       stageMetadata,
-      repoRoot,
     })
     const agentResources = yield* createAgentResources({
       appName,

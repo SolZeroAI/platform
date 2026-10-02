@@ -4,7 +4,7 @@ import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { build } from "alchemy/Bundle"
 import * as Effect from "effect/Effect"
-import { AGENT_CONTAINER_EXTERNAL_PACKAGES } from "../../apps/api/infra/resources"
+import { AGENT_CONTAINER_EXTERNAL_PACKAGES } from "../../packages/agent-container/src/images"
 
 describe.each([
   ["opencode", "opencode.ts", "@ai-sdk/harness-opencode"],

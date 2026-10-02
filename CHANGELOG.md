@@ -1,3 +1,9 @@
+## solzero@1.8.0
+
+### Deploy SolZero from alchemy.new
+
+SolZero can deploy from a GitHub release on alchemy.new. A fresh Cloudflare account uses workers.dev when the stage zone is localhost. Agent containers start from public GHCR images pinned by digest. Sign in as admin@example.com with the administrator password alchemy.new shows once.
+
 ## solzero@1.7.0
 
 ### Optional PlanetScale control-plane database

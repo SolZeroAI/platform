@@ -9,6 +9,7 @@ import * as Match from "effect/Match"
 import * as Redacted from "effect/Redacted"
 import type * as Schema from "effect/Schema"
 import {
+  deployedApiWorkerName,
   LOCAL_API_PORT,
   MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH,
   s0RuntimeSecretReferences,
@@ -26,7 +27,6 @@ import type { DeploymentMetadata } from "../../../packages/infra/src/deploymentM
 import type {} from "../env"
 import {
   DYNAMIC_WORKFLOW_CLASS_NAME,
-  getApiResourceName,
   getDynamicWorkflowName,
   type AgentContainerApplications,
   type AgentContainerNamespaces,
@@ -424,7 +424,7 @@ export function createApi(options: CreateApiOptions) {
   const entrypoint = resolve(__dirname, "../index.ts")
 
   // We replicate Alchemy's naming scheme so we can provide it as a binding env var
-  const workerName = `${getApiResourceName(appName)}-${stageMetadata.name}`
+  const workerName = deployedApiWorkerName(appName, stageMetadata.name)
 
   const devConfig = Match.value(dev).pipe(
     Match.when(true, () => ({ dev: { port: LOCAL_API_PORT } })),

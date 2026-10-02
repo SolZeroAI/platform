@@ -2,6 +2,7 @@ import {
   LOCAL_API_PORT,
   getStageMetadataFromConfigSync,
   getStageMetadataSync,
+  withWorkersDevOrigins,
 } from "../../packages/shared/src/stageMetadata"
 import { describe, expect, it } from "vitest"
 import {
@@ -100,5 +101,24 @@ describe("stage auth metadata", () => {
     expect(infra.authBaseUrl).toBe("https://console.example.org")
     expect(infra.apiDomains).toEqual(["api.console.example.org"])
     expect(infra.webDomains).toEqual(["console.example.org"])
+  })
+
+  it("serves a localhost zone on workers.dev without custom domains", () => {
+    const metadata = getStageMetadataFromConfigSync(
+      "prod",
+      { ...TEST_DEPLOYMENT_CONFIG, zone: "localhost" },
+      TEST_APPLICATION_CONFIG,
+    )
+    const infra = withWorkersDevOrigins(metadata, {
+      appName: "s0",
+      subdomain: "Example-Account",
+    }).infra
+
+    expect(infra.zone).toBe("localhost")
+    expect(infra.apiDomains).toEqual([])
+    expect(infra.webDomains).toEqual([])
+    expect(infra.serverUrl).toBe("https://s0-api-prod.example-account.workers.dev")
+    expect(infra.authBaseUrl).toBe("https://s0-web-prod.example-account.workers.dev")
+    expect(infra.authTrustedOrigins).toEqual(["https://s0-web-prod.example-account.workers.dev"])
   })
 })

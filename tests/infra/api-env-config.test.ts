@@ -34,6 +34,28 @@ describe("API infrastructure environment", () => {
     )
   })
 
+  it("accepts a 24-character alphanumeric administrator password from the environment", () => {
+    const password = "Abcdefghij1234567890Wxyz"
+    const secretBindings = Object.fromEntries(
+      s0ActiveSecretReferences(config).map((reference) => [
+        reference.env,
+        reference.env === "S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD"
+          ? password
+          : "a".repeat(MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH),
+      ]),
+    )
+
+    const env = getApiInfraEnv(
+      config,
+      "config/test.config.jsonc",
+      "test-config-digest",
+      secretBindings,
+    )
+
+    expect(password).toMatch(/^[A-Za-z0-9]{24}$/)
+    expect(env.configSecretBindings.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD).toBe(password)
+  })
+
   it("accepts a valid MCPCF proxy signing secret", () => {
     const secret = "a".repeat(MCPCF_PROXY_SIGNING_SECRET_MIN_LENGTH)
     const env = loadTestApiEnv(secret)
