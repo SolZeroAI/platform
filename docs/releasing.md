@@ -57,7 +57,8 @@ combined version and release-note preview. A change with no observable effect ca
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
 2. Wait for `Validate` to pass on `master`. That workflow runs the secret-less checks. The `Release`
-   workflow then runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
+   workflow first runs the agent-container images job, then runs `nub run tegami ci` and opens or
+   updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
