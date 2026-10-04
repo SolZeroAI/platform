@@ -67,10 +67,9 @@ D1 `"session"` is the Better Auth session table.
 SessionDO `session` is Durable Object sqlite chat state.
 Do not flag those names as a collision.
 
-Tests apply the numbered SQL in-process with `node:sqlite` `DatabaseSync`.
-That path starts in `tests/integration/d1-migrations.test.ts` and other store tests.
-That is the test apply path.
-That is not a Worker apply path.
+End-to-end tests start the real Alchemy stack, which applies numbered D1 migrations.
+Tests exercise the resulting database through public Worker routes.
+Do not reintroduce in-process store tests or Worker apply-on-read.
 
 Some D1 stores detect a missing migration and return an empty read or a typed write error.
 That fail-closed behavior is intended.
@@ -106,8 +105,8 @@ That copy renders when `signInProviders.length === 0`.
 It is a product failure.
 It is not a mapped empty state.
 
-`.cursor/skills/verify-solzero/SKILL.md` and `.cursor/skills/verify-solzero/features/sign-in.md` require doctor to fail closed.
-When `GET /api/auth/config` does not return a credential sign-in provider, doctor fails.
+`.cursor/skills/verify-solzero/SKILL.md` requires real credential sign-in verification.
+When `GET /api/auth/config` does not return a credential sign-in provider, the sign-in checks fail.
 Health-only ready is not enough.
 Do not paper over this in verify-solzero.
 
@@ -237,7 +236,9 @@ When preview or deploy jobs would run on this public repository, flag it.
 ### Tests and verify-solzero
 
 Flag colocated tests.
-When a behavior change has no tests in `test`, `tests`, or `__tests__`, flag it.
+Automated tests use tester-army/e2e in `tests/**/*.e2e.ts`.
+When a behavior change lacks a genuine end-to-end regression case, flag it.
+Flag unit/component runners, mocked providers, or a separate browser test driver.
 When verify-solzero papers over a product failure, flag it.
 When verify-solzero treats health-only ready as enough for sign-in, flag it.
 When a PR recommends Clerk, Effect 3.x, or moving the default control plane off D1, flag it.
@@ -249,11 +250,12 @@ When a PR recommends Clerk, Effect 3.x, or moving the default control plane off 
 `packages/infra/d1-migrations/` is numbered hand SQL for D1.
 `packages/api/src/server/background/session/schema.ts` is Durable Object sqlite `SCHEMA_SQL`.
 `apps/api/infra/resources.ts` is the Alchemy D1 apply path.
-`tests/integration/d1-migrations.test.ts` is the test apply path.
+`tests/api-contract.e2e.ts` verifies live Worker contracts after Alchemy applies migrations.
 `packages/infra/src/stack.ts` is `stackState()`.
 `packages/shared/src/stageMetadata.ts` is local versus deployed `alchemyStateStore`.
 `apps/web/src/routes/_authenticated.tsx` is `SignInPage`.
 `.github/workflows/deploy.yml` and `.github/workflows/preview.yml` are invert-guarded templates.
-`.github/workflows/validate.yml` is the secret-less public CI.
+`.github/workflows/validate.yml` has secret-less static validation and a credentialed isolated e2e job for trusted events.
+Fork pull requests must not receive e2e credentials.
 `.github/workflows/release.yml` is Tegami notes, not a Cloudflare deploy.
 `.cursor/skills/verify-solzero/SKILL.md` must not hide product failures.
