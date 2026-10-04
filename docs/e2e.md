@@ -139,6 +139,12 @@ starts. Enable the commented integration blocks in this profile:
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
 
+The source-image harness checks reproduced and fixed missing pnpm and unwritable OpenCode
+cache directories. Their actual prompt checks remain failing with the supplied Workers AI
+configuration: OpenCode reaches an outbound TLS certificate trust failure, and Codex receives
+a Workers AI Responses validation error for nested function tools. These are explicit
+external-suite failures; the core result does not verify either harness prompt flow.
+
 Source inventory still exposes additional external paths that require dedicated fixtures:
 Additional social-provider sign-in variants; GitHub linking/clone/branch/write/webhooks;
 Slack linking/events/command delivery; MCP registry sync/OAuth and custom local/remote execution;
