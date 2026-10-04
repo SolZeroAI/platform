@@ -12,10 +12,6 @@ import {
   getWorkflowAiSearchNamespaceName,
 } from "../../../packages/infra/src/aiSearch"
 
-export function getApiResourceName(appName: string): string {
-  return `${appName}-api`
-}
-
 export type AgentContainerRuntime = "opencode" | "codex" | "claude-code"
 
 const AGENT_CONTAINER_CLASS_NAMES = {

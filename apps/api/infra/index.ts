@@ -38,7 +38,6 @@ export {
   createAgentContainerNamespaces,
   createAgentResources,
   createDynamicWorkflowResource,
-  getApiResourceName,
 } from "./resources"
 export type {
   AgentContainerApplications,
