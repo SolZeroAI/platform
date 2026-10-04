@@ -45,6 +45,9 @@ RUN printf '%s\n' \
 COPY index.mjs /app/index.mjs
 COPY *.js /app/
 
+RUN mkdir -p /home/s0/.cache/opencode \
+  && chown -R s0:s0 /home/s0
+
 USER s0
 
 EXPOSE 8787
