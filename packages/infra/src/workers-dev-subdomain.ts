@@ -112,7 +112,7 @@ function fetchOrCreateSubdomain(accountId: string) {
   })
 }
 
-export function readWorkersDevSubdomain(accountId: string) {
+function readWorkersDevSubdomain(accountId: string) {
   return Config.String("CLOUDFLARE_WORKERS_SUBDOMAIN").pipe(
     Config.withDefault(""),
     Effect.map((value) => value.trim()),
