@@ -19,8 +19,9 @@ nub run test:e2e:all
 nub run test:e2e:external
 ```
 
-The launcher creates `config/.dev.vars` with mode 0600 when it is absent, allowing a fresh
-CI checkout to start the normal infra command. The empty file supplies no deployment
+The launcher creates missing `config/.env` and `config/.dev.vars` files with mode 0600,
+allowing a fresh CI checkout to start the normal infra command. Node watch requires even
+its optional environment-file path to exist. The comment-only files supply no deployment
 secrets; real credentials still come from the environment.
 
 The environment loader reads an explicitly selected `E2E_ENV_FILE`, then this repository's

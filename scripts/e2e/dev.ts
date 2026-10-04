@@ -6,14 +6,15 @@ import { bundleAgentContainer } from "../agent-container-build"
 import { AGENT_CONTAINER_ENTRYPOINTS } from "../../packages/agent-container/src/images"
 import { appEnvironment } from "./environment"
 
-// The normal infra command requires this file before it can generate stage bindings.
+// Node watch also watches optional --env-file-if-exists paths, so both must exist.
 // CI supplies its real credentials in the environment; never synthesize deployment secrets.
-if (!existsSync("config/.dev.vars")) {
-  writeFileSync(
-    "config/.dev.vars",
-    "# Isolated e2e launcher; credentials come from the environment.\n",
-    { mode: 0o600, flag: "wx" },
-  )
+for (const file of ["config/.env", "config/.dev.vars"]) {
+  if (!existsSync(file)) {
+    writeFileSync(file, "# Isolated e2e launcher; credentials come from the environment.\n", {
+      mode: 0o600,
+      flag: "wx",
+    })
+  }
 }
 if (process.env.E2E_CONTAINER_RUNTIME === "1") {
   const contexts = resolve(".e2e/containers")
