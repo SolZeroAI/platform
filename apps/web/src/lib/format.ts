@@ -1,7 +1,3 @@
-/**
- * Utility functions for formatting display values
- */
-
 function copyToClipboardWithTextArea(text: string): boolean {
   const textArea = document.createElement("textarea")
   textArea.value = text
