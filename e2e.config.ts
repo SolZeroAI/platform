@@ -17,7 +17,7 @@ export default {
           executable: "nub",
           args: ["exec", "tsx", "scripts/e2e/dev.ts"],
           env: appEnvironment,
-          startupTimeout: 180_000,
+          startupTimeout: process.env.E2E_CONTAINER_RUNTIME === "1" ? 600_000 : 180_000,
           shutdownTimeout: 30_000,
           log: ".e2e/logs/stack.log",
         },

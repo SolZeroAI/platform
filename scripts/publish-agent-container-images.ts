@@ -3,18 +3,15 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { build } from "alchemy/Bundle"
-import * as Effect from "effect/Effect"
+import { bundleAgentContainer } from "./agent-container-build"
 import {
   AGENT_CONTAINER_ENTRYPOINTS,
-  AGENT_CONTAINER_EXTERNAL_PACKAGES,
   AGENT_CONTAINER_IMAGE_NAMES,
   AGENT_CONTAINER_IMAGES,
 } from "../packages/agent-container/src/images"
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const imagesPath = resolve(repoRoot, "packages/agent-container/src/images.ts")
-const dockerfilePath = resolve(repoRoot, "packages/agent-container/Dockerfile")
 const registry = "ghcr.io/solzeroai"
 type RuntimeName = keyof typeof AGENT_CONTAINER_ENTRYPOINTS
 
@@ -56,41 +53,6 @@ function loginRegistry(): void {
   )
   if (result.status !== 0) {
     throw new Error(`docker login ghcr.io failed\n${result.stderr || result.stdout}`)
-  }
-}
-
-async function bundleRuntime(runtime: RuntimeName, contextDir: string): Promise<void> {
-  const bundle = await Effect.runPromise(
-    build(
-      {
-        input: resolve(
-          repoRoot,
-          "packages/agent-container/src",
-          AGENT_CONTAINER_ENTRYPOINTS[runtime],
-        ),
-        external: [...AGENT_CONTAINER_EXTERNAL_PACKAGES],
-        platform: "node",
-        resolve: { conditionNames: ["node", "import", "module", "default"] },
-        treeshake: true,
-      },
-      {
-        dir: contextDir,
-        entryFileNames: "index.mjs",
-        format: "esm",
-      },
-    ),
-  )
-  const dockerfile = await readFile(dockerfilePath, "utf8")
-  await writeFile(resolve(contextDir, "Dockerfile"), dockerfile)
-  let wroteJavaScript = false
-  for (const file of bundle.files) {
-    const name = file.path === "index.mjs" ? "index.mjs" : file.path
-    if (name.endsWith(".js")) wroteJavaScript = true
-    const content = typeof file.content === "string" ? file.content : Buffer.from(file.content)
-    await writeFile(resolve(contextDir, name), content)
-  }
-  if (!wroteJavaScript) {
-    await writeFile(resolve(contextDir, "container-chunks.js"), "export {}\n")
   }
 }
 
@@ -180,7 +142,7 @@ async function main(): Promise<void> {
   for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS) as RuntimeName[]) {
     const contextDir = await mkdtemp(resolve(tmpdir(), `s0-${runtime}-image-`))
     try {
-      await bundleRuntime(runtime, contextDir)
+      await bundleAgentContainer(runtime, contextDir)
       const digest = await publishImage(runtime, contextDir)
       digests[runtime] = digest
       console.log(referenceFor(runtime, digest))

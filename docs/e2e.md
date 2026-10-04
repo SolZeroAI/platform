@@ -19,6 +19,10 @@ nub run test:e2e:all
 nub run test:e2e:external
 ```
 
+The launcher creates `config/.dev.vars` with mode 0600 when it is absent, allowing a fresh
+CI checkout to start the normal infra command. The empty file supplies no deployment
+secrets; real credentials still come from the environment.
+
 The environment loader reads an explicitly selected `E2E_ENV_FILE`, then this repository's
 `config/.env` and `config/.dev.vars`. Values already supplied by the shell or CI win.
 It never prints values. The shared local gateway credentials can be selected with
@@ -95,6 +99,10 @@ configuration and identities linked to the disposable test account. Set:
 - `E2E_CONTAINER_RUNTIME=1` for harness execution, Docker, and an application model compatible
   with the selected harness (`E2E_APP_MODEL`). The container pins pnpm only because the
   third-party AI SDK bootstrap recipes require its bundled lockfiles; repo commands remain Nub.
+  With this flag, the isolated development stack bundles the committed runtime entrypoints
+  into ignored `.e2e/containers` contexts and builds their current Dockerfile through Alchemy.
+  Initial image builds have a ten-minute startup allowance. Other deployments continue to
+  use the pinned published image digests; release publishing is required to ship image changes.
 - `E2E_GITHUB_REPOSITORY=owner/repository` for the linked GitHub fixture.
 - `E2E_MCPCF_SERVER_ID`, `E2E_MCPCF_PROMPT`, `E2E_MCPCF_EXPECTED_OUTPUT` for a read-only MCP fixture.
 - `E2E_AI_SEARCH_SOURCE_ID`, `E2E_AI_SEARCH_QUERY`, `E2E_AI_SEARCH_EXPECTED_OUTPUT` for a seeded index.

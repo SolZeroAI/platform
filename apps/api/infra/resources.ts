@@ -1,3 +1,4 @@
+import { resolve } from "node:path"
 import type { Input } from "alchemy/Input"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
@@ -52,8 +53,19 @@ export function createAgentContainerApplication(
 ) {
   const { appName, stageMetadata } = options
 
+  const localContexts = process.env.S0_E2E_CONTAINER_CONTEXTS
+  if (localContexts && (!appName.startsWith("s0-e2e") || stageMetadata.name !== "dev")) {
+    throw new Error("Local e2e container builds require an isolated s0-e2e development deployment.")
+  }
+  const imageSource = localContexts
+    ? {
+        context: resolve(localContexts, options.runtime),
+        dockerfile: resolve(localContexts, options.runtime, "Dockerfile"),
+      }
+    : { image: AGENT_CONTAINER_IMAGES[options.runtime] }
+
   return Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {
-    image: AGENT_CONTAINER_IMAGES[options.runtime],
+    ...imageSource,
     instanceType: "standard",
     name: `${appName}-${options.runtime}-agent-${stageMetadata.name}`,
   })
