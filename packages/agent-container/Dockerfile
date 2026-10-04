@@ -9,7 +9,8 @@ ENV NODE_ENV=production
 ENV SANDBOX_ROOT=/workspace
 ENV WORKSPACE_ROOT=/workspace/repo
 
-RUN npm install --global @nubjs/nub@0.4.11 \
+# Pinned AI SDK harness recipes bootstrap their bundled pnpm lockfiles.
+RUN npm install --global @nubjs/nub@0.4.11 pnpm@10.34.6 \
   && npm install \
   @ai-sdk/harness@1.0.41 \
   @ai-sdk/harness-opencode@1.0.42 \

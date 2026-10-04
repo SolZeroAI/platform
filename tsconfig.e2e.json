@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["node"],
+    "jsxImportSource": "react"
+  },
+  "include": ["e2e.config.ts", "tests/**/*.ts", "scripts/e2e/**/*.ts"],
+  "exclude": ["node_modules"]
+}

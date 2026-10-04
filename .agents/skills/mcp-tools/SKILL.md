@@ -67,7 +67,7 @@ skill; each deployment chooses its own sources.
 Run focused checks while iterating:
 
 ```bash
-nub exec vitest run tests/integration/ai-search-mcp.test.ts tests/integration/session-mcp-config.test.ts
+nub run test:e2e tests/settings.e2e.ts tests/sessions.e2e.ts
 ```
 
 Before handoff, run the repo-root checks required by `AGENTS.md`:

@@ -4,7 +4,7 @@ import { Input } from "@cloudflare/kumo/components/input"
 import { Tooltip } from "@cloudflare/kumo/components/tooltip"
 import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { CircleHelp, Info, LogIn } from "lucide-react"
-import { useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useState, type FormEvent, type ReactNode } from "react"
 import type { PublicAuthProvider, PublicAuthProviderRegistry } from "@solzero/shared"
 import { S0AnimatedIcon } from "@/components/s0-animated-icon"
 import { S0Loader } from "@/components/s0-loader"
@@ -47,8 +47,10 @@ function AuthenticatedOutlet({
   authProviderConfig: PublicAuthProviderRegistry
 }) {
   const { data: session, status } = useAuthSession()
+  const [interactive, setInteractive] = useState(false)
+  useEffect(() => setInteractive(true), [])
 
-  if (status === "loading") {
+  if (status === "loading" || (session && !interactive)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <S0Loader size={32} />
@@ -70,6 +72,8 @@ export function SignInPage({
 }) {
   const brand = getS0Brand()
   const [pending, setPending] = useState(false)
+  const [ready, setReady] = useState(false)
+  useEffect(() => setReady(true), [])
   const signInProviders = [...authProviderConfig.providers]
     .filter((provider) => provider.capabilities.signIn)
     .sort((left, right) =>
@@ -125,7 +129,11 @@ export function SignInPage({
           <p className="mt-2 max-w-md text-kumo-subtle">Give your work an agent</p>
         </div>
         {credentialProvider ? (
-          <form className="flex w-full max-w-sm flex-col gap-3" onSubmit={handleCredentialSignIn}>
+          <form
+            method="post"
+            className="flex w-full max-w-sm flex-col gap-3"
+            onSubmit={handleCredentialSignIn}
+          >
             <div className="grid gap-2">
               <SignInFieldLabel
                 htmlFor="admin-email"
@@ -145,7 +153,7 @@ export function SignInPage({
                 type="email"
                 autoComplete="username"
                 required
-                disabled={pending}
+                disabled={pending || !ready}
               />
             </div>
             <div className="grid gap-2">
@@ -168,10 +176,10 @@ export function SignInPage({
                 type="password"
                 autoComplete="current-password"
                 required
-                disabled={pending}
+                disabled={pending || !ready}
               />
             </div>
-            <Button type="submit" size="lg" className="self-center" disabled={pending}>
+            <Button type="submit" size="lg" className="self-center" disabled={pending || !ready}>
               Sign In
             </Button>
           </form>
@@ -180,7 +188,7 @@ export function SignInPage({
           <Button
             key={provider.id}
             onClick={() => void handleExternalSignIn(provider)}
-            disabled={pending}
+            disabled={pending || !ready}
             size="lg"
             variant="secondary"
             icon={<LogIn className="h-5 w-5" aria-hidden />}

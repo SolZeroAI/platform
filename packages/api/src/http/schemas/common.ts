@@ -7,7 +7,7 @@ export const JsonPrimitive = Schema.Union([
   Schema.Null,
 ])
 
-export const JsonValue: Schema.Schema<unknown> = Schema.suspend(() =>
+export const JsonValue: Schema.Codec<unknown> = Schema.suspend(() =>
   Schema.Union([JsonPrimitive, Schema.Array(JsonValue), Schema.Record(Schema.String, JsonValue)]),
 )
 

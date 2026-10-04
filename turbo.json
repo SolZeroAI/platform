@@ -29,10 +29,6 @@
     },
     "lint": {},
     "typecheck": {},
-    "test": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
     "clean": {
       "cache": false
     }

@@ -66,7 +66,7 @@ When adding a node type, update:
 3. `getWorkflowNodeDefaultOptions(...)`
 4. `validateWorkflowNodeOptions(...)` only when options have real portability or authoring invariants
 5. `validateWorkflowNodeTemplateReferences(...)` only when new templated option fields are introduced
-6. Tests in `tests/workflows/nodes.test.ts` or `tests/workflows/authoring.test.ts`
+6. Tests in `tests/workflows.e2e.ts` or `tests/workflows.e2e.ts`
 
 Port ids are part of the authored graph contract. Keep names stable and simple.
 
@@ -91,7 +91,7 @@ Add focused tests before relying on broad executor coverage:
 - Registry tests when category routing changes.
 - Shared node tests for catalog defaults and option validation.
 - Compiler tests for logic nodes, ordering, inline behavior, redaction, or generated runtime changes.
-- Existing `actions.test.ts` regressions should still pass, but they should not be the only proof for new Adapter behavior.
+- Execute the node in `tests/workflows.e2e.ts` through the live Worker and assert its persisted output; a catalog-only check is insufficient.
 
 Always finish with:
 

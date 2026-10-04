@@ -11,11 +11,16 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Treat the task as incomplete until those checks pass, unless you explicitly report why a command could not be run or why a failure is unrelated to your changes.
 - During iteration, scoped or package-local checks are fine for speed, but the final handoff should still include the repo-root validation commands above.
 
-## Test Placement
+## End-to-end testing
 
-- Store tests only in dedicated `test`, `tests`, or `__tests__` directories.
-- Put web tests under `apps/web/tests`. Put cross-package suites under the matching root `tests/<suite>` directory.
-- The `s0-lint/no-colocated-tests` rule rejects `*.test.*` and `*.spec.*` files that sit beside source code.
+- Use tester-army/e2e exclusively. Read `.agents/skills/e2e/SKILL.md` before changing tests.
+- Store all executable tests at `tests/**/*.e2e.ts`; helpers belong in `tests/support`.
+- Use `agent.act` for semantic goals and exact `expect` assertions immediately after each goal.
+- Run the real Alchemy stack from `e2e.config.ts`; use `config/e2e-dev.config.jsonc` and isolated configured accounts. Keep web port 3000 and API port 3100.
+- The semantic executor uses Cloudflare Clef through AI Gateway. Never substitute Jev or a text model. Supply `CF_AI_GATEWAY_E2E_TOKEN` securely; process/CI environment overrides local `E2E_ENV_FILE` values.
+- `nub run test` runs core flows with Cloudflare credentials. `nub run test:e2e:all` includes external integrations and harnesses; it fails explicitly when required isolated fixtures are missing. Focus one file with `nub run test:e2e tests/settings.e2e.ts`. `test:e2e:live` disables action replay; `test:e2e:cache-strict` detects stale recordings.
+- Do not replace app routes or bindings with request interception, module mocks, or a second testing framework. Register passwords and secret fixtures with e2e credentials/secrets.
+- Record external-service prerequisites and unverified flows in `docs/e2e.md`. A startup failure or unavailable integration is a blocker, not a passing test. Never print tokens or publish app artifacts externally.
 
 ## Release Management
 

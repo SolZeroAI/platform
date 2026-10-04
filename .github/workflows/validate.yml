@@ -64,10 +64,71 @@ jobs:
           fail_level: error
           filter_mode: nofilter
 
-      - name: Test
-        if: github.repository != 'SolZeroAI/platform'
-        run: nub run test
+      - name: Collect end-to-end tests
+        run: nub run test:e2e:list
 
       - name: Build
         if: github.repository != 'SolZeroAI/platform'
         run: nub run build
+
+  e2e:
+    name: Cloudflare end-to-end flows
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_AI_GATEWAY_E2E_TOKEN: ${{ secrets.CF_AI_GATEWAY_E2E_TOKEN }}
+      CF_AI_GATEWAY_E2E_ID: default
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref }}
+      - uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          nub install --frozen-lockfile
+      - name: Install browser
+        run: nub run test:e2e:install
+      - name: Generate isolated credentials
+        shell: bash
+        run: |
+          password=$(openssl rand -hex 32)
+          echo "::add-mask::$password"
+          echo "E2E_USER_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
+      - name: Restore action replay cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .e2e/cache
+          key: e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-${{ github.run_id }}
+          restore-keys: |
+            e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-
+            e2e-solzero-${{ runner.os }}-
+      - name: Run core real-stack flows
+        run: nub run test
+      - name: Preserve successful replay recordings
+        if: always() && !cancelled()
+        uses: actions/cache/save@v5
+        with:
+          path: .e2e/cache
+          key: e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-${{ github.run_id }}
+      - name: Upload diagnostic reports
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: solzero-e2e
+          path: |
+            .e2e/report.json
+            .e2e/junit.xml
+            .e2e/summary.md
+            .e2e/failures
+            .e2e/artifacts
+          if-no-files-found: warn
+          retention-days: 7

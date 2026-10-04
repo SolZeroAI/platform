@@ -117,7 +117,7 @@ map:
     - match: functions/src/broadcast/sendBroadcastBulk.ts
       to: Broadcast sender
   exclude:
-    - "**/*.test.ts"
+    - "**/*.e2e.ts"
   lane:
     - match: packages/broadcast-lib/**
       lane: functions

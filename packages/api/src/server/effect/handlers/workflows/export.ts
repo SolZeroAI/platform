@@ -10,7 +10,7 @@ export function exportWorkflow({ params }: { params: { id: string } }) {
       const { workflow } = yield* requireWorkflowForUser(context, params.id)
       const manifest = yield* readWorkflowManifest(context.env, workflow.manifest_key)
       const yaml = serializeWorkflowExport({
-        manifest,
+        manifest: { ...manifest, name: workflow.name },
         sourceManifestVersion: workflow.manifest_version,
       })
       return new Response(yaml, {

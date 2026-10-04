@@ -307,21 +307,10 @@ export class GlobalSecretsStore {
     options?: SecretScopeOptions & { q?: string; tags?: readonly string[] },
   ) {
     const prefix = this.resolvePrefix(options)
-    const escapedPrefix = Option.match(prefix, {
-      onNone: () => "",
-      onSome: escapeLikePattern,
-    })
     const conditions = this.buildScopeConditions(prefix, options)
 
-    Option.match(Option.fromNullishOr(options?.q?.trim()).pipe(Option.filter(Boolean)), {
-      onNone: () => undefined,
-      onSome: (query) => {
-        conditions.push(
-          keyLike(this.schema.globalSecrets.key, `${escapedPrefix}%${escapeLikePattern(query)}%`),
-        )
-      },
-    })
-
+    // D1 limits LIKE patterns to 50 bytes; UUID scope plus a query can exceed it.
+    // Apply the existing literal metadata search after the database enforces user scope.
     const selectedTags = normalizeTags(options?.tags)
     Match.value(selectedTags.length > 0).pipe(
       Match.when(true, () => {
@@ -340,10 +329,13 @@ export class GlobalSecretsStore {
       catch: d1Error("db.globalSecrets.listSecrets"),
     })
 
-    return rows.map((item) => ({
-      key: this.stripSecretKey(item.key, options),
-      tags: parseTags(item.tags),
-    }))
+    return filterSecretMetadata(
+      rows.map((item) => ({
+        key: this.stripSecretKey(item.key, options),
+        tags: parseTags(item.tags),
+      })),
+      { q: options?.q },
+    )
   })
 
   private aggregateTags = Effect.fn("db.globalSecrets.aggregateTags")(function* (

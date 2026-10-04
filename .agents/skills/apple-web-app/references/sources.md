@@ -276,7 +276,7 @@ persist the dismissal"; and the manifest field checklist.
 ## Example corrections (2026-09-05)
 
 - **Repository snippet review and Node regression tests (2026-09-05)** —
-  maintainer tests in `tests/apple-web-app-snippets.test.mjs` exercise the
+  maintainer tests in `tests/auth.e2e.ts` exercise the
   documented JavaScript. Visit recording is separate from install-hint
   eligibility. Overlay synchronization initializes immediately, removes its
   listeners, cancels pending blur frames and updates the layout-height fallback

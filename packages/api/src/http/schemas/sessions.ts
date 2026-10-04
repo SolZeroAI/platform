@@ -219,9 +219,33 @@ export type SessionsListQuery = {
   repoName?: string
 }
 
-export class SessionResponse extends Schema.Class<SessionResponse>("SessionResponse")({
-  session: JsonRecord,
-}) {}
+// The Worker returns state directly, without a session envelope.
+export const SessionResponse = Schema.Struct({
+  id: Schema.String,
+  sessionKind: SessionKind,
+  agentRuntime: AgentRuntime,
+  title: Schema.NullOr(Schema.String),
+  repoOwner: Schema.String,
+  repoName: Schema.String,
+  status: SessionStatus,
+  model: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  reasoningEffort: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  subagents: Schema.optionalKey(SubagentMode),
+  runtimeStatus: Schema.String,
+  sandboxStatus: Schema.String,
+  runtimeError: Schema.optionalKey(Schema.String),
+  capabilities: JsonRecord,
+  sandbox: Schema.optionalKey(Schema.NullOr(JsonRecord)),
+  messageCount: Schema.optionalKey(Schema.Number),
+  isProcessing: Schema.optionalKey(Schema.Boolean),
+  tools: Schema.Array(SessionToolSpec),
+  customMcpServers: OpenCodeMcpServers,
+  isolateStepLimit: Schema.Number,
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+export const SessionEventsResponse = Schema.Struct({ events: Schema.Array(JsonRecord) })
 
 export class CreatedSessionResponse extends Schema.Class<CreatedSessionResponse>(
   "CreatedSessionResponse",

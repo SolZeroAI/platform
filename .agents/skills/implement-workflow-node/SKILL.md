@@ -15,7 +15,7 @@ Use this skill when implementing or reviewing a new **Workflow Node** in this re
    - Runtime action Adapter: `packages/api/src/server/background/workflows/nodes/*.ts`
    - Shared catalog/options: `packages/shared/src/workflow-nodes.ts`
    - Inline logic execution: `packages/api/src/server/background/workflows/compiler.ts`
-   - Tests: `tests/workflows/*`
+   - Tests: `tests/workflows.e2e.ts`
 
 ## Choose The Node Kind
 
@@ -32,7 +32,7 @@ Use this skill when implementing or reviewing a new **Workflow Node** in this re
 4. If it is an action node, add execution to a category Adapter under `packages/api/src/server/background/workflows/nodes/`.
 5. If it needs a new action category, add the category to shared metadata and register a category Adapter in `nodes/registry.ts`.
 6. Keep `actions.ts` as a thin `WorkflowActionExecutor`; it should delegate through `executeWorkflowNodeWithAdapters(...)`.
-7. Add focused direct Adapter tests and keep executor regression tests only for end-to-end dispatch behavior.
+7. Add an end-to-end workflow that saves and executes the node through the real Worker; assert its persisted output and run events.
 
 ## Runtime Rules
 
@@ -45,15 +45,9 @@ Use this skill when implementing or reviewing a new **Workflow Node** in this re
 
 ## Tests And Validation
 
-Add or update focused tests based on the node kind:
+Add a flow to `tests/workflows.e2e.ts` that saves a manifest using the node, executes it through the real Worker, and asserts its output, storage artifact, and run events. UI authoring changes also need an agent goal followed by exact persisted-state checks. External action nodes require isolated integration credentials; record missing credentials as blockers in `docs/e2e.md`.
 
-- Shared catalog/defaults/validation: `tests/workflows/nodes.test.ts` and `tests/workflows/authoring.test.ts`
-- Runtime Adapter: a direct `tests/workflows/<category-or-node>-nodes.test.ts`
-- Registry routing: `tests/workflows/node-registry.test.ts`
-- Compiler/logic behavior: `tests/workflows/compiler.test.ts`
-- Executor regression, only when dispatch behavior changes: `tests/workflows/actions.test.ts`
-
-Run the narrowest relevant Vitest command while iterating, then run the repo-root checks required by `AGENTS.md` before handoff:
+Run the narrowest relevant e2e command while iterating, then run the repo-root checks required by `AGENTS.md` before handoff:
 
 ```bash
 nub run typecheck

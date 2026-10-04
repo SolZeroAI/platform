@@ -44,7 +44,7 @@
    (`npx prettier@3 --check .` and `npx skill-check@1.2.0 check ./skills --no-security-scan --strict`,
    or the host repo's equivalents) and `wc -l -w` on `SKILL.md`.
 3. Bump `metadata.version` for the delivered content change. Run
-   `node --test tests/apple-web-app-snippets.test.mjs` when snippets change
+   `nub run test:e2e tests/auth.e2e.ts` when snippets change
    (in this repository).
 4. When committing, name the finding. Include the OS/Safari build for device
    findings; do not invent a device build for an editorial or code correction.
