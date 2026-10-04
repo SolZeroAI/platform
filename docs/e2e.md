@@ -167,16 +167,34 @@ explicit budgets remain unchanged. Native isolate parent and delegated turns rec
 same-session follow-ups with the exposed `reasoningEffort: "low"` fixture for these two tiny
 shell operations, including the omission of `sessionKind` in a follow-up request.
 
-Default-effort Codex tool trials and a low-effort follow-up with two separate reads returned
+Codex tool trials, including runs with low effort selected locally, returned
 `max_output_tokens` incomplete responses;
 the application returned a bounded failed result after about 70–75 seconds. That negative
-API outcome was observed. A later low-effort failure also exposed an incorrect thinking/Stop
+API outcome was observed. A later failure also exposed an incorrect thinking/Stop
 state after WebSocket replay: `Option.none` was incorrectly treated as a processing message.
 The replay now checks `Option.isSome`, and harness regressions require idle controls after
 reload or a terminal failure. The tool regression selects
 low effort explicitly, writes each file in a distinct call, and reads both files with one
 exact `cat` command. It asserts actual commands and byte-exact stdout, rather than the
 model summary spelling. Separate simple-prompt tests retain their literal response contract.
+
+A native-request diagnostic later proved that pinned Codex 0.144.5 omitted the selected
+reasoning effort for the multi-part Cloudflare model ID. Its fallback model metadata gates
+reasoning requests. The small pinned harness patch enables that metadata only for
+`@cf/openai/gpt-oss-20b` and `@cf/openai/gpt-oss-120b`, with summaries disabled; user-selected
+effort then reaches Workers AI. Nub and Docker apply the same patch. This matches the
+[tagged client gate](https://github.com/openai/codex/blob/rust-v0.144.5/codex-rs/core/src/client.rs#L762)
+and [upstream custom-model report](https://github.com/openai/codex/issues/30697).
+The actual fixed Codex tool/follow-up run passed with all five requests at `low`; completion
+counts were 108, 90, 27, 71, and 26 tokens. No output-budget increase was necessary.
+
+The delegation regression requests all events for its returned parent message instead of
+the default latest-100 tail. It requires a real child start, correlated completion and parent
+tool result with the marker, and no child error. Counts and lifecycle categories are recorded
+before cleanup. A strict run failed the earlier tail-only assertion, but pagination eviction
+was not reproduced: later real runs had 42 events/17 child events and 37/14. The corrected
+strong child contract passed; another run produced malformed parent output and remains a
+recorded provider failure rather than evidence of successful delegation.
 
 The user deferred the extra GitHub, Slack, MCPCF, AI Search, Anthropic, BYOK, and ordinary-member
 OIDC fixtures. Their authored cases and fail-fast preflight remain available; no live positive

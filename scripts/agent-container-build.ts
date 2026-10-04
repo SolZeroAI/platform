@@ -36,6 +36,11 @@ export async function bundleAgentContainer(
       },
     ),
   )
+  const codexPatch = await readFile(
+    resolve(repoRoot, "patches/@ai-sdk+harness-codex@1.0.43.patch"),
+    "utf8",
+  )
+  await writeFile(resolve(contextDir, "harness-codex.patch"), codexPatch)
   const dockerfile = await readFile(dockerfilePath, "utf8")
   await writeFile(resolve(contextDir, "Dockerfile"), dockerfile)
   let wroteJavaScript = false

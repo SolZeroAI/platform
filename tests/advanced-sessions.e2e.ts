@@ -147,26 +147,101 @@ test(
   { session: "admin", tags: ["runtime"] },
   async ({ browser }) => {
     const marker = uniqueName("delegated")
-    const result = await api<{ sessionId: string; status: string; output: string }>(
-      browser,
-      "/sessions/run",
-      "POST",
-      {
-        title: uniqueName("e2e-subagent"),
-        agentRuntime: "isolate",
-        subagents: "enabled",
-        content: `Use delegate_to_subagent to delegate exactly one task: return the marker ${marker}. Wait for the child to finish and include its marker in your final response.`,
-        ...(process.env.E2E_APP_MODEL ? { model: process.env.E2E_APP_MODEL } : {}),
-      },
-    )
+    const result = await api<{
+      sessionId: string
+      messageId: string
+      status: string
+      output: string
+    }>(browser, "/sessions/run", "POST", {
+      title: uniqueName("e2e-subagent"),
+      agentRuntime: "isolate",
+      subagents: "enabled",
+      content: `Use delegate_to_subagent to delegate exactly one task: return the marker ${marker}. Wait for the child to finish and include its marker in your final response.`,
+      ...(process.env.E2E_APP_MODEL ? { model: process.env.E2E_APP_MODEL } : {}),
+    })
     try {
-      expect(result.status).toBe("completed")
-      expect(result.output).toContain(marker)
-      const session = await api<{ events: Array<{ type: string }> }>(
+      type ChildEvent = {
+        type: string
+        data: {
+          kind?: string
+          runId?: string
+          messageId?: string
+          parentToolCallId?: string
+          task?: string
+          summary?: string
+          callId?: string
+          result?: string
+          error?: string
+        }
+      }
+      const tail = await api<{ events: ChildEvent[] }>(
         browser,
         `/sessions/${result.sessionId}/events`,
       )
-      expect(session.events.some((event) => event.type === "subagent_event")).toBe(true)
+      const session = await api<{ events: ChildEvent[] }>(
+        browser,
+        `/sessions/${result.sessionId}/events?messageId=${result.messageId}`,
+      )
+      console.info(
+        "e2e-delegation-events",
+        JSON.stringify({
+          parentCompleted: result.status === "completed",
+          parentMarker: result.output.includes(marker),
+          started: session.events.filter(
+            (event) => event.type === "subagent_event" && event.data.kind === "started",
+          ).length,
+          finished: session.events.filter(
+            (event) => event.type === "subagent_event" && event.data.kind === "finished",
+          ).length,
+          childErrors: session.events.filter(
+            (event) =>
+              event.type === "subagent_event" &&
+              ["error", "aborted", "interrupted"].includes(event.data.kind ?? ""),
+          ).length,
+          childMarker: session.events.some(
+            (event) =>
+              event.type === "subagent_event" &&
+              event.data.kind === "finished" &&
+              event.data.summary?.includes(marker),
+          ),
+          tail: tail.events.length,
+          tailChildEvents: tail.events.filter((event) => event.type === "subagent_event").length,
+          message: session.events.length,
+          messageChildEvents: session.events.filter((event) => event.type === "subagent_event")
+            .length,
+        }),
+      )
+      expect(result.status).toBe("completed")
+      expect(result.output).toContain(marker)
+      const started = session.events.find(
+        (event) => event.type === "subagent_event" && event.data.kind === "started",
+      )
+      expect(started?.data.runId).toBeDefined()
+      expect(started?.data.parentToolCallId).toBeDefined()
+      expect(started!.data.parentToolCallId!.length).toBeGreaterThan(0)
+      expect(started?.data.messageId).toBe(result.messageId)
+      expect(started?.data.task).toContain(marker)
+      const finished = session.events.find(
+        (event) =>
+          event.type === "subagent_event" &&
+          event.data.runId === started!.data.runId &&
+          event.data.kind === "finished",
+      )
+      expect(finished?.data.summary).toContain(marker)
+      expect(
+        session.events.some(
+          (event) =>
+            event.type === "subagent_event" &&
+            event.data.runId === started!.data.runId &&
+            ["error", "aborted", "interrupted"].includes(event.data.kind ?? ""),
+        ),
+      ).toBe(false)
+      const toolResult = session.events.find(
+        (event) =>
+          event.type === "tool_result" && event.data.callId === started!.data.parentToolCallId,
+      )
+      expect(toolResult?.data.result).toContain(marker)
+      expect(toolResult?.data.error).toBeUndefined()
     } finally {
       await api(browser, `/sessions/${result.sessionId}`, "DELETE")
     }

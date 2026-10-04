@@ -18,6 +18,12 @@ RUN npm install --global @nubjs/nub@0.4.11 pnpm@10.34.6 \
   @ai-sdk/harness-claude-code@1.0.42 \
   @modelcontextprotocol/sdk@1.29.0
 
+# Apply the same pinned custom-model reasoning fix used by the Nub install.
+COPY harness-codex.patch /app/harness-codex.patch
+RUN git apply --check --directory=node_modules/@ai-sdk/harness-codex harness-codex.patch \
+  && git apply --directory=node_modules/@ai-sdk/harness-codex harness-codex.patch \
+  && rm harness-codex.patch
+
 RUN groupadd --gid 10001 s0 \
   && useradd --uid 10001 --gid s0 --create-home --shell /bin/bash s0 \
   && mkdir -p /workspace/repo \

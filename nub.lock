@@ -12,6 +12,9 @@ overrides:
   workerd: 1.20260926.1
 
 patchedDependencies:
+  '@ai-sdk/harness-codex@1.0.43':
+    hash: 192b6be983e38d0262bcf91abffc0c12bb3a8512ad1ea78b00e3aa4344e9fac9
+    path: patches/@ai-sdk+harness-codex@1.0.43.patch
   '@cloudflare/containers@0.3.7':
     hash: 3ba0e745e0dcdddc06705fa0c7ee010aaa7259d52fd075bcf84ee0c5990ba44f
     path: patches/@cloudflare__containers@0.3.7.patch
@@ -289,7 +292,7 @@ importers:
         version: 1.0.42(zod@4.5.4)
       '@ai-sdk/harness-codex':
         specifier: 1.0.43
-        version: 1.0.43(zod@4.5.4)
+        version: 1.0.43(patch_hash=192b6be983e38d0262bcf91abffc0c12bb3a8512ad1ea78b00e3aa4344e9fac9)(zod@4.5.4)
       '@ai-sdk/harness-opencode':
         specifier: 1.0.42
         version: 1.0.42(zod@4.5.4)
@@ -6569,7 +6572,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@ai-sdk/harness-codex@1.0.43(zod@4.5.4)':
+  '@ai-sdk/harness-codex@1.0.43(patch_hash=192b6be983e38d0262bcf91abffc0c12bb3a8512ad1ea78b00e3aa4344e9fac9)(zod@4.5.4)':
     dependencies:
       '@ai-sdk/harness': 1.0.41(ws@8.21.0)(zod@4.5.4)
       '@ai-sdk/provider-utils': 5.0.12(zod@4.5.4)
