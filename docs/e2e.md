@@ -163,6 +163,12 @@ Configure repository secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, an
 `CF_AI_GATEWAY_E2E_TOKEN`; the workflow generates and masks a fresh disposable account
 password. Do not use production identity or integration secrets for tests.
 
+Raw browser/network trace ZIPs are disabled because the published SDK cannot register
+newly minted API keys or session cookies for dynamic redaction. Keep SDK-redacted
+screenshots, screen trees and reports; never send minted credentials to the model.
+Sensitive input fixtures must be registered before execution, and cleanup must leave
+credential displays before failure capture.
+
 The workflow installs Chromium separately, restores `.e2e/cache`, runs the core suite,
 saves replay recordings and uploads reports and failure artifacts. `.e2e/` is ignored
 locally. Chromium receives native clipboard read/write permissions through the small

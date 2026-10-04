@@ -62,6 +62,6 @@ export default {
   assertionTimeout: 20_000,
   cache: { mode: "read-write" },
   reporters: ["list", "junit", "markdown"],
-  trace: "retain-on-failure",
+  trace: "off",
   failOnSkippedFailure: true,
 } satisfies E2EConfig
