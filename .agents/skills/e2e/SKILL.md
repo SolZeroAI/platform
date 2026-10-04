@@ -25,7 +25,7 @@ and `expect` (topic `writing-tests`). Model sign-in commands are in
 [setup](references/setup.md#subscriptions-and-api-keys).
 
 ```ts
-// e2e.config.ts
+// e2e.config.ts: extend the committed config to retain environment and secret handling.
 import type { E2EConfig } from 'e2e';
 import { web } from '@e2e-dev/web';
 import { createClefExecutor } from './scripts/e2e/cf-clef-executor';
@@ -36,7 +36,7 @@ export default {
       engine: web(),
       app: {
         url: 'http://127.0.0.1:3000',
-        command: { executable: 'nub', args: ['dev'], log: '.e2e/logs/app.log' },
+        command: { executable: 'nub', args: ['exec', 'tsx', 'scripts/e2e/dev.ts'], log: '.e2e/logs/stack.log' },
       },
     },
   ],
@@ -51,15 +51,14 @@ export default {
 ```
 
 ```ts
-// tests/billing.e2e.ts
+// tests/auth.e2e.ts
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 
-test('a member upgrades to Pro', async ({ app, agent, screen, browser }) => {
-  await app.open('/settings/billing');
-  await agent.act('upgrade the workspace to the Pro plan');
-  await expect(screen.getByRole('status')).toContainText('Pro');
-  await expect(browser).toHaveURL('/settings/billing');
+test('signed-out visitors see the real credential form', async ({ app, screen }) => {
+  await app.open('/settings');
+  await expect(screen.getByLabel('Email')).toBeVisible();
+  await expect(screen.getByRole('button', 'Sign In')).toBeVisible();
 });
 ```
 
