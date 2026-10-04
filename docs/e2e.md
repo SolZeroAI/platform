@@ -273,12 +273,30 @@ verification. The original sign-in route was reproduced with two failing credent
 its interactive gate fixes early native GET submission. Real regression runs also exposed
 and corrected bot child-route rendering, subagent select layering, D1's 50-byte LIKE search
 limit, API schema drift, and stale workflow export names. The initial hosted Validate run at `381334d` passed all 27 then-core cases.
-Independent live verification at `e0c39c6` passed 31/31 selected core cases, including both
-harnesses and the stronger child delegation contract. Hosted Validate `37241453073` at
-that commit also passed 31/31. The full strict run `01a1091b-7f12-722c-9d72-8c0bc3d19482`
-passed 30/31: the Codex first tool turn failed with a genuine native output-limit result;
-its terminal failure UI checks passed. This remains a recorded provider limitation.
-The later focused positive/explicit-limit-negative run passed 2/2 in 44.73 seconds;
-complete verification of the final added negative probe is still required.
-The expanded core includes OpenCode/Codex prompts, tools, follow-ups, and history. See the generated run report for
-the current pass/failure count; do not infer a fully verified suite from this inventory.
+Earlier independent live verification and hosted Validate `37241453073` at `e0c39c6`
+each passed 31/31. That commit's strict run passed 30/31: the Codex first tool turn
+exhausted the native output limit, and its terminal failure UI checks passed.
+
+Final verification at `dc6e3ea` produced these results, with 31 core cases selected and
+seven user-deferred external cases excluded:
+
+- Independent live run `01a1092d-7d62-7548-884d-95daef4b75f2`: 30/31 in 261.43 seconds.
+  The delegation parent omitted the required marker although its real child and correlated
+  tool result contained it. Cleanup removed the failed payload before an exact API-output
+  versus final-parent-token comparison; model noncompliance remains a hypothesis, not a
+  proven cause.
+- Hosted Validate `37242692025`: 30/31. The default-effort Codex prompt exhausted the
+  4096-token native output limit before the marker assertion. Its terminal status failed;
+  this case did not reach failure-UI assertions. The native effort is inferred absent from
+  source, implying Cloudflare's documented medium default; CI request metadata did not
+  capture it. Static validation and actionlint passed.
+- Independent strict run `01a10932-409a-7b67-b9fd-c76d10d2132f`: 31/31 in 196.91 seconds,
+  with six action replays, five cache misses, 15 Clef calls and 30,672 tokens; no skips or
+  flaky passes. Strict action replay still executes the real application and provider flows.
+
+Both harness tool/follow-up/history cases and the genuine eight-token negative probe
+passed in all three final runs. Explicit low effort reaches the Codex provider; the
+supported default and 4096-token limit remain unchanged. These results establish actual
+positive and bounded-failure behavior, but do not establish stable success across the
+native provider flows. The earlier 31/31 results are historical, not the final live or CI
+outcome; no retry or provider workaround hides the recorded failures.
