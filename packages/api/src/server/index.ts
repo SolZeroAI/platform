@@ -1,4 +1,8 @@
 import "./effect/db/postgres-promise-drizzle"
+export {
+  prepareWorkersAiResponses,
+  streamWorkersAiResponse,
+} from "./background/sandbox/providers/workers-ai-responses"
 
 export { handleGitHubAppWebhookRequest } from "./background/auth/github-webhook"
 export { getAuthProviderRegistry, getPublicAuthProviderRegistry } from "./background/db/auth-config"

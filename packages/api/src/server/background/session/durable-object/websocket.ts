@@ -538,7 +538,7 @@ export function sendSubscribeReplay(host: SessionDODelegate, ws: WebSocket): voi
 
   host.wsManager.send(ws, {
     type: "processing_status",
-    isProcessing: host.repository.getProcessingMessage() !== null,
+    isProcessing: Option.isSome(host.repository.getProcessingMessage()),
   })
 }
 

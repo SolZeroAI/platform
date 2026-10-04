@@ -81,6 +81,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_AI_GATEWAY_E2E_TOKEN: ${{ secrets.CF_AI_GATEWAY_E2E_TOKEN }}
       CF_AI_GATEWAY_E2E_ID: default
+      E2E_CONTAINER_RUNTIME: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -95,6 +96,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
           nub install --frozen-lockfile
+      - name: Verify Docker for source-image harnesses
+        run: docker info
       - name: Install browser
         run: nub run test:e2e:install
       - name: Generate isolated credentials

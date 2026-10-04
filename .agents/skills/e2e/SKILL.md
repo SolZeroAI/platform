@@ -1,6 +1,6 @@
 ---
 name: e2e
-description: Agentic end-to-end tests with e2e, the e2e runner. Covers scaffolding e2e.config.ts, picking the Playwright browser engine or the agent-device mobile engine, starting the app under test from the config, driving flows with agent.act, judging with agent.assert, agent.waitFor, and agent.extract, pinning values with screen, app, browser, and expect, shaping the agent (context, system prompt, tools, personas), the replay cache, the e2e CLI, reading .e2e/report.json, and bug bashes (parallel explore runs proven with repro tests). Use when a project depends on e2e, when asked for end-to-end, browser, mobile, or agentic UI tests, to bug bash or hunt for bugs, or when an e2e run fails.
+description: Write and diagnose genuine end-to-end tests with tester-army/e2e, Nub and Cloudflare Clef through AI Gateway. Covers real-stack startup, browser and HTTP flows, act/assert, exact assertions, replay cache, reports and fixture cleanup. Use when implementing or verifying application flows or fixing an e2e failure.
 ---
 
 ## SolZero contract
@@ -21,8 +21,8 @@ checks. The replay cache reruns verified actions and checks their recorded end
 state without a model call; agent judgments still run live. UI targets use
 `@e2e-dev/web` for browsers or `@e2e-dev/mobile` for iOS simulators,
 Android emulators, and connected phones. A test that takes only `app` can check an API with `fetch`
-and `expect` (topic `writing-tests`). Model sign-in commands are in
-[setup](references/setup.md#subscriptions-and-api-keys).
+and `expect` (topic `writing-tests`). Read the repository setup in
+[setup](references/setup.md).
 
 ```ts
 // e2e.config.ts: extend the committed config to retain environment and secret handling.
@@ -65,8 +65,8 @@ test('signed-out visitors see the real credential form', async ({ app, screen })
 ## Topics
 
 Read the topic for the job before writing code. The files sit next to this
-one; the installed CLI prints the same text with `nub exec e2e guide <topic>`
-(`e2e guide` alone prints this page). For anything the topics do not cover,
+one. The installed CLI prints upstream API guidance with `nub exec e2e guide <topic>`;
+these adapted local topics and the repository configuration take precedence. For anything the topics do not cover,
 the full documentation ships in the `docs/` directory of the installed `e2e`
 package (`node_modules/e2e/docs` in a single-package project); a link such as
 `/reference/cli` is `docs/reference/cli.mdx`.
@@ -97,9 +97,8 @@ package (`node_modules/e2e/docs` in a single-package project); a link such as
    Exact values go through `screen`: a sign-in form in a setup test, a field
    that must receive one specific string, a count that must be one number.
 4. Run one file: `nub exec e2e run tests/<feature>.e2e.ts`. Agent steps need a
-   model in the config and that provider's authentication (a saved
-   subscription login, an API key); a local endpoint may need none. Tests
-   without agent steps need no model.
+   committed Clef executor and its Cloudflare gateway credentials. Keep the
+   launcher and full-stack fixture prerequisites even for exact-only tests.
 5. Read the failure: the reporter prints the error code, message, and a code
    frame; `.e2e/report.json` has every step and artifact path. Fix the
    locator, the expectation, or the app. Never add a sleep.

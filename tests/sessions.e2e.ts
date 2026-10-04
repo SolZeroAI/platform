@@ -104,7 +104,12 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
     `${runtime} executes a real prompt and persists its output`,
     {
       session: "admin",
-      tags: runtime === "isolate" ? ["runtime"] : ["runtime", "external", "harness"],
+      tags:
+        runtime === "isolate"
+          ? ["runtime"]
+          : runtime === "claude-code"
+            ? ["runtime", "external", "harness"]
+            : ["runtime", "harness"],
     },
     async ({ app, browser, screen }) => {
       if (runtime !== "isolate") requireFixture("E2E_CONTAINER_RUNTIME")
@@ -141,6 +146,7 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
           expect(copied).toBe(result.output)
         }
         await browser.reload()
+        await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         await expect(screen.getByText(marker, { exact: false }).last()).toBeVisible()
         const messages = await api<{ messages: object[] }>(
           browser,

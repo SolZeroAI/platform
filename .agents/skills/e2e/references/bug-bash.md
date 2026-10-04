@@ -1,5 +1,7 @@
 # Running a bug bash
 
+Repository contract: use Nub, the committed launcher/configuration and Cloudflare Clef through AI Gateway. These upstream API notes do not authorize other model providers, alternate test runners, mocks, unsupported `agent.waitFor`/`agent.extract`, raw traces or external feedback. See `docs/e2e.md` and the adapted setup/running/agent/debugging topics.
+
 A bug bash is many `e2e explore` runs at once, one charter each, then a
 verification pass that turns every claimed bug into a repro test that fails
 for the reason reported. Plan the charters, fan them out, merge the findings,
@@ -138,7 +140,7 @@ CHARTERS
 while IFS='|' read -r slug target agent charter; do
   [ -n "$slug" ] && printf '%s\0%s\0%s\0%s\0' "$slug" "$target" "$agent" "$charter"
 done < .e2e/bugbash/charters.txt | xargs -0 -n 4 -P 4 sh -c \
-  'npx e2e explore "$4" --config e2e.bugbash.config.ts --target "$2" --agent "$3" --output ".e2e/bugbash/$1" --max-steps 6 --video --reporter list,markdown < /dev/null > ".e2e/bugbash/$1.log" 2>&1' _
+  'nub exec e2e explore "$4" --config e2e.bugbash.config.ts --target "$2" --agent "$3" --output ".e2e/bugbash/$1" --max-steps 6 --video --reporter list,markdown < /dev/null > ".e2e/bugbash/$1.log" 2>&1' _
 ```
 
 The log's summary prints `AI` (cost) and `Duration`. Exit code `1` means
@@ -199,7 +201,7 @@ and the failure it saw. Without subagents, verify one area after another.
    registered, `open_session` with the bug-bash config, pass its session id
    to every call, walk the reproduction, and `locate` each locator before
    writing it (topic `mcp`). Close your session when done.
-4. Run the file alone: `npx e2e run tests/bugbash/<slug>.e2e.ts`. Confirmed
+4. Run the file alone: `nub exec e2e run tests/bugbash/<slug>.e2e.ts`. Confirmed
    only when it fails with `ASSERTION_FAILED` on the assertion that encodes
    the bug. Any other failure (`LOCATOR_NOT_FOUND`, a timeout, a setup
    error) means the test is wrong: fix it and rerun. A passing test means
@@ -219,7 +221,7 @@ the areas no charter reached.
 
 The repro tests fail until the bugs are fixed: where the project's `tests`
 glob covers `tests/bugbash/`, its gating run leaves them out
-(`npx e2e run --exclude-tag bugbash`) or they stay uncommitted. Offer to fix
+(`nub exec e2e run --exclude-tag bugbash`) or they stay uncommitted. Offer to fix
 each bug: the repro test turning green is the proof, and it stays as the
 regression test with its `bugbash` tag removed.
 

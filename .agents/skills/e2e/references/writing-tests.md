@@ -1,5 +1,7 @@
 # Writing tests
 
+Repository contract: use Nub, the committed launcher/configuration and Cloudflare Clef through AI Gateway. These upstream API notes do not authorize other model providers, alternate test runners, mocks, unsupported `agent.waitFor`/`agent.extract`, raw traces or external feedback. See `docs/e2e.md` and the adapted setup/running/agent/debugging topics.
+
 ## A complete file
 
 ```ts

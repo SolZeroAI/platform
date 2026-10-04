@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { existsSync, writeFileSync } from "node:fs"
 import { mkdir } from "node:fs/promises"
 import { resolve } from "node:path"
@@ -17,6 +17,12 @@ for (const file of ["config/.env", "config/.dev.vars"]) {
   }
 }
 if (process.env.E2E_CONTAINER_RUNTIME === "1") {
+  const docker = spawnSync("docker", ["info"], { stdio: "ignore" })
+  if (docker.status !== 0) {
+    throw new Error(
+      "Core harness flows require a running Docker daemon. Start Docker before running e2e.",
+    )
+  }
   const contexts = resolve(".e2e/containers")
   for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS) as Array<
     keyof typeof AGENT_CONTAINER_ENTRYPOINTS

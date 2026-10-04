@@ -129,6 +129,8 @@ export type CreateSessionPayload = typeof CreateSessionPayload.Type
 
 export const RunSessionPayload = Schema.Struct({
   ...CreateSessionPayload.fields,
+  // An omitted kind inherits an existing session; only new sessions default to isolate.
+  sessionKind: Schema.optionalKey(SessionKind),
   sessionId: Schema.optionalKey(Schema.String),
   content: Schema.String,
   source: Schema.optionalKey(MessageSource),

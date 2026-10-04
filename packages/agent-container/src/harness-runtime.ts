@@ -185,7 +185,8 @@ export function harnessAdapterSettings(
               },
             },
             reasoningEffort: reasoningEffort(reasoning),
-            webSearch: true,
+            // Native Workers AI GPT-OSS exposes function tools, not OpenAI hosted web search.
+            webSearch: !/^@cf\/openai\/gpt-oss-(20b|120b)$/.test(model.modelId),
           },
         }
       }

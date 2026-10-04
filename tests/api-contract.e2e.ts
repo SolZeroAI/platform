@@ -29,6 +29,14 @@ test(
       const createdSchema = document.components.schemas.CreatedApiKeyResponseEncoded
       expect(createdSchema.required).toEqual(["keyId", "key", "label", "createdAt"])
       expect(Object.hasOwn(createdSchema.properties, "apiKey")).toBe(false)
+      const runRef = document.paths["/sessions/run"].post.requestBody.content[
+        "application/json"
+      ].schema.$ref
+        .split("/")
+        .pop()
+      const runSchema = document.components.schemas[runRef]
+      expect(runSchema.required ?? []).not.toContain("sessionKind")
+      expect(Object.hasOwn(runSchema.properties.sessionKind, "default")).toBe(false)
       const stateRef = document.paths["/sessions/{id}"].get.responses["200"].content[
         "application/json"
       ].schema.$ref

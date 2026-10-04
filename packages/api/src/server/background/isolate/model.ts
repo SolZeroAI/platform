@@ -404,3 +404,17 @@ export function buildIsolateModelMessages(input: {
     },
   ]
 }
+
+/** Avoid the native GPT-OSS 256-token default while preserving explicit turn budgets. */
+export function resolveIsolateOutputTokenLimit(
+  modelId: string,
+  explicit: unknown,
+): Option.Option<number> {
+  return Option.liftPredicate(explicit, (value): value is number => typeof value === "number").pipe(
+    Option.orElse(() =>
+      Option.liftPredicate(modelId, (id) => /^@cf\/openai\/gpt-oss-(20b|120b)$/.test(id)).pipe(
+        Option.map(() => 4096),
+      ),
+    ),
+  )
+}

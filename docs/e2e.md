@@ -8,6 +8,9 @@ on these ports before running the suite. Existing applications are never reused.
 
 ## Run locally
 
+Start Docker before the core suite. The launcher fails with an actionable message if its
+daemon is unavailable.
+
 ```sh
 nub install --frozen-lockfile
 nub run test:e2e:install
@@ -42,8 +45,8 @@ for polling and extraction: Clef does not implement `agent.waitFor` or `agent.ex
 The application runtime model is separate from the semantic test executor. The test
 profile declares the existing Workers AI default and provider catalog. `E2E_APP_MODEL`
 can select a model that the application actually exposes. Runtime prompt tests require a
-working application model provider; container runtimes additionally require Docker and
-their runtime/provider credentials. Setting the semantic gateway token alone does not
+working application model provider. The core suite requires a running Docker daemon for
+source-image OpenCode and Codex, using the same configured Cloudflare GPT-OSS provider. Setting the semantic gateway token alone does not
 supply OpenAI, Anthropic, or harness subscription credentials.
 
 The profile provisions only `e2e-admin@example.test` and `e2e-peer@example.test`.
@@ -56,8 +59,8 @@ its returned cookies, retaining redacted screenshot support. The separate sign-i
 exercises the visible credential form with e2e secret handles.
 
 `nub run test` and `test:e2e` run core flows, excluding tests tagged `external`.
-`test:e2e:all` runs every flow. `test:e2e:external` runs only integrations and container
-harnesses. External tests fail with a named missing fixture instead of skipping.
+`test:e2e:all` runs every flow. `test:e2e:external` runs only deferred integrations and
+Claude Code. OpenCode and Codex prompts, tools, follow-ups, and history are core flows. External tests fail with a named missing fixture instead of skipping.
 
 ## Coverage inventory
 
@@ -77,7 +80,9 @@ cookies. Tests never intercept application requests or mock modules.
 | Attachment-bearing prompt cancellation | `advanced-sessions.e2e.ts`, tag `runtime` | Prompt reaches processing; stop produces failed terminal message; reload retains history |
 | Actual child-agent delegation | `advanced-sessions.e2e.ts`, tag `runtime` | Child event and output marker from a real isolate invocation |
 | Isolate prompt execution and native Markdown copy | `sessions.e2e.ts`, tag `runtime` | Workers AI output marker, exact native clipboard value, persisted messages survive page reload |
-| OpenCode, Codex, Claude Code prompt execution | `sessions.e2e.ts`, tags `external`, `harness` | Real output marker/history; container and compatible provider prerequisites |
+| OpenCode and Codex prompt execution | `sessions.e2e.ts`, tag `harness` | Real GPT-OSS output marker and persisted history after reload; Docker source images |
+| OpenCode and Codex multiple tools and follow-up | `harness-tools.e2e.ts`, tag `harness-tools` | Two distinct actual shell calls, successful correlated results, file readback in the same session, persisted token events for both turns |
+| Claude Code prompt execution | `sessions.e2e.ts`, tags `external`, `harness` | Compatible Anthropic fixture and real output/history; deferred |
 | Authentication transfer redemption and deep-link navigation | `session-transfer.e2e.ts` | Real one-time token/cookie redemption, exact redirect, repeat redemption rejected |
 | Foreign-account session access and mutation denial | `sessions.e2e.ts` | Real separate cookies; read/tools/delete/websocket-token all return 404 |
 | GitHub repository discovery | `external-integrations.e2e.ts`, tag `github` | Configured linked identity finds exact isolated repository |
@@ -97,8 +102,8 @@ cookies. Tests never intercept application requests or mock modules.
 The external suites require an isolated deployment with integrations enabled in its
 configuration and identities linked to the disposable test account. Set:
 
-- `E2E_CONTAINER_RUNTIME=1` for harness execution, Docker, and an application model compatible
-  with the selected harness (`E2E_APP_MODEL`). The container pins pnpm only because the
+- `E2E_CONTAINER_RUNTIME=1` is the default for the core source-image harness flows. Docker
+  must be running, with an application model compatible with the selected harness (`E2E_APP_MODEL`). The container pins pnpm only because the
   third-party AI SDK bootstrap recipes require its bundled lockfiles; repo commands remain Nub.
   With this flag, the isolated development stack bundles the committed runtime entrypoints
   into ignored `.e2e/containers` contexts and builds their current Dockerfile through Alchemy.
@@ -132,18 +137,50 @@ starts. Enable the commented integration blocks in this profile:
 | MCPCF | `mcpcf.enabled`, baseUrl, userOauthProviderId; `S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN` | Reachable registry, read-only tool server, OAuth/token linked identity; choose an ID actually returned by `/sessions/mcpcf/servers` |
 | AI Search | `aiSearch.serviceTokenId` referencing `CF_AI_SEARCH_SERVICE_TOKEN_ID` | Seed/index a document, enable the source in Admin > AI Search; choose an ID returned by `/sessions/ai-search/sources` |
 | Claude Code | Gateway providerKeys.anthropic references `S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY`; `E2E_CLAUDE_CODE_MODEL=cloudflare-ai-gateway/anthropic/claude-opus-5` | Anthropic messages-compatible model and container bootstrap |
-| OpenCode/Codex | Shipped Workers AI GPTOSS uses responses; override independently with `E2E_OPENCODE_MODEL`, `E2E_CODEX_MODEL` | Container bootstrap; OpenAI gateway models additionally need `S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY` in providerKeys.openai |
+| OpenCode/Codex (core) | Shipped Workers AI GPT-OSS120b; override independently with `E2E_OPENCODE_MODEL`, `E2E_CODEX_MODEL` | Docker and the configured application Workers AI binding/run token; optional OpenAI gateway models additionally need `S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY` in providerKeys.openai |
 | OIDC | `auth.providers.<id>` kind=oidc, issuer/clientId and a chosen clientSecret env reference; signIn/provisionUsers/link capabilities | Isolated IdP clients with localhost callback URLs; distinct admin/member users |
 | LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the Clef decision token as an application provider |
 
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
 
-The source-image harness checks reproduced and fixed missing pnpm and unwritable OpenCode
-cache directories. Their actual prompt checks remain failing with the supplied Workers AI
-configuration: OpenCode reaches an outbound TLS certificate trust failure, and Codex receives
-a Workers AI Responses validation error for nested function tools. These are explicit
-external-suite failures; the core result does not verify either harness prompt flow.
+The source-image harness checks reproduced and fixed missing pnpm, unwritable OpenCode
+cache directories, missing custom-model registration, and local outbound certificate trust.
+The launcher exports trusted macOS system roots to an ignored mode-0600 PEM before Alchemy
+starts and adds those roots to the runner's default trust set. It never disables certificate
+verification or replaces an explicitly supplied CA bundle.
+
+The configured GPT-OSS Responses route rejected the harness tool schema. Its Chat compatibility
+route also rejected replayed tool history. The narrowly scoped adapter uses the documented
+native `/accounts/<account>/ai/run/@cf/openai/gpt-oss-120b` Chat route, deliberately requests
+buffered JSON with `stream:false`, then emits standard Responses events from the actual result.
+The [native Chat model](https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/)
+also supports streaming; this bridge buffers for the tested harness protocol.
+The [Responses compatibility endpoint](https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/)
+requires `stream:false`. Text, call IDs, arguments,
+namespace names, tool results, abort signals, scoped application credentials and gateway headers
+are preserved. Output arrives after generation completes. Consecutive calls remain in one
+assistant turn. Private provider reasoning is omitted; unsupported replay/protocol semantics
+fail explicitly. Absent token budgets use 4096 rather than the native 256-token default;
+explicit budgets remain unchanged. Native isolate parent and delegated turns receive the same
+4096-token default when no explicit turn limit is supplied. The harness tests verify genuine shell writes/readback and
+same-session follow-ups with the exposed `reasoningEffort: "low"` fixture for these two tiny
+shell operations, including the omission of `sessionKind` in a follow-up request.
+
+Default-effort Codex tool trials and a low-effort follow-up with two separate reads returned
+`max_output_tokens` incomplete responses;
+the application returned a bounded failed result after about 70–75 seconds. That negative
+API outcome was observed. A later low-effort failure also exposed an incorrect thinking/Stop
+state after WebSocket replay: `Option.none` was incorrectly treated as a processing message.
+The replay now checks `Option.isSome`, and harness regressions require idle controls after
+reload or a terminal failure. The tool regression selects
+low effort explicitly, writes each file in a distinct call, and reads both files with one
+exact `cat` command. It asserts actual commands and byte-exact stdout, rather than the
+model summary spelling. Separate simple-prompt tests retain their literal response contract.
+
+The user deferred the extra GitHub, Slack, MCPCF, AI Search, Anthropic, BYOK, and ordinary-member
+OIDC fixtures. Their authored cases and fail-fast preflight remain available; no live positive
+result is claimed for those seven cases.
 
 Source inventory still exposes additional external paths that require dedicated fixtures:
 Additional social-provider sign-in variants; GitHub linking/clone/branch/write/webhooks;
@@ -182,7 +219,8 @@ raw stack logs are local diagnostics and are never uploaded by CI. This preserve
 the original Alchemy process lifecycle while exposing errors before a final watch
 process failure.
 
-The workflow installs Chromium separately, restores `.e2e/cache`, runs the core suite,
+The workflow verifies Docker, builds the current harness source images through Alchemy,
+installs Chromium separately, restores `.e2e/cache`, runs the core suite,
 saves replay recordings and uploads reports and failure artifacts. `.e2e/` is ignored
 locally. Chromium receives native clipboard read/write permissions through the small
 pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
@@ -196,11 +234,16 @@ do not convert failures into skips or claim green coverage from collection alone
 ## Migration and verification
 
 The migration removes 101 legacy test files (602 declared cases) and the Vitest runner,
-Workers pool, and configuration. The new catalogue has 36 cases including two real auth
-setup cases: 27 core and nine external fixture cases. Collection is separate from execution.
+Workers pool, and configuration. The new catalogue has 38 cases including two real auth
+setup cases: 31 core and seven deferred external fixture cases. Collection is separate from execution.
 External cases are authored regression coverage, not claims of completed external-service
 verification. The original sign-in route was reproduced with two failing credential flows;
 its interactive gate fixes early native GET submission. Real regression runs also exposed
 and corrected bot child-route rendering, subagent select layering, D1's 50-byte LIKE search
-limit, API schema drift, and stale workflow export names. See the generated run report for
+limit, API schema drift, and stale workflow export names. The earlier hosted Validate run at `381334d` passed all 27 then-core cases. The expanded
+31-case local run passed 30 cases and reported the bounded Codex tool provider failure
+described above. The final focused run then passed all four selected cases: authentication,
+both harness tool/follow-up/history cases with explicit low effort, and isolate prompt/reload
+with idle controls. A full run of the final source is still required.
+The expanded core includes OpenCode/Codex prompts, tools, follow-ups, and history. See the generated run report for
 the current pass/failure count; do not infer a fully verified suite from this inventory.

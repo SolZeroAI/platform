@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { getCACertificates } from "node:tls"
+import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import dotenv from "dotenv"
 import { parse, type ParseError } from "jsonc-parser"
 import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
@@ -14,6 +14,7 @@ for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]
 if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
   const trusted = getCACertificates("system")
   if (trusted.length > 0) {
+    setDefaultCACertificates([...getCACertificates("default"), ...trusted])
     mkdirSync(".e2e", { recursive: true })
     const path = resolve(".e2e/trusted-ca.pem")
     const pem = trusted.join("\n")
@@ -23,6 +24,8 @@ if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
     process.env.NODE_EXTRA_CA_CERTS = path
   }
 }
+// The core suite exercises source-image OpenCode and Codex runtimes.
+process.env.E2E_CONTAINER_RUNTIME ??= "1"
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {
   throw new Error("E2E_CONFIG_PROFILE must be e2e or an isolated e2e-* profile.")
