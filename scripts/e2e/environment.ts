@@ -44,6 +44,15 @@ export const appEnvironment = Object.fromEntries(
   Object.entries(process.env).filter(
     (entry): entry is [string, string] =>
       entry[1] !== undefined &&
-      !["CF_AI_GATEWAY_E2E_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"].includes(entry[0]),
+      ![
+        "CF_AI_GATEWAY_E2E_TOKEN",
+        "GH_TOKEN",
+        "GITHUB_TOKEN",
+        // Process-control metadata from the config-loader/watch process must not reach a new child.
+        "NODE_CHANNEL_FD",
+        "NODE_CHANNEL_SERIALIZATION_MODE",
+        "NODE_UNIQUE_ID",
+        "WATCH_REPORT_DEPENDENCIES",
+      ].includes(entry[0]),
   ),
 )

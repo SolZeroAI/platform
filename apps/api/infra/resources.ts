@@ -2,6 +2,8 @@ import { resolve } from "node:path"
 import type { Input } from "alchemy/Input"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
+import * as Config from "effect/Config"
+import * as Option from "effect/Option"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
 import type { AppDbMode, S0DatabaseEngine, StageMetadata } from "@solzero/shared"
@@ -51,23 +53,34 @@ export function createAgentContainerNamespace(runtime: AgentContainerRuntime) {
 export function createAgentContainerApplication(
   options: CreateAgentContainerOptions & { runtime: AgentContainerRuntime },
 ) {
-  const { appName, stageMetadata } = options
-
-  const localContexts = process.env.S0_E2E_CONTAINER_CONTEXTS
-  if (localContexts && (!appName.startsWith("s0-e2e") || stageMetadata.name !== "dev")) {
-    throw new Error("Local e2e container builds require an isolated s0-e2e development deployment.")
-  }
-  const imageSource = localContexts
-    ? {
-        context: resolve(localContexts, options.runtime),
-        dockerfile: resolve(localContexts, options.runtime, "Dockerfile"),
-      }
-    : { image: AGENT_CONTAINER_IMAGES[options.runtime] }
-
-  return Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {
-    ...imageSource,
-    instanceType: "standard",
-    name: `${appName}-${options.runtime}-agent-${stageMetadata.name}`,
+  return Effect.gen(function* () {
+    const { appName, stageMetadata } = options
+    const localContexts = yield* Config.string("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
+    const forbiddenContext = Option.filter(
+      localContexts,
+      () => !appName.startsWith("s0-e2e") || stageMetadata.name !== "dev",
+    )
+    yield* Option.match(forbiddenContext, {
+      onNone: () => Effect.void,
+      onSome: () =>
+        Effect.die(
+          new Error(
+            "Local e2e container builds require an isolated s0-e2e development deployment.",
+          ),
+        ),
+    })
+    const imageSource = Option.match(localContexts, {
+      onNone: () => ({ image: AGENT_CONTAINER_IMAGES[options.runtime] }),
+      onSome: (contexts) => ({
+        context: resolve(contexts, options.runtime),
+        dockerfile: resolve(contexts, options.runtime, "Dockerfile"),
+      }),
+    })
+    return yield* Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {
+      ...imageSource,
+      instanceType: "standard",
+      name: `${appName}-${options.runtime}-agent-${stageMetadata.name}`,
+    })
   })
 }
 
