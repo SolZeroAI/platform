@@ -186,7 +186,21 @@ effort then reaches Workers AI. Nub and Docker apply the same patch. This matche
 [tagged client gate](https://github.com/openai/codex/blob/rust-v0.144.5/codex-rs/core/src/client.rs#L762)
 and [upstream custom-model report](https://github.com/openai/codex/issues/30697).
 The actual fixed Codex tool/follow-up run passed with all five requests at `low`; completion
-counts were 108, 90, 27, 71, and 26 tokens. No output-budget increase was necessary.
+counts were 108, 90, 27, 71, and 26 tokens. A later full strict run still encountered a
+native output-limit failure. A bounded 8192-token experiment also returned actual
+`finish_reason: length` with 8192 completion tokens, so it was reverted: increasing the
+limit did not fix this provider behavior. The default remains 4096; no temperature change,
+model alias, fabricated tool call, or extra test retry is used.
+
+The Codex case also probes the real provider route inside its exclusively owned shipping
+container before asserting the positive result. It verifies the container's current session,
+uses the shipping Cloudflare CA with TLS verification, and sends an explicit eight-token
+limit. The live negative contract returned HTTP 200, `response.incomplete`,
+`max_output_tokens`, and exactly eight output tokens. A full positive tool/follow-up/history
+case then passed on the same route. Only status, limit usage and lifecycle metadata are
+logged; raw SSE, private reasoning, arguments, headers and credentials are excluded.
+The [Cloudflare GPT-OSS Harmony issue](https://github.com/cloudflare/ai/issues/574) describes
+related serving problems, but it does not establish the cause of the observed length failure.
 
 The delegation regression requests all events for its returned parent message instead of
 the default latest-100 tail. It requires a real child start, correlated completion and parent
@@ -258,10 +272,13 @@ External cases are authored regression coverage, not claims of completed externa
 verification. The original sign-in route was reproduced with two failing credential flows;
 its interactive gate fixes early native GET submission. Real regression runs also exposed
 and corrected bot child-route rendering, subagent select layering, D1's 50-byte LIKE search
-limit, API schema drift, and stale workflow export names. The earlier hosted Validate run at `381334d` passed all 27 then-core cases. The expanded
-31-case local run passed 30 cases and reported the bounded Codex tool provider failure
-described above. The final focused run then passed all four selected cases: authentication,
-both harness tool/follow-up/history cases with explicit low effort, and isolate prompt/reload
-with idle controls. A full run of the final source is still required.
+limit, API schema drift, and stale workflow export names. The initial hosted Validate run at `381334d` passed all 27 then-core cases.
+Independent live verification at `e0c39c6` passed 31/31 selected core cases, including both
+harnesses and the stronger child delegation contract. Hosted Validate `37241453073` at
+that commit also passed 31/31. The full strict run `01a1091b-7f12-722c-9d72-8c0bc3d19482`
+passed 30/31: the Codex first tool turn failed with a genuine native output-limit result;
+its terminal failure UI checks passed. This remains a recorded provider limitation.
+The later focused positive/explicit-limit-negative run passed 2/2 in 44.73 seconds;
+complete verification of the final added negative probe is still required.
 The expanded core includes OpenCode/Codex prompts, tools, follow-ups, and history. See the generated run report for
 the current pass/failure count; do not infer a fully verified suite from this inventory.

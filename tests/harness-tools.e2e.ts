@@ -2,6 +2,7 @@ import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
 import { api, uniqueName } from "./support/api"
 import { requireFixture } from "./support/external-fixtures"
+import { verifyExplicitNativeLimit } from "./support/native-provider"
 
 for (const runtime of ["opencode", "codex"] as const) {
   test(
@@ -35,6 +36,7 @@ for (const runtime of ["opencode", "codex"] as const) {
         content: `Execute these two shell commands in order, one tool call per command. First command: printf '%s' '${marker}' > '${file}' && cat '${file}'. Second command: printf '%s' '${otherMarker}' > '${otherFile}' && cat '${otherFile}'. These files are inside your allowed workspace. Report both tool outputs. Do not combine the commands into one tool call. Do not use the network or delegate.`,
       })
       try {
+        if (runtime === "codex") await verifyExplicitNativeLimit(first.sessionId)
         if (first.status === "failed") {
           await app.open(`/session/${first.sessionId}`)
           await expect(screen.getByText("Execution failed", { exact: true }).last()).toBeVisible()
