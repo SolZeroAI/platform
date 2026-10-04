@@ -169,6 +169,12 @@ screenshots, screen trees and reports; never send minted credentials to the mode
 Sensitive input fixtures must be registered before execution, and cleanup must leave
 credential displays before failure capture.
 
+The pinned runner patch quotes the first and last twenty startup log lines through
+the SDK's existing environment-secret redactor. Reads remain bounded to eight KiB;
+raw stack logs are local diagnostics and are never uploaded by CI. This preserves
+the original Alchemy process lifecycle while exposing errors before a final watch
+process failure.
+
 The workflow installs Chromium separately, restores `.e2e/cache`, runs the core suite,
 saves replay recordings and uploads reports and failure artifacts. `.e2e/` is ignored
 locally. Chromium receives native clipboard read/write permissions through the small
