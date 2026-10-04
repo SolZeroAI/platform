@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { getCACertificates } from "node:tls"
 import dotenv from "dotenv"
 import { parse, type ParseError } from "jsonc-parser"
 import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
@@ -8,6 +9,19 @@ import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
 // Explicit process/CI values always take precedence over local files.
 for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]) {
   if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
+}
+// workerd needs the trusted macOS roots explicitly; never replace a supplied CA bundle.
+if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
+  const trusted = getCACertificates("system")
+  if (trusted.length > 0) {
+    mkdirSync(".e2e", { recursive: true })
+    const path = resolve(".e2e/trusted-ca.pem")
+    const pem = trusted.join("\n")
+    if (!existsSync(path) || readFileSync(path, "utf8") !== pem) {
+      writeFileSync(path, pem, { mode: 0o600 })
+    }
+    process.env.NODE_EXTRA_CA_CERTS = path
+  }
 }
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {

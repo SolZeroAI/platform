@@ -52,6 +52,18 @@ function stringifyError(error: unknown): string {
     if (typeof message === "string" && message.length > 0) {
       return message
     }
+    // OpenCode's typed session errors store their safe display message in data.
+    const data = Reflect.get(error, "data")
+    if (data && typeof data === "object") {
+      const detail = Reflect.get(data, "message")
+      if (typeof detail === "string" && detail.length > 0) {
+        return detail
+      }
+    }
+    const name = Reflect.get(error, "name")
+    if (typeof name === "string" && name.length > 0) {
+      return name
+    }
   }
   return String(error)
 }
@@ -130,10 +142,12 @@ export function harnessAdapterSettings(
           settings: {
             provider: "openai",
             model: `openai/${model.modelId}`,
+            // The named compatible branch registers custom IDs in the OpenAI provider.
             auth: {
-              openai: {
+              openaiCompatible: {
                 apiKey: model.auth.apiKey,
                 baseUrl: model.auth.baseUrl,
+                name: "openai",
               },
             },
             reasoningVariant: openCodeReasoningVariant(reasoning),
