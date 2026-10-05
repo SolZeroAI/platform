@@ -22,7 +22,7 @@ nub run test:e2e:list
 
 The environment loader reads the selected private file, then `config/.env` and `config/.dev.vars`; existing environment values win. Supply the documented Cloudflare account, application, and Clef gateway credentials. Never print their values. The launcher creates a missing `.dev.vars` with mode 0600 and generates the isolated administrator password in an ignored file. Use the suite's registered secret handles for browser credential input.
 
-`nub run test` runs core flows. `nub run test:e2e:all` includes external integrations and container harnesses; `nub run test:e2e:external` selects them. Read the fixture inventory in `docs/e2e.md` first. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
+`nub run test` runs core flows, including real source-image OpenCode and Codex prompts, tools, follow-ups and persisted history. `nub run test:e2e:all` adds the deferred external integrations and Claude Code; `nub run test:e2e:external` selects only those deferred cases. Read the fixture inventory in `docs/e2e.md` first. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
 
 ## Prove behavior
 
@@ -35,5 +35,13 @@ Read `.e2e/report.json`, `.e2e/summary.md`, failure evidence, and the ignored st
 ## Scope and cleanup
 
 Use only the isolated e2e profile and disposable fixtures. Do not run `infra:deploy:*` or `db:copy-d1-to-planetscale` during verification. Preserve pinned Alchemy, Effect, Wrangler, and provider versions unless the requested fix requires a change. The e2e launcher owns process cleanup; stop only its recorded processes and preserve unrelated development stacks. Delete temporary integration fixtures and revoke minted tokens in `finally` blocks.
+
+After the local launcher stops, remove its account-level test resources with the same private credential file, account and isolated profile used for the run:
+
+```sh
+E2E_ENV_FILE=/path/to/private.env nub run test:e2e:cleanup
+```
+
+If the run selected `E2E_CONFIG_PROFILE`, retain that selection for cleanup. Keep the same `CI` setting: local and CI gateway IDs are separate, and the ownership guard refuses a scope mismatch. The command validates persisted gateway/token/account ownership and local Worker names before invoking normal Alchemy destruction; it deletes the dedicated gateway, revokes its generated application run token and removes the owned local state. Preserve replay cache, shared `default`, production gateways and unrelated or unknown remote resources. Do not bypass a guard or delete resources based only on names. CI runs this guarded cleanup automatically, including after startup or test failure.
 
 The previous `control-solzero` Chrome driver and its recipes were removed. Keep new regression cases in the shared e2e suite rather than rebuilding that driver.

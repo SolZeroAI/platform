@@ -17,6 +17,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Store all executable tests at `tests/**/*.e2e.ts`; helpers belong in `tests/support`.
 - Use `agent.act` for semantic goals and exact `expect` assertions immediately after each goal.
 - Run the real Alchemy stack from `e2e.config.ts`; use `config/e2e-dev.config.jsonc` and isolated configured accounts. Keep web port 3000 and API port 3100.
+- After the local test launcher stops, run `nub run test:e2e:cleanup` with the same credential file, account, profile and `CI` setting. Preserve unrelated resources; never bypass ownership guards. CI performs this cleanup automatically.
 - The semantic executor uses Cloudflare Clef through AI Gateway. Never substitute Jev or a text model. Supply `CF_AI_GATEWAY_E2E_TOKEN` securely; process/CI environment overrides local `E2E_ENV_FILE` values.
 - `nub run test` runs core flows with Cloudflare credentials and Docker, including source-image OpenCode and Codex prompts/tools/history. `nub run test:e2e:all` includes additional external integrations and Claude Code; it fails explicitly when required isolated fixtures are missing. Focus one file with `nub run test:e2e tests/settings.e2e.ts`. `test:e2e:live` disables action replay; `test:e2e:cache-strict` detects stale recordings.
 - Do not replace app routes or bindings with request interception, module mocks, or a second testing framework. Register passwords and secret fixtures with e2e credentials/secrets.
