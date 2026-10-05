@@ -18,7 +18,7 @@ test("all settings categories load real data", { session: "admin" }, async ({ ap
 test(
   "runtime default persists after reload",
   { session: "admin" },
-  async ({ app, agent, screen, browser }) => {
+  async ({ app, screen, browser }) => {
     await app.open("/settings?category=agents&tab=runtimes")
     const limit = screen.getByLabel("Default isolate step call limit")
     await expect(limit).toBeVisible()
@@ -28,10 +28,7 @@ test(
       await limit.fill(next)
       await expect(limit).toHaveValue(next)
       await expect(screen.getByRole("button", "Save", { exact: true })).toBeEnabled()
-      await agent.act(
-        "Save the supplied isolate step call limit using Save. Finish when Save is disabled and the supplied limit remains in the field.",
-        { params: { limit: Number(next) } },
-      )
+      await screen.getByRole("button", "Save", { exact: true }).tap()
       await expect(screen.getByRole("button", "Save", { exact: true })).not.toBeEnabled()
       await browser.reload()
       await expect(limit).toHaveValue(next)

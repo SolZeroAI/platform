@@ -15,6 +15,20 @@ const models = new Map([
 ])
 const cacheModes = new Set(["hit", "miss", "bypass", "unknown"])
 const layers = new Set(["gateway", "stagehand", "none"])
+const replayReasons = new Set([
+  "retry",
+  "no-entry",
+  "invalid-entry",
+  "truncated",
+  "wrong-context",
+  "target-not-found",
+  "target-ambiguous",
+  "gap",
+  "action-failed",
+  "action-uncertain",
+  "viewport-changed",
+  "end-mismatch",
+])
 const reportPaths = [
   ".e2e/report.json",
   ...["os-web", "gtt-web", "solzero-web", "x-activity", "tools"].map(
@@ -160,10 +174,17 @@ async function summarize() {
   const tests = Object.fromEntries(countNames.map((name) => [name, 0]))
   const replay = {
     steps: 0,
+    actionSteps: 0,
     fullyReplayedSteps: 0,
     partiallyReplayedSteps: 0,
+    missedSteps: 0,
+    uncachedActionSteps: 0,
+    liveJudgmentSteps: 0,
+    notRecordedSteps: 0,
     replayedActions: 0,
     modelCalls: 0,
+    reasons: {},
+    durations: { actionMs: 0, replayedMs: 0, liveActionMs: 0 },
   }
   let e2eMs = 0,
     reports = 0,
@@ -172,6 +193,24 @@ async function summarize() {
   let incomplete = false
   const collectSteps = (steps) => {
     for (const step of steps ?? []) {
+      if (step.kind === "agent") {
+        if (step.api === "agent.act") {
+          replay.actionSteps += 1
+          if (step.cache?.mode === "missed") replay.missedSteps += 1
+          else if (!step.cache) replay.uncachedActionSteps += 1
+          if (step.cache?.notRecorded === "param-collision") replay.notRecordedSteps += 1
+          if (step.cache?.reason) {
+            const reason = replayReasons.has(step.cache.reason) ? step.cache.reason : "unknown"
+            replay.reasons[reason] = (replay.reasons[reason] ?? 0) + 1
+          }
+          const field = step.cache?.mode === "self-finalized" ? "replayedMs" : "liveActionMs"
+          for (const key of ["actionMs", field]) {
+            if (Number.isFinite(step.durationMs) && step.durationMs >= 0) {
+              if (replay.durations[key] !== null) replay.durations[key] += step.durationMs
+            } else replay.durations[key] = null
+          }
+        } else replay.liveJudgmentSteps += 1
+      }
       if (["self-finalized", "agent-concluded"].includes(step.cache?.mode)) {
         replay.steps += 1
         if (step.cache.mode === "self-finalized") replay.fullyReplayedSteps += 1
@@ -389,8 +428,23 @@ async function summarize() {
     `Validated commit: ${summary.validatedSha ? `\`${summary.validatedSha}\`` : "unknown"}.`,
     `E2E report duration sum: ${duration(summary.durations.e2eMs)}; accounting window: ${duration(summary.durations.elapsedMs)}.`,
     `Tests: ${tests.passed} passed, ${tests.failed} failed, ${tests.interrupted} interrupted, ${tests.skipped} skipped.`,
-    `Action replay: ${replay.fullyReplayedSteps} complete and ${replay.partiallyReplayedSteps} partial steps / ${replay.replayedActions} actions; SDK model calls: ${replay.modelCalls}.`,
-    `Replay cache restored: ${display(summary.replayCacheRestored)}. Accounting: ${partial ? "partial / uncertain" : "complete"}.`,
+    "",
+    "#### Recorded-action replay (e2e cache)",
+    "",
+    `Action steps: ${replay.fullyReplayedSteps}/${replay.actionSteps} fully replayed, ${replay.partiallyReplayedSteps} handed off, ${replay.missedSteps} missed, ${replay.uncachedActionSteps} without cache; ${replay.replayedActions} actions replayed.`,
+    `Replay archive restored: ${display(summary.replayCacheRestored)}; SDK model calls: ${replay.modelCalls}; live judgment steps: ${replay.liveJudgmentSteps}; param collisions preventing recording: ${replay.notRecordedSteps}.`,
+    `Replay miss/handoff reasons: ${
+      Object.entries(replay.reasons)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([reason, count]) => `${reason}=${count}`)
+        .join(", ") || "none"
+    }.`,
+    `Cumulative action-step time: ${duration(replay.durations.actionMs)} (${duration(replay.durations.replayedMs)} fully replayed / ${duration(replay.durations.liveActionMs)} with live execution).`,
+    "Replays execute recorded browser actions and verify the recorded end state without model calls. Exact test assertions and real application/infrastructure flows still run. This is separate from Gateway response caching below; restoring an archive alone does not prove replay hits. Timing is observed step duration, not an estimate of time saved.",
+    "",
+    "#### Model requests and response caching",
+    "",
+    `Accounting: ${partial ? "partial / uncertain" : "complete"}.`,
     `Missing executor call records: ${missingExecutorCalls}; rejected usage records: ${rejectedRecords}; stale records excluded: ${staleRecords}.`,
     `Token usage: ${display(summary.totals.inputTokens)} input / ${display(summary.totals.outputTokens)} output; known subtotals: ${summary.totals.knownInputTokens} input / ${summary.totals.knownOutputTokens} output; records missing usage: ${summary.totals.missingUsage}.`,
     "",

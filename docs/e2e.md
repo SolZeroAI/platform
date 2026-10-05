@@ -69,6 +69,48 @@ exercises the visible credential form with e2e secret handles.
 `test:e2e:all` runs every flow. `test:e2e:external` runs only deferred integrations and
 Claude Code. OpenCode and Codex prompts, tools, follow-ups, and history are core flows. External tests fail with a named missing fixture instead of skipping.
 
+## Recorded-action replay
+
+`nub run test` uses verified action recordings in `.e2e/cache`. A warm `agent.act` can
+replay its controls and check its recorded final state without Clef calls; the immediate
+exact assertions still run. Fresh fixture names are marked with e2e `unique()` in action
+parameters, so their current values replace recording slots instead of changing the key.
+Keep choices that change the action flow, such as light versus dark mode, ordinary values.
+
+Set `E2E_ACTION_CACHE_DIR` to a fresh ignored directory for a cold/warm comparison without
+discarding existing recordings. Run normally first to create verified recordings, then
+run the same selection with `test:e2e:cache-strict` and the same directory. `test:e2e:live`
+disables action recording and replay; it cannot warm the cache. Strict mode still runs a
+step live when no entry exists, so verify `step.cache.mode === "self-finalized"` and zero
+model calls in the report rather than relying on the command name.
+
+CI restores only the current branch's replay archives, preferring the same Nub lockfile
+then the branch prefix. OS and architecture remain part of the key. Successful suites
+save a fresh run-and-attempt archive so repaired recordings reach the next run. Changes
+to documentation or accounting scripts do not invalidate the archive; the SDK validates
+each step's instruction, parameters, agent context, controls and final state itself.
+
+A focused local comparison used a fresh recording directory and ten tests covering bots,
+routines, archived sessions, runtime settings, MCP settings, secrets, theme, skills and
+workflow editing. The cold run passed in 87.98 seconds with 11 semantic actions and 36
+Clef calls. The first warm run passed in 42.80 seconds: ten actions replayed, while
+runtime Save still made three calls. Its only visible change was the disabled state,
+which the pinned SDK does not record as an end-state anchor. That already-known Save
+button now uses an exact locator; value, disabled-state, reload and restoration checks
+remain. The final warm run passed in 40.73 seconds with all ten remaining semantic
+actions self-finalized, 13 recorded controls replayed and zero model calls. Startup
+accounted for 15.86 seconds. This selected-flow proof is not a full core-suite timing or
+an application-provider cache proof. Run IDs: cold `01a10b0d-472f-7873-b184-687990a68b20`,
+initial warm `01a10b0f-9795-79e9-ac4e-b395e90dd70e`, final warm
+`01a10b12-c730-73cf-b00d-ee8c8b6cfe75`.
+
+Replay does not replace real application inference. Core Isolate/OpenCode/Codex prompts,
+tools, delegation and the bounded provider probe still call the configured provider.
+Stack startup, browser/API checks, container startup and those provider calls remain a
+speed limit. Live semantic judgments also need a model; the current core suite uses only
+`agent.act`, with exact assertions afterward. AI Gateway response-cache hits are a
+separate layer and are not evidence of recorded-action replay.
+
 ## AI usage accounting
 
 For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init` before

@@ -1,5 +1,5 @@
 import { test } from "@e2e-dev/web"
-import { expect } from "e2e"
+import { expect, unique } from "e2e"
 import { requireFixture } from "./support/external-fixtures"
 import { api, uniqueName } from "./support/api"
 
@@ -33,7 +33,7 @@ test(
       await expect(screen.getByText(title, { exact: true })).toBeVisible()
       await agent.act(
         "Click Unarchive on the archived chat named in params. Finish when the Archived chats section says No archived agents.",
-        { params: { title } },
+        { params: { title: unique(title) } },
       )
       await expect(screen.getByText(title, { exact: true })).not.toBeVisible()
       const restored = await api<{ status: string }>(browser, path)

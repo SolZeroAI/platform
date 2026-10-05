@@ -16,6 +16,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Use tester-army/e2e exclusively. Read `.agents/skills/e2e/SKILL.md` before changing tests.
 - Store all executable tests at `tests/**/*.e2e.ts`; helpers belong in `tests/support`.
 - Use `agent.act` for semantic goals and exact `expect` assertions immediately after each goal.
+- Wrap fresh fixture data in e2e `unique(value)` action params so recordings substitute the current value. Keep choices that change the action flow as ordinary params. Prove warm action replay with `self-finalized` steps and zero model calls; API response-cache hits do not prove replay.
 - Run the real Alchemy stack from `e2e.config.ts`; use `config/e2e-dev.config.jsonc` and isolated configured accounts. Keep web port 3000 and API port 3100.
 - After the local test launcher stops, run `nub run test:e2e:cleanup` with the same credential file, account, profile and `CI` setting. Preserve unrelated resources; never bypass ownership guards. CI performs this cleanup automatically.
 - The semantic executor uses Cloudflare Clef through AI Gateway. Never substitute Jev or a text model. Supply `CF_AI_GATEWAY_E2E_TOKEN` securely; process/CI environment overrides local `E2E_ENV_FILE` values.

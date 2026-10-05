@@ -60,7 +60,7 @@ export default {
   retries: 0,
   timeout: 180_000,
   assertionTimeout: 20_000,
-  cache: { mode: "read-write" },
+  cache: { mode: "read-write", dir: process.env.E2E_ACTION_CACHE_DIR ?? ".e2e/cache" },
   reporters: ["list", "junit", "markdown"],
   trace: "off",
   failOnSkippedFailure: true,

@@ -17,4 +17,11 @@ Register credentials as secrets before using them. Pass exact secret handles to 
 
 Action replay verifies the recorded end state. Keep an immediate exact assertion after each semantic action. Assertions themselves can make live model calls, and strict-cache mode alone does not establish zero calls. Inspect the report.
 
+Mark fresh fixture data with the SDK's `unique(value)` in `agent.act` params, including
+names that the flow enters or finds. This keeps one recording with replacement slots
+while exact assertions still use the current value. Keep choices that change the actions,
+such as theme direction or a selected plan, as ordinary parameters. An empty recording
+store is warmed by a normal read-write run, not `--no-cache`. Verify a warm run's
+`self-finalized` step count and zero model calls independently of Gateway cache headers.
+
 Repository flow inventory: `docs/e2e.md`.

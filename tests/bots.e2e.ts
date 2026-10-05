@@ -1,5 +1,5 @@
 import { test } from "@e2e-dev/web"
-import { expect } from "e2e"
+import { expect, unique } from "e2e"
 import { api, uniqueName } from "./support/api"
 
 test(
@@ -15,7 +15,7 @@ test(
       .fill("Disposable e2e bot. Never call external tools.")
     await agent.act(
       "Create the supplied bot from the completed form. Finish when its detail page shows the supplied name as a heading.",
-      { params: { name } },
+      { params: { name: unique(name) } },
     )
     await expect(screen.getByRole("heading", name)).toBeVisible()
     await expect(browser).toHaveURL(/\/bots\/[^/]+$/)
@@ -38,7 +38,7 @@ test(
       await expect(screen.getByText(routineName, { exact: true })).toBeVisible()
       await agent.act(
         "Delete the supplied routine. Finish when the No routines heading is visible.",
-        { params: { name: routineName } },
+        { params: { name: unique(routineName) } },
       )
       await expect(screen.getByText(routineName, { exact: true })).not.toBeVisible()
       const list = await api<{ routines: object[] }>(browser, `/bots/${botId}/routines`)

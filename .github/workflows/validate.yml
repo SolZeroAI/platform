@@ -116,10 +116,10 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .e2e/cache
-          key: e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-${{ github.run_id }}
+          key: e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-
-            e2e-solzero-${{ runner.os }}-
+            e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-
+            e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:
       - name: Initialize AI usage accounting
         id: ai-usage-init
         env:
@@ -145,16 +145,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/e2e/ai-comment.mjs
       - name: Preserve successful replay recordings
-        if: always() && !cancelled()
+        if: success() && steps.e2e-run.outcome == 'success'
         uses: actions/cache/save@v5
         with:
           path: .e2e/cache
-          key: e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-${{ github.run_id }}
+          key: e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload diagnostic reports
         if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         with:
-          name: solzero-e2e
+          name: solzero-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .e2e/report.json
             .e2e/junit.xml
