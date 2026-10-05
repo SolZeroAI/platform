@@ -758,7 +758,9 @@ const resolveGitHubAppUserAccessTokenFromBetterAuth = Effect.fn(
           },
         }),
       ).pipe(
-        Effect.map((token) => Option.getOrNull(validGitHubAppUserTokenOption(row.accountId, token))),
+        Effect.map((token) =>
+          Option.getOrNull(validGitHubAppUserTokenOption(row.accountId, token)),
+        ),
       ),
     ),
     Effect.catch(() => Effect.succeed(null)),
