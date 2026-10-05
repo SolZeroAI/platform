@@ -311,11 +311,11 @@ seven user-deferred external cases excluded:
   flaky passes. Strict action replay still executes the real application and provider flows.
 
 Both harness tool/follow-up/history cases and the genuine eight-token negative probe
-passed in all three final runs. Explicit low effort reaches the Codex provider; the
+passed in those three runs. Explicit low effort reaches the Codex provider; the
 supported default and 4096-token limit remain unchanged. These results establish actual
 positive and bounded-failure behavior, but do not establish stable success across the
-native provider flows. The earlier 31/31 results are historical, not the final live or CI
-outcome; no retry or provider workaround hides the recorded failures.
+native provider flows. These earlier outcomes remain historical evidence; no retry or
+provider workaround hides the recorded failures.
 
 The later Codex smoke prompt at `981b51d` requests only `hello`, without tools. Its focused
 live run `01a109a6-dad5-7bee-9ccf-eb868203a25c` passed the one Codex case and required
@@ -345,5 +345,20 @@ same CI gateway and creation timestamp, then passed 2/2 in 35.83 seconds
 (`01a109c1-5c79-703f-884d-a2ca2ebd2d33`). Both reports record clean `5bfd00a`.
 Guarded normal Alchemy destruction returned 404 for the gateway and both generated CI
 tokens, removed the owned local state, and left the other 19 gateway IDs unchanged.
-Wrong-scope and legacy-ID cleanup attempts failed before mutation. These are focused
-lifecycle/provider checks; a new complete hosted run is still required.
+Wrong-scope and legacy-ID cleanup attempts failed before mutation.
+
+The latest complete [hosted Validate run `37253611994`](https://github.com/SolZeroAI/platform/actions/runs/37253611994)
+passed at immutable `44abc320ed626f32612b6d7dbfb4e72563d799b1`: 31 selected, executed and
+passed core cases, with zero failures, skips or flaky passes in 173.554 seconds. The report
+is `01a109ca-c579-73b0-81b5-8b9880b6ae11` and records a clean checkout; artifact
+`11321623668` contains the reports. Repository validation, actionlint and guarded cleanup
+also succeeded. Subsequent commits change guidance only; runtime and tests remain the
+tested revision.
+
+Independent read-only checks after CI found the dedicated CI gateway returned 404 and the
+account held 19 gateways. The complete account token list showed no new active application
+token since CI began, and the five older token IDs were unchanged. The CI log records
+application-token deletion and 21 successful resource removals. Its exact newly created
+token ID was not retained, so no direct GET claim is made for that token. Historical
+unconfirmed tokens were preserved. This latest complete core success does not erase the
+earlier native-provider failures or verify the seven user-deferred external cases.
