@@ -20,6 +20,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - The semantic executor uses Cloudflare Clef through AI Gateway. Never substitute Jev or a text model. Supply `CF_AI_GATEWAY_E2E_TOKEN` securely; process/CI environment overrides local `E2E_ENV_FILE` values.
 - `nub run test` runs core flows with Cloudflare credentials and Docker, including source-image OpenCode and Codex prompts/tools/history. `nub run test:e2e:all` includes additional external integrations and Claude Code; it fails explicitly when required isolated fixtures are missing. Focus one file with `nub run test:e2e tests/settings.e2e.ts`. `test:e2e:live` disables action replay; `test:e2e:cache-strict` detects stale recordings.
 - Do not replace app routes or bindings with request interception, module mocks, or a second testing framework. Register passwords and secret fixtures with e2e credentials/secrets.
+- Generate authentication signing secrets at runtime or load them from private dotenv/CI bindings. Never commit static credential values, including test fixtures and fallback values.
 - Record external-service prerequisites and unverified flows in `docs/e2e.md`. A startup failure or unavailable integration is a blocker, not a passing test. Never print tokens or publish app artifacts externally.
 
 ## Release Management
