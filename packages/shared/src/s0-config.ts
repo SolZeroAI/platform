@@ -455,9 +455,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
 }
 
 export function resolveS0Config(value: unknown): S0ResolvedConfig {
-  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(
-    value,
-  )
+  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
   return normalizeResolvedConfig(
     Schema.decodeUnknownSync(S0ResolvedConfigSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(config),
