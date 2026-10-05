@@ -95,7 +95,7 @@ If runtime behavior changes, add paired kernel tests: one fixture for old behavi
 Run the smallest relevant set first, then broaden if shared behavior changed:
 
 ```bash
-nub exec vitest run tests/workflows/runtime-abi.test.ts tests/workflows/runtime-kernel.test.ts tests/workflows/runner.test.ts tests/workflows/lifecycle.test.ts
+nub run test:e2e tests/workflows.e2e.ts
 nub run workflow:runtime:audit <fixture-or-export.json>
 nub run lint
 ```

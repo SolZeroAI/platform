@@ -1,6 +1,6 @@
 import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { CommonErrors, NotFoundError } from "../errors"
-import { DeletedSessionResponse } from "../schemas/common"
+import { DeletedSessionResponse, StatusResponse } from "../schemas/common"
 import {
   CreateSessionPayload,
   CreatedSessionSuccess,
@@ -25,6 +25,7 @@ import {
   SessionListResponse,
   SessionMessagesResponse,
   SessionResponse,
+  SessionEventsResponse,
   SessionSandboxActivityResponse,
   SessionsListQuery,
   SlackCreateSessionPayload,
@@ -134,12 +135,12 @@ export class SessionsGroup extends HttpApiGroup.make("sessions")
     }).annotateMerge(OpenApi.annotations({ summary: "Resume a failed session prompt" })),
     HttpApiEndpoint.post("stop", "/:id/stop", {
       params: IdParams,
-      success: SessionResponse,
+      success: StatusResponse,
       error: [NotFoundError, ...CommonErrors],
     }).annotateMerge(OpenApi.annotations({ summary: "Stop session" })),
     HttpApiEndpoint.get("events", "/:id/events", {
       params: IdParams,
-      success: SessionResponse,
+      success: SessionEventsResponse,
       error: [NotFoundError, ...CommonErrors],
     }).annotateMerge(OpenApi.annotations({ summary: "Get session events" })),
     HttpApiEndpoint.get("sandboxActivity", "/:id/sandbox/activity", {
@@ -165,12 +166,12 @@ export class SessionsGroup extends HttpApiGroup.make("sessions")
     }).annotateMerge(OpenApi.annotations({ summary: "Create session websocket token" })),
     HttpApiEndpoint.post("archive", "/:id/archive", {
       params: IdParams,
-      success: SessionResponse,
+      success: StatusResponse,
       error: [NotFoundError, ...CommonErrors],
     }).annotateMerge(OpenApi.annotations({ summary: "Archive session" })),
     HttpApiEndpoint.post("unarchive", "/:id/unarchive", {
       params: IdParams,
-      success: SessionResponse,
+      success: StatusResponse,
       error: [NotFoundError, ...CommonErrors],
     }).annotateMerge(OpenApi.annotations({ summary: "Unarchive session" })),
   )

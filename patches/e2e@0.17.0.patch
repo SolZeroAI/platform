@@ -1,0 +1,33 @@
+diff --git a/dist/run/managed-process.js b/dist/run/managed-process.js
+--- a/dist/run/managed-process.js
++++ b/dist/run/managed-process.js
+@@ -258,7 +258,7 @@
+         return new InfrastructureError('APP_UNREACHABLE', `${message}\n${detail}`);
+     }
+     /**
+-     * The last lines appended to the log past `offset`, terminal controls
++     * The first and last lines appended to the log past `offset`, terminal controls
+      * stripped, bounded in bytes before lines so a chatty process cannot turn
+      * the message into the whole log.
+      */
+@@ -283,7 +283,19 @@
+                 .filter((line) => line.length > 0);
+             if (cutMidLine)
+                 lines.shift();
+-            return lines.slice(-OUTPUT_TAIL_LINES);
++            if (start === offset)
++                return lines.length <= OUTPUT_TAIL_LINES * 2
++                    ? lines
++                    : [...lines.slice(0, OUTPUT_TAIL_LINES), '[startup output omitted]', ...lines.slice(-OUTPUT_TAIL_LINES)];
++            const firstBuffer = Buffer.alloc(Math.min(OUTPUT_TAIL_BYTES, end - offset));
++            fs.readSync(fd, firstBuffer, 0, firstBuffer.length, offset);
++            const firstText = firstBuffer.toString('utf8');
++            const firstLines = stripVTControlCharacters(firstText)
++                .split(/\r\n|\n|\r/)
++                .map((line) => line.trimEnd());
++            if (!/[\r\n]$/.test(firstText))
++                firstLines.pop();
++            return [...firstLines.filter((line) => line.length > 0).slice(0, OUTPUT_TAIL_LINES), '[startup output omitted]', ...lines.slice(-OUTPUT_TAIL_LINES)];
+         }
+         catch {
+             return [];

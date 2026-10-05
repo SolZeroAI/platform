@@ -11,7 +11,7 @@ map:
     - match: functions/src/broadcast/sendBroadcastBulk.ts
       to: Broadcast sender
   exclude:
-    - "**/*.test.ts"
+    - "**/*.e2e.ts"
     - scripts/**
   lane:
     - match: packages/broadcast-lib/**
@@ -49,7 +49,7 @@ Up to 128 of each. They are about intent rather than structure: there is no way 
 **"Stop showing me the test files."**
 ```yaml
 map:
-  exclude: ["**/*.test.ts", "**/__tests__/**"]
+  exclude: ["**/*.e2e.ts", "**/__tests__/**"]
 ```
 
 **"That node is called the wrong thing."** Match the file it comes from, not its id:

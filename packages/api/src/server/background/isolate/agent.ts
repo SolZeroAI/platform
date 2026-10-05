@@ -37,7 +37,11 @@ import {
   // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate agent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
 } from "../observability/tracing"
-import { compileIsolateModelContext, type IsolateModelContext } from "./model"
+import {
+  resolveIsolateOutputTokenLimit,
+  compileIsolateModelContext,
+  type IsolateModelContext,
+} from "./model"
 import { getLatestAssistantText } from "./message-chunks"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { runChatWithStepLimitRecovery } from "./step-limit-recovery"
@@ -292,6 +296,10 @@ export class IsolateSessionAgent
 
     const turnConfig: TurnConfig = {
       system: systemSections.join("\n\n"),
+      maxOutputTokens: resolveIsolateOutputTokenLimit(
+        this.activeTurn?.model.modelId ?? "",
+        ctx.body?.maxOutputTokens,
+      ).pipe(Option.getOrUndefined),
       providerOptions: this.activeTurn?.model.providerOptions,
       telemetry: aiTelemetrySettings("isolate.think.turn", {
         "session.id": this.getRuntimeId(),

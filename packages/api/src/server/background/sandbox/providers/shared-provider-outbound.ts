@@ -221,11 +221,13 @@ function sharedProviderRequestInit(request: Request, headers: Headers): RequestI
     Match.when(true, () => ({
       headers,
       method: request.method,
+      signal: request.signal,
     })),
     Match.orElse(() => ({
       body: request.body,
       headers,
       method: request.method,
+      signal: request.signal,
     })),
   )
 }

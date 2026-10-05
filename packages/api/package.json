@@ -31,7 +31,6 @@
     "build": "tsc --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
-    "test": "nub exec --cwd ../.. vitest run --config packages/api/vitest.facets.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -55,9 +54,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.18.7",
     "@types/node": "^24.13.3",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2"
   }
 }

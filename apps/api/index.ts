@@ -21,6 +21,11 @@ import {
   IsolateSubAgent,
   makeCloudflareContext,
   normalizeCloudflareAiGatewayResponse,
+  prepareWorkersAiResponses,
+  streamWorkersAiResponse,
+  gatewayCacheStatus,
+  nativeWorkersAiUsage,
+  startApplicationAiUsage,
   createApiRequestObserver,
   decryptCloudflareAiGatewayByokProxyCredential,
   withApiSurfaceSpan,
@@ -128,6 +133,15 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
               { status: 502 },
             ),
           onSome: async (apiKey) => {
+            const prepared = await prepareWorkersAiResponses(request).catch((error: unknown) => {
+              if (error instanceof Error && error.message.startsWith("Workers AI")) return error
+              throw error
+            })
+            if (prepared instanceof Error)
+              return Response.json(
+                { error: { message: prepared.message, type: "invalid_request_error" } },
+                { status: 400 },
+              )
             const providerApiKey =
               kind === "cloudflare-provider-native"
                 ? await Effect.runPromise(
@@ -140,13 +154,40 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
             const authenticatedRequest =
               kind === "cloudflare-provider-native"
                 ? requestWithCloudflareProviderNativeCredential(request, apiKey, providerApiKey)
-                : requestWithSharedProviderCredential(request, apiKey, headers)
-            // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
-            const response = await fetch(authenticatedRequest)
-            log.set({ upstreamStatus: response.status })
-            return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
-              ? normalizeCloudflareAiGatewayResponse(response)
-              : response
+                : requestWithSharedProviderCredential(prepared.request, apiKey, headers)
+            const finishUsage = startApplicationAiUsage(
+              env,
+              requestedModel,
+              kind === "bearer" ? "none" : "gateway",
+            )
+            const bypass = authenticatedRequest.headers.get("cf-aig-skip-cache") === "true"
+            let usage = nativeWorkersAiUsage(undefined)
+            let httpStatus: number | null = null
+            let cache: ReturnType<typeof gatewayCacheStatus> = bypass ? "bypass" : "unknown"
+            try {
+              // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
+              const upstream = await fetch(authenticatedRequest)
+              httpStatus = upstream.status
+              cache = gatewayCacheStatus(upstream.headers, bypass)
+              const response = prepared.streaming
+                ? await streamWorkersAiResponse(upstream, prepared.functionNames, (native) => {
+                    usage = nativeWorkersAiUsage(native)
+                  })
+                : upstream
+              finishUsage({
+                ...usage,
+                httpStatus,
+                status: upstream.ok ? "success" : "error",
+                cache,
+              })
+              log.set({ upstreamStatus: response.status })
+              return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
+                ? normalizeCloudflareAiGatewayResponse(response)
+                : response
+            } catch (error) {
+              finishUsage({ ...usage, status: "error", httpStatus, cache })
+              throw error
+            }
           },
         }),
     })

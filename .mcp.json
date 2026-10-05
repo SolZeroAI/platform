@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "e2e": {
+      "command": "nub",
+      "args": ["run", "--silent", "test:e2e:mcp"],
+      "env": {
+        "E2E_TELEMETRY_DISABLED": "1"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
+--- a/dist/bridge/index.mjs
++++ b/dist/bridge/index.mjs
+@@ -1180,6 +1180,11 @@
+     );
+   }
+   const codexConfig = {};
++  // The pinned Codex fallback metadata omits reasoning for multi-part custom model IDs.
++  if (/^@cf\/openai\/gpt-oss-(20b|120b)$/.test(start.model ?? "")) {
++    codexConfig.model_supports_reasoning_summaries = true;
++    codexConfig.model_reasoning_summary = "none";
++  }
+   const gatewayBaseUrl = procEnv2.AI_GATEWAY_BASE_URL;
+   const hasGatewayAuth = Boolean(procEnv2.AI_GATEWAY_API_KEY || gatewayBaseUrl);
+   if (hasGatewayAuth && !gatewayBaseUrl) {
+diff --git a/src/bridge/index.ts b/src/bridge/index.ts
+--- a/src/bridge/index.ts
++++ b/src/bridge/index.ts
+@@ -121,6 +121,11 @@
+   }
+
+   const codexConfig: Record<string, unknown> = {};
++  // The pinned Codex fallback metadata omits reasoning for multi-part custom model IDs.
++  if (/^@cf\/openai\/gpt-oss-(20b|120b)$/.test(start.model ?? "")) {
++    codexConfig.model_supports_reasoning_summaries = true;
++    codexConfig.model_reasoning_summary = "none";
++  }
+
+   const gatewayBaseUrl = procEnv.AI_GATEWAY_BASE_URL;
+   const hasGatewayAuth = Boolean(procEnv.AI_GATEWAY_API_KEY || gatewayBaseUrl);

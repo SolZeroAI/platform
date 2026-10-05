@@ -25,10 +25,9 @@
     "dev:apps": "nub run dev:app",
     "dev:logs": "./scripts/watch-logs.sh",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "lint": "NODE_OPTIONS='--import tsx' turbo run lint && NODE_OPTIONS='--import tsx' oxlint packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts vitest.config.ts apps/api/index.ts apps/api/env.d.ts",
-    "lint:fix": "NODE_OPTIONS='--import tsx' turbo run lint -- --fix && NODE_OPTIONS='--import tsx' oxlint --fix packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts vitest.config.ts apps/api/index.ts apps/api/env.d.ts",
-    "test": "turbo run test && vitest run",
+    "typecheck": "turbo run typecheck && nub run typecheck:e2e",
+    "lint": "NODE_OPTIONS='--import tsx' turbo run lint && NODE_OPTIONS='--import tsx' oxlint packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/agent-container-build.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts e2e.config.ts scripts/e2e apps/api/index.ts apps/api/env.d.ts",
+    "lint:fix": "NODE_OPTIONS='--import tsx' turbo run lint -- --fix && NODE_OPTIONS='--import tsx' oxlint --fix packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/agent-container-build.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts e2e.config.ts scripts/e2e apps/api/index.ts apps/api/env.d.ts",
     "alchemy:state:bootstrap": "nub run --cwd packages/infra alchemy cloudflare bootstrap",
     "alchemy:state:tree": "CI=true nub run --cwd packages/infra alchemy state tree alchemy.state.run.ts",
     "alchemy:state:stacks": "CI=true nub run --cwd packages/infra alchemy state stacks alchemy.state.run.ts",
@@ -59,8 +58,18 @@
     "format": "oxfmt --check .",
     "format:fix": "oxfmt .",
     "lint:fix:max": "NODE_OPTIONS='--import tsx' oxlint --fix --fix-suggestions --fix-dangerously .",
-    "test:watch": "vitest",
-    "test:e2e": "RUN_E2E=1 vitest run tests/e2e/opencode-workflow.test.ts"
+    "test": "nub run test:e2e",
+    "test:e2e": "tsx scripts/e2e/run.ts --exclude-tag external",
+    "test:e2e:live": "tsx scripts/e2e/run.ts --no-cache --exclude-tag external",
+    "test:e2e:cache-strict": "tsx scripts/e2e/run.ts --strict-cache --exclude-tag external",
+    "test:e2e:cleanup": "tsx scripts/e2e/cleanup.ts",
+    "test:e2e:install": "e2e-web install chromium --with-deps",
+    "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
+    "test:e2e:list": "e2e list",
+    "test:e2e:all": "tsx scripts/e2e/run.ts",
+    "test:e2e:external": "tsx scripts/e2e/run.ts --tag external",
+    "test:e2e:lifecycle": "e2e run --config e2e.cleanup.config.ts",
+    "test:e2e:mcp": "tsx scripts/e2e/run.ts --mcp"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.0-beta.107",
@@ -70,24 +79,30 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
+    "@e2e-dev/github": "0.3.3",
+    "@e2e-dev/web": "0.12.0",
     "@electric-sql/pglite": "0.4.5",
     "@electric-sql/pglite-socket": "0.1.5",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@mpsuesser/oxlint-plugin-effect": "0.2.2",
     "@oxlint/plugins": "1.86.0",
     "@types/node": "^24.13.3",
+    "@types/pngjs": "6.0.5",
     "@types/semver": "7.8.0",
     "alchemy": "2.0.0-beta.74",
     "anti-slop": "github:dmmulroy/anti-slop",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
+    "e2e": "0.17.0",
+    "jpeg-js": "0.4.4",
     "jsonc-parser": "^3.3.1",
     "oxfmt": "^0.49.0",
     "oxlint": "1.86.0",
+    "pngjs": "7.0.0",
     "semver": "7.8.5",
     "tegami": "1.5.0",
     "tsx": "^4.23.13",
     "turbo": "2.11.5",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11",
     "wrangler": "4.143.0"
   },
   "overrides": {
@@ -124,6 +139,9 @@
   },
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
-    "alchemy@2.0.0-beta.74": "patches/alchemy@2.0.0-beta.74.patch"
+    "alchemy@2.0.0-beta.74": "patches/alchemy@2.0.0-beta.74.patch",
+    "@e2e-dev/web@0.12.0": "patches/@e2e-dev+web@0.12.0.patch",
+    "e2e@0.17.0": "patches/e2e@0.17.0.patch",
+    "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch"
   }
 }

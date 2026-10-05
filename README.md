@@ -212,20 +212,26 @@ nub run dev                 # API Worker and web app
 nub run dev:api             # API Worker only
 nub run dev:web             # web app only
 nub run config:check        # validate every config profile and generated schema
-nub run test                # workspace and repository tests
+nub run test                # core browser and live-API end-to-end suite
 nub run typecheck           # repository type checks
 nub run lint                # repository lint checks
 nub run format              # formatting check
 nub run db:pglite           # local PGLite socket for the PlanetScale flavor (port 15432)
 ```
 
-Run the local API key end-to-end test after you create a user API key:
+Run the end-to-end suite against its isolated Alchemy deployment:
 
 ```sh
-S0_API_KEY="<user API key>" \
-BACKGROUND_BASE_URL=http://localhost:3100 \
-nub run test:e2e
+nub run test:e2e:install
+E2E_ENV_FILE=/path/to/private.env nub run test
+nub run test:e2e:live tests/settings.e2e.ts
+nub run test:e2e:cache-strict
+nub run test:e2e:all # requires the isolated external fixtures documented below
 ```
+
+The private environment supplies Cloudflare account and deployment authentication plus
+`CF_AI_GATEWAY_E2E_TOKEN` for the Clef semantic executor. See [end-to-end testing](docs/e2e.md)
+for CI setup, flow coverage, replay recordings, and external runtime prerequisites.
 
 ## Roadmap
 

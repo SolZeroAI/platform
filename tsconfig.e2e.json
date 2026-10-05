@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["node"],
+    "jsxImportSource": "react"
+  },
+  "include": [
+    "e2e.config.ts",
+    "tests/**/*.ts",
+    "scripts/e2e/**/*.ts",
+    "e2e.cleanup.config.ts",
+    "e2e.failure.config.ts",
+    "e2e.cancel.config.ts"
+  ],
+  "exclude": ["node_modules"]
+}
