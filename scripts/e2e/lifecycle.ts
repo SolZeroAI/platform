@@ -664,6 +664,9 @@ const TokenList = Schema.Struct({
   result_info: Schema.Struct({ total_count: Schema.Number }),
 })
 async function reconcileTokens(run: RunManifest) {
+  const createdAt = Date.parse(run.createdAt)
+  if (!Number.isFinite(createdAt))
+    throw new Error("Cleanup refused an invalid run creation timestamp.")
   const ids = [...run.tokenIds]
   let count = 0
   for (let page = 1; page <= 100; page++) {
@@ -679,6 +682,9 @@ async function reconcileTokens(run: RunManifest) {
     if (!list.success) throw new Error("Token reconciliation failed.")
     for (const token of list.result) {
       if (token.name !== `${run.appName}-dev-ai-gateway-run-${run.runId}`) continue
+      const issuedOn = Date.parse(token.issued_on)
+      if (!Number.isFinite(issuedOn))
+        throw new Error("Cleanup refused an invalid owned token issue timestamp.")
       const policy = token.policies[0]
       const groups = policy?.permission_groups.map((group) => group.name).sort()
       if (
@@ -689,7 +695,7 @@ async function reconcileTokens(run: RunManifest) {
         JSON.stringify(groups) !== JSON.stringify(["AI Gateway Run", "Workers AI Read"]) ||
         JSON.stringify(Object.keys(policy.resources)) !==
           JSON.stringify([`com.cloudflare.api.account.${run.account}`]) ||
-        Date.parse(token.issued_on) < Date.parse(run.createdAt) - 1000
+        issuedOn < createdAt - 1000
       )
         throw new Error("Cleanup refused mismatched per-run token metadata.")
       if (!ids.includes(token.id)) ids.push(token.id)
