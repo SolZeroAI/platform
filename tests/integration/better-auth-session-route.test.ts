@@ -169,10 +169,10 @@ describe("Better Auth session route", () => {
       },
     } satisfies ResolvedAuthProviderRegistry
     const response = await createBetterAuth(env, oidcRegistry).handler(
-      new Request("http://localhost:3000/api/auth/sign-in/oauth2", {
+      new Request("http://localhost:3000/api/auth/sign-in/social", {
         method: "POST",
         headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-        body: JSON.stringify({ providerId: "company-oidc", callbackURL: "/" }),
+        body: JSON.stringify({ provider: "company-oidc", callbackURL: "/" }),
       }),
     )
 
