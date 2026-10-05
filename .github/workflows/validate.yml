@@ -125,7 +125,8 @@ jobs:
         env:
           E2E_ACTION_CACHE_RESTORED: ${{ steps.action-replay-cache.outputs.cache-matched-key != '' }}
         run: |
-          export E2E_AI_VALIDATED_SHA="$(git rev-parse HEAD)"
+          E2E_AI_VALIDATED_SHA="$(git rev-parse HEAD)"
+          export E2E_AI_VALIDATED_SHA
           echo "E2E_AI_VALIDATED_SHA=$E2E_AI_VALIDATED_SHA" >> "$GITHUB_ENV"
           node scripts/e2e/ai-report.mjs init
       - name: Run core real-stack flows
