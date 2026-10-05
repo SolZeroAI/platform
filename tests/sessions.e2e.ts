@@ -117,13 +117,17 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       const marker = uniqueName("E2E_OUTPUT")
       const result = await api<{
         sessionId: string
+        messageId: string
         status: string
         output: string
         error?: string
       }>(browser, "/sessions/run", "POST", {
         title: uniqueName(`e2e-${runtime}`),
         agentRuntime: runtime,
-        content: `Reply with only this marker: ${marker}. Do not call any external tools.`,
+        content:
+          runtime === "codex"
+            ? "Reply with only hello. Do not call any tools."
+            : `Reply with only this marker: ${marker}. Do not call any external tools.`,
         ...((process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
         process.env.E2E_APP_MODEL)
           ? {
@@ -135,9 +139,15 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       })
       try {
         expect(result.status, result.error ?? runtime).toBe("completed")
-        expect(result.output).toContain(marker)
+        if (runtime === "codex") expect(result.output.trim()).toBe("hello")
+        else expect(result.output).toContain(marker)
         await app.open(`/session/${result.sessionId}`)
-        await expect(screen.getByText(marker, { exact: false }).last()).toBeVisible()
+        // The final assistant card has mr-8; user prompts have ml-8 and must not satisfy this.
+        const output =
+          runtime === "codex"
+            ? browser.locator("div.group.mr-8").getByText("hello", { exact: true })
+            : screen.getByText(marker, { exact: false }).last()
+        await expect(output).toBeVisible()
         if (runtime === "isolate") {
           await expect(screen.getByRole("button", "Copy markdown").last()).toBeVisible()
           await screen.getByText(marker, { exact: false }).last().hover()
@@ -147,7 +157,19 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
         }
         await browser.reload()
         await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
-        await expect(screen.getByText(marker, { exact: false }).last()).toBeVisible()
+        await expect(output).toBeVisible()
+        if (runtime === "codex") {
+          const persisted = await api<{
+            events: Array<{ type: string; data: { content?: string } }>
+          }>(browser, `/sessions/${result.sessionId}/events?messageId=${result.messageId}`)
+          expect(
+            persisted.events
+              .filter((event) => event.type === "token")
+              .at(-1)
+              ?.data.content?.trim(),
+          ).toBe("hello")
+          expect(persisted.events.filter((event) => event.type === "tool_call").length).toBe(0)
+        }
         const messages = await api<{ messages: object[] }>(
           browser,
           `/sessions/${result.sessionId}/messages`,
