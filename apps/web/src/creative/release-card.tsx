@@ -37,7 +37,7 @@ export const ReleaseHighlightSchema = Schema.Struct({
   title: ReleaseTitleSchema,
   description: ReleaseDescriptionSchema,
   bullets: Schema.optionalKey(
-    Schema.Array(ReleaseBulletSchema).check(Schema.isLengthBetween(1, 3)),
+    Schema.Array(ReleaseBulletSchema).check(Schema.isBetweenLength(1, 3)),
   ),
   label: Schema.optionalKey(ReleaseTitleSchema),
   workType: Schema.optionalKey(ReleaseWorkTypeSchema),

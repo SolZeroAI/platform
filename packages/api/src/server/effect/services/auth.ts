@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { HttpServerRequest } from "effect/unstable/http"
+import { HttpServerRequest } from "effect/http"
 import {
   ControlPlaneAuth,
   CurrentPrincipal,

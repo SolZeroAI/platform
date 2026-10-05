@@ -17,8 +17,8 @@
     "@solzero/shared": "workspace:*"
   },
   "devDependencies": {
-    "alchemy": "2.0.0-beta.74",
-    "effect": "4.0.0-beta.107",
+    "alchemy": "2.0.0-beta.81",
+    "effect": "4.0.1",
     "typescript": "^7.0.2"
   }
 }

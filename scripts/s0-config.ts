@@ -8,6 +8,7 @@ import * as JsonSchema from "effect/JsonSchema"
 import * as Schema from "effect/Schema"
 import {
   getStageMetadataFromConfigSync,
+  S0_CONFIG_JSON_SCHEMA_OPTIONS,
   S0_CONFIG_STAGE_NAMES,
   S0ConfigFileSchema,
   s0ActiveSecretReferences,
@@ -39,7 +40,7 @@ function readConfigFile(stage: string, profile?: string): unknown {
 }
 
 async function generatedSchema(): Promise<string> {
-  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema)
+  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)
   const schema = {
     $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
     ...document.schema,

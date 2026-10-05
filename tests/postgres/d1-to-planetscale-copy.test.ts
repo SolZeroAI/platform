@@ -20,9 +20,9 @@ import {
   planPlanetscaleCutoverEdits,
 } from "../../packages/api/src/cli/d1-to-planetscale-cutover-diff"
 import { pgRelations } from "../../packages/api/src/server/effect/db/control-plane-db"
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { FileSystem, Layer, Path, Stdio, Terminal } from "effect"
-import { ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcessSpawner } from "effect/process"
 import { applyPostgresMigrationTree } from "./pg-migrations"
 
 const repoRoot = resolve(import.meta.dirname, "../..")

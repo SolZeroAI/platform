@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { Headers, HttpServerRequest } from "effect/unstable/http"
+import { Headers, HttpServerRequest } from "effect/http"
 import { requestFromSource } from "../../packages/api/src/server/effect/services/auth"
 import * as controlPlane from "../../packages/api/src/server/effect/handlers/shared/control-plane"
 

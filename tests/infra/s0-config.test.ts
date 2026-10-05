@@ -234,5 +234,20 @@ describe("canonical s0 configuration", () => {
     expect(schema.properties.deployment.properties).not.toHaveProperty("databaseEngine")
     expect(schema.properties).not.toHaveProperty("profiles")
     expect(schema).not.toHaveProperty("dialect")
+    expect(schema.additionalProperties).toBe(false)
+    expect(schema.properties.deployment.additionalProperties).toBe(false)
+    expect(JSON.stringify(schema)).not.toContain('"additionalProperties":true')
+  })
+
+  it("rejects unknown operator config keys", () => {
+    const extraRoot = loadExampleConfigSource()
+    extraRoot.typoKey = true
+
+    expect(() => resolveS0Config(extraRoot)).toThrow(/excess property|Unexpected key/i)
+
+    const extraNested = loadExampleConfigSource()
+    extraNested.deployment.databaseEngine = "planetscale"
+
+    expect(() => resolveS0Config(extraNested)).toThrow(/excess property|Unexpected key/i)
   })
 })

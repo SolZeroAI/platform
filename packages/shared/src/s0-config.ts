@@ -160,6 +160,15 @@ export const S0ConfigFileSchema = Schema.Struct({
 })
 export type S0ConfigFile = typeof S0ConfigFileSchema.Type
 
+/**
+ * Effect 4 leaves structs open by default (`onExcessProperty: "ignore"`).
+ * Operator config keeps the closed contract: unknown keys fail decode and
+ * the generated editor schema emits `additionalProperties: false`.
+ */
+export const S0_CONFIG_JSON_SCHEMA_OPTIONS = {
+  onExcessProperty: "error",
+} as const
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -446,9 +455,11 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
 }
 
 export function resolveS0Config(value: unknown): S0ResolvedConfig {
-  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema)(value)
+  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
-  return normalizeResolvedConfig(Schema.decodeUnknownSync(S0ResolvedConfigSchema)(config))
+  return normalizeResolvedConfig(
+    Schema.decodeUnknownSync(S0ResolvedConfigSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(config),
+  )
 }
 
 function sortForCanonicalJson(value: unknown): unknown {
