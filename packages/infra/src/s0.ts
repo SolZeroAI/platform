@@ -1,5 +1,6 @@
 import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
+import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -76,11 +77,26 @@ function createCloudflareAiGateway(input: {
     }
 
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
-    const resource = yield* Cloudflare.AI.Gateway("ai-gateway", {
+    const gatewayProps = {
       authentication: true,
       cacheTtl: config.cacheTtl,
       collectLogs: config.collectLogs,
       storeId: secretsStore.storeId,
+    }
+    // Fresh test checkouts must adopt one dedicated gateway rather than consume another quota slot.
+    const ci = yield* Config.boolean("CI").pipe(Config.withDefault(false))
+    const scope = Match.value(ci).pipe(
+      Match.when(true, () => "-ci"),
+      Match.orElse(() => ""),
+    )
+    const testGatewayId = Option.liftPredicate(
+      (deployment: typeof input) =>
+        /^s0-e2e(?:-[a-z0-9-]+)?$/.test(deployment.appName) &&
+        deployment.stageMetadata.name === "dev",
+    )(input).pipe(Option.map((deployment) => `${deployment.appName}${scope}-dev-ai-gateway`))
+    const resource = yield* Option.match(testGatewayId, {
+      onNone: () => Cloudflare.AI.Gateway("ai-gateway", gatewayProps),
+      onSome: (id) => Cloudflare.AI.Gateway("ai-gateway", { ...gatewayProps, id }),
     })
     yield* Effect.forEach(
       CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,

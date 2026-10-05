@@ -62,6 +62,7 @@
     "test:e2e": "e2e run --exclude-tag external",
     "test:e2e:live": "e2e run --no-cache --exclude-tag external",
     "test:e2e:cache-strict": "e2e run --strict-cache --exclude-tag external",
+    "test:e2e:cleanup": "tsx scripts/e2e/cleanup.ts",
     "test:e2e:install": "e2e-web install chromium --with-deps",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "test:e2e:list": "e2e list",

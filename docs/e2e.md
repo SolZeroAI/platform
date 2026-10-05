@@ -20,12 +20,19 @@ nub run test:e2e:live tests/skills.e2e.ts
 nub run test:e2e:cache-strict
 nub run test:e2e:all
 nub run test:e2e:external
+nub run test:e2e:cleanup
 ```
 
 The launcher creates missing `config/.env` and `config/.dev.vars` files with mode 0600,
 allowing a fresh CI checkout to start the normal infra command. Node watch requires even
 its optional environment-file path to exist. The comment-only files supply no deployment
 secrets; real credentials still come from the environment.
+
+After stopping the local test stack, run `test:e2e:cleanup` with the same credential file
+and profile. It validates persisted account, Worker, gateway and token ownership, then
+runs normal Alchemy destruction of that isolated local stack. It refuses unknown remote
+resources. The dedicated gateway and generated application run token are deleted; replay
+cache remains available. Stopping dev alone does not remove account-level resources.
 
 The environment loader reads an explicitly selected `E2E_ENV_FILE`, then this repository's
 `config/.env` and `config/.dev.vars`. Values already supplied by the shell or CI win.
@@ -238,6 +245,15 @@ runs, including the canonical repository. Fork pull requests cannot access its c
 Configure repository secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and
 `CF_AI_GATEWAY_E2E_TOKEN`; the workflow generates and masks a fresh disposable account
 password. Do not use production identity or integration secrets for tests.
+
+The isolated dev profile declares stable gateway IDs: `s0-e2e-dev-ai-gateway` locally and
+`s0-e2e-ci-dev-ai-gateway` in CI (alternate isolated profiles use their own app name).
+Cold state adopts the same dedicated ID instead of leaking an auto-generated gateway
+on each checkout. CI jobs serialize without cancelling an active job, and always run
+guarded Alchemy cleanup after installed dependencies, including on test/startup failure.
+Separate local and CI IDs prevent either cleanup from deleting the other's active gateway.
+Production/pre gateway naming and shared `default` are unchanged. The application run token
+has account-level AI permissions; a gateway name is not a token authorization boundary.
 
 Raw browser/network trace ZIPs are disabled because the published SDK cannot register
 newly minted API keys or session cookies for dynamic redaction. Keep SDK-redacted

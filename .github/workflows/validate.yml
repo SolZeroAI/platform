@@ -73,6 +73,9 @@ jobs:
 
   e2e:
     name: Cloudflare end-to-end flows
+    concurrency:
+      group: solzero-e2e-cloudflare-${{ github.repository }}
+      cancel-in-progress: false
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
@@ -92,6 +95,7 @@ jobs:
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
       - name: Install dependencies
+        id: e2e-dependencies
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
@@ -116,6 +120,9 @@ jobs:
             e2e-solzero-${{ runner.os }}-
       - name: Run core real-stack flows
         run: nub run test
+      - name: Destroy owned test infrastructure and revoke its run token
+        if: always() && steps.e2e-dependencies.outcome == 'success'
+        run: nub run test:e2e:cleanup
       - name: Preserve successful replay recordings
         if: always() && !cancelled()
         uses: actions/cache/save@v5
