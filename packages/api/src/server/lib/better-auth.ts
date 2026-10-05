@@ -108,13 +108,6 @@ type GitHubAppRefreshInput =
     }
   | { kind: "skip" }
 
-type LinkedGitHubAccount =
-  | {
-      kind: "linked"
-      accountId: string
-    }
-  | { kind: "missing" }
-
 type GitHubTokenRefreshFailure =
   | { kind: "missing_token_data" }
   | { kind: "invalid_token_data"; tokenData: GitHubRefreshTokenResponse }
@@ -137,14 +130,12 @@ function profileString(profile: Record<string, unknown>, key: string): Option.Op
 
 function mapOidcProfile(profile: Record<string, unknown>) {
   const email = profileString(profile, "email")
-  const id = profileString(profile, "sub").pipe(Option.orElse(() => profileString(profile, "id")))
   const name = profileString(profile, "name").pipe(
     Option.orElse(() => profileString(profile, "preferred_username")),
     Option.orElse(() => email),
   )
 
   return {
-    id: Option.getOrUndefined(id),
     email: Option.getOrUndefined(email),
     name: Option.getOrUndefined(name),
   }
@@ -156,12 +147,13 @@ function oidcConfig(providerId: string, config: ResolvedAuthProviderConfig) {
         {
           providerId,
           discoveryUrl: `${config.issuer}/.well-known/openid-configuration`,
-          issuer: config.issuer,
           clientId: config.clientId,
           clientSecret: config.clientSecret,
           scopes: [...(config.scopes ?? [])],
           pkce: true,
           disableSignUp: !config.capabilities.provisionUsers,
+          // 1.7 would otherwise send users to the IdP end-session URL on sign-out.
+          disableProviderLogout: true,
           mapProfileToUser: mapOidcProfile,
         },
       ]
@@ -752,30 +744,21 @@ export function prefixStorageKeyWithUserId(userId: string, key: string): string 
 const resolveGitHubAppUserAccessTokenFromBetterAuth = Effect.fn(
   "auth.betterAuth.resolveGitHubAppUserAccessTokenFromBetterAuth",
 )(function* (env: ApiEnv, userId: string) {
-  const githubUserId = yield* getLinkedProviderAccountIdForUser(env, GITHUB_PROVIDER_ID, userId)
+  const rowOption = yield* getGitHubAccountTokenRow(env, userId)
   const authConfig = yield* getAuthProviderRegistry(env)
-  const linkedAccount: LinkedGitHubAccount = Option.match(Option.fromNullishOr(githubUserId), {
-    onNone: () => ({ kind: "missing" }),
-    onSome: (accountId) => ({ kind: "linked", accountId }),
-  })
 
-  return yield* Effect.succeed(linkedAccount).pipe(
-    Effect.filterOrFail(
-      (account): account is Extract<LinkedGitHubAccount, { kind: "linked" }> =>
-        account.kind === "linked",
-      () => "missing_account" as const,
-    ),
-    Effect.flatMap(({ accountId }) =>
+  return yield* Effect.succeed(rowOption).pipe(
+    Effect.filterOrFail(Option.isSome, () => "missing_account" as const),
+    Effect.flatMap(({ value: row }) =>
       Effect.tryPromise(() =>
         createBetterAuth(env, authConfig).api.getAccessToken({
           body: {
-            providerId: GITHUB_PROVIDER_ID,
-            accountId,
+            accountId: row.id,
             userId,
           },
         }),
       ).pipe(
-        Effect.map((token) => Option.getOrNull(validGitHubAppUserTokenOption(accountId, token))),
+        Effect.map((token) => Option.getOrNull(validGitHubAppUserTokenOption(row.accountId, token))),
       ),
     ),
     Effect.catch(() => Effect.succeed(null)),
