@@ -80,7 +80,7 @@ cookies. Tests never intercept application requests or mock modules.
 | Attachment-bearing prompt cancellation | `advanced-sessions.e2e.ts`, tag `runtime` | Prompt reaches processing; stop produces failed terminal message; reload retains history |
 | Actual child-agent delegation | `advanced-sessions.e2e.ts`, tag `runtime` | Child event and output marker from a real isolate invocation |
 | Isolate prompt execution and native Markdown copy | `sessions.e2e.ts`, tag `runtime` | Workers AI output marker, exact native clipboard value, persisted messages survive page reload |
-| OpenCode and Codex prompt execution | `sessions.e2e.ts`, tag `harness` | Real GPT-OSS output marker and persisted history after reload; Docker source images |
+| OpenCode and Codex prompt execution | `sessions.e2e.ts`, tag `harness` | OpenCode output marker; Codex exact `hello` in returned output, assistant card and persisted token after reload, without tools; Docker source images |
 | OpenCode and Codex multiple tools and follow-up | `harness-tools.e2e.ts`, tag `harness-tools` | Two distinct actual shell calls, successful correlated results, file readback in the same session, persisted token events for both turns |
 | Claude Code prompt execution | `sessions.e2e.ts`, tags `external`, `harness` | Compatible Anthropic fixture and real output/history; deferred |
 | Authentication transfer redemption and deep-link navigation | `session-transfer.e2e.ts` | Real one-time token/cookie redemption, exact redirect, repeat redemption rejected |
@@ -277,7 +277,7 @@ Earlier independent live verification and hosted Validate `37241453073` at `e0c3
 each passed 31/31. That commit's strict run passed 30/31: the Codex first tool turn
 exhausted the native output limit, and its terminal failure UI checks passed.
 
-Final verification at `dc6e3ea` produced these results, with 31 core cases selected and
+Full-suite verification at `dc6e3ea` produced these results, with 31 core cases selected and
 seven user-deferred external cases excluded:
 
 - Independent live run `01a1092d-7d62-7548-884d-95daef4b75f2`: 30/31 in 261.43 seconds.
@@ -300,3 +300,19 @@ supported default and 4096-token limit remain unchanged. These results establish
 positive and bounded-failure behavior, but do not establish stable success across the
 native provider flows. The earlier 31/31 results are historical, not the final live or CI
 outcome; no retry or provider workaround hides the recorded failures.
+
+The later Codex smoke prompt at `981b51d` requests only `hello`, without tools. Its focused
+live run `01a109a6-dad5-7bee-9ccf-eb868203a25c` passed the one Codex case and required
+sign-in setup (2/2 selected, 35.36 seconds; Codex case 17.37 seconds). The report records
+that immutable commit and a clean checkout. The real source-image Codex runtime used the
+configured Cloudflare `@cf/openai/gpt-oss-120b` provider, with the existing default reasoning
+and 4096-token budget. Returned output and the persisted final token equal `hello` after
+trimming transport whitespace; the browser assertion targets the assistant card before
+and after reload, and message-scoped events contain no tool calls. Node 24.15.0 ran the
+documented dotenv/CA launcher; no replay, retry or fabricated output was used. Root
+typecheck, lint and format passed. This focused result does not replace the earlier
+full-suite outcomes or prove provider stability. Reproduce it with:
+
+```sh
+E2E_ENV_FILE=/path/to/private.env nub run test:e2e:live tests/sessions.e2e.ts --grep 'codex executes a real prompt'
+```
