@@ -114,6 +114,7 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
     async ({ app, browser, screen }) => {
       if (runtime !== "isolate") requireFixture("E2E_CONTAINER_RUNTIME")
       if (runtime === "claude-code") requireFixture("E2E_CLAUDE_CODE_MODEL")
+      const literalHello = runtime === "isolate" || runtime === "codex"
       const marker = uniqueName("E2E_OUTPUT")
       const result = await api<{
         sessionId: string
@@ -124,10 +125,9 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       }>(browser, "/sessions/run", "POST", {
         title: uniqueName(`e2e-${runtime}`),
         agentRuntime: runtime,
-        content:
-          runtime === "codex"
-            ? "Reply with only hello. Do not call any tools."
-            : `Reply with only this marker: ${marker}. Do not call any external tools.`,
+        content: literalHello
+          ? "Reply with only hello. Do not call any tools."
+          : `Reply with only this marker: ${marker}. Do not call any external tools.`,
         ...((process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
         process.env.E2E_APP_MODEL)
           ? {
@@ -139,18 +139,17 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       })
       try {
         expect(result.status, result.error ?? runtime).toBe("completed")
-        if (runtime === "codex") expect(result.output.trim()).toBe("hello")
+        if (literalHello) expect(result.output.trim()).toBe("hello")
         else expect(result.output).toContain(marker)
         await app.open(`/session/${result.sessionId}`)
-        // The final assistant card has mr-8; user prompts have ml-8 and must not satisfy this.
-        const output =
-          runtime === "codex"
-            ? browser.locator("div.group.mr-8").getByText("hello", { exact: true })
-            : screen.getByText(marker, { exact: false }).last()
+        // Assistant cards have mr-8; user prompts have ml-8 and must not satisfy hello.
+        const output = literalHello
+          ? browser.locator("div.group.mr-8").getByText("hello", { exact: true })
+          : screen.getByText(marker, { exact: false }).last()
         await expect(output).toBeVisible()
         if (runtime === "isolate") {
           await expect(screen.getByRole("button", "Copy markdown").last()).toBeVisible()
-          await screen.getByText(marker, { exact: false }).last().hover()
+          await output.hover()
           await screen.getByRole("button", "Copy markdown").last().tap()
           const copied = await browser.evaluate(() => navigator.clipboard.readText())
           expect(copied).toBe(result.output)
@@ -158,7 +157,7 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
         await browser.reload()
         await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         await expect(output).toBeVisible()
-        if (runtime === "codex") {
+        if (literalHello) {
           const persisted = await api<{
             events: Array<{ type: string; data: { content?: string } }>
           }>(browser, `/sessions/${result.sessionId}/events?messageId=${result.messageId}`)
