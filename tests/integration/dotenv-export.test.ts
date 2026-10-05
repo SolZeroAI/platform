@@ -6,7 +6,7 @@ import { dotenvAssignment } from "../../packages/api/src/server/lib/dotenv"
 
 const parseAssignment = (assignment: string) =>
   Effect.runSync(
-    Config.string("S0_CONFIG_TEST").parse(ConfigProvider.fromDotEnvContents(assignment)),
+    Config.String("S0_CONFIG_TEST").parse(ConfigProvider.fromDotEnvContents(assignment)),
   )
 
 describe("dotenv export", () => {

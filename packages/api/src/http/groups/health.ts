@@ -1,4 +1,4 @@
-import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/unstable/httpapi"
+import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
 import { HealthResponse } from "../schemas/health"
 
 export class HealthGroup extends HttpApiGroup.make("health", { topLevel: true }).add(

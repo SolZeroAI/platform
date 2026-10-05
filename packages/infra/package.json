@@ -37,10 +37,10 @@
   },
   "dependencies": {
     "@solzero/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.74",
+    "alchemy": "2.0.0-beta.81",
     "alchemy-planetscale-logical-db": "2.0.0",
     "dotenv": "^17.4.2",
-    "effect": "4.0.0-beta.107",
+    "effect": "4.0.1",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {

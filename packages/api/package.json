@@ -48,7 +48,7 @@
     "ai": "7.0.93",
     "better-auth": "1.6.33",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.0-beta.107",
+    "effect": "4.0.1",
     "jose": "^6.2.10",
     "postgres": "^3.4.8",
     "workers-ai-provider": "4.0.0",

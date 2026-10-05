@@ -1,4 +1,4 @@
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import { builderDraftLatest } from "../handlers/workflows/builder-drafts"
 import { deleteWorkflow } from "../handlers/workflows/delete"

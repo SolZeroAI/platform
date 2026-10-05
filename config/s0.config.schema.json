@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "$schema": { "$ref": "#/$defs/Union_" },
+    "$schema": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
     "schemaVersion": { "type": "number", "enum": [1] },
     "deployment": {
       "type": "object",
       "properties": {
         "appName": { "type": "string" },
         "zone": { "type": "string" },
-        "webFqdn": { "$ref": "#/$defs/Union_" },
-        "apiFqdn": { "$ref": "#/$defs/Union_" },
+        "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "apiFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "useApiShield": { "type": "boolean" },
         "observability": {
           "type": "object",
@@ -19,14 +19,14 @@
             "tracesDestinations": { "type": "array", "items": { "type": "string" } },
             "logsHeadSamplingRate": {
               "anyOf": [
-                { "type": "number", "allOf": [{ "minimum": 0, "maximum": 1 }] },
-                { "$ref": "#/$defs/Union_1" }
+                { "type": "number" },
+                { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
               ]
             },
             "tracesHeadSamplingRate": {
               "anyOf": [
-                { "type": "number", "allOf": [{ "minimum": 0, "maximum": 1 }] },
-                { "$ref": "#/$defs/Union_1" }
+                { "type": "number" },
+                { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
               ]
             }
           },
@@ -36,11 +36,11 @@
             "logsHeadSamplingRate",
             "tracesHeadSamplingRate"
           ],
-          "additionalProperties": false
+          "additionalProperties": true
         }
       },
       "required": ["appName", "zone", "useApiShield", "observability"],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "application": {
       "type": "object",
@@ -48,7 +48,12 @@
         "logLevel": { "type": "string", "enum": ["trace", "debug"] },
         "sendSlackNotifications": { "type": "boolean" },
         "slackChannel": { "type": "string" },
-        "sandboxInactivityTimeoutMs": { "$ref": "#/$defs/Union_2" },
+        "sandboxInactivityTimeoutMs": {
+          "anyOf": [
+            { "type": "number" },
+            { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
+          ]
+        },
         "showTestErrorButton": { "type": "boolean" },
         "betterAuthSessionTransferEnabled": { "type": "boolean" }
       },
@@ -60,7 +65,7 @@
         "showTestErrorButton",
         "betterAuthSessionTransferEnabled"
       ],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "admins": {
       "type": "object",
@@ -69,7 +74,7 @@
         "adminDomains": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["adminEmails", "adminDomains"],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "auth": {
       "type": "object",
@@ -85,16 +90,25 @@
                   "kind": { "type": "string", "enum": ["credential"] },
                   "enabled": { "type": "boolean" },
                   "displayName": { "type": "string" },
-                  "capabilities": { "$ref": "#/$defs/Objects_" },
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": true
+                  },
                   "provisioning": {
                     "type": "object",
                     "properties": { "scope": { "type": "string", "enum": ["configured-admins"] } },
                     "required": ["scope"],
-                    "additionalProperties": false
+                    "additionalProperties": true
                   }
                 },
                 "required": ["kind", "enabled", "displayName", "capabilities", "provisioning"],
-                "additionalProperties": false
+                "additionalProperties": true
               },
               {
                 "type": "object",
@@ -103,14 +117,31 @@
                   "enabled": { "type": "boolean" },
                   "displayName": { "type": "string" },
                   "clientId": { "type": "string" },
-                  "clientSecret": { "$ref": "#/$defs/Objects_1" },
+                  "clientSecret": {
+                    "type": "object",
+                    "properties": {
+                      "env": { "type": "string" },
+                      "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                    },
+                    "required": ["env"],
+                    "additionalProperties": true
+                  },
                   "scopes": {
                     "anyOf": [
                       { "type": "array", "items": { "type": "string" } },
                       { "type": "null" }
                     ]
                   },
-                  "capabilities": { "$ref": "#/$defs/Objects_" }
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": true
+                  }
                 },
                 "required": [
                   "kind",
@@ -120,7 +151,7 @@
                   "clientSecret",
                   "capabilities"
                 ],
-                "additionalProperties": false
+                "additionalProperties": true
               },
               {
                 "type": "object",
@@ -130,14 +161,31 @@
                   "displayName": { "type": "string" },
                   "issuer": { "type": "string" },
                   "clientId": { "type": "string" },
-                  "clientSecret": { "$ref": "#/$defs/Objects_1" },
+                  "clientSecret": {
+                    "type": "object",
+                    "properties": {
+                      "env": { "type": "string" },
+                      "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                    },
+                    "required": ["env"],
+                    "additionalProperties": true
+                  },
                   "scopes": {
                     "anyOf": [
                       { "type": "array", "items": { "type": "string" } },
                       { "type": "null" }
                     ]
                   },
-                  "capabilities": { "$ref": "#/$defs/Objects_" }
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "signIn": { "type": "boolean" },
+                      "provisionUsers": { "type": "boolean" },
+                      "link": { "type": "boolean" }
+                    },
+                    "required": ["signIn", "provisionUsers", "link"],
+                    "additionalProperties": true
+                  }
                 },
                 "required": [
                   "kind",
@@ -148,15 +196,28 @@
                   "clientSecret",
                   "capabilities"
                 ],
-                "additionalProperties": false
+                "additionalProperties": true
               }
             ]
           }
         },
-        "adminPassword": { "$ref": "#/$defs/Union_3" }
+        "adminPassword": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": true
+            },
+            { "type": "null" }
+          ]
+        }
       },
       "required": ["defaultSignInProviderId", "providers"],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "aiProviders": {
       "type": "object",
@@ -165,7 +226,17 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
-            "cacheTtl": { "anyOf": [{ "$ref": "#/$defs/Union_2" }, { "type": "null" }] },
+            "cacheTtl": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    { "type": "number" },
+                    { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
+                  ]
+                },
+                { "type": "null" }
+              ]
+            },
             "collectLogs": { "type": "boolean" },
             "defaultModel": { "type": "string" },
             "models": {
@@ -180,11 +251,21 @@
                       {
                         "type": "object",
                         "properties": {
-                          "context": { "$ref": "#/$defs/Union_2" },
-                          "output": { "$ref": "#/$defs/Union_2" }
+                          "context": {
+                            "anyOf": [
+                              { "type": "number" },
+                              { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
+                            ]
+                          },
+                          "output": {
+                            "anyOf": [
+                              { "type": "number" },
+                              { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
+                            ]
+                          }
                         },
                         "required": ["context", "output"],
-                        "additionalProperties": false
+                        "additionalProperties": true
                       },
                       { "type": "null" }
                     ]
@@ -194,13 +275,25 @@
                       {
                         "type": "object",
                         "properties": {
-                          "efforts": { "type": "array", "items": { "$ref": "#/$defs/Union_4" } },
+                          "efforts": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                            }
+                          },
                           "default": {
-                            "anyOf": [{ "$ref": "#/$defs/Union_4" }, { "type": "null" }]
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                              },
+                              { "type": "null" }
+                            ]
                           }
                         },
                         "required": ["efforts"],
-                        "additionalProperties": false
+                        "additionalProperties": true
                       },
                       { "type": "null" }
                     ]
@@ -219,7 +312,7 @@
                               }
                             },
                             "required": ["field"],
-                            "additionalProperties": false
+                            "additionalProperties": true
                           }
                         ]
                       },
@@ -231,17 +324,17 @@
                       {
                         "type": "object",
                         "properties": {
-                          "npm": { "$ref": "#/$defs/Union_" },
-                          "api": { "$ref": "#/$defs/Union_" }
+                          "npm": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                          "api": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": true
                       },
                       { "type": "null" }
                     ]
                   }
                 },
                 "required": ["name"],
-                "additionalProperties": false
+                "additionalProperties": true
               }
             },
             "providerKeys": {
@@ -249,18 +342,63 @@
                 {
                   "type": "object",
                   "properties": {
-                    "openai": { "$ref": "#/$defs/Union_3" },
-                    "anthropic": { "$ref": "#/$defs/Union_3" },
-                    "xai": { "$ref": "#/$defs/Union_3" }
+                    "openai": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": true
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "anthropic": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": true
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "xai": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "env": { "type": "string" },
+                            "generateIfMissing": {
+                              "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                            }
+                          },
+                          "required": ["env"],
+                          "additionalProperties": true
+                        },
+                        { "type": "null" }
+                      ]
+                    }
                   },
-                  "additionalProperties": false
+                  "additionalProperties": true
                 },
                 { "type": "null" }
               ]
             }
           },
           "required": ["enabled", "cacheTtl", "collectLogs", "defaultModel", "models"],
-          "additionalProperties": false
+          "additionalProperties": true
         },
         "litellm": {
           "anyOf": [
@@ -271,13 +409,34 @@
                 "baseUrl": { "type": "string" },
                 "defaultModel": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
                 "defaultReasoningLevel": {
-                  "anyOf": [{ "$ref": "#/$defs/Union_4" }, { "type": "null" }]
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+                    },
+                    { "type": "null" }
+                  ]
                 },
                 "adapterOverrides": {
                   "type": "object",
                   "additionalProperties": { "type": "string" }
                 },
-                "apiKey": { "$ref": "#/$defs/Union_3" }
+                "apiKey": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "env": { "type": "string" },
+                        "generateIfMissing": {
+                          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+                        }
+                      },
+                      "required": ["env"],
+                      "additionalProperties": true
+                    },
+                    { "type": "null" }
+                  ]
+                }
               },
               "required": [
                 "enabled",
@@ -286,14 +445,14 @@
                 "defaultReasoningLevel",
                 "adapterOverrides"
               ],
-              "additionalProperties": false
+              "additionalProperties": true
             },
             { "type": "null" }
           ]
         }
       },
       "required": ["cloudflareAiGateway"],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "mcpcf": {
       "anyOf": [
@@ -306,7 +465,20 @@
             "expectedIssuer": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
             "authTypeAllowlist": { "type": "array", "items": { "type": "string" } },
             "serverBlacklist": { "type": "array", "items": { "type": "string" } },
-            "adminApiToken": { "$ref": "#/$defs/Union_3" }
+            "adminApiToken": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": true
+                },
+                { "type": "null" }
+              ]
+            }
           },
           "required": [
             "enabled",
@@ -316,7 +488,7 @@
             "authTypeAllowlist",
             "serverBlacklist"
           ],
-          "additionalProperties": false
+          "additionalProperties": true
         },
         { "type": "null" }
       ]
@@ -331,33 +503,102 @@
             "appId": { "type": "string" },
             "clientId": { "type": "string" },
             "slug": { "type": "string" },
-            "clientSecret": { "$ref": "#/$defs/Objects_1" },
-            "privateKey": { "$ref": "#/$defs/Objects_1" },
-            "webhookSecret": { "$ref": "#/$defs/Union_3" }
+            "clientSecret": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": true
+            },
+            "privateKey": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": true
+            },
+            "webhookSecret": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": true
+                },
+                { "type": "null" }
+              ]
+            }
           },
           "required": ["enabled", "appId", "clientId", "slug", "clientSecret", "privateKey"],
-          "additionalProperties": false
+          "additionalProperties": true
         },
         "slack": {
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
-            "botToken": { "$ref": "#/$defs/Objects_1" }
+            "botToken": {
+              "type": "object",
+              "properties": {
+                "env": { "type": "string" },
+                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+              },
+              "required": ["env"],
+              "additionalProperties": true
+            }
           },
           "required": ["enabled", "botToken"],
-          "additionalProperties": false
+          "additionalProperties": true
         }
       },
       "required": ["githubApp", "slack"],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "security": {
       "type": "object",
       "properties": {
-        "betterAuthSecret": { "$ref": "#/$defs/Objects_1" },
-        "mcpcfProxySigningSecret": { "$ref": "#/$defs/Objects_1" },
-        "tokenEncryptionKey": { "$ref": "#/$defs/Objects_1" },
-        "repositorySecretsEncryptionKey": { "$ref": "#/$defs/Objects_1" }
+        "betterAuthSecret": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": true
+        },
+        "mcpcfProxySigningSecret": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": true
+        },
+        "tokenEncryptionKey": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": true
+        },
+        "repositorySecretsEncryptionKey": {
+          "type": "object",
+          "properties": {
+            "env": { "type": "string" },
+            "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+          },
+          "required": ["env"],
+          "additionalProperties": true
+        }
       },
       "required": [
         "betterAuthSecret",
@@ -365,19 +606,32 @@
         "tokenEncryptionKey",
         "repositorySecretsEncryptionKey"
       ],
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "aiSearch": {
       "type": "object",
       "properties": {
         "serviceTokenId": {
           "anyOf": [
-            { "anyOf": [{ "$ref": "#/$defs/Objects_1" }, { "type": "null" }] },
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "env": { "type": "string" },
+                    "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
+                  },
+                  "required": ["env"],
+                  "additionalProperties": true
+                },
+                { "type": "null" }
+              ]
+            },
             { "type": "null" }
           ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": [
@@ -391,34 +645,5 @@
     "security",
     "aiSearch"
   ],
-  "additionalProperties": false,
-  "$defs": {
-    "Union_": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-    "Union_1": { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] },
-    "Union_2": { "anyOf": [{ "type": "number" }, { "$ref": "#/$defs/Union_1" }] },
-    "Objects_": {
-      "type": "object",
-      "properties": {
-        "signIn": { "type": "boolean" },
-        "provisionUsers": { "type": "boolean" },
-        "link": { "type": "boolean" }
-      },
-      "required": ["signIn", "provisionUsers", "link"],
-      "additionalProperties": false
-    },
-    "Objects_1": {
-      "type": "object",
-      "properties": {
-        "env": { "type": "string" },
-        "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
-      },
-      "required": ["env"],
-      "additionalProperties": false
-    },
-    "Union_3": { "anyOf": [{ "$ref": "#/$defs/Objects_1" }, { "type": "null" }] },
-    "Union_4": {
-      "type": "string",
-      "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
-    }
-  }
+  "additionalProperties": true
 }

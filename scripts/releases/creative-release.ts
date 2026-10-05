@@ -13,13 +13,13 @@ import { renderReleaseNotesCardToFile } from "../../apps/web/src/creative/node.t
 import { SOLZERO_GITHUB_REPO } from "./github-repo.ts"
 import { SOLZERO_PACKAGE_ID, SOLZERO_VERSION_FILE } from "./solzero-release.ts"
 
-const releaseAssetsEnabled = Config.boolean("S0_CREATIVE_RELEASE_ASSETS").pipe(
+const releaseAssetsEnabled = Config.Boolean("S0_CREATIVE_RELEASE_ASSETS").pipe(
   Config.withDefault(false),
 )
 
 const decodeReleaseLayout = Schema.decodeUnknownEffect(ReleaseCardLayoutSchema)
 
-const releaseLayout = Config.string("S0_CREATIVE_RELEASE_LAYOUT").pipe(
+const releaseLayout = Config.String("S0_CREATIVE_RELEASE_LAYOUT").pipe(
   Config.withDefault("light-features"),
   Effect.flatMap(decodeReleaseLayout),
 )

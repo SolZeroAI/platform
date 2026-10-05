@@ -1,4 +1,4 @@
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import { list } from "../handlers/repos/list"
 import { getMetadata } from "../handlers/repos/repo/metadata/get"
