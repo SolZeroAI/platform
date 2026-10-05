@@ -332,3 +332,18 @@ full-suite outcomes or prove provider stability. Reproduce it with:
 ```sh
 E2E_ENV_FILE=/path/to/private.env nub run test:e2e:live tests/sessions.e2e.ts --grep 'codex executes a real prompt'
 ```
+
+The subsequent full hosted run `37251567618` at `bca93d5` executed zero tests: Cloudflare
+rejected creation of another auto-generated AI Gateway at the account's 20-gateway limit.
+Repository validation and actionlint passed; this was a startup failure, not 31 test failures.
+The lifecycle correction at `5bfd00a` was verified against that real full account. Only the
+legacy gateway matched to this repository's local e2e Worker/state/store was removed.
+Local creation, real Codex `hello`, deletion and token revocation passed, returning the
+account to 19 gateways. CI-mode creation then passed 2/2 selected cases in 37.72 seconds
+(`01a109c0-7c77-7878-9a52-62174eba2d44`). A cold-state launch at 20 gateways adopted the
+same CI gateway and creation timestamp, then passed 2/2 in 35.83 seconds
+(`01a109c1-5c79-703f-884d-a2ca2ebd2d33`). Both reports record clean `5bfd00a`.
+Guarded normal Alchemy destruction returned 404 for the gateway and both generated CI
+tokens, removed the owned local state, and left the other 19 gateway IDs unchanged.
+Wrong-scope and legacy-ID cleanup attempts failed before mutation. These are focused
+lifecycle/provider checks; a new complete hosted run is still required.
