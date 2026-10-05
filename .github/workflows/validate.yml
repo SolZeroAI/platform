@@ -113,7 +113,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           nub exec tsx scripts/e2e/recover-hosted.ts
-          node -e 'const fs = require("node:fs"); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Hosted ownership recovery\n\n```json\n" + fs.readFileSync(".e2e/hosted-recovery-summary.json", "utf8") + "\n```\n")'
+          node <<'NODE'
+          const fs = require("node:fs"); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Hosted ownership recovery\n\n```json\n" + fs.readFileSync(".e2e/hosted-recovery-summary.json", "utf8") + "\n```\n")
+          NODE
       - name: Verify Docker for source-image harnesses
         run: docker info
       - name: Install browser
@@ -157,7 +159,9 @@ jobs:
         run: |
           cleanup_status=0
           nub run test:e2e:cleanup || cleanup_status=$?
-          node -e 'const fs = require("node:fs"); const path = ".e2e/cleanup-summary.json"; if (fs.existsSync(path)) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Owned test cleanup\n\n```json\n" + fs.readFileSync(path, "utf8") + "\n```\n")'
+          node <<'NODE'
+          const fs = require("node:fs"); const path = ".e2e/cleanup-summary.json"; if (fs.existsSync(path)) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Owned test cleanup\n\n```json\n" + fs.readFileSync(path, "utf8") + "\n```\n")
+          NODE
           exit "$cleanup_status"
       - name: Summarize measured AI usage
         if: always() && steps.ai-usage-init.outcome == 'success'

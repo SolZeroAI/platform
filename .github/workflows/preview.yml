@@ -49,6 +49,7 @@ jobs:
     if: ${{ github.repository != 'SolZeroAI/platform' && (github.event_name != 'pull_request' || github.event.action != 'closed') && (github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'deploy-standing-pre') }}
     uses: ./.github/workflows/validate.yml
     permissions:
+      actions: read
       contents: read
       checks: write
       pull-requests: write
@@ -91,7 +92,12 @@ jobs:
       - name: Resolve preview target
         id: preview-target
         run: |
-          stage=$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(process.env.GITHUB_EVENT_NAME === "pull_request" ? `pre-${event.pull_request.number}` : "pre")')
+          stage=$(node <<'NODE'
+          const fs = require("node:fs");
+          const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+          process.stdout.write(process.env.GITHUB_EVENT_NAME === "pull_request" ? `pre-${event.pull_request.number}` : "pre");
+          NODE
+          )
           website_url=$(nub run config:stage-url -- "$stage" | tail -n 1)
           echo "stage=$stage" >> "$GITHUB_OUTPUT"
           echo "website_url=$website_url" >> "$GITHUB_OUTPUT"

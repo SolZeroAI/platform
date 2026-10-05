@@ -192,6 +192,8 @@ export async function recoverHostedOwnership() {
       if (!previous) pending.set(row.owner, row)
     }
   }
+  // A fresh Linux checkout with no retained archives has not created .e2e yet.
+  mkdirSync(resolve(repo, ".e2e"), { recursive: true, mode: 0o700 })
   const file = resolve(repo, ".e2e/hosted-recovery.json")
   writeFileSync(file, JSON.stringify([...pending.values()]), { mode: 0o600 })
   try {
