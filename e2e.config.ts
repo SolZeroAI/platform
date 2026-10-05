@@ -1,11 +1,12 @@
 import type { E2EConfig } from "e2e"
 import { web } from "@e2e-dev/web"
+import { github } from "@e2e-dev/github"
 import { appEnvironment } from "./scripts/e2e/environment"
 import { createClefExecutor } from "./scripts/e2e/cf-clef-executor"
 
 export default {
   projectId: "solzero",
-  tests: "tests/**/*.e2e.ts",
+  tests: ["tests/**/*.e2e.ts", "!tests/lifecycle/**"],
   targets: [
     {
       name: "local-cloudflare",
@@ -18,7 +19,7 @@ export default {
           args: ["exec", "tsx", "scripts/e2e/dev.ts"],
           env: appEnvironment,
           startupTimeout: process.env.E2E_CONTAINER_RUNTIME === "1" ? 600_000 : 180_000,
-          shutdownTimeout: 30_000,
+          shutdownTimeout: 120_000,
           log: ".e2e/logs/stack.log",
         },
       },
@@ -61,7 +62,7 @@ export default {
   timeout: 180_000,
   assertionTimeout: 20_000,
   cache: { mode: "read-write", dir: process.env.E2E_ACTION_CACHE_DIR ?? ".e2e/cache" },
-  reporters: ["list", "junit", "markdown"],
+  reporters: ["list", "junit", "markdown", github({ key: "solzero-core" })],
   trace: "off",
   failOnSkippedFailure: true,
 } satisfies E2EConfig

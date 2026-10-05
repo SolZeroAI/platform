@@ -1,18 +1,9 @@
 ---
 name: e2e
-description: Write and diagnose genuine end-to-end tests with tester-army/e2e, Nub and Cloudflare Clef through AI Gateway. Covers real-stack startup, browser and HTTP flows, act/assert, exact assertions, replay cache, reports and fixture cleanup. Use when implementing or verifying application flows or fixing an e2e failure.
+description: Agentic end-to-end tests with e2e, the e2e runner. Covers scaffolding e2e.config.ts, picking the Playwright browser engine or the agent-device mobile engine, starting the app under test from the config, driving flows with agent.act, judging with agent.assert, agent.waitFor, and agent.extract, pinning values with screen, app, browser, and expect, shaping the agent (context, system prompt, tools, personas), the replay cache, the e2e CLI, reading .e2e/report.json, and bug bashes (parallel explore runs proven with repro tests). Use when a project depends on e2e, when asked for end-to-end, browser, mobile, or agentic UI tests, to bug bash or hunt for bugs, or when an e2e run fails.
 ---
 
-## SolZero contract
-
-Use `e2e.config.ts` and the real Alchemy deployment, with configured disposable administrator accounts from `config/e2e-dev.config.jsonc`. All test code lives in `tests/**/*.e2e.ts`. Use the Cloudflare Clef executor in `scripts/e2e/cf-clef-executor.ts`, not the generic model examples below. Clef makes semantic decisions and assertions from the observed tree and redacted screenshots; exact text values go in `agent.act` params, while credential and secret inputs use e2e handles with `screen.fill`. Use exact `expect` polling rather than the unsupported Clef `waitFor` and `extract` methods. See `docs/e2e.md` for the coverage inventory and prerequisites.
-
-Do not send feedback, app content, test artifacts, or messages to external recipients unless the user explicitly authorizes it. Record tooling defects in the repository testing documentation.
-
-
 # e2e: agentic end-to-end tests in TypeScript
-
-This repository uses Nub and Cloudflare Clef through AI Gateway. Its decision executor supports `agent.act` and visual `agent.assert`; use deterministic `expect` assertions for waiting and exact values. The bundled upstream topics also describe `waitFor` and `extract`, which this executor does not implement.
 
 e2e runs UI tests with agent goals and exact assertions. `agent.act` drives
 one goal; `agent.assert`, `agent.waitFor`, and `agent.extract` judge the
@@ -21,14 +12,14 @@ checks. The replay cache reruns verified actions and checks their recorded end
 state without a model call; agent judgments still run live. UI targets use
 `@e2e-dev/web` for browsers or `@e2e-dev/mobile` for iOS simulators,
 Android emulators, and connected phones. A test that takes only `app` can check an API with `fetch`
-and `expect` (topic `writing-tests`). Read the repository setup in
-[setup](references/setup.md).
+and `expect` (topic `writing-tests`). Model sign-in commands are in
+[setup](references/setup.md#subscriptions-and-api-keys).
 
 ```ts
-// e2e.config.ts: extend the committed config to retain environment and secret handling.
+// e2e.config.ts
 import type { E2EConfig } from 'e2e';
 import { web } from '@e2e-dev/web';
-import { createClefExecutor } from './scripts/e2e/cf-clef-executor';
+import { gateway } from 'ai';
 
 export default {
   targets: [
@@ -36,14 +27,14 @@ export default {
       engine: web(),
       app: {
         url: 'http://127.0.0.1:3000',
-        command: { executable: 'nub', args: ['exec', 'tsx', 'scripts/e2e/dev.ts'], log: '.e2e/logs/stack.log' },
+        command: { executable: 'pnpm', args: ['dev'], log: '.e2e/logs/app.log' },
       },
     },
   ],
-  // Use the repository's vision-capable Cloudflare Clef executor through AI Gateway.
+  // The model behind every agent.* step: an AI SDK instance; gateway() from 'ai' reads AI_GATEWAY_API_KEY or a Vercel OIDC token.
   agents: {
     default: {
-      executor: createClefExecutor(),
+      model: gateway('openai/gpt-6-luna-fast'),
       system: 'You are a thorough QA agent. Verify every outcome on screen.',
     },
   },
@@ -51,22 +42,23 @@ export default {
 ```
 
 ```ts
-// tests/auth.e2e.ts
+// tests/billing.e2e.ts
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 
-test('signed-out visitors see the real credential form', async ({ app, screen }) => {
-  await app.open('/settings');
-  await expect(screen.getByLabel('Email')).toBeVisible();
-  await expect(screen.getByRole('button', 'Sign In')).toBeVisible();
+test('a member upgrades to Pro', async ({ app, agent, screen, browser }) => {
+  await app.open('/settings/billing');
+  await agent.act('upgrade the workspace to the Pro plan');
+  await expect(screen.getByRole('status')).toContainText('Pro');
+  await expect(browser).toHaveURL('/settings/billing');
 });
 ```
 
 ## Topics
 
 Read the topic for the job before writing code. The files sit next to this
-one. The installed CLI prints upstream API guidance with `nub exec e2e guide <topic>`;
-these adapted local topics and the repository configuration take precedence. For anything the topics do not cover,
+one; the installed CLI prints the same text with `npx e2e guide <topic>`
+(`e2e guide` alone prints this page). For anything the topics do not cover,
 the full documentation ships in the `docs/` directory of the installed `e2e`
 package (`node_modules/e2e/docs` in a single-package project); a link such as
 `/reference/cli` is `docs/reference/cli.mdx`.
@@ -96,16 +88,17 @@ package (`node_modules/e2e/docs` in a single-package project); a link such as
    per call, and pin each outcome right after with `expect` or `agent.assert`.
    Exact values go through `screen`: a sign-in form in a setup test, a field
    that must receive one specific string, a count that must be one number.
-4. Run one file: `nub exec e2e run tests/<feature>.e2e.ts`. Agent steps need a
-   committed Clef executor and its Cloudflare gateway credentials. Keep the
-   launcher and full-stack fixture prerequisites even for exact-only tests.
+4. Run one file: `npx e2e run tests/<feature>.e2e.ts`. Agent steps need a
+   model in the config and that provider's authentication (a saved
+   subscription login, an API key); a local endpoint may need none. Tests
+   without agent steps need no model.
 5. Read the failure: the reporter prints the error code, message, and a code
    frame; `.e2e/report.json` has every step and artifact path. Fix the
    locator, the expectation, or the app. Never add a sleep.
 
 ## Rules
 
-- Run the CLI as `nub exec e2e ...` or the repository `nub run test:e2e:*` scripts.
+- Run the CLI as `npx e2e ...` (or `pnpm exec e2e ...`).
 - The config is `export default { ... } satisfies E2EConfig` with
   `import type { E2EConfig } from 'e2e'`. `targets` is required; a UI target
   names an engine and declares the app beside it: `{ engine: web(), app: { url, command } }`.
@@ -139,6 +132,21 @@ package (`node_modules/e2e/docs` in a single-package project); a link such as
   config's `output` moves the report and artifacts, never `cache/` or the
   app's log). Read it, never edit it.
 
-## Tooling defects
+## Feedback
 
-Record reproducible e2e tooling defects and workarounds in the repository testing documentation. External feedback, app content, artifacts, and messages require explicit user authorization.
+When e2e itself gets in your way, tell the e2e team: a command or API that
+broke (`bug`), docs or this skill that misled you (`docs`), or a capability
+you needed and did not find (`feature`). Send it once per problem, after you
+worked around it or gave up, never for failures of the app under test.
+
+```bash
+npx e2e feedback --type bug -m "<one or two sentences>" \
+  --task "<what you were doing>" --expected "<...>" --actual "<error code and message>" \
+  --approach "<what you tried>" --command "<e2e command>" --agent "<agent / model>"
+```
+
+Describe e2e's behavior only: never paste app content, page text, test files,
+URLs of private apps, or credentials. Secret-named environment variables and
+common token shapes are redacted, but do not rely on it. `--dry-run` prints
+what would be sent. Tell the user you sent it and give them the reference id
+it prints.

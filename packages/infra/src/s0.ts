@@ -83,17 +83,28 @@ function createCloudflareAiGateway(input: {
       collectLogs: config.collectLogs,
       storeId: secretsStore.storeId,
     }
-    // Fresh test checkouts must adopt one dedicated gateway rather than consume another quota slot.
+    // Only an isolated development test launcher may supply durable run ownership.
+    const runOwner = yield* Config.string("S0_E2E_RUN_ID").pipe(Config.option)
+    const forbiddenOwner = Option.filter(
+      runOwner,
+      (id) =>
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id) ||
+        !/^s0-e2e(?:-[a-z0-9-]+)?$/.test(input.appName) ||
+        input.stageMetadata.name !== "dev",
+    )
+    yield* Option.match(forbiddenOwner, {
+      onNone: () => Effect.void,
+      onSome: () =>
+        Effect.die(
+          new Error("E2E run ownership requires an isolated development profile and UUID."),
+        ),
+    })
     const ci = yield* Config.boolean("CI").pipe(Config.withDefault(false))
     const scope = Match.value(ci).pipe(
       Match.when(true, () => "-ci"),
       Match.orElse(() => ""),
     )
-    const testGatewayId = Option.liftPredicate(
-      (deployment: typeof input) =>
-        /^s0-e2e(?:-[a-z0-9-]+)?$/.test(deployment.appName) &&
-        deployment.stageMetadata.name === "dev",
-    )(input).pipe(Option.map((deployment) => `${deployment.appName}${scope}-dev-ai-gateway`))
+    const testGatewayId = Option.map(runOwner, (id) => `${input.appName}${scope}-dev-${id}`)
     const resource = yield* Option.match(testGatewayId, {
       onNone: () => Cloudflare.AI.Gateway("ai-gateway", gatewayProps),
       onSome: (id) => Cloudflare.AI.Gateway("ai-gateway", { ...gatewayProps, id }),
@@ -118,9 +129,13 @@ function createCloudflareAiGateway(input: {
         ),
       { concurrency: "unbounded" },
     )
+    const tokenName = Option.match(runOwner, {
+      onNone: () => `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
+      onSome: (id) => `${input.appName}-${input.stageMetadata.name}-ai-gateway-run-${id}`,
+    })
     const runToken = yield* Cloudflare.ApiToken.AccountApiToken("ai-gateway-run-token", {
       accountId: input.cloudflareAccountId,
-      name: `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
+      name: tokenName,
       policies: [
         {
           effect: "allow",

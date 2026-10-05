@@ -48,6 +48,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260702.1
         version: 4.20260702.1
+      '@e2e-dev/github':
+        specifier: 0.3.3
+        version: 0.3.3(e2e@0.17.0(@ai-sdk/anthropic@4.0.49(zod@4.5.4))(@ai-sdk/openai@4.0.60(zod@4.5.4))(@ai-sdk/openai-compatible@3.0.44(zod@4.5.4))(ai@7.0.93(zod@4.5.4)))
       '@e2e-dev/web':
         specifier: 0.12.0
         version: 0.12.0(patch_hash=32d6ff524ac04ebe362a643c8b8598494ce37490bb5e0bb0e2e0649e815b07fc)(e2e@0.17.0(@ai-sdk/anthropic@4.0.49(zod@4.5.4))(@ai-sdk/openai@4.0.60(zod@4.5.4))(@ai-sdk/openai-compatible@3.0.44(zod@4.5.4))(ai@7.0.93(zod@4.5.4)))
@@ -57,6 +60,9 @@ importers:
       '@electric-sql/pglite-socket':
         specifier: 0.1.5
         version: 0.1.5(@electric-sql/pglite@0.4.5)
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.5.4)
       '@mpsuesser/oxlint-plugin-effect':
         specifier: 0.2.2
         version: 0.2.2
@@ -1147,6 +1153,12 @@ packages:
 
   '@drizzle-team/brocli@0.12.0':
     resolution: {integrity: sha512-mlUE+rZ8CatQekLhnaiN91Iemdd+e2gFKooGlnRB3oPTL3VghLfX24dx7HrzMNeC1JrIB/0kpsfyty3f5HNfxQ==}
+
+  '@e2e-dev/github@0.3.3':
+    resolution: {integrity: sha512-Mc/E+tyONRKaCWMOJUY/NxdT/vpittblRZL+QJt2rK8QCpZJcEz1OPH7EXmdE18arI6ozkF/+LMW1jb/m97l9w==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      e2e: '>=0.15.0 <1'
 
   '@e2e-dev/web@0.12.0':
     resolution: {integrity: sha512-Ee5QaVZHSvjhVx5p2/kcYCxFerNr8BA8zLbja7OsvzF5Jp4Ku2mEri2KoMRol7i+DpCmfSUPSxI4KrzIPpJqdg==}
@@ -7434,6 +7446,10 @@ snapshots:
       effect: 4.0.0-beta.107
 
   '@drizzle-team/brocli@0.12.0': {}
+
+  '@e2e-dev/github@0.3.3(e2e@0.17.0(@ai-sdk/anthropic@4.0.49(zod@4.5.4))(@ai-sdk/openai@4.0.60(zod@4.5.4))(@ai-sdk/openai-compatible@3.0.44(zod@4.5.4))(ai@7.0.93(zod@4.5.4)))':
+    dependencies:
+      e2e: 0.17.0(patch_hash=20b9daddfd7411e653466f89bc21c37c387a48e3e31278f7375a065f31008f1b)(@ai-sdk/anthropic@4.0.49(zod@4.5.4))(@ai-sdk/openai@4.0.60(zod@4.5.4))(@ai-sdk/openai-compatible@3.0.44(zod@4.5.4))(ai@7.0.93(zod@4.5.4))
 
   '@e2e-dev/web@0.12.0(patch_hash=32d6ff524ac04ebe362a643c8b8598494ce37490bb5e0bb0e2e0649e815b07fc)(e2e@0.17.0(@ai-sdk/anthropic@4.0.49(zod@4.5.4))(@ai-sdk/openai@4.0.60(zod@4.5.4))(@ai-sdk/openai-compatible@3.0.44(zod@4.5.4))(ai@7.0.93(zod@4.5.4)))':
     dependencies:

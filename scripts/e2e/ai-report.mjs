@@ -31,6 +31,8 @@ const replayReasons = new Set([
 ])
 const reportPaths = [
   ".e2e/report.json",
+  ".e2e/lifecycle/report.json",
+  ".e2e/cleanup-proof/report.json",
   ...["os-web", "gtt-web", "solzero-web", "x-activity", "tools"].map(
     (app) => `.e2e/${app}/report.json`,
   ),

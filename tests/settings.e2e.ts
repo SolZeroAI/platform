@@ -19,13 +19,20 @@ test(
   "runtime default persists after reload",
   { session: "admin" },
   async ({ app, screen, browser }) => {
+    await app.open("/")
+    const refreshed = browser.waitForResponse(/\/api\/providers$/)
     await app.open("/settings?category=agents&tab=runtimes")
     const limit = screen.getByLabel("Default isolate step call limit")
     await expect(limit).toBeVisible()
+    await expect(limit).toBeEnabled()
     const original = await limit.inputValue()
     const next = original === "35" ? "36" : "35"
     try {
       await limit.fill(next)
+      await expect(limit).toHaveValue(next)
+      const refreshResponse = await refreshed
+      expect(refreshResponse.status).toBe(200)
+      await refreshResponse.json()
       await expect(limit).toHaveValue(next)
       await expect(screen.getByRole("button", "Save", { exact: true })).toBeEnabled()
       await screen.getByRole("button", "Save", { exact: true }).tap()

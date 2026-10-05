@@ -1,7 +1,5 @@
 # Driving the app over MCP
 
-Repository contract: use Nub, the committed launcher/configuration and Cloudflare Clef through AI Gateway. These upstream API notes do not authorize other model providers, alternate test runners, mocks, unsupported `agent.waitFor`/`agent.extract`, raw traces or external feedback. See `docs/e2e.md` and the adapted setup/running/agent/debugging topics.
-
 `e2e mcp` serves a project's live app to a coding agent over MCP (stdio). The
 coding agent drives the app the way the testing agent does: look at a screen
 before writing a test, check a locator before committing to it. Running tests
@@ -12,7 +10,7 @@ and reading a failed run stay on the CLI (topics `running` and `debugging`).
 The server ships with `e2e`. `e2e init` offers to register it; by hand:
 
 ```bash
-claude mcp add e2e -- nub exec e2e mcp   # Claude Code
+claude mcp add e2e -- npx e2e mcp   # Claude Code
 ```
 
 Or declare it in the client's project config (`.mcp.json` for Claude Code,
@@ -79,7 +77,7 @@ Resources: `e2e://guide` and `e2e://guide/<topic>` hold this skill.
    `LOCATOR_NOT_FOUND` or `LOCATOR_AMBIGUOUS`.
 3. Write `tests/<feature>.e2e.ts` (topic `writing-tests`). Deterministic steps
    where you saw exact names; `agent.act` where the flow varies.
-4. Run it from the shell: `nub exec e2e run tests/<feature>.e2e.ts`, read the
+4. Run it from the shell: `npx e2e run tests/<feature>.e2e.ts`, read the
    failure (topic `debugging`), fix, repeat.
 5. `close_session` when you are done; an idle session closes on its own after
    30 minutes and never outlives 4 hours. When the client exits, every session

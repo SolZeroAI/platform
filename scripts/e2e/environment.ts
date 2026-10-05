@@ -7,8 +7,11 @@ import { parse, type ParseError } from "jsonc-parser"
 import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
 
 // Explicit process/CI values always take precedence over local files.
-for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]) {
-  if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
+// Registered application children inherit the already filtered app environment; do not reload runner-only secrets.
+if (process.env.S0_E2E_APP_CHILD !== "1") {
+  for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]) {
+    if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
+  }
 }
 // workerd needs the trusted macOS roots explicitly; never replace a supplied CA bundle.
 if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
@@ -28,6 +31,7 @@ if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
 process.env.E2E_CONTAINER_RUNTIME ??= "1"
 // Only the isolated test launcher opts into content-free application AI accounting.
 process.env.E2E_AI_USAGE ??= "1"
+process.env.E2E_TELEMETRY_DISABLED ??= "1"
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {
   throw new Error("E2E_CONFIG_PROFILE must be e2e or an isolated e2e-* profile.")

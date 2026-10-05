@@ -133,10 +133,18 @@ AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions c
 
 CI initializes and summarizes usage around the test run and uploads only sanitized
 `summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and accounting ledgers are
-not uploaded. The PR publisher receives its GitHub token in its own step, verifies the
-tested head of a same-repository PR and skips runs without a PR. It comments when measured
-uncached calls occurred, showing model, call counts, tokens and estimated cost; unknown
-measurements remain explicit.
+not uploaded. The official `@e2e-dev/github@0.3.3` reporter writes e2e results and SDK-measured
+model usage to the job summary and updates its pull-request comment. Core and lifecycle
+runs use distinct stable keys. `GITHUB_TOKEN` is scoped to the test step and stripped from
+application children. Application accounting remains a sanitized receipt/job summary;
+there is no custom AI-only PR publisher. Missing measurements remain explicit.
+SDK telemetry is disabled with `E2E_TELEMETRY_DISABLED=1`.
+
+The installed CLI refreshed the pristine `.agents/skills/e2e` guidance and the Claude
+skill symlink. `.mcp.json` and `.cursor/mcp.json` invoke the installed MCP server through
+`nub run --silent test:e2e:mcp`. The MCP command uses the same registered SDK process and verified exit cleanup as test runs; `--silent` keeps Nub headers out of JSON-RPC stdout. Project-specific Node/Nub, Clef, lifecycle and feedback rules live in
+`AGENTS.md` and this guide. Upstream feedback or other outgoing messages require explicit
+human authorization.
 
 ## Coverage inventory
 
@@ -315,14 +323,19 @@ Configure repository secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, an
 `CF_AI_GATEWAY_E2E_TOKEN`; the workflow generates and masks a fresh disposable account
 password. Do not use production identity or integration secrets for tests.
 
-The isolated dev profile declares stable gateway IDs: `s0-e2e-dev-ai-gateway` locally and
-`s0-e2e-ci-dev-ai-gateway` in CI (alternate isolated profiles use their own app name).
-Cold state adopts the same dedicated ID instead of leaking an auto-generated gateway
-on each checkout. CI jobs serialize without cancelling an active job, and always run
-guarded Alchemy cleanup after installed dependencies, including on test/startup failure.
-Separate local and CI IDs prevent either cleanup from deleting the other's active gateway.
-Production/pre gateway naming and shared `default` are unchanged. The application run token
-has account-level AI permissions; a gateway name is not a token authorization boundary.
+Each launcher owns `.e2e/runs/<UUID>/stack`, including Alchemy state, simulator D1/KV/R2/DO data and source-container build contexts. It runs the shipping stack and normal Alchemy destruction from that directory. The application gateway and token names contain the same run UUID; local and CI names have separate scopes. Cleanup never treats a shared name or prefix as ownership. Application run tokens have account-level AI permissions; a gateway name is not a token authorization boundary.
+
+The default `test:e2e` command wraps the SDK and verifies recovery after exit. Cleanup failures make the command fail even if SDK teardown ignored the app's exit code. The launcher records exact process birth times and descendants, including detached sidecar groups. Both SDK and Alchemy children must publish a durable launch intent and their own PID/birth before importing the real CLI. Unresolved registration, failed process inspection and a same-birth process moving groups retain evidence and block storage removal. Process inspection and signaling use portable POSIX tools; they cannot eliminate every operating-system identity race. Cancellation signals the owned launcher, and recovery stops only birth-matched descendants before deleting storage. Run `nub run test:e2e:cleanup` again with the same credentials, profile and CI scope after an abrupt termination. Completed receipts make repeated recovery a no-op; active launchers and mismatched ownership are refused.
+
+Cleanup reconciles a token created before its state record was flushed by exact UUID name, account, permission policy and creation time. It verifies gateway/token HTTP 404 and owned Docker label absence before removing the run directory. The directory removal also clears every run-owned identity, auth session/API key, session/workspace/history, bot/routine, agent/skill/MCP definition, uploaded attachment, secret and runtime preference. Most tests also delete their entities or restore settings in `finally`; storage teardown recovers interrupted requests and APIs without individual delete endpoints.
+
+`nub run test:e2e:lifecycle` exercises real success/failure recovery: launcher SIGTERM; SIGKILL with a real Codex container and missing token state; killed CLI leader with detached runtime descendants; an intentionally failing SDK suite; outer-command SIGTERM and SIGKILL after creating an authenticated session; a failed process inspector; and a genuine filesystem publication failure before Alchemy loads; and an official MCP open/observe/close session with valid JSON-RPC stdout and verified app teardown. It verifies receipts, state removal and idempotent recovery. These lifecycle fixtures are excluded from the ordinary core catalogue. To run them on the normal hosted validation job, dispatch `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. The boolean defaults to false, so ordinary PR and push validation still runs only the core suite; an opt-in dispatch adds lifecycle cases after core. Lifecycle reports use `.e2e/cleanup-proof`; intentional inner failures use separate private report directories.
+
+Sanitized CI diagnostics retain `cleanup-summary.json` (counts/types/verified status) for seven days. A separate `solzero-cleanup-ownership-<run>-<attempt>` artifact retains only `cleanup-ownership.json` (repository/run/account hash/profile and exact run-owned resource metadata) for 30 days and uploads even on cancellation. Private state, credentials, logs and journals are never uploaded. Before new allocations, CI examines up to 10,000 repository artifact records and restores pending ownership from completed same-repository Validate attempts, including earlier attempts of the current run. It verifies original producer metadata and byte-equivalent pending rows in immutable dedicated archives. A newer empty or completed inventory does not discard older pending evidence; recovery verifies absence again. Active producers are preserved. Unavailable, conflicting or malformed claimed ownership evidence blocks recovery. Explicit manual recovery can also use a historical diagnostic archive containing the exact ownership file: `CI=1 nub exec tsx scripts/e2e/cleanup.ts /path/to/cleanup-ownership.json`, with the same isolated profile/account and an Actions-read token. Live token IDs are reconciled from exact UUID ownership; supplied IDs do not authorize deletion. Evidence beyond the retention and inventory bounds requires operator review; it is never replaced by a prefix sweep.
+
+The shared base container images/build cache, action replay cache, sanitized reports/receipts and trust-root PEM remain intentionally reusable. Operator dotenv files and the ignored administrator password fixture are retained; they are inputs, not deployed entities. Legacy shared `packages/infra/.alchemy/local` data can contain unrelated dev state and is not swept. External cases read pre-existing GitHub/Slack/MCP/AI Search/provider/identity fixtures and remove their local sessions/settings. They do not create provider accounts, repositories, Slack channels or search indexes. External MCP instructions must be read-only; destructive MCP actions and external identity-provider session revocation require provider-specific fixtures and remain unverified in the deferred scope.
+
+Preview deployment rechecks the current same-repository PR and exact head immediately before creating infrastructure. Cleanup accepts only canonical `pre-<positive-number>` for a currently closed same-repository PR. It restores safe ownership receipts, captures exact Worker-bound gateway/token and DO/container IDs, runs normal Alchemy destroy, and verifies Workers, D1, KV, R2, workflow/AI Search namespaces and captured runtime/gateway/token absence. Asynchronous container removal is polled for up to two minutes. Ownership artifacts survive cleanup failure for retry; cleanup comments require verified success. Shared Secrets Store/default gateway and open PR previews are preserved. Nonempty remote preview deletion and optional BYOK provider-key teardown have not been exercised by this local cleanup proof; do not infer those results from an empty inventory.
 
 Raw browser/network trace ZIPs are disabled because the published SDK cannot register
 newly minted API keys or session cookies for dynamic redaction. Keep SDK-redacted
@@ -431,3 +444,10 @@ application-token deletion and 21 successful resource removals. Its exact newly 
 token ID was not retained, so no direct GET claim is made for that token. Historical
 unconfirmed tokens were preserved. This latest complete core success does not erase the
 earlier native-provider failures or verify the seven user-deferred external cases.
+
+
+Cleanup verification on 2026-10-05 passed the eight real failure/cancellation cases in 268.73 seconds (`01a10b63-f318-7d99-a9d3-9f97063a72bb`), with eight verified receipts, seven revoked run tokens and zero remaining owned containers, proxies or images. After the atomic launch-publication refinement, the outer SIGTERM, outer SIGKILL and publication-fault selection passed 3/3 in 76.58 seconds (`01a10b71-73f8-7f50-ae97-20fe6e399520`). The official MCP client then passed its separate real open/observe/close and registered-runner teardown case in 50.35 seconds (`01a10b80-922e-75b4-999e-92e073b14902`); stdout remained valid JSON-RPC. The nine lifecycle cases were verified across these selections, not in one final combined run. After making the public ownership ledger atomic, the controlled publication fault passed again, 1/1 in 2.10 seconds (`01a10b84-1bdf-7c2f-b53a-bc199d5eaa24`), and the initial pending ownership intent remained intact.
+
+The latest local full core run passed 30/31 in 248.04 seconds (`01a10b68-abcc-7c32-8475-1f74b06ad787`); its runtime-settings case exposed an unchanged-value background refresh resetting an unsaved draft. The primitive-value synchronization fix passed the actual refresh/save/reload/restore regression plus authentication setup, 2/2 in 23.38 seconds (`01a10b7a-340e-7aa2-8631-a531574997e1`). The earlier 31/31 local and hosted results above remain historical; final exact-head CI must establish the latest complete core result.
+
+The final read-only account inventory contained 19 gateways and 16 unrelated tokens, zero active run-owned tokens or pending journals, and HTTP 404 for the latest owned gateway and token. Five historical test tokens were matched to recorded ID hashes, creation times, exact names and account policies, then revoked with HTTP 404 verification. Fourteen historical unlabelled containers and seven proxies were preserved because ownership was unproven. Automatic hosted recovery inspected the canonical repository and found zero retained dedicated ownership archives; cross-host recovery of a nonempty archived run remains unexercised. Preview guards have read-only current-PR proof, but no nonempty remote preview teardown was performed. These are local/read-only proofs, not new hosted CI results.

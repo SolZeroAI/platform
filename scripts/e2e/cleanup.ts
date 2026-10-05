@@ -7,6 +7,12 @@ import * as Schema from "effect/Schema"
 import { parse } from "jsonc-parser"
 import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
 import { appEnvironment } from "./environment"
+import { recoverRuns } from "./lifecycle"
+import { restoreHostedOwnership } from "./hosted-ownership"
+
+const ownershipFile = process.argv[2]
+if (ownershipFile) await restoreHostedOwnership(ownershipFile)
+await recoverRuns()
 
 const CleanupResource = Schema.Struct({
   resourceType: Schema.optional(Schema.String),
