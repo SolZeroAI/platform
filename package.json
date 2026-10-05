@@ -70,6 +70,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
+    "@effect/vitest": "4.0.1",
     "@electric-sql/pglite": "0.4.5",
     "@electric-sql/pglite-socket": "0.1.5",
     "@mpsuesser/oxlint-plugin-effect": "0.2.2",
