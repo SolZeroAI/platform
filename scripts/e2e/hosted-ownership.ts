@@ -49,7 +49,7 @@ function completedAttempt(repository: string, run: string, attempt: string) {
 }
 function downloadOwnership(repository: string, id: number) {
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Invalid hosted artifact identity.")
-  mkdirSync(resolve(repo, ".e2e"), { recursive: true })
+  mkdirSync(resolve(repo, ".e2e"), { recursive: true, mode: 0o700 })
   const archive = resolve(repo, `.e2e/ownership-recovery-${randomUUID()}.zip`)
   writeFileSync(archive, githubApi(`repos/${repository}/actions/artifacts/${id}/zip`), {
     mode: 0o600,
