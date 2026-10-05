@@ -36,11 +36,11 @@
             "logsHeadSamplingRate",
             "tracesHeadSamplingRate"
           ],
-          "additionalProperties": true
+          "additionalProperties": false
         }
       },
       "required": ["appName", "zone", "useApiShield", "observability"],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "application": {
       "type": "object",
@@ -65,7 +65,7 @@
         "showTestErrorButton",
         "betterAuthSessionTransferEnabled"
       ],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "admins": {
       "type": "object",
@@ -74,7 +74,7 @@
         "adminDomains": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["adminEmails", "adminDomains"],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "auth": {
       "type": "object",
@@ -98,17 +98,17 @@
                       "link": { "type": "boolean" }
                     },
                     "required": ["signIn", "provisionUsers", "link"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   },
                   "provisioning": {
                     "type": "object",
                     "properties": { "scope": { "type": "string", "enum": ["configured-admins"] } },
                     "required": ["scope"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   }
                 },
                 "required": ["kind", "enabled", "displayName", "capabilities", "provisioning"],
-                "additionalProperties": true
+                "additionalProperties": false
               },
               {
                 "type": "object",
@@ -124,7 +124,7 @@
                       "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
                     },
                     "required": ["env"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   },
                   "scopes": {
                     "anyOf": [
@@ -140,7 +140,7 @@
                       "link": { "type": "boolean" }
                     },
                     "required": ["signIn", "provisionUsers", "link"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -151,7 +151,7 @@
                   "clientSecret",
                   "capabilities"
                 ],
-                "additionalProperties": true
+                "additionalProperties": false
               },
               {
                 "type": "object",
@@ -168,7 +168,7 @@
                       "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
                     },
                     "required": ["env"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   },
                   "scopes": {
                     "anyOf": [
@@ -184,7 +184,7 @@
                       "link": { "type": "boolean" }
                     },
                     "required": ["signIn", "provisionUsers", "link"],
-                    "additionalProperties": true
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -196,7 +196,7 @@
                   "clientSecret",
                   "capabilities"
                 ],
-                "additionalProperties": true
+                "additionalProperties": false
               }
             ]
           }
@@ -210,14 +210,14 @@
                 "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
               },
               "required": ["env"],
-              "additionalProperties": true
+              "additionalProperties": false
             },
             { "type": "null" }
           ]
         }
       },
       "required": ["defaultSignInProviderId", "providers"],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "aiProviders": {
       "type": "object",
@@ -265,7 +265,7 @@
                           }
                         },
                         "required": ["context", "output"],
-                        "additionalProperties": true
+                        "additionalProperties": false
                       },
                       { "type": "null" }
                     ]
@@ -293,7 +293,7 @@
                           }
                         },
                         "required": ["efforts"],
-                        "additionalProperties": true
+                        "additionalProperties": false
                       },
                       { "type": "null" }
                     ]
@@ -312,7 +312,7 @@
                               }
                             },
                             "required": ["field"],
-                            "additionalProperties": true
+                            "additionalProperties": false
                           }
                         ]
                       },
@@ -327,14 +327,14 @@
                           "npm": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
                           "api": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
                         },
-                        "additionalProperties": true
+                        "additionalProperties": false
                       },
                       { "type": "null" }
                     ]
                   }
                 },
                 "required": ["name"],
-                "additionalProperties": true
+                "additionalProperties": false
               }
             },
             "providerKeys": {
@@ -353,7 +353,7 @@
                             }
                           },
                           "required": ["env"],
-                          "additionalProperties": true
+                          "additionalProperties": false
                         },
                         { "type": "null" }
                       ]
@@ -369,7 +369,7 @@
                             }
                           },
                           "required": ["env"],
-                          "additionalProperties": true
+                          "additionalProperties": false
                         },
                         { "type": "null" }
                       ]
@@ -385,20 +385,20 @@
                             }
                           },
                           "required": ["env"],
-                          "additionalProperties": true
+                          "additionalProperties": false
                         },
                         { "type": "null" }
                       ]
                     }
                   },
-                  "additionalProperties": true
+                  "additionalProperties": false
                 },
                 { "type": "null" }
               ]
             }
           },
           "required": ["enabled", "cacheTtl", "collectLogs", "defaultModel", "models"],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "litellm": {
           "anyOf": [
@@ -432,7 +432,7 @@
                         }
                       },
                       "required": ["env"],
-                      "additionalProperties": true
+                      "additionalProperties": false
                     },
                     { "type": "null" }
                   ]
@@ -445,14 +445,14 @@
                 "defaultReasoningLevel",
                 "adapterOverrides"
               ],
-              "additionalProperties": true
+              "additionalProperties": false
             },
             { "type": "null" }
           ]
         }
       },
       "required": ["cloudflareAiGateway"],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "mcpcf": {
       "anyOf": [
@@ -474,7 +474,7 @@
                     "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
                   },
                   "required": ["env"],
-                  "additionalProperties": true
+                  "additionalProperties": false
                 },
                 { "type": "null" }
               ]
@@ -488,7 +488,7 @@
             "authTypeAllowlist",
             "serverBlacklist"
           ],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         { "type": "null" }
       ]
@@ -510,7 +510,7 @@
                 "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
               },
               "required": ["env"],
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "privateKey": {
               "type": "object",
@@ -519,7 +519,7 @@
                 "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
               },
               "required": ["env"],
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "webhookSecret": {
               "anyOf": [
@@ -530,14 +530,14 @@
                     "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
                   },
                   "required": ["env"],
-                  "additionalProperties": true
+                  "additionalProperties": false
                 },
                 { "type": "null" }
               ]
             }
           },
           "required": ["enabled", "appId", "clientId", "slug", "clientSecret", "privateKey"],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "slack": {
           "type": "object",
@@ -550,15 +550,15 @@
                 "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
               },
               "required": ["env"],
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
           "required": ["enabled", "botToken"],
-          "additionalProperties": true
+          "additionalProperties": false
         }
       },
       "required": ["githubApp", "slack"],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "security": {
       "type": "object",
@@ -570,7 +570,7 @@
             "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
           },
           "required": ["env"],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "mcpcfProxySigningSecret": {
           "type": "object",
@@ -579,7 +579,7 @@
             "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
           },
           "required": ["env"],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "tokenEncryptionKey": {
           "type": "object",
@@ -588,7 +588,7 @@
             "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
           },
           "required": ["env"],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "repositorySecretsEncryptionKey": {
           "type": "object",
@@ -597,7 +597,7 @@
             "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
           },
           "required": ["env"],
-          "additionalProperties": true
+          "additionalProperties": false
         }
       },
       "required": [
@@ -606,7 +606,7 @@
         "tokenEncryptionKey",
         "repositorySecretsEncryptionKey"
       ],
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "aiSearch": {
       "type": "object",
@@ -622,7 +622,7 @@
                     "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
                   },
                   "required": ["env"],
-                  "additionalProperties": true
+                  "additionalProperties": false
                 },
                 { "type": "null" }
               ]
@@ -631,7 +631,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     }
   },
   "required": [
@@ -645,5 +645,5 @@
     "security",
     "aiSearch"
   ],
-  "additionalProperties": true
+  "additionalProperties": false
 }
