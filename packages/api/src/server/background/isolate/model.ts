@@ -13,6 +13,7 @@ import {
   normalizeCloudflareAiGatewayResponse,
 } from "../ai-providers/cloudflare-ai-gateway"
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
+import { withApplicationAiUsage } from "../ai-providers/e2e-usage"
 import {
   BackgroundTracing,
   // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate model.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
@@ -298,7 +299,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   return Match.value(providerPackage).pipe(
     Match.when("workers-ai-provider", () =>
       createWorkersAI({
-        binding: requireAiGatewayBinding(input.env),
+        binding: withApplicationAiUsage(requireAiGatewayBinding(input.env), input.env),
         gateway: { id: requireAiGatewayId(input.env) },
       })(input.modelId),
     ),

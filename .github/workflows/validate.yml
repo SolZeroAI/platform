@@ -29,7 +29,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.checkout_ref || github.ref }}
+          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.4.0
@@ -85,10 +85,11 @@ jobs:
       CF_AI_GATEWAY_E2E_TOKEN: ${{ secrets.CF_AI_GATEWAY_E2E_TOKEN }}
       CF_AI_GATEWAY_E2E_ID: default
       E2E_CONTAINER_RUNTIME: "1"
+      E2E_AI_USAGE: "1"
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.checkout_ref || github.ref }}
+          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
       - uses: nubjs/setup-nub@v0.4.0
         with:
           nub-version: 0.4.11
@@ -111,6 +112,7 @@ jobs:
           echo "::add-mask::$password"
           echo "E2E_USER_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
       - name: Restore action replay cache
+        id: action-replay-cache
         uses: actions/cache/restore@v5
         with:
           path: .e2e/cache
@@ -118,11 +120,29 @@ jobs:
           restore-keys: |
             e2e-solzero-${{ runner.os }}-${{ hashFiles('nub.lock', 'e2e.config.ts', 'scripts/e2e/**', 'tests/**/*.e2e.ts') }}-
             e2e-solzero-${{ runner.os }}-
+      - name: Initialize AI usage accounting
+        id: ai-usage-init
+        env:
+          E2E_ACTION_CACHE_RESTORED: ${{ steps.action-replay-cache.outputs.cache-matched-key != '' }}
+        run: |
+          export E2E_AI_VALIDATED_SHA="$(git rev-parse HEAD)"
+          echo "E2E_AI_VALIDATED_SHA=$E2E_AI_VALIDATED_SHA" >> "$GITHUB_ENV"
+          node scripts/e2e/ai-report.mjs init
       - name: Run core real-stack flows
+        id: e2e-run
         run: nub run test
       - name: Destroy owned test infrastructure and revoke its run token
         if: always() && steps.e2e-dependencies.outcome == 'success'
         run: nub run test:e2e:cleanup
+      - name: Summarize measured AI usage
+        if: always() && steps.ai-usage-init.outcome == 'success'
+        id: ai-usage-summary
+        run: node scripts/e2e/ai-report.mjs summarize
+      - name: Comment on the tested pull request when uncached AI calls occurred
+        if: always() && !cancelled() && steps.ai-usage-summary.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/e2e/ai-comment.mjs
       - name: Preserve successful replay recordings
         if: always() && !cancelled()
         uses: actions/cache/save@v5
@@ -140,5 +160,7 @@ jobs:
             .e2e/summary.md
             .e2e/failures
             .e2e/artifacts
+            .e2e/ai-usage/summary.json
+            .e2e/ai-usage/summary.md
           if-no-files-found: warn
           retention-days: 7

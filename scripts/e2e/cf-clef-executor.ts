@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHmac } from "node:crypto"
 import jpeg from "jpeg-js"
 import { PNG } from "pngjs"
 import { AgentError } from "e2e"
@@ -10,6 +11,9 @@ import type {
   StepExecutorContext,
   StepTurn,
 } from "e2e"
+
+import { gatewayCache, measuredTokens, recordAiUsage } from "./ai-usage"
+import type { AiUsage } from "./ai-usage"
 
 type Choice = { description: string; run: () => Promise<void> }
 type Answer = {
@@ -149,6 +153,26 @@ async function ask(
     throw new AgentError("MODEL_UNAVAILABLE", "Invalid Cloudflare account or gateway identifier.")
   const pixels = observation.pixels
   const images = pixels ? [clefImage(pixels)] : []
+  const body = JSON.stringify({
+    model: "clef",
+    state: {
+      goal: ctx.step.instruction,
+      context: ctx.agentContext,
+      params: ctx.step.params,
+      path: observation.path,
+      page: observation.text,
+      history: history.slice(-12),
+      pixelsWithheld: observation.pixelsWithheld,
+    },
+    questions: { decision: { type: "choice", instructions, criteria } },
+    ...(images.length ? { images } : {}),
+  })
+  // Opt in even when the Gateway's default caching is disabled. Scope the opaque
+  // key to the credential, account, endpoint and complete identical request.
+  const cacheKey = `e2e-clef-${createHmac("sha256", token)
+    .update(JSON.stringify([account, gateway, "@cf/cloudflare/clef", body]))
+    .digest("hex")}`
+  const bypass = process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1"
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (usageBudget.calls >= ctx.budgets.maxModelCalls)
       throw new AgentError(
@@ -160,6 +184,9 @@ async function ask(
     const startedAt = new Date().toISOString()
     let usage: ClefResult["usage"] | undefined
     let retryDelay: number | undefined
+    let cache: AiUsage["cache"] = bypass ? "bypass" : "unknown"
+    let httpStatus: number | null = null
+    let status: AiUsage["status"] = "error"
     try {
       const response = await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/@cf/cloudflare/clef`,
@@ -175,25 +202,14 @@ async function ask(
             "cf-aig-gateway-id": gateway,
             "cf-aig-authorization": `Bearer ${token}`,
             "cf-aig-cache-ttl": "3600",
-            "cf-aig-skip-cache":
-              process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1" ? "true" : "false",
+            "cf-aig-cache-key": cacheKey,
+            "cf-aig-skip-cache": bypass ? "true" : "false",
           },
-          body: JSON.stringify({
-            model: "clef",
-            state: {
-              goal: ctx.step.instruction,
-              context: ctx.agentContext,
-              params: ctx.step.params,
-              path: observation.path,
-              page: observation.text,
-              history: history.slice(-12),
-              pixelsWithheld: observation.pixelsWithheld,
-            },
-            questions: { decision: { type: "choice", instructions, criteria } },
-            ...(images.length ? { images } : {}),
-          }),
+          body,
         },
       )
+      httpStatus = response.status
+      cache = gatewayCache(response.headers, bypass)
       if (!response.ok) {
         if (attempt < 2 && (response.status === 429 || response.status >= 500)) {
           const seconds = Number(response.headers.get("retry-after"))
@@ -236,6 +252,7 @@ async function ask(
             "Clef returned an invalid probability distribution.",
           )
         }
+        status = "success"
         return answer.choice
       }
     } catch (error) {
@@ -248,12 +265,35 @@ async function ask(
           "The Cloudflare Clef request failed or exceeded its deadline.",
         )
     } finally {
+      const inputTokens = measuredTokens(usage?.input_tokens)
+      const outputTokens = measuredTokens(usage?.output_tokens)
+      recordAiUsage({
+        schemaVersion: 1,
+        source: "executor",
+        model: "@cf/cloudflare/clef",
+        cache,
+        cacheLayer: "gateway",
+        requests: 1,
+        operations: 0,
+        inputTokens,
+        outputTokens,
+        cachedInputTokens: null,
+        status,
+        httpStatus,
+        startedAt,
+      })
       ctx.budgets.recordModelCall({
         provider: "cloudflare-ai-gateway",
         modelId: "@cf/cloudflare/clef",
         startedAt,
         durationMs: performance.now() - started,
-        ...(usage ? { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens } : {}),
+        ...(inputTokens !== null ? { inputTokens } : {}),
+        ...(outputTokens !== null ? { outputTokens } : {}),
+        ...(cache === "hit"
+          ? { estimatedCostUsd: 0 }
+          : inputTokens !== null && (cache === "miss" || cache === "bypass")
+            ? { estimatedCostUsd: (inputTokens * 0.24) / 1_000_000 }
+            : {}),
       })
     }
     if (retryDelay !== undefined) {

@@ -23,6 +23,9 @@ import {
   normalizeCloudflareAiGatewayResponse,
   prepareWorkersAiResponses,
   streamWorkersAiResponse,
+  gatewayCacheStatus,
+  nativeWorkersAiUsage,
+  startApplicationAiUsage,
   createApiRequestObserver,
   decryptCloudflareAiGatewayByokProxyCredential,
   withApiSurfaceSpan,
@@ -152,15 +155,39 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
               kind === "cloudflare-provider-native"
                 ? requestWithCloudflareProviderNativeCredential(request, apiKey, providerApiKey)
                 : requestWithSharedProviderCredential(prepared.request, apiKey, headers)
-            // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
-            const upstream = await fetch(authenticatedRequest)
-            const response = prepared.streaming
-              ? await streamWorkersAiResponse(upstream, prepared.functionNames)
-              : upstream
-            log.set({ upstreamStatus: response.status })
-            return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
-              ? normalizeCloudflareAiGatewayResponse(response)
-              : response
+            const finishUsage = startApplicationAiUsage(
+              env,
+              requestedModel,
+              kind === "bearer" ? "none" : "gateway",
+            )
+            const bypass = authenticatedRequest.headers.get("cf-aig-skip-cache") === "true"
+            let usage = nativeWorkersAiUsage(undefined)
+            let httpStatus: number | null = null
+            let cache: ReturnType<typeof gatewayCacheStatus> = bypass ? "bypass" : "unknown"
+            try {
+              // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
+              const upstream = await fetch(authenticatedRequest)
+              httpStatus = upstream.status
+              cache = gatewayCacheStatus(upstream.headers, bypass)
+              const response = prepared.streaming
+                ? await streamWorkersAiResponse(upstream, prepared.functionNames, (native) => {
+                    usage = nativeWorkersAiUsage(native)
+                  })
+                : upstream
+              finishUsage({
+                ...usage,
+                httpStatus,
+                status: upstream.ok ? "success" : "error",
+                cache,
+              })
+              log.set({ upstreamStatus: response.status })
+              return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
+                ? normalizeCloudflareAiGatewayResponse(response)
+                : response
+            } catch (error) {
+              finishUsage({ ...usage, status: "error", httpStatus, cache })
+              throw error
+            }
           },
         }),
     })

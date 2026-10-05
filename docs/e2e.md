@@ -69,6 +69,33 @@ exercises the visible credential form with e2e secret handles.
 `test:e2e:all` runs every flow. `test:e2e:external` runs only deferred integrations and
 Claude Code. OpenCode and Codex prompts, tools, follow-ups, and history are core flows. External tests fail with a named missing fixture instead of skipping.
 
+## AI usage accounting
+
+For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init` before
+the tests and `nub exec tsx scripts/e2e/ai-report.mjs summarize` afterward. These commands
+use the pinned Node runtime and do not make model calls.
+
+The isolated launcher enables `E2E_AI_USAGE=1`. The API binding defaults to disabled and
+also requires the isolated development Worker name. Application records contain only an
+allowlisted model, request count, gateway cache result, status, token counts and start
+time. They exclude request content, credentials, URLs and identifiers. Accounting does
+not add inference calls, retries, or change provider options. Set `E2E_AI_USAGE=0` to
+disable application accounting for a local test run.
+
+OpenCode, Codex and the bounded native-provider probe reuse the existing buffered
+response parser for measured usage. Isolate binding JSON is observed before the SDK's
+fallback zeros. Streaming bindings do not expose HTTP cache headers or reliable usage
+presence at that boundary; these measurements remain unknown. Missing token counts or
+cache status never imply zero cost. Provider prompt-cache tokens are separate from an
+AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions cache.
+
+CI initializes and summarizes usage around the test run and uploads only sanitized
+`summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and accounting ledgers are
+not uploaded. The PR publisher receives its GitHub token in its own step, verifies the
+tested head of a same-repository PR and skips runs without a PR. It comments when measured
+uncached calls occurred, showing model, call counts, tokens and estimated cost; unknown
+measurements remain explicit.
+
 ## Coverage inventory
 
 The actual routes and HTTP groups define this inventory. Every executable test is under

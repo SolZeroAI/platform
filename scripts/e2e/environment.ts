@@ -26,6 +26,8 @@ if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
 }
 // The core suite exercises source-image OpenCode and Codex runtimes.
 process.env.E2E_CONTAINER_RUNTIME ??= "1"
+// Only the isolated test launcher opts into content-free application AI accounting.
+process.env.E2E_AI_USAGE ??= "1"
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {
   throw new Error("E2E_CONFIG_PROFILE must be e2e or an isolated e2e-* profile.")

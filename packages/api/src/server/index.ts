@@ -1,5 +1,10 @@
 import "./effect/db/postgres-promise-drizzle"
 export {
+  gatewayCacheStatus,
+  nativeWorkersAiUsage,
+  startApplicationAiUsage,
+} from "./background/ai-providers/e2e-usage"
+export {
   prepareWorkersAiResponses,
   streamWorkersAiResponse,
 } from "./background/sandbox/providers/workers-ai-responses"

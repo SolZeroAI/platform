@@ -179,6 +179,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
     })
     const api = yield* createApi({
       appName,
+      e2eAiUsage: yield* Config.boolean("E2E_AI_USAGE").pipe(Config.withDefault(false)),
       stageMetadata,
       deploymentMetadata,
       dev,

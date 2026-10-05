@@ -272,12 +272,14 @@ function chatToResponses(value: unknown, functionNames: FunctionNames): unknown 
 export async function streamWorkersAiResponse(
   response: Response,
   functionNames: FunctionNames = new Map(),
+  observeUsage?: (nativeResponse: unknown) => void,
 ): Promise<Response> {
   if (!response.ok) return response
   const envelope: unknown = await response
     .clone()
     .json()
     .catch(() => undefined)
+  observeUsage?.(envelope)
   const value = chatToResponses(
     object(envelope) && object(envelope.result) ? envelope.result : envelope,
     functionNames,
