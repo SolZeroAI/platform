@@ -8,8 +8,8 @@
   (CommonJS packages need no change); never `require` or `module.exports`.
 - Browser tests: `@e2e-dev/web`, pinning `playwright-core` exactly; do not
   add `playwright` for it. Missing browsers download on first boot; in CI run
-  `npx @e2e-dev/web install chromium --with-deps` (pnpm: `pnpm exec e2e-web
-  install chromium --with-deps`). Mobile tests: `@e2e-dev/mobile`, pinning
+  `nub run test:e2e:install` (or `nub exec e2e-web install chromium --with-deps`).
+  Mobile tests: `@e2e-dev/mobile`, pinning
   `agent-device` exactly; each pin moves with its engine release.
 
 ## Scaffold
@@ -17,12 +17,11 @@
 Fresh project:
 
 ```bash
-npx e2e init       # npm
-pnpm dlx e2e init  # pnpm
+nub exec e2e init
 ```
 
-With `e2e` installed, run the installed version: `npx e2e init` or `pnpm exec
-e2e init`; `npx e2e init my-app` scaffolds into a new directory.
+With `e2e` installed, run the installed version through Nub: `nub exec e2e init`;
+`nub exec e2e init my-app` scaffolds into a new directory.
 
 The wizard picks an engine and a model provider (None for tests without AI)
 and offers to install this skill, register the MCP server for your coding
@@ -95,7 +94,7 @@ export default {
       engine: web(),
       app: {
         url: 'http://127.0.0.1:3000',
-        command: { executable: 'pnpm', args: ['dev'], log: '.e2e/logs/app.log' },
+        command: { executable: 'nub', args: ['run', 'dev'], log: '.e2e/logs/app.log' },
       },
     },
   ],
@@ -220,8 +219,8 @@ engine: web(),
 app: {
   url: 'http://127.0.0.1:3000',
   command: {
-    executable: 'pnpm',
-    args: ['dev'],
+    executable: 'nub',
+    args: ['run', 'dev'],
     env: { PORT: '3000', DATABASE_URL: process.env.DATABASE_URL ?? '' },
     startupTimeout: 120_000,
     log: '.e2e/logs/app.log',

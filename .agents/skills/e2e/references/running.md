@@ -64,9 +64,9 @@ test-target pair, `file › title [target] #tag`, skipped pairs ending in
 npx e2e list tests/signup.e2e.ts --tag smoke --reporter json
 ```
 
-With a `package.json` script `"test:e2e": "e2e run"`, pnpm forwards `--`
-literally: `pnpm test:e2e -- --headed` reaches e2e as `run -- --headed` and
-exits 2. Write `pnpm test:e2e --headed` or `pnpm exec e2e run --headed`.
+In this repository prefer Nub wrappers: `nub run test:e2e --headed` or
+`nub exec e2e run --headed`. Project scripts live in `package.json` as
+`test:e2e` and related `test:e2e:*` entries; invoke them with `nub run`.
 
 ## The replay cache
 
@@ -173,14 +173,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@9fd676a19091d4595eefd76e4bd31c97133911f1 # v4.2.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 26 # any Node >= 22.12
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec e2e-web install chromium --with-deps
-      - run: npx e2e run --reporter list,junit
+          node-version: 24 # SolZero pins Node 24.15
+      - run: nub install --frozen-lockfile
+      - run: nub run test:e2e:install
+      - run: nub run test
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           E2E_USER_ADMIN_USERNAME: ${{ secrets.E2E_USER_ADMIN_USERNAME }}

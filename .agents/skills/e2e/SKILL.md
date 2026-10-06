@@ -5,6 +5,11 @@ description: Agentic end-to-end tests with e2e, the e2e runner. Covers scaffoldi
 
 # e2e: agentic end-to-end tests in TypeScript
 
+SolZero uses **Nub** for install and every e2e/verify command (`nub install`,
+`nub run test`, `nub run test:e2e`, `nub exec e2e ...`). Project rules live in
+`AGENTS.md`, `docs/e2e.md`, and `.cursor/skills/verify-solzero/`. Prefer those
+wrappers over raw `npx e2e` when working in this repository.
+
 e2e runs UI tests with agent goals and exact assertions. `agent.act` drives
 one goal; `agent.assert`, `agent.waitFor`, and `agent.extract` judge the
 screen. `screen`, `app`, `browser`, and `expect` make exact interactions and
@@ -27,7 +32,7 @@ export default {
       engine: web(),
       app: {
         url: 'http://127.0.0.1:3000',
-        command: { executable: 'pnpm', args: ['dev'], log: '.e2e/logs/app.log' },
+        command: { executable: 'nub', args: ['run', 'dev'], log: '.e2e/logs/app.log' },
       },
     },
   ],
@@ -98,7 +103,7 @@ package (`node_modules/e2e/docs` in a single-package project); a link such as
 
 ## Rules
 
-- Run the CLI as `npx e2e ...` (or `pnpm exec e2e ...`).
+- In this repository run tests through Nub only: `nub run test`, `nub run test:e2e -- tests/<file>.e2e.ts`, or `nub exec e2e run ...`.
 - The config is `export default { ... } satisfies E2EConfig` with
   `import type { E2EConfig } from 'e2e'`. `targets` is required; a UI target
   names an engine and declares the app beside it: `{ engine: web(), app: { url, command } }`.

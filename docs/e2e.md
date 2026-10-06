@@ -148,38 +148,16 @@ human authorization.
 
 ## Coverage inventory
 
-The actual routes and HTTP groups define this inventory. Every executable test is under
-`tests/**/*.e2e.ts`; shared fetch helpers call live endpoints with the test browser's
-cookies. Tests never intercept application requests or mock modules.
+The user-facing flow map lives under
+[`.cursor/skills/verify-solzero/features/`](../.cursor/skills/verify-solzero/features/README.md).
+That directory is the single inventory of areas, feature files, and canonical
+`tests/**/*.e2e.ts` suites. Every executable test remains under `tests/**/*.e2e.ts`;
+shared fetch helpers call live endpoints with the test browser's cookies. Tests never
+intercept application requests or mock modules.
 
-| Flow | Suite | Exact evidence / prerequisite |
-| --- | --- | --- |
-| Anonymous route gates, credential sign-in/sign-out, protected APIs | `auth.e2e.ts` | Visible form, settings reached, 401 across all protected groups |
-| Settings navigation, runtime defaults, theme persistence, MCP legacy deep link/search | `settings.e2e.ts` | Accessible heading/tab/input, saved step limit survives reload |
-| Global secret create, metadata search, delete | `settings.e2e.ts` | Exact key/tag metadata; registered secret input; cleanup |
-| API key create, list, authenticated request, revoke; exported schema/OpenAPI contract | `accounts.e2e.ts`, `api-contract.e2e.ts` | Key label visible, live request 200 before revoke and 401 after |
-| Global skill creation/default and own enable override/reset/delete | `skills.e2e.ts` | UI toggle survives reload; API enabled/default/override fields |
-| Session creation, tool changes, archive and unarchive, reload | `sessions.e2e.ts` | Exact tools and archived title; active state restored |
-| Incognito visibility, custom MCP configuration and tools/subagent editor | `advanced-sessions.e2e.ts` | Real list exclusion/direct link, exact preferences survive UI save/reload |
-| Attachment-bearing prompt cancellation | `advanced-sessions.e2e.ts`, tag `runtime` | Prompt reaches processing; stop produces failed terminal message; reload retains history |
-| Actual child-agent delegation | `advanced-sessions.e2e.ts`, tag `runtime` | Child event and output marker from a real isolate invocation |
-| Isolate prompt execution and native Markdown copy | `sessions.e2e.ts`, tag `runtime` | Exact Workers AI `hello` in returned output, assistant card, native clipboard and message-scoped final token after reload, without tools |
-| OpenCode and Codex prompt execution | `sessions.e2e.ts`, tag `harness` | OpenCode output marker; Codex exact `hello` in returned output, assistant card and persisted token after reload, without tools; Docker source images |
-| OpenCode and Codex multiple tools and follow-up | `harness-tools.e2e.ts`, tag `harness-tools` | Two distinct actual shell calls, successful correlated results, file readback in the same session, persisted token events for both turns |
-| Claude Code prompt execution | `sessions.e2e.ts`, tags `external`, `harness` | Compatible Anthropic fixture and real output/history; deferred |
-| Authentication transfer redemption and deep-link navigation | `session-transfer.e2e.ts` | Real one-time token/cookie redemption, exact redirect, repeat redemption rejected |
-| Foreign-account session access and mutation denial | `sessions.e2e.ts` | Real separate cookies; read/tools/delete/websocket-token all return 404 |
-| GitHub repository discovery | `external-integrations.e2e.ts`, tag `github` | Configured linked identity finds exact isolated repository |
-| MCP tool execution | `external-integrations.e2e.ts`, tag `mcpcf` | Available server, live invocation, expected fixture output |
-| AI Search retrieval | `external-integrations.e2e.ts`, tag `ai-search` | Live source retrieval yields indexed marker |
-| Personal BYOK provider save and model call | `provider.external.e2e.ts`, tag `byok` | Encrypted credential metadata, visible provider, actual isolate output; settings restored |
-| OIDC member sign-in/admin denial | `identity.external.e2e.ts`, tag `oidc` | Real IdP sign-in, member session, 403 admin API and visible Access Denied |
-| Slack-origin session creation | `external-integrations.e2e.ts`, tag `slack` | Linked test user produces session visible in the UI; no external message sent |
-| Workflow save, name edit, export, disable/enable, archive | `workflows.e2e.ts` | Saved name survives reload, YAML contains name, live status transitions |
-| Workflow JS execution, R2 artifact and run deletion | `workflows.e2e.ts`, tag `workflow-runtime` | Completed run, exact artifact marker and events; real dynamic Workflow binding |
-| Invalid manifest rejection | `workflows.e2e.ts` | Live Worker returns 400 before persistence |
-| Bot creation, detail, temporary routine creation/deletion | `bots.e2e.ts` | Exact bot heading and routine; no scheduled action is allowed to fire |
-| Admin skill/workflow/integration/AI Search pages and summaries | `admin.e2e.ts` | Live authenticated configuration and page headings |
+Read the feature files for suite paths and how to run a focused file. Keep fixture
+preflight, replay, cleanup, and CI guidance in this document; do not duplicate the flow
+table here.
 
 ### External fixture preflight
 
@@ -187,8 +165,9 @@ The external suites require an isolated deployment with integrations enabled in 
 configuration and identities linked to the disposable test account. Set:
 
 - `E2E_CONTAINER_RUNTIME=1` is the default for the core source-image harness flows. Docker
-  must be running, with an application model compatible with the selected harness (`E2E_APP_MODEL`). The container pins pnpm only because the
-  third-party AI SDK bootstrap recipes require its bundled lockfiles; repo commands remain Nub.
+  must be running, with an application model compatible with the selected harness (`E2E_APP_MODEL`). The container
+  includes the third-party bootstrap package manager required by AI SDK harness lockfiles;
+  repository commands remain Nub (`nub install`, `nub run`, `nub exec`).
   With this flag, the isolated development stack bundles the committed runtime entrypoints
   into ignored `.e2e/containers` contexts and builds their current Dockerfile through Alchemy.
   Initial image builds have a ten-minute startup allowance. Other deployments continue to
@@ -228,8 +207,9 @@ starts. Enable the commented integration blocks in this profile:
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
 
-The source-image harness checks reproduced and fixed missing pnpm, unwritable OpenCode
-cache directories, missing custom-model registration, and local outbound certificate trust.
+The source-image harness checks reproduced and fixed a missing container bootstrap package
+manager for AI SDK lockfiles, unwritable OpenCode cache directories, missing custom-model
+registration, and local outbound certificate trust.
 The launcher exports trusted macOS system roots to an ignored mode-0600 PEM before Alchemy
 starts and adds those roots to the runner's default trust set. It never disables certificate
 verification or replaces an explicitly supplied CA bundle.
