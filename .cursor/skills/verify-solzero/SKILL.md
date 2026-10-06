@@ -5,7 +5,9 @@ description: Verify SolZero user flows with tester-army/e2e against the isolated
 
 # Verify SolZero
 
-Read `.agents/skills/e2e/SKILL.md` and `docs/e2e.md` before running or extending verification. Automated tests use tester-army/e2e exclusively and live under `tests/**/*.e2e.ts`. The runner starts the real Alchemy development stack with isolated `s0-e2e` configuration, D1, Durable Objects, KV, R2, and disposable account credentials.
+Read `.agents/skills/e2e/SKILL.md`, `docs/e2e.md`, and [`features/README.md`](features/README.md) before running or extending verification. The `features/` directory is the coverage map: one file per user-facing area, each linking to its canonical `tests/**/*.e2e.ts` suite(s). Automated tests use tester-army/e2e exclusively. The runner starts the real Alchemy development stack with isolated `s0-e2e` configuration, D1, Durable Objects, KV, R2, and disposable account credentials.
+
+Use Nub for every install and verify command (`nub install`, `nub run test`, `nub run test:e2e`, `nub exec e2e ...`). This skill is a thin runbook over tester-army/e2e; do not restore a custom Chrome driver.
 
 ## Run
 
@@ -22,7 +24,7 @@ nub run test:e2e:list
 
 The environment loader reads the selected private file, then `config/.env` and `config/.dev.vars`; existing environment values win. Supply the documented Cloudflare account, application, and Clef gateway credentials. Never print their values. The launcher creates its owned run’s `.dev.vars` with mode 0600 and generates the isolated administrator password in an ignored file. Use the suite's registered secret handles for browser credential input.
 
-`nub run test` runs core flows, including real source-image OpenCode and Codex prompts, tools, follow-ups and persisted history. `nub run test:e2e:all` adds the deferred external integrations and Claude Code; `nub run test:e2e:external` selects only those deferred cases. Read the fixture inventory in `docs/e2e.md` first. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
+`nub run test` runs core flows, including real source-image OpenCode and Codex prompts, tools, follow-ups and persisted history. `nub run test:e2e:all` adds the deferred external integrations and Claude Code; `nub run test:e2e:external` selects only those deferred cases. Focus one area with `nub run test:e2e -- tests/<file>.e2e.ts` after reading its feature file under `features/`. Read External fixture preflight in `docs/e2e.md` before deferred suites. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
 
 ## Prove behavior
 
