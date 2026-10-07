@@ -152,7 +152,8 @@ Those jobs need Cloudflare tokens.
 
 `.github/workflows/release.yml` runs Tegami version and release after Validate on master push.
 The release job writes GitHub Release notes.
-The artifact job packs `alchemy.new.tar.gz` and uploads it to that GitHub Release when the release exists.
+The artifact job packs `alchemy.new.tar.gz` only for the release that run published, and only after the checkout SHA matches that tag.
+It does not upload the current master tree to an older release.
 Neither job is a Cloudflare deploy.
 
 `docs/releasing.md` and `CONTRIBUTING.md` state the same invert-guard policy.
