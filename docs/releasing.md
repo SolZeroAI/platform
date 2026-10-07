@@ -73,9 +73,47 @@ combined version and release-note preview. A change with no observable effect ca
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
    creates its GitHub Release.
+5. When this run publishes that GitHub Release, the same workflow checks out the new tag and uploads
+   `alchemy.new.tar.gz` for that commit. It does not attach the archive to an older release. See
+   [Ready deploy artifact](#ready-deploy-artifact).
 
 Do not edit generated version files in a feature pull request. Review them in the version pull request
 before merge.
+
+## Ready deploy artifact
+
+alchemy.new deploys SolZero from the GitHub Release asset named by `deployment.artifact` in
+`alchemy.new.jsonc`. That asset is `alchemy.new.tar.gz`. The runner downloads the asset and runs
+`node node_modules/alchemy/bin/cli.js deploy`. It does not clone the tag, and it does not install
+dependencies or build container images.
+
+The Release workflow publishes the digest-pinned agent container images first. Tegami then creates
+the GitHub Release. The pack job runs only when that same run published the release. It checks out
+the release tag on linux/amd64 and continues only when the checkout, the recorded publish commit, and
+the live tag commit are the same SHA. A tree whose `VERSION` names an older release, such as current
+master naming `v1.8.0`, is not packed. When the asset is already on that tag, the job leaves it in
+place. Otherwise it runs:
+
+```sh
+nub install --frozen-lockfile
+tar -czf alchemy.new.tar.gz --exclude=.git --exclude=alchemy.new.tar.gz .
+```
+
+`scripts/pack-alchemy-new-artifact.sh` creates that archive. The archive root is the package root.
+It includes `node_modules` and the project-local Nub store. `.npmrc` sets
+`enableGlobalVirtualStore=false`, so package links stay inside the project and the tree runs without
+another install. The script rejects symlinks that resolve outside the project, and it checks that
+`node_modules/alchemy/bin/cli.js` and `packages/infra/alchemy.run.ts` resolve inside the archive.
+It excludes `.git`.
+
+Alchemy builds the Workers and the Vite site during deploy. The pack job does not run `nub run
+build`. Deploy and Deploy Preview on SolZeroAI/platform stay disabled.
+
+A release without `alchemy.new.tar.gz` cannot be deployed on alchemy.new. Re-run the failed jobs on
+the same Release workflow run to retry a missing upload. A later run does not upload to a release it
+did not publish. Tegami skips an existing tag and GitHub Release. The pack job leaves an existing
+asset for that tag in place. A workflow triggered by `release: published` does not start, because
+Tegami creates the release with the workflow token.
 
 ## Repository settings
 
@@ -83,13 +121,16 @@ Enable **Allow GitHub Actions to create and approve pull requests** in the repos
 settings. Keep workflow permissions restricted to the values in each workflow. The version workflow
 needs `contents: write` and `pull-requests: write`.
 
-Create the `release:none` label for pull requests that have no user-visible release note. Enable
-immutable releases after the repository supports that GitHub setting.
+Create the `release:none` label for pull requests that have no user-visible release note. Immutable
+releases reject asset changes after publication. Leave that setting off while this workflow attaches
+`alchemy.new.tar.gz` after Tegami publishes the release.
 
 ## Failure recovery
 
 Re-run the failed `Release` workflow after a network or GitHub API failure. Tegami checks existing
-tags and releases, so the retry continues the same version without duplicating work.
+tags and releases, so the retry continues the same version without duplicating work. Re-run the
+failed jobs on the publishing run to retry a missing `alchemy.new.tar.gz` upload. A new run does not
+attach that archive to a release it did not publish.
 
 If a released change has a defect, fix it in a new pull request and add a new release entry. Keep an
 existing release tag at its original commit. Never delete or move a published release tag.

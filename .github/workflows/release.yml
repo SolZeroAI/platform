@@ -40,6 +40,10 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    outputs:
+      published: ${{ steps.published.outputs.published }}
+      tag: ${{ steps.published.outputs.tag }}
+      sha: ${{ steps.published.outputs.sha }}
     steps:
       - name: Check out validated commit
         uses: actions/checkout@v7
@@ -62,3 +66,153 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           S0_CREATIVE_RELEASE_ASSETS: "true"
+
+      - name: Record whether this run published the release
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head_sha="$(git rev-parse HEAD)"
+          version="$(git show HEAD:VERSION | tr -d '[:space:]')"
+          echo "sha=${head_sha}" >> "$GITHUB_OUTPUT"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            {
+              echo "tag="
+              echo "published=false"
+            } >> "$GITHUB_OUTPUT"
+            echo "VERSION at HEAD is not an x.y.z release. No deploy artifact will be uploaded."
+            exit 0
+          fi
+          tag="v${version}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          run_created="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq .created_at)"
+          tag_sha=""
+          published_at=""
+          if ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq .object.type 2>/dev/null)"; then
+            object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq .object.sha)"
+            if [[ "$ref_type" == "tag" ]]; then
+              tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
+            else
+              tag_sha="$object_sha"
+            fi
+            published_at="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)"
+          fi
+          decision="$(bash scripts/release-artifact-gate.sh published "$head_sha" "$tag_sha" "$published_at" "$run_created")"
+          echo "published=${decision}" >> "$GITHUB_OUTPUT"
+          if [[ "$decision" == "true" ]]; then
+            echo "This run published ${tag} at ${head_sha}."
+          else
+            echo "This run did not publish ${tag} at ${head_sha}. No deploy artifact will be uploaded."
+          fi
+
+  # Packs the ready deploy archive only for the release this run just published.
+  # Checking out master and uploading to v$(VERSION) would attach a later commit
+  # to an older release such as v1.8.0. A release: published workflow does not
+  # run: Tegami creates that release with GITHUB_TOKEN.
+  # Alchemy builds Workers and the Vite site during deploy, so this job does
+  # not run a separate production build.
+  deploy-artifact:
+    name: Pack alchemy.new deploy artifact
+    needs:
+      - images
+      - release
+    if: >-
+      needs.release.outputs.published == 'true' &&
+      needs.images.result == 'success' &&
+      needs.release.result == 'success' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.release.outputs.tag }}
+          fetch-depth: 1
+
+      - name: Require this run's release tag commit
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Refusing to pack release ${RELEASE_TAG}."
+            exit 1
+          fi
+          head_sha="$(git rev-parse HEAD)"
+          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.type)"
+          object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.sha)"
+          if [[ "$ref_type" == "tag" ]]; then
+            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
+          else
+            tag_sha="$object_sha"
+          fi
+          bash scripts/release-artifact-gate.sh assert-tag "$head_sha" "$EXPECTED_SHA" "$tag_sha"
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq 'alchemy.new.tar.gz'; then
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "alchemy.new.tar.gz is already attached to ${RELEASE_TAG} at ${EXPECTED_SHA}."
+            exit 0
+          fi
+          {
+            echo "upload=true"
+            echo "tag=${RELEASE_TAG}"
+            echo "sha=${EXPECTED_SHA}"
+          } >> "$GITHUB_OUTPUT"
+          echo "GitHub Release ${RELEASE_TAG} at ${EXPECTED_SHA} has no alchemy.new.tar.gz asset."
+
+      - name: Set up Nub
+        if: steps.artifact.outputs.upload == 'true'
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        if: steps.artifact.outputs.upload == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        if: steps.artifact.outputs.upload == 'true'
+        run: nub install --frozen-lockfile
+
+      - name: Pack alchemy.new.tar.gz
+        if: steps.artifact.outputs.upload == 'true'
+        run: bash scripts/pack-alchemy-new-artifact.sh
+
+      - name: Upload alchemy.new.tar.gz
+        if: steps.artifact.outputs.upload == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Refusing to upload release ${RELEASE_TAG}."
+            exit 1
+          fi
+          head_sha="$(git rev-parse HEAD)"
+          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.type)"
+          object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.sha)"
+          if [[ "$ref_type" == "tag" ]]; then
+            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
+          else
+            tag_sha="$object_sha"
+          fi
+          bash scripts/release-artifact-gate.sh assert-tag "$head_sha" "$EXPECTED_SHA" "$tag_sha"
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq 'alchemy.new.tar.gz'; then
+            echo "alchemy.new.tar.gz is already attached to ${RELEASE_TAG} at ${EXPECTED_SHA}."
+            exit 0
+          fi
+          gh release upload "$RELEASE_TAG" alchemy.new.tar.gz --repo "$GITHUB_REPOSITORY"
