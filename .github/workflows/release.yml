@@ -62,3 +62,81 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           S0_CREATIVE_RELEASE_ASSETS: "true"
+
+  # Packs the ready deploy archive after Tegami publishes a GitHub Release.
+  # A workflow on release: published does not run: Tegami creates that release
+  # with GITHUB_TOKEN, and GitHub does not start workflows from that token.
+  # Alchemy builds Workers and the Vite site during deploy, so this job does
+  # not run a separate production build.
+  deploy-artifact:
+    name: Pack alchemy.new deploy artifact
+    needs:
+      - images
+      - release
+    if: >-
+      needs.images.result == 'success' &&
+      needs.release.result == 'success' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Decide whether to pack the deploy artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          tag="v${version}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName >/dev/null 2>&1; then
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "No GitHub Release ${tag}. This run did not publish a release."
+            exit 0
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq 'alchemy.new.tar.gz'; then
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "alchemy.new.tar.gz is already attached to ${tag}."
+            exit 0
+          fi
+          echo "upload=true" >> "$GITHUB_OUTPUT"
+          echo "GitHub Release ${tag} has no alchemy.new.tar.gz asset."
+
+      - name: Set up Nub
+        if: steps.artifact.outputs.upload == 'true'
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        if: steps.artifact.outputs.upload == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        if: steps.artifact.outputs.upload == 'true'
+        run: nub install --frozen-lockfile
+
+      - name: Pack alchemy.new.tar.gz
+        if: steps.artifact.outputs.upload == 'true'
+        run: bash scripts/pack-alchemy-new-artifact.sh
+
+      - name: Upload alchemy.new.tar.gz
+        if: steps.artifact.outputs.upload == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.artifact.outputs.tag }}
+        run: gh release upload "$RELEASE_TAG" alchemy.new.tar.gz --repo "$GITHUB_REPOSITORY"

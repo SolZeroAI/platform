@@ -151,8 +151,9 @@ The public repo disables preview with `gh workflow disable preview.yml`.
 Those jobs need Cloudflare tokens.
 
 `.github/workflows/release.yml` runs Tegami version and release after Validate on master push.
-That job writes GitHub Release notes.
-That job is not a Cloudflare deploy.
+The release job writes GitHub Release notes.
+The artifact job packs `alchemy.new.tar.gz` and uploads it to that GitHub Release when the release exists.
+Neither job is a Cloudflare deploy.
 
 `docs/releasing.md` and `CONTRIBUTING.md` state the same invert-guard policy.
 

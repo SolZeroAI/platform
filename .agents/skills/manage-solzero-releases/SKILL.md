@@ -60,6 +60,7 @@ request.
 - Review the generated version pull request before merge. Verify `VERSION`, `CHANGELOG.md`, and the
   release notes.
 - Re-run a failed release workflow after a transient failure. Tegami skips an existing tag and GitHub
-  Release.
+  Release. The same rerun uploads `alchemy.new.tar.gz` when that release asset is missing and leaves
+  an existing asset in place. alchemy.new deploys from that asset and does not install dependencies.
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.
