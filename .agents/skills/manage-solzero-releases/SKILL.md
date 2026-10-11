@@ -62,7 +62,8 @@ request.
 - Re-run a failed release workflow after a transient failure. Tegami skips an existing tag and GitHub
   Release. Retry a missing alchemy.new registry publish by re-running the failed jobs on the run that
   published the release. A later run does not publish a package for a release it did not create.
-  alchemy.new deploys that registry archive and does not install dependencies. The registry job uses
-  GitHub Environment `alchemy-new` in `.github/workflows/release.yml`.
+  alchemy.new deploys that registry archive and does not install dependencies. The manifest is
+  uploaded separately and is not a member of the archive. The registry job uses GitHub Environment
+  `alchemy-new` in `.github/workflows/release.yml`.
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.

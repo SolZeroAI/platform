@@ -82,11 +82,14 @@ before merge.
 
 ## Registry package
 
-alchemy.new deploys SolZero from the registry package named in `alchemy.new.jsonc`. `source.kind` is
+alchemy.new deploys SolZero from the registry package named in `alchemy.new.jsonc`. The manifest
+uses schema version 1 and `$schema` `https://alchemy.new/schema/project.json`. `source.kind` is
 `registry`, `source.org` is `solzero`, and `source.project` is `platform`. The manifest does not set
 `source.version`. The published version is the release tag without the leading `v`. The runner
-downloads that archive and runs `node node_modules/alchemy/bin/cli.js deploy`. It does not clone the
-tag, and it does not install dependencies or build container images.
+downloads the archive, writes the stored manifest to the package root, and runs
+`node node_modules/alchemy/bin/cli.js deploy`. It does not clone the tag, and it does not install
+dependencies or build container images. The manifest is a separate upload. A root `alchemy.new.jsonc`
+inside the archive is rejected.
 
 The Release workflow (`.github/workflows/release.yml`) publishes the digest-pinned agent container
 images first. Tegami then creates the GitHub Release. The registry job runs only when that same run
@@ -104,30 +107,36 @@ nub prune --prod
 `scripts/prepare-alchemy-new-package.sh` runs those commands. Vite and the Tailwind plugin are
 production dependencies because deploy runs `vite build` from `apps/web`. Alchemy is a production
 dependency so `node_modules/alchemy/bin/cli.js` remains after the prune. The script then replaces
-the `node_modules/alchemy` directory link with relative links into `node_modules/.store`. Nub keeps
-the store in the project (`enableGlobalVirtualStore=false`). The publish action does not walk a
-directory link, and it requires `node_modules/alchemy/bin/cli.js` as an archive member. The file
-bytes stay in the store.
+the `node_modules/alchemy` directory link with relative links into `node_modules/.store`. It then
+rewrites any remaining absolute symlink that points inside the package. The publish action rejects
+an absolute symlink target. Nub keeps the store in the project (`enableGlobalVirtualStore=false`).
+The publish action does not walk a directory link, and it requires
+`node_modules/alchemy/bin/cli.js` as an archive member. The file bytes stay in the store.
 
 `SolZeroAI/alchemy-new-publish-action@v1` packs the tree and publishes it with GitHub OIDC. The
-registry job uses GitHub Environment `alchemy-new`. Its permissions are `contents: read` and
-`id-token: write`. It does not use a registry token. `package` is `solzero/platform`. The version is
-the release tag. `on-immutable` is `skip-if-digest-matches`, so a retry of the same bytes succeeds
-and a different archive for that version fails. Include and exclude patterns live in
-`scripts/alchemy-new-pack.include` and `scripts/alchemy-new-pack.exclude`. The action's default
-excludes still drop tests, VCS metadata, and secret files. The archive root is the package root. It
-contains `alchemy.new.jsonc`, `packages/infra/alchemy.run.ts`, the built web output, and production
-`node_modules`.
+workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately and leaves
+it out of the tar. The job summary includes the `manifest-sha256` output. The registry job uses
+GitHub Environment `alchemy-new`. Its permissions are `contents: read` and `id-token: write`. It
+does not use a registry token. `package` is `solzero/platform`. The version is the release tag.
+`on-immutable` is `skip-if-digest-matches`, so a retry of the same archive and the same manifest
+succeeds. A different archive or manifest for that version fails. Include and exclude patterns live
+in `scripts/alchemy-new-pack.include` and `scripts/alchemy-new-pack.exclude`. The exclude list names
+`alchemy.new.jsonc`. The action's default excludes still drop tests, VCS metadata, and secret files.
+The archive root is the package root. It contains `packages/infra/alchemy.run.ts`, the built web
+output, `apps/web/public`, and production `node_modules`.
 
 Pull requests from this repository run the same prepare steps with `dry-run: true`. That job has
 `contents: read` only. It does not use the `alchemy-new` environment and it does not publish.
-`@v1` is not tagged yet. The workflow names that ref anyway. Pin the action by commit SHA after the
-v1 tag exists.
+`@v1` floats and is not tagged yet. The dry-run check fails until the tag exists. After Tegami
+releases the action, pin `alchemy-new-publish-action@1.x.y` or that tag's commit SHA.
 
-Archives over 80 MiB warn. Archives over 256 MiB fail. The linux/amd64 workerd binary and
-the GIF assets in `apps/web/public/images` do not compress. Together with the Alchemy provider
-JavaScript and the Vite native bindings, the package is larger than the 80 MiB guide and under the
-256 MiB cap. Deploy and Deploy Preview on SolZeroAI/platform stay disabled.
+Archives over 80 MiB warn. Archives over 256 MiB fail. Deploy runs `vite build` from `apps/web`,
+and Vite copies `public/` into the client output, so `apps/web/public/images` stays in the archive.
+The GIF files in that directory are static public assets. Application source does not import them.
+The same bytes also land in `apps/web/dist/client/images` during the release build. That copy is
+excluded. The linux/amd64 workerd binary, sharp, and the Vite native bindings stay. Together with
+the Alchemy provider JavaScript and the public GIF assets, the package is larger than the 80 MiB
+guide and under the 256 MiB cap. Deploy and Deploy Preview on SolZeroAI/platform stay disabled.
 
 A release that did not publish the registry package cannot be deployed on alchemy.new. Re-run the
 failed jobs on the same Release workflow run to retry. A later run does not publish a version for a
@@ -164,8 +173,9 @@ allowlist value. It does not hold secrets.
 Re-run the failed `Release` workflow after a network or GitHub API failure. Tegami checks existing
 tags and releases, so the retry continues the same version without duplicating work. Re-run the
 failed jobs on the publishing run to retry a missing registry publish. A new run does not publish a
-package for a release it did not create. When the registry already has the same bytes,
-`skip-if-digest-matches` skips the upload. Different bytes for that version fail.
+package for a release it did not create. When the registry already has the same archive digest and
+the same manifest digest, `skip-if-digest-matches` skips the upload. Different bytes for that
+version fail.
 
 If a released change has a defect, fix it in a new pull request and add a new release entry. Keep an
 existing release tag at its original commit. Never delete or move a published release tag.

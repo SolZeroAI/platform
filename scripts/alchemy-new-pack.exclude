@@ -1,3 +1,8 @@
+# The registry rejects a root alchemy.new.jsonc with invalid_archive.
+# The action uploads that file with the manifest request.
+# A pattern with no slash matches that name in every directory.
+alchemy.new.jsonc
+
 # Source and docs the deploy sandbox does not execute.
 **/*.md
 **/*.map

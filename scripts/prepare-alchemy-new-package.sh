@@ -13,3 +13,4 @@ nub run build
 # It does not take --os. The install on this runner already selected linux/amd64.
 nub prune --prod
 node scripts/materialize-alchemy-package-link.mjs
+node scripts/relativize-in-package-symlinks.mjs

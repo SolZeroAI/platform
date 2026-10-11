@@ -186,16 +186,26 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # TODO pin by SHA once v1 is tagged
+      # TODO: pin to the immutable tag alchemy-new-publish-action@1.x.y (released via Tegami) or its SHA once it is released. v1 floats.
       - name: Publish to alchemy.new
+        id: publish
         uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
           package: solzero/platform
           version: ${{ needs.release.outputs.tag }}
           path: .
+          manifest: alchemy.new.jsonc
           include: ${{ steps.patterns.outputs.include }}
           exclude: ${{ steps.patterns.outputs.exclude }}
           on-immutable: skip-if-digest-matches
+
+      - name: Record manifest digest
+        run: |
+          {
+            echo "### Manifest digest"
+            echo ""
+            echo "\`manifest-sha256\`: \`${{ steps.publish.outputs.manifest-sha256 }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   registry-dry-run:
     name: Dry-run alchemy.new registry package
@@ -238,13 +248,23 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # TODO pin by SHA once v1 is tagged
+      # TODO: pin to the immutable tag alchemy-new-publish-action@1.x.y (released via Tegami) or its SHA once it is released. v1 floats.
       - name: Dry-run publish to alchemy.new
+        id: publish
         uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
           package: solzero/platform
           version: 0.0.0-dry-run
           path: .
+          manifest: alchemy.new.jsonc
           include: ${{ steps.patterns.outputs.include }}
           exclude: ${{ steps.patterns.outputs.exclude }}
           dry-run: true
+
+      - name: Record manifest digest
+        run: |
+          {
+            echo "### Manifest digest"
+            echo ""
+            echo "\`manifest-sha256\`: \`${{ steps.publish.outputs.manifest-sha256 }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -154,7 +154,9 @@ Those jobs need Cloudflare tokens.
 The release job writes GitHub Release notes.
 The registry job publishes package `solzero/platform` only for the release that run published, and only after the checkout SHA matches that tag.
 It does not publish the current master tree as an older version.
+The manifest is schema version 1. The action uploads `alchemy.new.jsonc` separately. The archive does not contain that file.
 Pull requests run that pack with `dry-run: true`.
+The action ref is `@v1`. That ref floats. Pin `alchemy-new-publish-action@1.x.y` or its SHA after Tegami releases it.
 Neither job is a Cloudflare deploy.
 The registry job uses GitHub Environment `alchemy-new` and OIDC.
 It does not add a preview or prod deploy.
