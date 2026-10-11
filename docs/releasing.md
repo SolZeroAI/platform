@@ -73,47 +73,80 @@ combined version and release-note preview. A change with no observable effect ca
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
    creates its GitHub Release.
-5. When this run publishes that GitHub Release, the same workflow checks out the new tag and uploads
-   `alchemy.new.tar.gz` for that commit. It does not attach the archive to an older release. See
-   [Ready deploy artifact](#ready-deploy-artifact).
+5. When this run publishes that GitHub Release, the same workflow checks out the new tag and
+   publishes the alchemy.new registry package for that commit. It does not publish a later commit
+   under an older version. See [Registry package](#registry-package).
 
 Do not edit generated version files in a feature pull request. Review them in the version pull request
 before merge.
 
-## Ready deploy artifact
+## Registry package
 
-alchemy.new deploys SolZero from the GitHub Release asset named by `deployment.artifact` in
-`alchemy.new.jsonc`. That asset is `alchemy.new.tar.gz`. The runner downloads the asset and runs
-`node node_modules/alchemy/bin/cli.js deploy`. It does not clone the tag, and it does not install
-dependencies or build container images.
+alchemy.new deploys SolZero from the registry package named in `alchemy.new.jsonc`. `source.kind` is
+`registry`, `source.org` is `solzero`, and `source.project` is `platform`. The manifest does not set
+`source.version`. The published version is the release tag without the leading `v`. The runner
+downloads that archive and runs `node node_modules/alchemy/bin/cli.js deploy`. It does not clone the
+tag, and it does not install dependencies or build container images.
 
-The Release workflow publishes the digest-pinned agent container images first. Tegami then creates
-the GitHub Release. The pack job runs only when that same run published the release. It checks out
-the release tag on linux/amd64 and continues only when the checkout, the recorded publish commit, and
-the live tag commit are the same SHA. A tree whose `VERSION` names an older release, such as current
-master naming `v1.8.0`, is not packed. When the asset is already on that tag, the job leaves it in
-place. Otherwise it runs:
+The Release workflow (`.github/workflows/release.yml`) publishes the digest-pinned agent container
+images first. Tegami then creates the GitHub Release. The registry job runs only when that same run
+published the release. It checks out the release tag on linux/amd64 and continues only when the
+checkout, the recorded publish commit, and the live tag commit are the same SHA. A tree whose
+`VERSION` names an older release, such as current master naming `v1.8.0`, is not published. The job
+then runs:
 
 ```sh
 nub install --frozen-lockfile
-tar -czf alchemy.new.tar.gz --exclude=.git --exclude=alchemy.new.tar.gz .
+nub run build
+nub prune --prod
 ```
 
-`scripts/pack-alchemy-new-artifact.sh` creates that archive. The archive root is the package root.
-It includes `node_modules` and the project-local Nub store. `.npmrc` sets
-`enableGlobalVirtualStore=false`, so package links stay inside the project and the tree runs without
-another install. The script rejects symlinks that resolve outside the project, and it checks that
-`node_modules/alchemy/bin/cli.js` and `packages/infra/alchemy.run.ts` resolve inside the archive.
-It excludes `.git`.
+`scripts/prepare-alchemy-new-package.sh` runs those commands. Vite and the Tailwind plugin are
+production dependencies because deploy runs `vite build` from `apps/web`. Alchemy is a production
+dependency so `node_modules/alchemy/bin/cli.js` remains after the prune. The script then replaces
+the `node_modules/alchemy` directory link with relative links into `node_modules/.store`. Nub keeps
+the store in the project (`enableGlobalVirtualStore=false`). The publish action does not walk a
+directory link, and it requires `node_modules/alchemy/bin/cli.js` as an archive member. The file
+bytes stay in the store.
 
-Alchemy builds the Workers and the Vite site during deploy. The pack job does not run `nub run
-build`. Deploy and Deploy Preview on SolZeroAI/platform stay disabled.
+`SolZeroAI/alchemy-new-publish-action@v1` packs the tree and publishes it with GitHub OIDC. The
+registry job uses GitHub Environment `alchemy-new`. Its permissions are `contents: read` and
+`id-token: write`. It does not use a registry token. `package` is `solzero/platform`. The version is
+the release tag. `on-immutable` is `skip-if-digest-matches`, so a retry of the same bytes succeeds
+and a different archive for that version fails. Include and exclude patterns live in
+`scripts/alchemy-new-pack.include` and `scripts/alchemy-new-pack.exclude`. The action's default
+excludes still drop tests, VCS metadata, and secret files. The archive root is the package root. It
+contains `alchemy.new.jsonc`, `packages/infra/alchemy.run.ts`, the built web output, and production
+`node_modules`.
 
-A release without `alchemy.new.tar.gz` cannot be deployed on alchemy.new. Re-run the failed jobs on
-the same Release workflow run to retry a missing upload. A later run does not upload to a release it
-did not publish. Tegami skips an existing tag and GitHub Release. The pack job leaves an existing
-asset for that tag in place. A workflow triggered by `release: published` does not start, because
-Tegami creates the release with the workflow token.
+Pull requests from this repository run the same prepare steps with `dry-run: true`. That job has
+`contents: read` only. It does not use the `alchemy-new` environment and it does not publish.
+`@v1` is not tagged yet. The workflow names that ref anyway. Pin the action by commit SHA after the
+v1 tag exists.
+
+Archives over 80 MiB warn. Archives over 256 MiB fail. The linux/amd64 workerd binary and
+the GIF assets in `apps/web/public/images` do not compress. Together with the Alchemy provider
+JavaScript and the Vite native bindings, the package is larger than the 80 MiB guide and under the
+256 MiB cap. Deploy and Deploy Preview on SolZeroAI/platform stay disabled.
+
+A release that did not publish the registry package cannot be deployed on alchemy.new. Re-run the
+failed jobs on the same Release workflow run to retry. A later run does not publish a version for a
+release it did not create. Tegami skips an existing tag and GitHub Release. A workflow triggered by
+`release: published` does not start, because Tegami creates the release with the workflow token.
+
+After the registry production deploy, allow this publisher at alchemy.new `/packages`:
+
+| Field | Value |
+| --- | --- |
+| Organization | `solzero` |
+| Package | `platform` |
+| Repository | `SolZeroAI/platform` |
+| Workflow | `.github/workflows/release.yml` |
+| GitHub Environment | `alchemy-new` |
+
+Create the `alchemy-new` environment in this repository before the first registry publish. Do not
+store a registry token in it. The job requests an OIDC token for
+`https://alchemy.new/registry/publish`.
 
 ## Repository settings
 
@@ -121,16 +154,18 @@ Enable **Allow GitHub Actions to create and approve pull requests** in the repos
 settings. Keep workflow permissions restricted to the values in each workflow. The version workflow
 needs `contents: write` and `pull-requests: write`.
 
-Create the `release:none` label for pull requests that have no user-visible release note. Immutable
-releases reject asset changes after publication. Leave that setting off while this workflow attaches
-`alchemy.new.tar.gz` after Tegami publishes the release.
+Create the `release:none` label for pull requests that have no user-visible release note. The
+registry package is not a GitHub Release asset. GitHub's immutable-release setting can stay enabled.
+Create the `alchemy-new` environment for the registry job. That environment is the trusted-publisher
+allowlist value. It does not hold secrets.
 
 ## Failure recovery
 
 Re-run the failed `Release` workflow after a network or GitHub API failure. Tegami checks existing
 tags and releases, so the retry continues the same version without duplicating work. Re-run the
-failed jobs on the publishing run to retry a missing `alchemy.new.tar.gz` upload. A new run does not
-attach that archive to a release it did not publish.
+failed jobs on the publishing run to retry a missing registry publish. A new run does not publish a
+package for a release it did not create. When the registry already has the same bytes,
+`skip-if-digest-matches` skips the upload. Different bytes for that version fail.
 
 If a released change has a defect, fix it in a new pull request and add a new release entry. Keep an
 existing release tag at its original commit. Never delete or move a published release tag.

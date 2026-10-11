@@ -1,0 +1,36 @@
+# Source and docs the deploy sandbox does not execute.
+**/*.md
+**/*.map
+apps/web/src/creative
+apps/web/scripts
+packages/s0-lint
+**/Dockerfile
+**/.dockerignore
+
+# Declarations and TypeScript sources shipped next to compiled JavaScript.
+# The Node CLI and Vite load the JavaScript. Keep small packages whose
+# published entry is src/*.js; those trees are not these paths.
+node_modules/**/*.d.ts
+node_modules/**/alchemy/src
+node_modules/**/@distilled.cloud/*/src
+node_modules/**/@alchemy.run/*/src
+node_modules/**/effect/src
+
+# Optional peers and dev stores. Nub leaves them in node_modules/.store when
+# another package links them. Deploy does not execute these.
+node_modules/.store/drizzle-kit@*
+node_modules/.store/typescript@*
+node_modules/.store/@typescript+*
+node_modules/.store/@electric-sql+*
+node_modules/.store/sql.js@*
+node_modules/.store/prettier@*
+node_modules/.store/@img+sharp-wasm32@*
+node_modules/.store/@libsql+linux-x64-musl@*
+node_modules/.store/@cloudflare+workers-types@*
+node_modules/.store/@prisma+dev@*
+node_modules/.store/@prisma+query-plan-executor@*
+node_modules/.store/esbuild@0.25.12*
+node_modules/.store/@esbuild+linux-x64@0.25.12*
+node_modules/.store/date-fns-jalali@*
+# Vite copies public images into dist. The source images stay in public.
+apps/web/dist/client/images

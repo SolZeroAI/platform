@@ -34,9 +34,11 @@
     "@solzero/api": "workspace:*",
     "@solzero/shared": "workspace:*",
     "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-start": "^1.168.49",
     "@tanstack/react-table": "^8.21.3",
+    "@vitejs/plugin-react": "^6.1.1",
     "@xyflow/react": "12.11.6",
     "better-auth": "1.6.33",
     "border-beam": "1.3.0",
@@ -49,21 +51,19 @@
     "react-markdown": "^10.1.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "shiki": "3.23.0"
+    "shiki": "3.23.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.2"
   },
   "devDependencies": {
     "@effect/platform-node": "4.0.0-beta.107",
-    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.20.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@types/semver": "7.8.0",
-    "@vitejs/plugin-react": "^6.1.1",
     "semver": "7.8.5",
-    "tailwindcss": "^4.3.3",
     "takumi-js": "2.13.7",
     "tsx": "^4.23.13",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.2"
+    "typescript": "^7.0.2"
   }
 }

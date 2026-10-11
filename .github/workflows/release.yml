@@ -8,6 +8,7 @@ on:
       - completed
     branches:
       - master
+  pull_request:
 
 permissions:
   contents: write
@@ -15,8 +16,8 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: release-master
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   images:
@@ -81,7 +82,7 @@ jobs:
               echo "tag="
               echo "published=false"
             } >> "$GITHUB_OUTPUT"
-            echo "VERSION at HEAD is not an x.y.z release. No deploy artifact will be uploaded."
+            echo "VERSION at HEAD is not an x.y.z release. No registry package will be published."
             exit 0
           fi
           tag="v${version}"
@@ -103,17 +104,15 @@ jobs:
           if [[ "$decision" == "true" ]]; then
             echo "This run published ${tag} at ${head_sha}."
           else
-            echo "This run did not publish ${tag} at ${head_sha}. No deploy artifact will be uploaded."
+            echo "This run did not publish ${tag} at ${head_sha}. No registry package will be published."
           fi
 
-  # Packs the ready deploy archive only for the release this run just published.
-  # Checking out master and uploading to v$(VERSION) would attach a later commit
+  # Publishes the registry package only for the release this run just published.
+  # Checking out master and publishing v$(VERSION) would attach a later commit
   # to an older release such as v1.8.0. A release: published workflow does not
   # run: Tegami creates that release with GITHUB_TOKEN.
-  # Alchemy builds Workers and the Vite site during deploy, so this job does
-  # not run a separate production build.
-  deploy-artifact:
-    name: Pack alchemy.new deploy artifact
+  registry:
+    name: Publish alchemy.new registry package
     needs:
       - images
       - release
@@ -125,9 +124,11 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 45
+    timeout-minutes: 60
+    environment: alchemy-new
     permissions:
-      contents: write
+      contents: read
+      id-token: write
     steps:
       - name: Check out release tag
         uses: actions/checkout@v7
@@ -136,7 +137,6 @@ jobs:
           fetch-depth: 1
 
       - name: Require this run's release tag commit
-        id: artifact
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.release.outputs.tag }}
@@ -144,7 +144,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Refusing to pack release ${RELEASE_TAG}."
+            echo "Refusing to publish release ${RELEASE_TAG}."
             exit 1
           fi
           head_sha="$(git rev-parse HEAD)"
@@ -156,20 +156,9 @@ jobs:
             tag_sha="$object_sha"
           fi
           bash scripts/release-artifact-gate.sh assert-tag "$head_sha" "$EXPECTED_SHA" "$tag_sha"
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq 'alchemy.new.tar.gz'; then
-            echo "upload=false" >> "$GITHUB_OUTPUT"
-            echo "alchemy.new.tar.gz is already attached to ${RELEASE_TAG} at ${EXPECTED_SHA}."
-            exit 0
-          fi
-          {
-            echo "upload=true"
-            echo "tag=${RELEASE_TAG}"
-            echo "sha=${EXPECTED_SHA}"
-          } >> "$GITHUB_OUTPUT"
-          echo "GitHub Release ${RELEASE_TAG} at ${EXPECTED_SHA} has no alchemy.new.tar.gz asset."
+          echo "Registry publish is allowed for ${RELEASE_TAG} at ${EXPECTED_SHA}."
 
       - name: Set up Nub
-        if: steps.artifact.outputs.upload == 'true'
         uses: nubjs/setup-nub@v0.4.0
         with:
           nub-version: 0.4.11
@@ -177,42 +166,85 @@ jobs:
           cache-dependency-path: nub.lock
 
       - name: Install native dependencies
-        if: steps.artifact.outputs.upload == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
-      - name: Install dependencies
-        if: steps.artifact.outputs.upload == 'true'
-        run: nub install --frozen-lockfile
+      - name: Install, build, and prune production dependencies
+        run: bash scripts/prepare-alchemy-new-package.sh
 
-      - name: Pack alchemy.new.tar.gz
-        if: steps.artifact.outputs.upload == 'true'
-        run: bash scripts/pack-alchemy-new-artifact.sh
-
-      - name: Upload alchemy.new.tar.gz
-        if: steps.artifact.outputs.upload == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release.outputs.tag }}
-          EXPECTED_SHA: ${{ needs.release.outputs.sha }}
+      - name: Load pack patterns
+        id: patterns
         run: |
           set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Refusing to upload release ${RELEASE_TAG}."
-            exit 1
-          fi
-          head_sha="$(git rev-parse HEAD)"
-          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.type)"
-          object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.sha)"
-          if [[ "$ref_type" == "tag" ]]; then
-            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
-          else
-            tag_sha="$object_sha"
-          fi
-          bash scripts/release-artifact-gate.sh assert-tag "$head_sha" "$EXPECTED_SHA" "$tag_sha"
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq 'alchemy.new.tar.gz'; then
-            echo "alchemy.new.tar.gz is already attached to ${RELEASE_TAG} at ${EXPECTED_SHA}."
-            exit 0
-          fi
-          gh release upload "$RELEASE_TAG" alchemy.new.tar.gz --repo "$GITHUB_REPOSITORY"
+          {
+            echo "include<<EOF"
+            cat scripts/alchemy-new-pack.include
+            echo "EOF"
+            echo "exclude<<EOF"
+            cat scripts/alchemy-new-pack.exclude
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # TODO pin by SHA once v1 is tagged
+      - name: Publish to alchemy.new
+        uses: SolZeroAI/alchemy-new-publish-action@v1
+        with:
+          package: solzero/platform
+          version: ${{ needs.release.outputs.tag }}
+          path: .
+          include: ${{ steps.patterns.outputs.include }}
+          exclude: ${{ steps.patterns.outputs.exclude }}
+          on-immutable: skip-if-digest-matches
+
+  registry-dry-run:
+    name: Dry-run alchemy.new registry package
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v7
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0.4.0
+        with:
+          nub-version: 0.4.11
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install, build, and prune production dependencies
+        run: bash scripts/prepare-alchemy-new-package.sh
+
+      - name: Load pack patterns
+        id: patterns
+        run: |
+          set -euo pipefail
+          {
+            echo "include<<EOF"
+            cat scripts/alchemy-new-pack.include
+            echo "EOF"
+            echo "exclude<<EOF"
+            cat scripts/alchemy-new-pack.exclude
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # TODO pin by SHA once v1 is tagged
+      - name: Dry-run publish to alchemy.new
+        uses: SolZeroAI/alchemy-new-publish-action@v1
+        with:
+          package: solzero/platform
+          version: 0.0.0-dry-run
+          path: .
+          include: ${{ steps.patterns.outputs.include }}
+          exclude: ${{ steps.patterns.outputs.exclude }}
+          dry-run: true

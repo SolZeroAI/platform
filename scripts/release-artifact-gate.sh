@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Decide whether this Release workflow run may upload alchemy.new.tar.gz.
+# Decide whether this Release workflow run may publish the registry package.
 #
 # A GitHub Release named by VERSION is not enough. v1.8.0 already exists, and
-# the first master run after this change still has that version. Uploading
+# the first master run after this change still has that version. Publishing
 # the current checkout would attach a later commit to that release.
 #
-# published: this run may upload only when the tag commit is HEAD and the
+# published: this run may publish only when the tag commit is HEAD and the
 # release was published at or after this workflow run was created.
 # assert-tag: the checkout, the recorded publish commit, and the live tag
 # commit are the same SHA.
