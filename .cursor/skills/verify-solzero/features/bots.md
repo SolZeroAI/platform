@@ -1,40 +1,19 @@
 # Bots
 
-Bots is the always-on bot list at `/bots`. A signed-in user names a bot, adds instructions, and creates it. The create action navigates to `/bots/$botId`.
+The canonical user-flow recipe is [`tests/bots.e2e.ts`](../../../../tests/bots.e2e.ts).
+Run it with:
 
-## Sub-features
-
-- `index-empty` shows `Always-on bots` and either `No bots yet` or a list of bot cards.
-- `create-bot` submits `Bot name` plus optional `Bot instructions` via **Create bot**.
-- `bot-detail` opens `/bots/$botId` after create.
-
-## How to get to it (user POV)
-
-1. Sign in.
-2. Click **Bots** in the sidebar.
-3. Fill **Bot name**. Optionally fill **Bot instructions**.
-4. Click **Create bot**.
-
-## Driving it with Chrome DevTools
-
-```bash
-ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
-  --url http://localhost:3000/bots \
-  --email admin@example.com \
-  --out-dir "$ART/bots"
-.cursor/skills/verify-solzero/control-solzero chrome create-bot \
-  --name "verify-bot-<runId>" \
-  --email admin@example.com \
-  --out-dir "$ART/bot-created"
+```sh
+nub run test:e2e -- tests/bots.e2e.ts
 ```
 
-`bots/after.text` must contain `Always-on bots` and `Create bot`. Empty state copy is `No bots yet`. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof. The instructions field accessible name is `Bot instructions`; its placeholder is `Instructions for this bot`.
+Read `docs/e2e.md` for credentials and current verification status. Use the real Alchemy
+stack; do not substitute mocks or a standalone web server.
 
-Create a unique name per run (`verify-bot-<runId>`). `create-bot` is ready when `after.text` contains the name. Prefer the detail page (`Create a routine` plus `/bots/$botId`). If the URL changes before that page paints, the command re-opens `/bots` and waits for the card. Re-open `/bots` with `signed-in-open` to prove persistence.
+Keep these product facts honest:
 
-## Gotchas
-
-- Create posts to `/api/bots`. A toast error without a new card is a failed create, not a UI-only glitch.
-- Temporary routines and optional GitHub PR watches are detail-page work. There is no Slack watch UI. Do not mark them verified from the index screenshot.
-- The Create bot button stays disabled until the name is non-empty.
+- Bot creation from `/bots` opens the detail page with the bot name as a heading.
+- Temporary routines can be created and deleted through the UI; no scheduled action is
+  allowed to fire in the test.
+- Bots have no public delete endpoint. The creation test may leave a dormant disposable bot
+  record in the local database after deleting its routine.

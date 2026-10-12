@@ -18,18 +18,22 @@ export class AuthSessionResponse extends Schema.Class<AuthSessionResponse>("Auth
 }) {}
 
 export class ApiKeyResponse extends Schema.Class<ApiKeyResponse>("ApiKeyResponse")({
-  id: Schema.String,
+  keyId: Schema.String,
+  userId: Schema.String,
   label: Schema.NullOr(Schema.String),
-  prefix: Schema.String,
-  createdAt: Schema.String,
-  lastUsedAt: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+  lastUsedAt: Schema.NullOr(Schema.Number),
+  revokedAt: Schema.NullOr(Schema.Number),
 }) {}
 
 export class CreatedApiKeyResponse extends Schema.Class<CreatedApiKeyResponse>(
   "CreatedApiKeyResponse",
 )({
+  keyId: Schema.String,
   key: Schema.String,
-  apiKey: ApiKeyResponse,
+  label: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
 }) {}
 
 export class ApiKeysResponse extends Schema.Class<ApiKeysResponse>("ApiKeysResponse")({
