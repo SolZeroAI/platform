@@ -32,3 +32,10 @@ config/s0-prod.config.jsonc
 
 # PR Lens writes its previews here. They are rebuilt on demand.
 .pr-lens/
+
+# End-to-end reports, screenshots, local disposable credentials and replay recordings
+.e2e/
+config/.e2e-password
+
+# Optional isolated external-integration profiles contain local deployment details.
+config/e2e-*-dev.config.jsonc

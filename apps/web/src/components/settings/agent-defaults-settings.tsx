@@ -96,16 +96,20 @@ export function AgentDefaultsSettings({
     withResolver: true,
   })
 
+  const persistedStepLimit = settings
+    ? String(normalizeIsolateStepLimit(settings.defaultIsolateStepLimit))
+    : null
   useEffect(() => {
-    if (!settings) {
+    if (persistedStepLimit === null) {
       return
     }
-    const nextStepLimit = String(normalizeIsolateStepLimit(settings.defaultIsolateStepLimit))
+    // A background refresh can publish a new settings object without changing this saved value.
+    const nextStepLimit = persistedStepLimit
     setStepLimit(nextStepLimit)
     setSavedFormState(serializeAgentDefaultsFormState(nextStepLimit))
     setSaveError(null)
     setSaveSuccess(null)
-  }, [settings])
+  }, [persistedStepLimit])
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     setSaveError(null)
@@ -249,6 +253,7 @@ export function AgentDefaultsSettings({
               max={MAX_ISOLATE_STEP_LIMIT}
               step={1}
               value={stepLimit}
+              disabled={savedFormState === null || saving}
               onChange={(event) => setStepLimit(event.target.value)}
               className="w-28 tabular-nums"
               aria-label="Default isolate step call limit"
