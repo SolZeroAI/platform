@@ -12,10 +12,7 @@
 - `packages/api/src/server/background/workflows/lifecycle.ts`: create/update save path that migrates, compiles, writes versioned artifacts, and updates workflow rows.
 - `scripts/workflows/audit-runtime-abi.ts`: CLI audit/backfill entrypoint.
 - `apps/web/src/routes/workflows.tsx`: workflow save UI, migration summary, runtime version change display, import/export flows.
-- `tests/workflows/runtime-abi.test.ts`: ABI registry, manifest migration, and audit tests.
-- `tests/workflows/runtime-kernel.test.ts`: runtime kernel behavior tests.
-- `tests/workflows/runner.test.ts`: artifact version lookup, dynamic metadata, loader cache key, resume helpers.
-- `tests/workflows/lifecycle.test.ts`: save/update behavior and versioned artifacts.
+- `tests/workflows.e2e.ts`: live manifest save, validation rejection, rename/export/status transitions, JavaScript execution and R2 artifacts. Extend this suite with new ABI migration and resume flows when changing those behaviors. The existing suite does not claim isolated kernel-unit coverage.
 
 ## New Version Steps
 
@@ -71,9 +68,7 @@ For run resume:
 ## Commands
 
 ```bash
-nub exec vitest run tests/workflows/runtime-abi.test.ts
-nub exec vitest run tests/workflows/runtime-kernel.test.ts
-nub exec vitest run tests/workflows/runner.test.ts tests/workflows/lifecycle.test.ts
+nub run test:e2e tests/workflows.e2e.ts
 nub run workflow:runtime:audit path/to/workflow-export.json
 nub run workflow:runtime:audit --write path/to/workflow-export.json
 ```

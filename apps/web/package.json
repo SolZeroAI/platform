@@ -14,9 +14,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src scripts vite.config.ts",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src scripts vite.config.ts",
-    "render:release": "tsx scripts/render-release-card.ts render-release",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "render:release": "tsx scripts/render-release-card.ts render-release"
   },
   "dependencies": {
     "@cloudflare/kumo": "^2.12.0",
@@ -66,7 +64,6 @@
     "takumi-js": "2.13.7",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "^8.2.2"
   }
 }

@@ -1,25 +1,37 @@
-# SolZero verification map
+# User flow map
 
-This directory is the maintained source for verifying user-facing SolZero behavior. Read the index before driving the app, then use the matching feature file as the recipe.
+This directory is the **coverage map source of truth** for SolZero e2e user flows.
+`docs/e2e.md` points here for the inventory; keep fixture preflight, replay, cleanup,
+and CI guidance in that guide. Automated recipes live under `tests/` and run only through
+tester-army/e2e.
 
-Primary surface: web app at `http://localhost:3000`. Secondary: API Worker at `http://localhost:3100` (health, Better Auth, session APIs). Do not treat Vitest suites as a substitute for a mapped UI feature.
+| Area | Feature file | Canonical suite(s) |
+| --- | --- | --- |
+| Auth, anonymous gates, sign-in/out | `auth.md` | `tests/auth.e2e.ts` (+ `tests/auth.setup.e2e.ts`) |
+| Settings, runtime defaults, theme, MCP deep links, secrets | `settings.md` | `tests/settings.e2e.ts` |
+| Accounts, API keys, OpenAPI contracts | `accounts.md` | `tests/accounts.e2e.ts`, `tests/api-contract.e2e.ts` |
+| Skills (admin defaults and user overrides) | `skills.md` | `tests/skills.e2e.ts` |
+| Sessions / Agents home (create, tools, archive, isolate/OpenCode/Codex prompts) | `sessions.md` | `tests/sessions.e2e.ts` |
+| Advanced sessions (incognito, MCP/subagent editor, attachment cancel, delegation) | `advanced-sessions.md` | `tests/advanced-sessions.e2e.ts` |
+| Harness tools (OpenCode/Codex multi-tool and follow-up) | `harness-tools.md` | `tests/harness-tools.e2e.ts` |
+| Session transfer (auth-transfer redemption) | `session-transfer.md` | `tests/session-transfer.e2e.ts` |
+| External integrations (GitHub, MCP, AI Search, Slack) | `external-integrations.md` | `tests/external-integrations.e2e.ts` |
+| BYOK / personal provider | `providers.md` | `tests/provider.external.e2e.ts` |
+| OIDC identity (ordinary member) | `identity.md` | `tests/identity.external.e2e.ts` |
+| Workflows | `workflows.md` | `tests/workflows.e2e.ts` |
+| Bots | `bots.md` | `tests/bots.e2e.ts` |
+| Admin control plane | `admin.md` | `tests/admin.e2e.ts` |
 
-## Baseline preconditions
+Prefer `nub run test:e2e -- tests/<file>.e2e.ts` so the project wrapper owns cleanup.
+`nub run test` runs the core catalogue (excludes `external`). `nub run test:e2e:external`
+and `nub run test:e2e:all` cover deferred integrations. Read `.agents/skills/e2e/SKILL.md`
+for authoring and `docs/e2e.md` for credentials, fixtures, and ops.
 
-- Run `.cursor/skills/verify-solzero/control-solzero launch` then `doctor`.
-- Stay on `http://localhost:3000`. Refuse if doctor says the ports are not this run.
-- Default credential admin is `admin@example.com`. Get the password with `control-solzero admin-password` (Worker-bound Alchemy disk secret). `nub run auth:admin-password -- dev --local` now reads that same file; do not use the script without `--local`.
-- Creating an Isolate session that talks to a model needs a configured Cloudflare AI Gateway or LiteLLM provider. Sign-in, navigation, Workflows empty state, and Bots empty state do not.
-- Local sign-in is the credential form (`Email`, `Password`, **Sign In**). If doctor fails closed on `/api/auth/config`, stop. An unconfigured welcome is a product failure, not a mapped feature.
+### Ops (not product features)
 
-## Features
+Lifecycle and owned-resource cleanup live under `tests/lifecycle/` and run with
+`nub run test:e2e:lifecycle`. They prove launcher recovery, not product UI coverage.
+See `docs/e2e.md` for cleanup and CI artifact rules.
 
-| File | What a user is doing |
-| --- | --- |
-| [sign-in.md](sign-in.md) | Open SolZero, see the welcome form, sign in with the deployment-managed admin credential |
-| [agents.md](agents.md) | Compose a new Isolate agent and open previous sessions |
-| [workflows.md](workflows.md) | Open the workflow index and choose Template, Build with AI, or Import |
-| [bots.md](bots.md) | Open always-on bots and create a named bot |
-| [settings.md](settings.md) | Open Settings categories (AI Providers, Agents, Secrets, Accounts, Data Controls, Learn More) |
-
-Drive one file per verification pass unless the change spans two surfaces.
+Do not count a blocked or deferred-external flow as passing coverage. Collection alone
+does not establish verification.

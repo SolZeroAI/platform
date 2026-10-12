@@ -9,13 +9,20 @@ ENV NODE_ENV=production
 ENV SANDBOX_ROOT=/workspace
 ENV WORKSPACE_ROOT=/workspace/repo
 
-RUN npm install --global @nubjs/nub@0.4.11 \
+# Pinned AI SDK harness recipes bootstrap their bundled pnpm lockfiles.
+RUN npm install --global @nubjs/nub@0.4.11 pnpm@10.34.6 \
   && npm install \
   @ai-sdk/harness@1.0.41 \
   @ai-sdk/harness-opencode@1.0.42 \
   @ai-sdk/harness-codex@1.0.43 \
   @ai-sdk/harness-claude-code@1.0.42 \
   @modelcontextprotocol/sdk@1.29.0
+
+# Apply the same pinned custom-model reasoning fix used by the Nub install.
+COPY harness-codex.patch /app/harness-codex.patch
+RUN git apply --check --directory=node_modules/@ai-sdk/harness-codex harness-codex.patch \
+  && git apply --directory=node_modules/@ai-sdk/harness-codex harness-codex.patch \
+  && rm harness-codex.patch
 
 RUN groupadd --gid 10001 s0 \
   && useradd --uid 10001 --gid s0 --create-home --shell /bin/bash s0 \
@@ -43,6 +50,9 @@ RUN printf '%s\n' \
 
 COPY index.mjs /app/index.mjs
 COPY *.js /app/
+
+RUN mkdir -p /home/s0/.cache/opencode \
+  && chown -R s0:s0 /home/s0
 
 USER s0
 

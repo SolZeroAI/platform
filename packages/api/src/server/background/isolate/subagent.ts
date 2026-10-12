@@ -24,7 +24,11 @@ import {
   type IsolateMcpcfMcpPromptServer,
 } from "../session/isolate/system"
 import type { Env } from "../types"
-import { compileIsolateModelContext, type IsolateModelContext } from "./model"
+import {
+  resolveIsolateOutputTokenLimit,
+  compileIsolateModelContext,
+  type IsolateModelContext,
+} from "./model"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { buildResolvedIsolateSkillSources } from "./skills"
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds the control-plane handle for IsolateToolContext.
@@ -219,6 +223,10 @@ export class IsolateSubAgent extends Think<Env> {
         Match.when(true, () => [baseSystem, contextSystem].join("\n\n")),
         Match.orElse(() => baseSystem),
       ),
+      maxOutputTokens: resolveIsolateOutputTokenLimit(
+        turn.model.modelId,
+        ctx.body?.maxOutputTokens,
+      ).pipe(Option.getOrUndefined),
       providerOptions: turn.model.providerOptions,
       maxSteps: resolveIsolateSubagentTurnStepLimit(turn.input.stepLimit),
     }
