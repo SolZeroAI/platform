@@ -490,7 +490,7 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
       "--import",
       resolve(repo, "node_modules/tsx/dist/loader.mjs"),
       ...(launch ? [resolve(repo, "scripts/e2e/registered.ts"), launch] : []),
-      resolve(repo, "packages/infra/node_modules/alchemy/bin/alchemy.ts"),
+      resolve(repo, "packages/infra/node_modules/alchemy/bin/cli.js"),
       command,
       resolve(repo, "packages/infra/alchemy.run.ts"),
       "--stage",

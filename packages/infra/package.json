@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "alchemy": "nub exec tsx --env-file-if-exists=../../config/.env ./node_modules/alchemy/bin/alchemy.ts",
+    "alchemy": "nub exec tsx --env-file-if-exists=../../config/.env ./node_modules/alchemy/bin/cli.js",
     "dev": "nub run alchemy dev alchemy.run.ts --stage dev --env-file ../../config/.dev.vars",
     "dev:api": "nub run alchemy dev alchemy.api.run.ts --stage dev --env-file ../../config/.dev.vars",
     "dev:web": "nub run alchemy dev alchemy.web.run.ts --stage dev --env-file ../../config/.dev.vars",
@@ -38,9 +38,9 @@
   "dependencies": {
     "@solzero/shared": "workspace:*",
     "alchemy": "2.0.0-beta.81",
-    "alchemy-planetscale-logical-db": "2.0.0",
+    "alchemy-planetscale-logical-db": "2.1.0",
     "dotenv": "^17.4.2",
-    "effect": "4.0.1",
+    "effect": "4.0.3",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
