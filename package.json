@@ -103,14 +103,14 @@
     "tsx": "^4.23.13",
     "turbo": "2.11.7",
     "typescript": "^7.0.2",
-    "wrangler": "4.147.0"
+    "wrangler": "4.149.0"
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.1",
     "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.93",
     "chat": "4.40.0",
-    "workerd": "1.20260926.1"
+    "workerd": "1.20261006.1"
   },
   "devEngines": {
     "packageManager": {
