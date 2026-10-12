@@ -56,7 +56,7 @@ const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 const appName = resolveS0Config(
   parse(readFileSync(resolve(repo, s0ConfigPathForStage("dev", profile)), "utf8")),
 ).deployment.appName
-const ci = await Effect.runPromise(Config.boolean("CI").pipe(Config.withDefault(false)))
+const ci = await Effect.runPromise(Config.Boolean("CI").pipe(Config.withDefault(false)))
 const account = process.env.CLOUDFLARE_ACCOUNT_ID ?? ""
 const gatewayForRun = (runId: string) => `${appName}${ci ? "-ci" : ""}-dev-${runId}`
 const Resource = Schema.Struct({
