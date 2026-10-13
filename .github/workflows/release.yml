@@ -111,18 +111,29 @@ jobs:
   # Checking out master and publishing v$(VERSION) would attach a later commit
   # to an older release such as v1.8.0. A release: published workflow does not
   # run: Tegami creates that release with GITHUB_TOKEN.
+  #
+  # This is the only job that requests id-token or uses environment alchemy-new.
+  # The workflow event is workflow_run, because this file runs after Validate.
+  # github.event_name is therefore workflow_run, and the finished Validate run
+  # must itself be a push. github.ref is refs/heads/master because workflow_run
+  # uses the default-branch workflow file. A pull_request, tag push,
+  # workflow_dispatch, or merge_group event does not match.
   registry:
     name: Publish alchemy.new registry package
     needs:
       - images
       - release
     if: >-
+      github.repository == 'SolZeroAI/platform' &&
+      github.ref == 'refs/heads/master' &&
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success' &&
       needs.release.outputs.published == 'true' &&
       needs.images.result == 'success' &&
-      needs.release.result == 'success' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      needs.release.result == 'success'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     environment: alchemy-new
@@ -206,6 +217,7 @@ jobs:
             echo "\`manifest-sha256\`: \`${{ steps.publish.outputs.manifest-sha256 }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # Pack preview only. Do not add environment alchemy-new or id-token here.
   registry-dry-run:
     name: Dry-run alchemy.new registry package
     if: >-

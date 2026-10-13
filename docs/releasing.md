@@ -117,7 +117,11 @@ The publish action does not walk a directory link, and it requires
 (`alchemy-new-publish-action@1.0.0`, also tagged `v1`) packs the tree and publishes it with GitHub
 OIDC. The workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately
 and leaves it out of the tar. The job summary includes the `manifest-sha256` output. The registry
-job uses GitHub Environment `alchemy-new`. Its permissions are `contents: read` and
+job is the only job that uses GitHub Environment `alchemy-new` or `id-token: write`. It runs only
+when this repository is `SolZeroAI/platform`, `github.ref` is `refs/heads/master`, and the workflow
+event is `workflow_run` for a successful `push` to `master`. `github.event_name` is `workflow_run`,
+not `push`, because the job starts after Validate. A pull request, tag push, `workflow_dispatch`, or
+`merge_group` event does not request a token. Its permissions are `contents: read` and
 `id-token: write`. It does not use a registry token. `package` is `solzero/platform`. The version is
 the release tag. `on-immutable` is `skip-if-digest-matches`, so a retry of the same archive and the
 same manifest succeeds. A different archive or manifest for that version fails. Include and exclude
@@ -128,8 +132,9 @@ metadata, and secret files. The archive root is the package root. It contains
 `node_modules`.
 
 Pull requests from this repository run the same prepare steps with `dry-run: true`. That job has
-`contents: read` only. It does not use the `alchemy-new` environment and it does not publish. The
-workflow pins the action by that commit SHA. `v1` still moves when a later 1.x release is cut.
+`contents: read` only. It does not use the `alchemy-new` environment, it does not request
+`id-token`, and it does not publish. The workflow pins the action by that commit SHA. `v1` still
+moves when a later 1.x release is cut.
 
 Archives over 80 MiB warn. Archives over 256 MiB fail. Deploy runs `vite build` from `apps/web`,
 and Vite copies `public/` into the client output, so `apps/web/public/images` stays in the archive.
@@ -144,19 +149,30 @@ failed jobs on the same Release workflow run to retry. A later run does not publ
 release it did not create. Tegami skips an existing tag and GitHub Release. A workflow triggered by
 `release: published` does not start, because Tegami creates the release with the workflow token.
 
-After the registry production deploy, allow this publisher at alchemy.new `/packages`:
+After the registry production deploy, allow this publisher at alchemy.new `/packages`. The registry
+stores GitHub's repository id and owner id for `SolZeroAI/platform`. It checks `job_workflow_ref`
+is present. When these optional fields are set, it matches them too:
 
 | Field | Value |
 | --- | --- |
 | Organization | `solzero` |
 | Package | `platform` |
 | Repository | `SolZeroAI/platform` |
-| Workflow | `.github/workflows/release.yml` |
-| GitHub Environment | `alchemy-new` |
+| `workflowFilename` | `release.yml` |
+| `environment` | `alchemy-new` |
+| `ref` | `refs/heads/master` |
+
+`workflowFilename` matches the prefix `SolZeroAI/platform/.github/workflows/release.yml@`. It does
+not match the ref after `@`. A token whose `job_workflow_ref` ends in `@refs/tags/v1.2.3` still
+passes that filename check. Set `ref` to `refs/heads/master` so the separate `ref` claim must be the
+master branch. The OIDC `sub` for this environment job is
+`repo:SolZeroAI/platform:environment:alchemy-new` and does not include the ref.
 
 Create the `alchemy-new` environment in this repository before the first registry publish. Do not
 store a registry token in it. The job requests an OIDC token for
-`https://alchemy.new/registry/publish`.
+`https://alchemy.new/registry/publish`. Limit that environment's deployment branches to `master`.
+Do not allow tag patterns `v*` or `*@v*`. The tag ruleset must also limit who can create `v*` tags.
+See [Repository settings](#repository-settings).
 
 ## Repository settings
 
@@ -167,7 +183,10 @@ needs `contents: write` and `pull-requests: write`.
 Create the `release:none` label for pull requests that have no user-visible release note. The
 registry package is not a GitHub Release asset. GitHub's immutable-release setting can stay enabled.
 Create the `alchemy-new` environment for the registry job. That environment is the trusted-publisher
-allowlist value. It does not hold secrets.
+allowlist value. It does not hold secrets. Its deployment policy must allow only the `master`
+branch. Remove tag patterns `v*` and `*@v*`. A required reviewer is optional. The tag ruleset
+currently blocks moving or deleting `v*` tags. It must also restrict who can create those tags.
+This repository's workflow file cannot change those settings.
 
 ## Failure recovery
 
