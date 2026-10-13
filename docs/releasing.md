@@ -113,22 +113,23 @@ an absolute symlink target. Nub keeps the store in the project (`enableGlobalVir
 The publish action does not walk a directory link, and it requires
 `node_modules/alchemy/bin/cli.js` as an archive member. The file bytes stay in the store.
 
-`SolZeroAI/alchemy-new-publish-action@v1` packs the tree and publishes it with GitHub OIDC. The
-workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately and leaves
-it out of the tar. The job summary includes the `manifest-sha256` output. The registry job uses
-GitHub Environment `alchemy-new`. Its permissions are `contents: read` and `id-token: write`. It
-does not use a registry token. `package` is `solzero/platform`. The version is the release tag.
-`on-immutable` is `skip-if-digest-matches`, so a retry of the same archive and the same manifest
-succeeds. A different archive or manifest for that version fails. Include and exclude patterns live
-in `scripts/alchemy-new-pack.include` and `scripts/alchemy-new-pack.exclude`. The exclude list names
-`alchemy.new.jsonc`. The action's default excludes still drop tests, VCS metadata, and secret files.
-The archive root is the package root. It contains `packages/infra/alchemy.run.ts`, the built web
-output, `apps/web/public`, and production `node_modules`.
+`SolZeroAI/alchemy-new-publish-action` at commit `0a204b3ff07a4fc9e06e29f220b9e25906794f0f`
+(`alchemy-new-publish-action@1.0.0`, also tagged `v1`) packs the tree and publishes it with GitHub
+OIDC. The workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately
+and leaves it out of the tar. The job summary includes the `manifest-sha256` output. The registry
+job uses GitHub Environment `alchemy-new`. Its permissions are `contents: read` and
+`id-token: write`. It does not use a registry token. `package` is `solzero/platform`. The version is
+the release tag. `on-immutable` is `skip-if-digest-matches`, so a retry of the same archive and the
+same manifest succeeds. A different archive or manifest for that version fails. Include and exclude
+patterns live in `scripts/alchemy-new-pack.include` and `scripts/alchemy-new-pack.exclude`. The
+exclude list names `alchemy.new.jsonc`. The action's default excludes still drop tests, VCS
+metadata, and secret files. The archive root is the package root. It contains
+`packages/infra/alchemy.run.ts`, the built web output, `apps/web/public`, and production
+`node_modules`.
 
 Pull requests from this repository run the same prepare steps with `dry-run: true`. That job has
-`contents: read` only. It does not use the `alchemy-new` environment and it does not publish.
-`@v1` floats and is not tagged yet. The dry-run check fails until the tag exists. After Tegami
-releases the action, pin `alchemy-new-publish-action@1.x.y` or that tag's commit SHA.
+`contents: read` only. It does not use the `alchemy-new` environment and it does not publish. The
+workflow pins the action by that commit SHA. `v1` still moves when a later 1.x release is cut.
 
 Archives over 80 MiB warn. Archives over 256 MiB fail. Deploy runs `vite build` from `apps/web`,
 and Vite copies `public/` into the client output, so `apps/web/public/images` stays in the archive.

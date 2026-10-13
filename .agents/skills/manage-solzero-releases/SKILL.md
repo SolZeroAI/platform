@@ -64,6 +64,7 @@ request.
   published the release. A later run does not publish a package for a release it did not create.
   alchemy.new deploys that registry archive and does not install dependencies. The manifest is
   uploaded separately and is not a member of the archive. The registry job uses GitHub Environment
-  `alchemy-new` in `.github/workflows/release.yml`.
+  `alchemy-new` in `.github/workflows/release.yml`. That workflow pins
+  `SolZeroAI/alchemy-new-publish-action` at `0a204b3ff07a4fc9e06e29f220b9e25906794f0f` (v1.0.0).
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.

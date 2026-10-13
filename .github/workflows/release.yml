@@ -186,10 +186,9 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # TODO: pin to the immutable tag alchemy-new-publish-action@1.x.y (released via Tegami) or its SHA once it is released. v1 floats.
       - name: Publish to alchemy.new
         id: publish
-        uses: SolZeroAI/alchemy-new-publish-action@v1
+        uses: SolZeroAI/alchemy-new-publish-action@0a204b3ff07a4fc9e06e29f220b9e25906794f0f # v1.0.0
         with:
           package: solzero/platform
           version: ${{ needs.release.outputs.tag }}
@@ -248,10 +247,9 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # TODO: pin to the immutable tag alchemy-new-publish-action@1.x.y (released via Tegami) or its SHA once it is released. v1 floats.
       - name: Dry-run publish to alchemy.new
         id: publish
-        uses: SolZeroAI/alchemy-new-publish-action@v1
+        uses: SolZeroAI/alchemy-new-publish-action@0a204b3ff07a4fc9e06e29f220b9e25906794f0f # v1.0.0
         with:
           package: solzero/platform
           version: 0.0.0-dry-run
