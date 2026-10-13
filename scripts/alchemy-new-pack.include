@@ -1,0 +1,11 @@
+# Paths deploy reads. The publish action also keeps its default excludes.
+# A pattern with no slash matches that name in every directory.
+# alchemy.new.jsonc stays out of this list. The registry rejects it in the
+# archive and the action uploads that file separately.
+VERSION
+package.json
+tsconfig.json
+apps
+packages
+config
+node_modules

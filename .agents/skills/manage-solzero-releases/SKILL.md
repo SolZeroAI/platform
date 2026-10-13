@@ -60,6 +60,14 @@ request.
 - Review the generated version pull request before merge. Verify `VERSION`, `CHANGELOG.md`, and the
   release notes.
 - Re-run a failed release workflow after a transient failure. Tegami skips an existing tag and GitHub
-  Release.
+  Release. Retry a missing alchemy.new registry publish by re-running the failed jobs on the run that
+  published the release. A later run does not publish a package for a release it did not create.
+  alchemy.new deploys that registry archive and does not install dependencies. The manifest is
+  uploaded separately and is not a member of the archive. The registry job uses GitHub Environment
+  `alchemy-new` in `.github/workflows/release.yml` and runs only after a push to `master` in
+  `SolZeroAI/platform`. That workflow pins `SolZeroAI/alchemy-new-publish-action` at
+  `0a204b3ff07a4fc9e06e29f220b9e25906794f0f` (v1.0.0). The environment deployment policy allows only
+  branch `master`. The trusted publisher sets `workflowFilename` to `release.yml`, `environment` to
+  `alchemy-new`, and `ref` to `refs/heads/master`.
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.
