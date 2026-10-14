@@ -55,7 +55,7 @@ export function createAgentContainerApplication(
 ) {
   return Effect.gen(function* () {
     const { appName, stageMetadata } = options
-    const localContexts = yield* Config.string("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
+    const localContexts = yield* Config.String("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
     const forbiddenContext = Option.filter(
       localContexts,
       () => !appName.startsWith("s0-e2e") || stageMetadata.name !== "dev",

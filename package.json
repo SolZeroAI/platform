@@ -72,10 +72,10 @@
     "test:e2e:mcp": "tsx scripts/e2e/run.ts --mcp"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.0-beta.107",
+    "@effect/platform-node": "4.0.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.0-beta.107"
+    "effect": "4.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
@@ -89,7 +89,7 @@
     "@types/node": "^24.13.3",
     "@types/pngjs": "6.0.5",
     "@types/semver": "7.8.0",
-    "alchemy": "2.0.0-beta.74",
+    "alchemy": "2.0.0-beta.81",
     "anti-slop": "github:dmmulroy/anti-slop",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "e2e": "0.17.0",
@@ -107,9 +107,16 @@
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.1",
+    "@effect/platform-node": "4.0.3",
+    "@effect/platform-node-shared": "4.0.3",
+    "@effect/sql-d1": "4.0.3",
+    "@effect/sql-pg": "4.0.3",
+    "@effect/sql-sqlite-do": "4.0.3",
+    "@effect/vitest": "4.0.3",
     "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.93",
     "chat": "4.40.0",
+    "effect": "4.0.3",
     "workerd": "1.20260926.1"
   },
   "devEngines": {
@@ -139,7 +146,7 @@
   },
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
-    "alchemy@2.0.0-beta.74": "patches/alchemy@2.0.0-beta.74.patch",
+    "alchemy@2.0.0-beta.81": "patches/alchemy@2.0.0-beta.81.patch",
     "@e2e-dev/web@0.12.0": "patches/@e2e-dev+web@0.12.0.patch",
     "e2e@0.17.0": "patches/e2e@0.17.0.patch",
     "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch"

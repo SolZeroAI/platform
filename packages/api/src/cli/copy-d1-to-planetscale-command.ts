@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import { Command, Flag } from "effect/unstable/cli"
+import { Command, Flag } from "effect/cli"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import {
@@ -70,31 +70,31 @@ export function formatCopyReport(report: CopyReport): string {
 export const copyD1ToPlanetscaleCommand = Command.make(
   COPY_D1_TO_PLANETSCALE_NAME,
   {
-    apply: Flag.boolean("apply").pipe(
+    apply: Flag.Boolean("apply").pipe(
       Flag.withDescription("Write rows to PlanetScale. Default is dry-run and writes nothing."),
     ),
-    overwrite: Flag.boolean("overwrite").pipe(
+    overwrite: Flag.Boolean("overwrite").pipe(
       Flag.withDescription(
         "Upsert destination rows that already exist with different values. Default fails closed.",
       ),
     ),
-    sourceSqlite: Flag.file("source-sqlite", { mustExist: true }).pipe(
+    sourceSqlite: Flag.File("source-sqlite", { mustExist: true }).pipe(
       Flag.withDescription(
         "Operator D1 dump. Use a sqlite file from wrangler d1 export, or the exported .sql.",
       ),
     ),
-    destUrl: Flag.optional(Flag.string("dest-url")).pipe(
+    destUrl: Flag.optional(Flag.String("dest-url")).pipe(
       Flag.withDescription(
         "PlanetScale or Hyperdrive postgres URL. Defaults to DATABASE_URL or the local PGLite URL.",
       ),
     ),
-    config: Flag.optional(Flag.file("config")).pipe(
+    config: Flag.optional(Flag.File("config")).pipe(
       Flag.withDescription("Operator s0 jsonc to diff. Defaults to config/prod.config.jsonc."),
     ),
-    envFile: Flag.optional(Flag.file("env-file")).pipe(
+    envFile: Flag.optional(Flag.File("env-file")).pipe(
       Flag.withDescription("Operator env file to diff. Defaults to config/.env."),
     ),
-    patchOut: Flag.optional(Flag.string("patch-out")).pipe(
+    patchOut: Flag.optional(Flag.String("patch-out")).pipe(
       Flag.withDescription(
         "Optional sidecar directory for the printed jsonc and env diffs. Never rewrites the live jsonc on dry-run.",
       ),

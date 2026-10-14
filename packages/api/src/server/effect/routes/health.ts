@@ -1,4 +1,4 @@
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import { get } from "../handlers/health/get"
 import { head } from "../handlers/health/head"

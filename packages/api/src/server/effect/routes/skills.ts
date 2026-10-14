@@ -1,5 +1,5 @@
 import { S0Api } from "@solzero/api"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { clearPreference, list, setPreference } from "../handlers/skills"
 import { observeRoute } from "../services/observability"
 

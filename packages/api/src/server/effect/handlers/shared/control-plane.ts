@@ -18,7 +18,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HttpServerRequest, HttpServerResponse } from "effect/http"
 import { describeError } from "../../../lib/effect-errors"
 import type {
   GitHubAppRepository,
