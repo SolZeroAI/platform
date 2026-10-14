@@ -3,14 +3,11 @@
 import { createContext, createElement, useContext, useMemo } from "react"
 import type { PublicAuthProviderRegistry } from "@solzero/shared"
 import { createAuthClient } from "better-auth/react"
-import { genericOAuthClient } from "better-auth/client/plugins"
 import { resolveAppSession, type AppSession } from "@/lib/auth-session-state"
 
 export type { AppSession } from "@/lib/auth-session-state"
 
-export const authClient = createAuthClient({
-  plugins: [genericOAuthClient()],
-})
+export const authClient = createAuthClient()
 
 const InitialAuthSessionContext = createContext<AppSession | null | undefined>(undefined)
 const AuthProviderConfigContext = createContext<PublicAuthProviderRegistry>({
@@ -73,8 +70,8 @@ export function useAuthSession() {
 }
 
 export async function signInWithOAuth(providerId: string, callbackURL = "/") {
-  return authClient.signIn.oauth2({
-    providerId,
+  return authClient.signIn.social({
+    provider: providerId,
     callbackURL,
   })
 }
@@ -92,7 +89,7 @@ export async function linkOAuthProvider(
   errorCallbackURL: string,
   scopes?: string[],
 ) {
-  return authClient.oauth2.link({ providerId, callbackURL, errorCallbackURL, scopes })
+  return authClient.linkSocial({ provider: providerId, callbackURL, errorCallbackURL, scopes })
 }
 
 export async function reconnectOkta(callbackURL: string, errorCallbackURL: string) {
