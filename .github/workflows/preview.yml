@@ -75,7 +75,8 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
+        # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+        uses: nubjs/setup-nub@v0.6.0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
@@ -199,7 +200,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
+        # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+        uses: nubjs/setup-nub@v0.6.0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
