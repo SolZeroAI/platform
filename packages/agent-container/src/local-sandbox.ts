@@ -9,7 +9,7 @@ import type {
 } from "@ai-sdk/provider-utils"
 import type { HarnessV1NetworkSandboxSession, HarnessV1SandboxProvider } from "@ai-sdk/harness"
 
-export const SANDBOX_ROOT = process.env.SANDBOX_ROOT ?? "/workspace"
+const SANDBOX_ROOT = process.env.SANDBOX_ROOT ?? "/workspace"
 export const WORKSPACE_DIRECTORY = "repo"
 export const WORKSPACE_ROOT =
   process.env.WORKSPACE_ROOT ?? resolve(SANDBOX_ROOT, WORKSPACE_DIRECTORY)
@@ -78,7 +78,7 @@ function lineSlice(
   return lines.slice(start, end).join("\n")
 }
 
-export class LocalNetworkSandboxSession implements HarnessV1NetworkSandboxSession {
+class LocalNetworkSandboxSession implements HarnessV1NetworkSandboxSession {
   readonly description: string
   readonly defaultWorkingDirectory: string
   readonly ports: readonly number[]
