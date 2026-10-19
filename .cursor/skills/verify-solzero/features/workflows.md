@@ -1,38 +1,22 @@
 # Workflows
 
-Workflows is the builder index at `/workflows`. A signed-in user creates an unsaved draft from a template, a natural-language prompt, or a YAML import. The draft stays on `/workflows` until save. Opening an existing row or saving a draft reaches `/workflows/$workflowId`.
+The canonical user-flow recipe is
+[`tests/workflows.e2e.ts`](../../../../tests/workflows.e2e.ts). Run it with:
 
-## Sub-features
-
-- `index-landing` shows `Create a new Workflow` and `Existing workflows`.
-- `create-template` opens the Template card (`aria-label` starts with `Template.`).
-- `create-ai` opens Build with AI (`Build draft` after a prompt).
-- `create-import` opens Import (`Choose YAML file`).
-- `existing-list` shows the workflows table or an empty list.
-
-## How to get to it (user POV)
-
-1. Sign in.
-2. Click **Workflows** in the sidebar (`/workflows`).
-3. Choose **Template**, **Build with AI**, or **Import**.
-4. Open an existing row to reach `/workflows/$workflowId`.
-
-## Driving it with Chrome DevTools
-
-```bash
-ART="$(".cursor/skills/verify-solzero/control-solzero" artifact-dir)"
-.cursor/skills/verify-solzero/control-solzero chrome signed-in-open \
-  --url http://localhost:3000/workflows \
-  --email admin@example.com \
-  --out-dir "$ART/workflows"
+```sh
+nub run test:e2e -- tests/workflows.e2e.ts
 ```
 
-`workflows/after.text` must contain `Create a new Workflow` and the three card titles `Template`, `Build with AI`, and `Import`. Unauthenticated visits render the welcome form on the same URL. Do not use a later `chrome dump` as a signed-in proof.
+Read `docs/e2e.md` for credentials and current verification status. Use the real Alchemy
+stack; do not substitute mocks or a standalone web server.
 
-Build-with-AI needs a model provider. Template selection does not. Prefer Template when proving the index without gateway credentials.
+Keep these product facts honest:
 
-## Gotchas
-
-- Unauthenticated visits to `/workflows` render the welcome form on the same origin. If you see `#admin-email`, you are not on Workflows.
-- Admin workflow tools live under `/admin/workflows`. That is a different page. Do not treat it as this feature.
-- Import expects a SolZero workflow YAML export. Do not upload an arbitrary file and call a rejection a product failure unless the copy is wrong.
+- Workflow save, name edit, YAML export, disable/enable, and archive persist. Exported YAML
+  contains the saved (renamed) name.
+- Invalid manifests receive live Worker `400` before persistence.
+- JS execution with R2 artifact and run deletion (`workflow-runtime` tag) requires a
+  completed run, exact artifact marker/events, and the real dynamic Workflow binding.
+- Workflow archive follows the public API's soft-deletion behavior.
+- AI authoring, approval/resume, external HTTP/email/Slack actions, and schedule/webhook
+  triggers remain unverified in `docs/e2e.md`.

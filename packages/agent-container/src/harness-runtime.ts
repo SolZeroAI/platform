@@ -20,7 +20,7 @@ interface RuntimeState {
   mcpTools: McpTools
 }
 
-export type HarnessAdapterSettings =
+type HarnessAdapterSettings =
   | {
       runtime: "opencode"
       settings: NonNullable<Parameters<typeof createOpenCode>[0]>
@@ -34,7 +34,7 @@ export type HarnessAdapterSettings =
       settings: NonNullable<Parameters<typeof createClaudeCode>[0]>
     }
 
-export interface CodingAgentRuntime {
+interface CodingAgentRuntime {
   send(input: RuntimeSendRequest): Promise<void>
   interrupt(): Promise<void>
   poll(cursor: number): { events: RuntimeEvent[]; cursor: number }
@@ -52,11 +52,23 @@ function stringifyError(error: unknown): string {
     if (typeof message === "string" && message.length > 0) {
       return message
     }
+    // OpenCode's typed session errors store their safe display message in data.
+    const data = Reflect.get(error, "data")
+    if (data && typeof data === "object") {
+      const detail = Reflect.get(data, "message")
+      if (typeof detail === "string" && detail.length > 0) {
+        return detail
+      }
+    }
+    const name = Reflect.get(error, "name")
+    if (typeof name === "string" && name.length > 0) {
+      return name
+    }
   }
   return String(error)
 }
 
-export function claudeCodeProviderBaseUrl(baseUrl: string): string {
+function claudeCodeProviderBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/v1\/?$/, "")
 }
 
@@ -98,7 +110,7 @@ function openCodeReasoningVariant(value: string | null | undefined): string | un
   }
 }
 
-export function harnessAdapterSettings(
+function harnessAdapterSettings(
   runtime: HarnessRuntimeName,
   model: RuntimeProviderConfig,
   reasoning: string | null | undefined,
@@ -130,10 +142,12 @@ export function harnessAdapterSettings(
           settings: {
             provider: "openai",
             model: `openai/${model.modelId}`,
+            // The named compatible branch registers custom IDs in the OpenAI provider.
             auth: {
-              openai: {
+              openaiCompatible: {
                 apiKey: model.auth.apiKey,
                 baseUrl: model.auth.baseUrl,
+                name: "openai",
               },
             },
             reasoningVariant: openCodeReasoningVariant(reasoning),
@@ -171,7 +185,8 @@ export function harnessAdapterSettings(
               },
             },
             reasoningEffort: reasoningEffort(reasoning),
-            webSearch: true,
+            // Native Workers AI GPT-OSS exposes function tools, not OpenAI hosted web search.
+            webSearch: !/^@cf\/openai\/gpt-oss-(20b|120b)$/.test(model.modelId),
           },
         }
       }
@@ -229,7 +244,7 @@ function makeHarness(
   }
 }
 
-export function buildHarnessInstructions(input: {
+function buildHarnessInstructions(input: {
   runtime: HarnessRuntimeName
   model: RuntimeProviderConfig
   repository?: RuntimeSendRequest["repository"]
@@ -279,7 +294,7 @@ export function buildHarnessInstructions(input: {
   return sections.join("\n\n")
 }
 
-export function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Skill[] {
+function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Skill[] {
   return (skills ?? []).map((skill) => ({
     name: skill.name,
     description: skill.description,
@@ -288,7 +303,7 @@ export function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Sk
   }))
 }
 
-export function runtimeConfigurationSignature(input: RuntimeSendRequest): string {
+function runtimeConfigurationSignature(input: RuntimeSendRequest): string {
   return JSON.stringify({
     model: input.model,
     reasoningEffort: input.reasoningEffort ?? null,
@@ -343,7 +358,7 @@ function fileChangeEvent(
   }
 }
 
-export function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
+function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
   if (typeof part !== "object" || part === null || !("type" in part)) {
     return null
   }

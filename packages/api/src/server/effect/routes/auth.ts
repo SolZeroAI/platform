@@ -1,4 +1,4 @@
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import { createApiKey, listApiKeys } from "../handlers/auth/api-keys"
 import { deleteApiKey } from "../handlers/auth/api-keys/key-id"

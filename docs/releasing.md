@@ -56,16 +56,16 @@ combined version and release-note preview. A change with no observable effect ca
 ## Automated release flow
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
-2. Wait for `Validate` to pass on `master`. That workflow runs the secret-less checks. The `Release`
+2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
    workflow then runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
    workflow is enabled. Fork owners enable it on their own Actions page. Do not run `Deploy Preview`
-   or `Deploy` on SolZeroAI/platform. Public `Validate` stays secret-less. On the private fork, **Run
+   or `Deploy` on SolZeroAI/platform. The canonical `Validate` e2e job uses dedicated Cloudflare test credentials; deployment remains disabled. On the private fork, **Run
    workflow** on `Deploy Preview` can refresh standing Alchemy stage `pre` (`deploy-standing-pre`)
-   or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a `stage` that starts with
-   `pre-`). Exact `pre` is rejected so a click cannot destroy the standing preview. Manual `Deploy`
+   or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a canonical `pre-<positive-number>` stage for a currently closed, same-repository pull request).
+   The lifetime guard preserves standing `pre`, open/reopened previews and unrelated stages. Manual `Deploy`
    (`deploy.yml`) stays a separate `workflow_dispatch` with a required `environment` choice of `pre`
    or `prod`. Do not fold those Deploy Preview actions into `Deploy`. It runs only when
    `github.repository != 'SolZeroAI/platform'` (the private deploy fork `jonbeckman/solzero`).
@@ -79,9 +79,14 @@ before merge.
 
 ## Repository settings
 
-Enable **Allow GitHub Actions to create and approve pull requests** in the repository Actions
-settings. Keep workflow permissions restricted to the values in each workflow. The version workflow
-needs `contents: write` and `pull-requests: write`.
+The release job mints a GitHub App installation token with `actions/create-github-app-token`. The
+action is pinned by commit SHA. Secrets `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` identify the
+app. The token is limited to this repository. It requests contents write and pull requests write.
+Checkout and `nub run tegami ci` use that token for the version pull request, the `vX.Y.Z` tag, and
+the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
+
+Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. The release job has
+`contents: read`. The image publish job has `contents: read` and `packages: write`.
 
 Create the `release:none` label for pull requests that have no user-visible release note. Enable
 immutable releases after the repository supports that GitHub setting.

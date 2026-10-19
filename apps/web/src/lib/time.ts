@@ -36,8 +36,3 @@ export function formatShortTimestamp(timestampSeconds: number): string {
     minute: "2-digit",
   })
 }
-
-export function isInactiveSession(updatedAt: number): boolean {
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-  return updatedAt < sevenDaysAgo
-}

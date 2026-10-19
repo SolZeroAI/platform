@@ -82,5 +82,5 @@ nub run format
 Also run focused tests when applicable. Example:
 
 ```bash
-nub exec vitest run tests/integration/api-observability.test.ts tests/integration/effect-api-contract.test.ts tests/integration/repos-discovery-alignment.test.ts
+nub run test:e2e tests/auth.e2e.ts tests/admin.e2e.ts
 ```

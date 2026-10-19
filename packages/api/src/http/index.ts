@@ -1,4 +1,4 @@
-import { HttpApi, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, OpenApi } from "effect/http-api"
 import { AdminGroup } from "./groups/admin"
 import { AuthGroup } from "./groups/auth"
 import { BotsGroup } from "./groups/bots"

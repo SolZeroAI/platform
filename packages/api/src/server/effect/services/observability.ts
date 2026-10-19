@@ -9,7 +9,7 @@ import * as Logger from "effect/Logger"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as R from "effect/Record"
-import { HttpServerError, type HttpServerResponse } from "effect/unstable/http"
+import { HttpServerError, type HttpServerResponse } from "effect/http"
 import {
   createLocalSpanContext,
   localSpanLogAnnotations,

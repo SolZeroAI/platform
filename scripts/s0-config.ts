@@ -8,6 +8,7 @@ import * as JsonSchema from "effect/JsonSchema"
 import * as Schema from "effect/Schema"
 import {
   getStageMetadataFromConfigSync,
+  S0_CONFIG_JSON_SCHEMA_OPTIONS,
   S0_CONFIG_STAGE_NAMES,
   S0ConfigFileSchema,
   s0ActiveSecretReferences,
@@ -39,7 +40,7 @@ function readConfigFile(stage: string, profile?: string): unknown {
 }
 
 async function generatedSchema(): Promise<string> {
-  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema)
+  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)
   const schema = {
     $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
     ...document.schema,
@@ -54,7 +55,11 @@ async function generatedSchema(): Promise<string> {
 
 async function checkConfig(profile?: string): Promise<void> {
   resolveS0Config(readConfigPath(exampleConfigPath))
-  const stages = profile ? (["dev", "pre", "prod"] as const) : S0_CONFIG_STAGE_NAMES
+  const stages = profile?.startsWith("e2e")
+    ? (["dev"] as const)
+    : profile
+      ? (["dev", "pre", "prod"] as const)
+      : S0_CONFIG_STAGE_NAMES
   for (const stage of stages) {
     resolveS0Config(readConfigFile(stage, profile))
   }
@@ -62,6 +67,11 @@ async function checkConfig(profile?: string): Promise<void> {
     throw new Error("config/s0.config.schema.json is stale. Run `nub run config:schema`.")
   }
   const configPaths = stages.map((stage) => s0ConfigPathForStage(stage, profile))
+  if (!profile) {
+    const e2ePath = s0ConfigPathForStage("dev", "e2e")
+    resolveS0Config(readConfigPath(resolve(repoRoot, e2ePath)))
+    configPaths.push(e2ePath)
+  }
   process.stdout.write(
     `Validated s0 config files: config/example.config.jsonc, ${configPaths.join(", ")}\n`,
   )

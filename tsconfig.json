@@ -44,10 +44,7 @@
     "apps/api/**/*.ts",
     "apps/api/**/*.tsx",
     "packages/api/**/*.ts",
-    "packages/infra/**/*.ts",
-    "tests/**/*.ts",
-    "tests/**/*.d.ts",
-    "vitest.config.ts"
+    "packages/infra/**/*.ts"
   ],
   "exclude": [
     "node_modules",

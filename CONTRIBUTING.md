@@ -19,7 +19,7 @@ Contributions from organizations and individual users are welcome.
 
 ## Development setup
 
-SolZero requires Node.js 24.15 and Nub 0.4.11. Follow the complete onboarding instructions in the
+SolZero requires Node.js 24.15 and Nub 0.9.6. Follow the complete onboarding instructions in the
 [README](README.md#get-started), then install dependencies from the repository root:
 
 ```sh
