@@ -90,14 +90,13 @@ test(
 )
 
 test(
-  "Accounts settings shows GitHub and Slack as unlinked without OAuth providers",
+  "Accounts settings shows GitHub as unlinked without OAuth providers",
   { session: "admin" },
   async ({ app, screen }) => {
     await app.open("/settings?category=api-access")
     await expect(screen.getByRole("heading", "Link to section: Accounts")).toBeVisible()
     await expect(screen.getByText("No GitHub account linked", { exact: true })).toBeVisible()
     await expect(screen.getByText("Not enabled in the stage config", { exact: true })).toBeVisible()
-    await expect(screen.getByText("No Slack accounts linked yet", { exact: true })).toBeVisible()
     await expect(screen.getByRole("button", "Unlink")).not.toBeVisible()
   },
 )
