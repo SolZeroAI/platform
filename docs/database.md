@@ -132,4 +132,4 @@ first-party path.
 - Durable Object sqlite for session messages, events, and artifacts
 - R2 buckets
 - Cloudflare AI Search
-- Alchemy `2.0.0-beta.81`, Effect `4.0.3`, wrangler `4.149.0`, and better-auth `1.6.24`
+- Alchemy `2.0.0-beta.81`, Effect `4.0.3`, wrangler `4.149.0`, and better-auth `1.7.7`
