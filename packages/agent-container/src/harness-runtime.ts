@@ -20,7 +20,7 @@ interface RuntimeState {
   mcpTools: McpTools
 }
 
-export type HarnessAdapterSettings =
+type HarnessAdapterSettings =
   | {
       runtime: "opencode"
       settings: NonNullable<Parameters<typeof createOpenCode>[0]>
@@ -34,7 +34,7 @@ export type HarnessAdapterSettings =
       settings: NonNullable<Parameters<typeof createClaudeCode>[0]>
     }
 
-export interface CodingAgentRuntime {
+interface CodingAgentRuntime {
   send(input: RuntimeSendRequest): Promise<void>
   interrupt(): Promise<void>
   poll(cursor: number): { events: RuntimeEvent[]; cursor: number }
@@ -68,7 +68,7 @@ function stringifyError(error: unknown): string {
   return String(error)
 }
 
-export function claudeCodeProviderBaseUrl(baseUrl: string): string {
+function claudeCodeProviderBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/v1\/?$/, "")
 }
 
@@ -110,7 +110,7 @@ function openCodeReasoningVariant(value: string | null | undefined): string | un
   }
 }
 
-export function harnessAdapterSettings(
+function harnessAdapterSettings(
   runtime: HarnessRuntimeName,
   model: RuntimeProviderConfig,
   reasoning: string | null | undefined,
@@ -244,7 +244,7 @@ function makeHarness(
   }
 }
 
-export function buildHarnessInstructions(input: {
+function buildHarnessInstructions(input: {
   runtime: HarnessRuntimeName
   model: RuntimeProviderConfig
   repository?: RuntimeSendRequest["repository"]
@@ -294,7 +294,7 @@ export function buildHarnessInstructions(input: {
   return sections.join("\n\n")
 }
 
-export function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Skill[] {
+function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Skill[] {
   return (skills ?? []).map((skill) => ({
     name: skill.name,
     description: skill.description,
@@ -303,7 +303,7 @@ export function harnessSkills(skills: RuntimeSendRequest["skills"]): HarnessV1Sk
   }))
 }
 
-export function runtimeConfigurationSignature(input: RuntimeSendRequest): string {
+function runtimeConfigurationSignature(input: RuntimeSendRequest): string {
   return JSON.stringify({
     model: input.model,
     reasoningEffort: input.reasoningEffort ?? null,
@@ -358,7 +358,7 @@ function fileChangeEvent(
   }
 }
 
-export function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
+function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
   if (typeof part !== "object" || part === null || !("type" in part)) {
     return null
   }
