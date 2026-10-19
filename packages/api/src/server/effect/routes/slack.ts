@@ -1,4 +1,4 @@
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import { createSession, prompt, queuePrompt, run, stop } from "../handlers/slack"
 import { observeRoute } from "../services/observability"

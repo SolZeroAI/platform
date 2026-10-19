@@ -1,4 +1,4 @@
-import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api"
 import { CommonErrors, NotFoundError } from "../errors"
 import { ControlPlaneAuth } from "../security"
 import {

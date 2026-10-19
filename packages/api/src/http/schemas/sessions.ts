@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect"
-import { HttpApiSchema } from "effect/unstable/httpapi"
+import { HttpApiSchema } from "effect/http-api"
 import { JsonRecord, StringMap } from "./common"
 import { SUBAGENT_MODES } from "@solzero/shared"
 

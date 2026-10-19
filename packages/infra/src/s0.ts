@@ -84,7 +84,7 @@ function createCloudflareAiGateway(input: {
       storeId: secretsStore.storeId,
     }
     // Only an isolated development test launcher may supply durable run ownership.
-    const runOwner = yield* Config.string("S0_E2E_RUN_ID").pipe(Config.option)
+    const runOwner = yield* Config.String("S0_E2E_RUN_ID").pipe(Config.option)
     const forbiddenOwner = Option.filter(
       runOwner,
       (id) =>
@@ -99,7 +99,7 @@ function createCloudflareAiGateway(input: {
           new Error("E2E run ownership requires an isolated development profile and UUID."),
         ),
     })
-    const ci = yield* Config.boolean("CI").pipe(Config.withDefault(false))
+    const ci = yield* Config.Boolean("CI").pipe(Config.withDefault(false))
     const scope = Match.value(ci).pipe(
       Match.when(true, () => "-ci"),
       Match.orElse(() => ""),
@@ -194,7 +194,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
     })
     const api = yield* createApi({
       appName,
-      e2eAiUsage: yield* Config.boolean("E2E_AI_USAGE").pipe(Config.withDefault(false)),
+      e2eAiUsage: yield* Config.Boolean("E2E_AI_USAGE").pipe(Config.withDefault(false)),
       stageMetadata,
       deploymentMetadata,
       dev,
