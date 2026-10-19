@@ -1,12 +1,6 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
-import {
-  api,
-  authErrorCode,
-  authRequest,
-  linkedAuthAccounts,
-  uniqueName,
-} from "./support/api"
+import { api, authErrorCode, authRequest, linkedAuthAccounts, uniqueName } from "./support/api"
 
 test(
   "create, use and revoke an isolated user API key",

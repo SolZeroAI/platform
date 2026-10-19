@@ -1,12 +1,6 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
-import {
-  api,
-  authErrorCode,
-  authRequest,
-  linkedAuthAccounts,
-  uniqueName,
-} from "./support/api"
+import { api, authErrorCode, authRequest, linkedAuthAccounts, uniqueName } from "./support/api"
 import { requireFixture } from "./support/external-fixtures"
 
 test(
