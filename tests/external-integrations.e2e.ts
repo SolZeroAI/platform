@@ -1,6 +1,12 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
-import { api, uniqueName } from "./support/api"
+import {
+  api,
+  authErrorCode,
+  authRequest,
+  linkedAuthAccounts,
+  uniqueName,
+} from "./support/api"
 import { requireFixture } from "./support/external-fixtures"
 
 test(
@@ -17,6 +23,63 @@ test(
       response.repos.some((item) => item.full_name === repo),
       "Link the disposable admin GitHub identity and grant its app access to E2E_GITHUB_REPOSITORY",
     ).toBe(true)
+  },
+)
+
+test(
+  "linked GitHub identity loads account info and an access token by local account id",
+  { session: "admin", tags: ["external", "github"] },
+  async ({ app, browser, screen }) => {
+    requireFixture("E2E_GITHUB_REPOSITORY")
+    const listed = await authRequest(browser, "/api/auth/list-accounts")
+    expect(listed.status).toBe(200)
+    const github = linkedAuthAccounts(listed.payload).find(
+      (account) => account.providerId === "github",
+    )
+    expect(
+      github,
+      "Link the disposable admin GitHub identity so list-accounts returns a github row",
+    ).toBeDefined()
+    if (!github) {
+      return
+    }
+
+    const foreignId = github.accountId === github.id ? uniqueName("foreign") : github.accountId
+    const profileLoad = browser.waitForResponse(/\/api\/auth\/account-info\?accountId=/)
+    await app.open("/settings?category=api-access")
+    const profileResponse = await profileLoad
+    expect(profileResponse.status).toBe(200)
+    expect(profileResponse.url).toContain(`accountId=${encodeURIComponent(github.id)}`)
+    const profile = (await profileResponse.json()) as {
+      account?: { id?: string; accountId?: string }
+      data?: { login?: string }
+    }
+    expect(profile.account?.id).toBe(github.id)
+    expect(profile.account?.accountId).toBe(github.accountId)
+    expect(profile.data?.login).toBeDefined()
+    await expect(screen.getByText(`@${profile.data?.login}`, { exact: true })).toBeVisible()
+    await expect(screen.getByRole("button", "Unlink").first()).toBeVisible()
+
+    const missingProfile = await authRequest(
+      browser,
+      `/api/auth/account-info?accountId=${encodeURIComponent(foreignId)}`,
+    )
+    expect(missingProfile.status).toBe(400)
+    expect(authErrorCode(missingProfile.payload)).toBe("ACCOUNT_NOT_FOUND")
+
+    const token = await authRequest(browser, "/api/auth/get-access-token", "POST", {
+      accountId: github.id,
+    })
+    expect(token.status).toBe(200)
+    const tokenPayload = token.payload as { accessToken?: string }
+    expect(typeof tokenPayload.accessToken).toBe("string")
+    expect(tokenPayload.accessToken?.startsWith("ghu_")).toBe(true)
+
+    const missingToken = await authRequest(browser, "/api/auth/get-access-token", "POST", {
+      accountId: foreignId,
+    })
+    expect(missingToken.status).toBe(400)
+    expect(authErrorCode(missingToken.payload)).toBe("ACCOUNT_NOT_FOUND")
   },
 )
 
