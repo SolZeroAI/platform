@@ -11,7 +11,7 @@ Use Nub for every install and verify command (`nub install`, `nub run test`, `nu
 
 ## Run
 
-Use Node 24.15 and Nub 0.4.11. Docker must be running. Ports 3000 and 3100 are exclusive; the launcher refuses an existing stack. Coordinate with other projects before starting the suite.
+Use Node 24.15 and Nub 0.9.6. Docker must be running. Ports 3000 and 3100 are exclusive; the launcher refuses an existing stack. Coordinate with other projects before starting the suite.
 
 ```sh
 nub install --frozen-lockfile

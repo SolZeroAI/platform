@@ -2,6 +2,7 @@
   "name": "@solzero/background-web",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nub run --cwd ../../packages/infra dev:web",
     "build": "vite build",
