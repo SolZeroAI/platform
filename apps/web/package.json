@@ -12,7 +12,7 @@
     "deploy:dev": "nub run --cwd ../../packages/infra deploy:web:dev",
     "deploy:pre": "nub run --cwd ../../packages/infra deploy:web:pre",
     "deploy:prod": "nub run --cwd ../../packages/infra deploy:web:prod",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src scripts vite.config.ts",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src scripts vite.config.ts",
     "render:release": "tsx scripts/render-release-card.ts render-release"
@@ -63,6 +63,7 @@
     "semver": "7.8.5",
     "tailwindcss": "^4.3.3",
     "takumi-js": "2.13.7",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.2"

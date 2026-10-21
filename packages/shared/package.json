@@ -16,13 +16,14 @@
     "build": "tsc --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
     "effect": "4.0.3",
     "yaml": "2.9.0"
   },
   "devDependencies": {
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^7.0.2"
   }
 }

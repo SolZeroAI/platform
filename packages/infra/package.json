@@ -31,7 +31,7 @@
     "destroy:pre": "nub run alchemy destroy alchemy.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
     "destroy:prod": "nub run alchemy destroy alchemy.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
     "build": "tsc --noEmit -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsrs --noEmit -p tsconfig.json",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src"
   },
@@ -48,6 +48,7 @@
     "@types/node": "^24.13.3",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "oxlint": "1.87.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }

@@ -31,7 +31,7 @@
     "build": "tsc --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.49",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^7.0.2"
   }
 }
