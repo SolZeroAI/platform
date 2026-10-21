@@ -23,6 +23,13 @@ const PublicOwnership = Schema.Struct({
 })
 export type OwnershipReceipt = Schema.Schema.Type<typeof PublicOwnership>
 type OwnershipEvidence = { run: string; attempt: string; rows: readonly OwnershipReceipt[] }
+type HostedAttemptMetadata = {
+  id: string | number
+  path: string
+  status: string
+  run_attempt: string | number
+  repository?: { full_name?: string }
+}
 const decodeOwnership = Schema.decodeUnknownSync(Schema.Array(PublicOwnership))
 function githubApi(path: string) {
   const result = spawnSync("gh", ["api", path], { maxBuffer: 16_777_216, timeout: 60_000 })
@@ -144,7 +151,7 @@ export async function recoverHostedOwnership() {
       if (String(artifact.workflow_run?.id) !== run)
         throw new Error("Ownership archive producer mismatch.")
       // An active producer may still own resources; leave its archive for a later completed-run recovery.
-      const metadata = JSON.parse(
+      const metadata: HostedAttemptMetadata = JSON.parse(
         githubApi(`repos/${repository}/actions/runs/${run}/attempts/${attempt}`).toString("utf8"),
       )
       if (

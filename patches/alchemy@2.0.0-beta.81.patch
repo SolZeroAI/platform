@@ -1,0 +1,123 @@
+diff --git a/lib/Cloudflare/AI/SearchInstance.js b/lib/Cloudflare/AI/SearchInstance.js
+--- a/lib/Cloudflare/AI/SearchInstance.js
++++ b/lib/Cloudflare/AI/SearchInstance.js
+@@ -407,7 +407,7 @@
+             name: output.namespace,
+             id: output.instanceId,
+         })
+-            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.void));
++            .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.void));
+     }),
+ });
+ /**
+@@ -450,12 +450,13 @@
+ const resolveNamespace = (namespace) => namespace ?? "default";
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId, namespace, id) => aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+-    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.succeed(undefined)));
++    .pipe(Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.succeed(undefined)));
+ const createInstanceId = (id, instanceId) => Effect.gen(function* () {
+     return instanceId ?? (yield* createPhysicalName({ id, lowercase: true }));
+ });
+diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/WorkerProvider.js
+--- a/lib/Cloudflare/Workers/WorkerProvider.js
++++ b/lib/Cloudflare/Workers/WorkerProvider.js
+@@ -975,7 +975,7 @@
+         const toRemove = liveAll.filter((d) => !desiredSet.has(d.hostname));
+         yield* Effect.all(toRemove.map((d) => workers
+             .deleteDomain({ accountId, domainId: d.id })
+-            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void))), { concurrency: "unbounded" });
++            .pipe(Effect.catchCause(() => Effect.void))), { concurrency: "unbounded" });
+         if (desired.length === 0)
+             return [];
+         const zoneCache = new Map();
+@@ -1000,7 +1000,7 @@
+                 // then recreate it below with the explicitly requested zone.
+                 yield* workers
+                     .deleteDomain({ accountId, domainId: live.id })
+-                    .pipe(Effect.catchTag("DomainNotFound", () => Effect.void));
++                    .pipe(Effect.catchCause(() => Effect.void));
+             }
+             // Not attached to this Worker — but it could still belong
+             // to another Worker. Check before we try to PUT so we can
+@@ -4045,7 +4045,7 @@
+                     ? [
+                         workers
+                             .deleteDomain({ accountId: output.accountId, domainId: d.id })
+-                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                            .pipe(Effect.catchCause(() => Effect.void)),
+                     ]
+                     : []), { concurrency: "unbounded" });
+             }
+diff --git a/src/Cloudflare/AI/SearchInstance.ts b/src/Cloudflare/AI/SearchInstance.ts
+--- a/src/Cloudflare/AI/SearchInstance.ts
++++ b/src/Cloudflare/AI/SearchInstance.ts
+@@ -738,7 +738,7 @@
+           id: output.instanceId,
+         })
+         .pipe(
+-          Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () => Effect.void),
++          Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"], () => Effect.void),
+         );
+     }),
+   });
+@@ -790,15 +790,17 @@
+ 
+ /**
+  * Read an instance by id within its namespace, mapping "gone" to
+- * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`,
+- * code 7002) or its whole namespace is (`NamespaceNotFound`, code 7063).
++ * `undefined` — either the instance is missing (`AiSearchInstanceNotFound`
++ * or `NotFound`, code 7002) or its whole namespace is (`NamespaceNotFound`,
++ * code 7063).
+  */
+ const getInstance = (accountId: string, namespace: string, id: string) =>
+   aisearch
+     .readNamespaceInstance({ accountId, name: namespace, id })
+     .pipe(
+-      Effect.catchTag(["AiSearchInstanceNotFound", "NamespaceNotFound"], () =>
+-        Effect.succeed(undefined),
++      Effect.catchTag(
++        ["AiSearchInstanceNotFound", "NamespaceNotFound", "NotFound"],
++        () => Effect.succeed(undefined),
+       ),
+     );
+ 
+diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/WorkerProvider.ts
+--- a/src/Cloudflare/Workers/WorkerProvider.ts
++++ b/src/Cloudflare/Workers/WorkerProvider.ts
+@@ -1342,7 +1342,7 @@
+             toRemove.map((d) =>
+               workers
+                 .deleteDomain({ accountId, domainId: d.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                .pipe(Effect.catchCause(() => Effect.void)),
+             ),
+             { concurrency: "unbounded" },
+           );
+@@ -1376,7 +1376,7 @@
+               // then recreate it below with the explicitly requested zone.
+               yield* workers
+                 .deleteDomain({ accountId, domainId: live.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void));
++                .pipe(Effect.catchCause(() => Effect.void));
+             }
+ 
+             // Not attached to this Worker — but it could still belong
+@@ -5203,7 +5203,7 @@
+                   ? [
+                       workers
+                         .deleteDomain({ accountId: output.accountId, domainId: d.id })
+-                        .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                        .pipe(Effect.catchCause(() => Effect.void)),
+                     ]
+                   : [],
+               ),

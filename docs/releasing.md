@@ -57,7 +57,8 @@ combined version and release-note preview. A change with no observable effect ca
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
 2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
-   workflow then runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
+   workflow first runs the agent-container images job, then runs `nub run tegami ci` and opens or
+   updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
@@ -107,9 +108,14 @@ production. `Deploy` and `Deploy Preview` stay disabled. Do not add a `prod` env
 
 ## Repository settings
 
-Enable **Allow GitHub Actions to create and approve pull requests** in the repository Actions
-settings. Keep workflow permissions restricted to the values in each workflow. The version workflow
-needs `contents: write` and `pull-requests: write`.
+The release job mints a GitHub App installation token with `actions/create-github-app-token`. The
+action is pinned by commit SHA. Secrets `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` identify the
+app. The token is limited to this repository. It requests contents write and pull requests write.
+Checkout and `nub run tegami ci` use that token for the version pull request, the `vX.Y.Z` tag, and
+the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
+
+Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. The release job has
+`contents: read`. The image publish job has `contents: read` and `packages: write`.
 
 Create the `release:none` label for pull requests that have no user-visible release note. Enable
 immutable releases after the repository supports that GitHub setting.

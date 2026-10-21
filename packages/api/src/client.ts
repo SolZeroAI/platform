@@ -1,6 +1,6 @@
 import { Effect, type Redacted } from "effect"
-import { FetchHttpClient, HttpClientRequest } from "effect/unstable/http"
-import { HttpApiClient, HttpApiMiddleware } from "effect/unstable/httpapi"
+import { FetchHttpClient, HttpClientRequest } from "effect/http"
+import { HttpApiClient, HttpApiMiddleware } from "effect/http-api"
 import { S0Api } from "./http"
 import { ControlPlaneAuth } from "./http/security"
 

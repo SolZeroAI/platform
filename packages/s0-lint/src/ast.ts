@@ -22,7 +22,7 @@ export function isNodeType(node: unknown, type: string): node is NodeLike {
   return isNode(node) && node.type === type
 }
 
-export function nodeValue(node: NodeLike, key: string): unknown {
+function nodeValue(node: NodeLike, key: string): unknown {
   return node[key]
 }
 
@@ -36,7 +36,7 @@ export function nodeChildren(node: NodeLike, key: string): NodeLike[] {
   return Array.isArray(value) ? value.filter(isNode) : []
 }
 
-export function parentNode(node: NodeLike): NodeLike | undefined {
+function parentNode(node: NodeLike): NodeLike | undefined {
   const parent = nodeValue(node, "parent")
   return isNode(parent) ? parent : undefined
 }
@@ -52,14 +52,14 @@ export function literalValue(node: NodeLike | undefined): unknown {
   return nodeValue(node, "value")
 }
 
-export function identifierName(node: NodeLike | undefined): string | undefined {
+function identifierName(node: NodeLike | undefined): string | undefined {
   if (!node) {
     return undefined
   }
   return readString(nodeValue(node, "name")) ?? readString(nodeValue(node, "value"))
 }
 
-export function unwrapExpression(node: NodeLike | undefined): NodeLike | undefined {
+function unwrapExpression(node: NodeLike | undefined): NodeLike | undefined {
   let current = node
   while (current) {
     const expression = nodeChild(current, "expression")

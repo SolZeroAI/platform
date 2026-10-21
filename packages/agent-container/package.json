@@ -8,7 +8,7 @@
     "build": "tsc --noEmit",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
     "@ai-sdk/harness": "1.0.41",
@@ -17,10 +17,11 @@
     "@ai-sdk/harness-opencode": "1.0.42",
     "@ai-sdk/provider-utils": "5.0.12",
     "@modelcontextprotocol/sdk": "1.30.0",
-    "effect": "4.0.0-beta.107"
+    "effect": "4.0.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^7.0.2"
   }
 }

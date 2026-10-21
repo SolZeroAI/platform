@@ -18,7 +18,7 @@ export const ReleaseSocialCopySchema = Schema.Struct({
   title: Schema.optionalKey(ReleaseTitleSchema),
   description: Schema.optionalKey(ReleaseDescriptionSchema),
   bullets: Schema.optionalKey(
-    Schema.Array(ReleaseBulletSchema).check(Schema.isLengthBetween(1, 3)),
+    Schema.Array(ReleaseBulletSchema).check(Schema.isBetweenLength(1, 3)),
   ),
   workType: Schema.optionalKey(ReleaseWorkTypeSchema),
 })

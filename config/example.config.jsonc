@@ -55,6 +55,7 @@
 
       // Any social or OIDC provider can become a sign-in authority. Its kind does not grant
       // authority; the capabilities below do. Keep implicit account linking disabled.
+      // Register <authBaseUrl>/api/auth/callback/<providerId> with the identity provider.
       // "company-oidc": {
       //   "kind": "oidc",
       //   "enabled": true,

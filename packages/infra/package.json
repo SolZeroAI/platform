@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "alchemy": "nub exec tsx --env-file-if-exists=../../config/.env ./node_modules/alchemy/bin/alchemy.ts",
+    "alchemy": "nub exec tsx --env-file-if-exists=../../config/.env ./node_modules/alchemy/bin/cli.js",
     "dev": "nub run alchemy dev alchemy.run.ts --stage dev --env-file ../../config/.dev.vars",
     "dev:api": "nub run alchemy dev alchemy.api.run.ts --stage dev --env-file ../../config/.dev.vars",
     "dev:web": "nub run alchemy dev alchemy.web.run.ts --stage dev --env-file ../../config/.dev.vars",
@@ -31,23 +31,24 @@
     "destroy:pre": "nub run alchemy destroy alchemy.run.ts --stage pre --env-file ../../config/.pre.vars --yes",
     "destroy:prod": "nub run alchemy destroy alchemy.run.ts --stage prod --env-file ../../config/.prod.vars --yes",
     "build": "tsc --noEmit -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsrs --noEmit -p tsconfig.json",
     "lint": "NODE_OPTIONS='--import tsx' oxlint src",
     "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src"
   },
   "dependencies": {
     "@solzero/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.74",
-    "alchemy-planetscale-logical-db": "2.0.0",
+    "alchemy": "2.0.0-beta.81",
+    "alchemy-planetscale-logical-db": "2.1.0",
     "dotenv": "^17.4.2",
-    "effect": "4.0.0-beta.107",
+    "effect": "4.0.3",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
     "@types/node": "^24.13.3",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "oxlint": "1.86.0",
+    "oxlint": "1.87.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }

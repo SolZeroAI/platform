@@ -43,9 +43,10 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@47e5e7393d50f4e9544ddaf756aa277972afba2d # v0.4.0
+        # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -104,9 +105,10 @@ jobs:
         with:
           # Pull requests use the head SHA. Push, merge_group, and dispatch use github.sha.
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.sha }}
-      - uses: nubjs/setup-nub@47e5e7393d50f4e9544ddaf756aa277972afba2d # v0.4.0
+      # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+      - uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
       - name: Install dependencies
