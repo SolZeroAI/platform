@@ -154,6 +154,12 @@ jobs:
           exclude: |
             **/*.md
             **/*.map
+            node_modules/**/*.ts
+            node_modules/**/*.tsx
+            node_modules/**/*.mts
+            node_modules/**/*.cts
+            node_modules/.store/drizzle-kit@*
+            apps/web/dist/client/images
 
   # Pack preview only. No environment and no id-token.
   registry-dry-run:
@@ -195,3 +201,9 @@ jobs:
           exclude: |
             **/*.md
             **/*.map
+            node_modules/**/*.ts
+            node_modules/**/*.tsx
+            node_modules/**/*.mts
+            node_modules/**/*.cts
+            node_modules/.store/drizzle-kit@*
+            apps/web/dist/client/images
