@@ -1,5 +1,5 @@
 /* oxlint-disable effect/avoid-process-env, s0-lint/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import dotenv from "dotenv"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
@@ -55,11 +55,17 @@ async function generatedSchema(): Promise<string> {
 
 async function checkConfig(profile?: string): Promise<void> {
   resolveS0Config(readConfigPath(exampleConfigPath))
-  const stages = profile?.startsWith("e2e")
-    ? (["dev"] as const)
+  const stages: string[] = profile?.startsWith("e2e")
+    ? ["dev"]
     : profile
-      ? (["dev", "pre", "prod"] as const)
-      : S0_CONFIG_STAGE_NAMES
+      ? ["dev", "pre", "prod"]
+      : [...S0_CONFIG_STAGE_NAMES]
+  if (
+    profile &&
+    !profile.startsWith("e2e") &&
+    existsSync(resolve(repoRoot, s0ConfigPathForStage("test", profile)))
+  )
+    stages.push("test")
   for (const stage of stages) {
     resolveS0Config(readConfigFile(stage, profile))
   }
@@ -103,6 +109,7 @@ function writeStageVars(stage: string, outputPath: string): void {
     .map((name) => `${name}=${dotenvQuote(process.env[name] ?? existing[name] ?? "")}`)
     .join("\n")
   writeFileSync(resolvedOutputPath, `${contents}\n`, { mode: 0o600 })
+  chmodSync(resolvedOutputPath, 0o600)
   process.stdout.write(`Wrote ${names.length} secret references to ${outputPath}\n`)
 }
 
