@@ -79,62 +79,28 @@ jobs:
       - name: Install dependencies
         run: nub install --frozen-lockfile
 
+      - name: Skip registry publish when the version tag exists
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${version}" >/dev/null 2>&1; then
+            echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Version or publish release
         run: nub run tegami ci
         env:
           GITHUB_TOKEN: ${{ steps.release-token.outputs.token }}
           S0_CREATIVE_RELEASE_ASSETS: "true"
 
-      - name: Record whether this run published the release
-        id: published
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          head_sha="$(git rev-parse HEAD)"
-          version="$(git show HEAD:VERSION | tr -d '[:space:]')"
-          echo "sha=${head_sha}" >> "$GITHUB_OUTPUT"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            {
-              echo "tag="
-              echo "published=false"
-            } >> "$GITHUB_OUTPUT"
-            echo "VERSION at HEAD is not an x.y.z release. No registry package will be published."
-            exit 0
-          fi
-          tag="v${version}"
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          run_created="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq .created_at)"
-          tag_sha=""
-          published_at=""
-          if ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq .object.type 2>/dev/null)"; then
-            object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq .object.sha)"
-            if [[ "$ref_type" == "tag" ]]; then
-              tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
-            else
-              tag_sha="$object_sha"
-            fi
-            published_at="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)"
-          fi
-          decision="$(bash scripts/release-artifact-gate.sh published "$head_sha" "$tag_sha" "$published_at" "$run_created")"
-          echo "published=${decision}" >> "$GITHUB_OUTPUT"
-          if [[ "$decision" == "true" ]]; then
-            echo "This run published ${tag} at ${head_sha}."
-          else
-            echo "This run did not publish ${tag} at ${head_sha}. No registry package will be published."
-          fi
-
-  # Publishes the registry package only for the release this run just published.
-  # Checking out master and publishing v$(VERSION) would attach a later commit
-  # to an older release such as v1.8.0. A release: published workflow does not
-  # run: Tegami creates that release with GITHUB_TOKEN.
-  #
-  # This is the only job that requests id-token or uses environment alchemy-new.
-  # The workflow event is workflow_run, because this file runs after Validate.
-  # github.event_name is therefore workflow_run, and the finished Validate run
-  # must itself be a push. github.ref is refs/heads/master because workflow_run
-  # uses the default-branch workflow file. A pull_request, tag push,
-  # workflow_dispatch, or merge_group event does not match.
+  # The only job that requests id-token or uses environment alchemy-new.
   registry:
     name: Publish alchemy.new registry package
     needs:
@@ -158,33 +124,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - name: Check out release tag
+      - name: Check out release commit
         uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ needs.release.outputs.tag }}
-          fetch-depth: 1
-
-      - name: Require this run's release tag commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release.outputs.tag }}
-          EXPECTED_SHA: ${{ needs.release.outputs.sha }}
-        run: |
-          set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Refusing to publish release ${RELEASE_TAG}."
-            exit 1
-          fi
-          head_sha="$(git rev-parse HEAD)"
-          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.type)"
-          object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .object.sha)"
-          if [[ "$ref_type" == "tag" ]]; then
-            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq .object.sha)"
-          else
-            tag_sha="$object_sha"
-          fi
-          bash scripts/release-artifact-gate.sh assert-tag "$head_sha" "$EXPECTED_SHA" "$tag_sha"
-          echo "Registry publish is allowed for ${RELEASE_TAG} at ${EXPECTED_SHA}."
+          ref: ${{ needs.release.outputs.sha }}
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0.6.0
@@ -199,42 +142,20 @@ jobs:
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
       - name: Install, build, and prune production dependencies
-        run: bash scripts/prepare-alchemy-new-package.sh
-
-      - name: Load pack patterns
-        id: patterns
         run: |
-          set -euo pipefail
-          {
-            echo "include<<EOF"
-            cat scripts/alchemy-new-pack.include
-            echo "EOF"
-            echo "exclude<<EOF"
-            cat scripts/alchemy-new-pack.exclude
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          nub install --frozen-lockfile
+          nub run build
+          nub prune --prod
 
       - name: Publish to alchemy.new
-        id: publish
         uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
-          package: solzero/platform
           version: ${{ needs.release.outputs.tag }}
-          path: .
-          manifest: alchemy.new.jsonc
-          include: ${{ steps.patterns.outputs.include }}
-          exclude: ${{ steps.patterns.outputs.exclude }}
-          on-immutable: skip-if-digest-matches
+          exclude: |
+            **/*.md
+            **/*.map
 
-      - name: Record manifest digest
-        run: |
-          {
-            echo "### Manifest digest"
-            echo ""
-            echo "\`manifest-sha256\`: \`${{ steps.publish.outputs.manifest-sha256 }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # Pack preview only. Do not add environment alchemy-new or id-token here.
+  # Pack preview only. No environment and no id-token.
   registry-dry-run:
     name: Dry-run alchemy.new registry package
     if: >-
@@ -261,37 +182,16 @@ jobs:
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
       - name: Install, build, and prune production dependencies
-        run: bash scripts/prepare-alchemy-new-package.sh
-
-      - name: Load pack patterns
-        id: patterns
         run: |
-          set -euo pipefail
-          {
-            echo "include<<EOF"
-            cat scripts/alchemy-new-pack.include
-            echo "EOF"
-            echo "exclude<<EOF"
-            cat scripts/alchemy-new-pack.exclude
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          nub install --frozen-lockfile
+          nub run build
+          nub prune --prod
 
       - name: Dry-run publish to alchemy.new
-        id: publish
         uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
-          package: solzero/platform
           version: 0.0.0-dry-run
-          path: .
-          manifest: alchemy.new.jsonc
-          include: ${{ steps.patterns.outputs.include }}
-          exclude: ${{ steps.patterns.outputs.exclude }}
           dry-run: true
-
-      - name: Record manifest digest
-        run: |
-          {
-            echo "### Manifest digest"
-            echo ""
-            echo "\`manifest-sha256\`: \`${{ steps.publish.outputs.manifest-sha256 }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          exclude: |
+            **/*.md
+            **/*.map

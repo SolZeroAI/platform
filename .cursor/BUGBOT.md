@@ -152,17 +152,11 @@ Those jobs need Cloudflare tokens.
 
 `.github/workflows/release.yml` runs Tegami version and release after Validate on master push.
 The release job writes GitHub Release notes.
-The registry job publishes package `solzero/platform` only for the release that run published, and only after the checkout SHA matches that tag.
-It runs only for `SolZeroAI/platform` when `github.ref` is `refs/heads/master` and the event is `workflow_run` for a push to `master`.
-A pull request, tag push, `workflow_dispatch`, or `merge_group` event does not request `id-token`.
-It does not publish the current master tree as an older version.
-The manifest is schema version 1. The action uploads `alchemy.new.jsonc` separately. The archive does not contain that file.
-Pull requests run that pack with `dry-run: true`.
-The dry-run job has `contents: read` only. It does not use environment `alchemy-new` and it does not request `id-token`.
-Both publish steps use `SolZeroAI/alchemy-new-publish-action@v1`. Do not pin that action to a commit SHA or an exact version. Leave SHA pins that already exist on other actions.
+The registry job publishes the alchemy.new package when the version tag does not already exist.
+It uses environment `alchemy-new` and `id-token: write` only for `SolZeroAI/platform` on `refs/heads/master` after a master push.
+The dry-run job has `contents: read` only. It does not use that environment or `id-token`.
+Both publish steps use `SolZeroAI/alchemy-new-publish-action@v1`. Do not pin that action to a commit SHA or an exact version.
 Neither job is a Cloudflare deploy.
-The registry job uses GitHub Environment `alchemy-new` and OIDC.
-It does not add a preview or prod deploy.
 
 `docs/releasing.md` and `CONTRIBUTING.md` state the same invert-guard policy.
 
