@@ -28,3 +28,11 @@ test("health identifies the configured application without exposing configuratio
   })
   expect(Object.keys(body).sort()).toEqual(["configDigest", "service", "status", "version"])
 })
+
+test("OpenAPI uses the selected deployment brand", async () => {
+  const response = await fetch("http://localhost:3100/openapi.json")
+  expect(response.status).toBe(200)
+  const document = await response.json()
+  expect(document.info.title).toBe(`${testDeploymentConfig.brand.name} Agent API`)
+  expect(document.info.description).toBe(`API for ${testDeploymentConfig.brand.name} Agent`)
+})

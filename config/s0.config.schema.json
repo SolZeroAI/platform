@@ -12,6 +12,41 @@
         "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "apiFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "useApiShield": { "type": "boolean" },
+        "planetscale": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "clusterSize": { "type": "string" },
+                "logicalDatabaseName": { "type": "string" },
+                "region": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                "arch": {
+                  "anyOf": [{ "type": "string", "enum": ["x86", "arm"] }, { "type": "null" }]
+                },
+                "replicas": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        { "type": "number", "enum": [0] },
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "allOf": [{ "minimum": 2 }]
+                        }
+                      ]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "majorVersion": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+              },
+              "required": ["clusterSize", "logicalDatabaseName"],
+              "additionalProperties": false
+            },
+            { "type": "null" }
+          ]
+        },
         "observability": {
           "type": "object",
           "properties": {

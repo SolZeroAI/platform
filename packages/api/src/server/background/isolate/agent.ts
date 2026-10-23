@@ -1,4 +1,5 @@
 import { tracing as workerTracing } from "cloudflare:workers"
+import { durableMigration } from "../../../migration/durable-state"
 import {
   Think,
   type ChatRecoveryContext,
@@ -93,6 +94,16 @@ export class IsolateSessionAgent
   extends Think<Env, IsolateSessionAgentState>
   implements IsolateSubagentHost
 {
+  /** Internal binding RPC only; not @callable and never exposed to chat clients. */
+  migrationState(request: unknown): Promise<unknown> {
+    return durableMigration(this.ctx, request, {
+      empty: !this.state.sessionId,
+      quiescent:
+        this.activeTurn === null &&
+        (!this.state.sessionId ||
+          !["running", "pending", "warming"].includes(this.state.runtimeStatus)),
+    })
+  }
   initialState = createInitialIsolateSessionAgentState()
   maxSteps = DEFAULT_ISOLATE_STEP_LIMIT
   maxConcurrentAgentTools = 4

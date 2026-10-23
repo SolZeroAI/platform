@@ -68,6 +68,7 @@ import { toError, toErrorWithFallback } from "../../lib/effect-errors"
 import { SessionRepository, toSessionRuntimeRepository } from "./repository"
 import { buildResolvedSessionMcpServers } from "./runtime-mcp"
 import { initSchema } from "./schema"
+import { durableMigration } from "../../../migration/durable-state"
 import { handleResumePromptRequest } from "./resume"
 import { runIsolatePromptWithEvents } from "./isolate-prompt-bridge"
 import { projectSubagentSessionEvent } from "../isolate/agent/subagent-event-projection"
@@ -479,6 +480,17 @@ export class SessionDO extends DurableObject<Env> {
     this.ensureInitialized()
     const url = new URL(request.url)
     return this.routeRequest(request, url)
+  }
+
+  /** Privileged binding RPC for an opt-in operator Worker; intentionally absent from HTTP routing. */
+  migrationState(request: unknown): Promise<unknown> {
+    this.ensureInitialized()
+    const busy = this.sql
+      .exec<{ count: number }>(
+        "SELECT count(*) AS count FROM messages WHERE status IN ('pending', 'processing', 'running')",
+      )
+      .one().count
+    return durableMigration(this.ctx, request, { empty: !this.getSession(), quiescent: busy === 0 })
   }
 
   async persistIsolateSubagentToolEvent(

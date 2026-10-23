@@ -5,7 +5,7 @@ packages:
 
 ## Customize a deployment without changing application code
 
-Deployment profiles can now define a complete product brand for the browser, agents, and Slack.
+Deployment profiles can now define a complete product brand for the browser, API documentation, agents, and Slack.
 Custom logos also replace the primary loading mark. Existing brand environment overrides remain
 supported when the profile does not define a brand.
 
@@ -15,3 +15,5 @@ configured application as `<appName>-agent-control-plane`.
 
 Private deployment templates support named profiles, configurable runners, Okta credentials, and
 PlanetScale credentials for standing environments. Ephemeral pull-request previews remain on D1.
+
+Remote PlanetScale capacity, region and logical database name can be configured without code changes.

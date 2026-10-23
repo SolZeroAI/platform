@@ -1,11 +1,12 @@
-import type { Table } from "drizzle-orm"
+import type { PgTable } from "drizzle-orm/pg-core"
+import type { SQLiteTable } from "drizzle-orm/sqlite-core"
 import * as sqliteSchema from "../server/effect/db/schema"
 import * as pgSchema from "../server/effect/db/schema.pg"
 
 export interface ControlPlaneCopyTable {
   readonly name: string
-  readonly sqlite: Table
-  readonly postgres: Table
+  readonly sqlite: SQLiteTable
+  readonly postgres: PgTable
   readonly primaryKeys: readonly string[]
 }
 

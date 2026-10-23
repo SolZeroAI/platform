@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "s0-migration-operator",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": true,
+  "secrets": { "required": ["MIGRATION_TOKEN"] },
+  "vars": {
+    "MIGRATION_STORE_KIND": "r2",
+    "MIGRATION_RESOURCE_ID": "replace-with-account-and-resource-id",
+    "MIGRATION_WRITABLE": "false",
+  },
+  // Copy to an ignored local config. Bind only the existing resource being transferred.
+  // Never point a writable operator at a source resource or deploy this example unchanged.
+  "kv_namespaces": [{ "binding": "KV", "id": "00000000000000000000000000000000" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "replace-with-existing-bucket" }],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "OBJECTS",
+        "class_name": "SessionDO",
+        "script_name": "replace-with-existing-api-worker",
+      },
+    ],
+  },
+  // Supply MIGRATION_TOKEN as a Worker secret, never here. Use independent source/destination tokens.
+}

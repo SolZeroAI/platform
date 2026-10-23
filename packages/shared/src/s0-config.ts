@@ -36,6 +36,27 @@ export const S0BrandConfigSchema = Schema.Struct({
 })
 export type S0BrandConfig = typeof S0BrandConfigSchema.Type
 
+// oxlint-disable-next-line effect/prefer-schema-class -- PlanetScale provisioning is a deployment JSON DTO, not Worker state.
+export const S0PlanetscaleConfigSchema = Schema.Struct({
+  clusterSize: Schema.String.check(Schema.isPattern(/^[A-Z0-9]+(?:[_-][A-Z0-9]+)*$/)),
+  logicalDatabaseName: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,62}$/)),
+  region: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))),
+  arch: Schema.optional(Schema.Literals(["x86", "arm"])),
+  replicas: Schema.optional(
+    Schema.Union([
+      Schema.Literal(0),
+      Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(2)),
+    ]),
+  ),
+  majorVersion: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9]+$/))),
+})
+export type S0PlanetscaleConfig = typeof S0PlanetscaleConfigSchema.Type
+
+export const DEFAULT_PLANETSCALE_CONFIG: S0PlanetscaleConfig = {
+  clusterSize: "PS_10",
+  logicalDatabaseName: "s0",
+}
+
 function normalizeS0Brand(brand: S0BrandConfig): S0BrandConfig {
   return Schema.decodeUnknownSync(S0BrandConfigSchema)(
     Object.fromEntries(Object.entries(brand).map(([key, value]) => [key, value.trim()])),
@@ -49,6 +70,7 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   webFqdn: Schema.optional(Schema.String),
   apiFqdn: Schema.optional(Schema.String),
   useApiShield: Schema.Boolean,
+  planetscale: Schema.optional(S0PlanetscaleConfigSchema),
   observability: Schema.Struct({
     logsDestinations: Schema.Array(Schema.String),
     tracesDestinations: Schema.Array(Schema.String),

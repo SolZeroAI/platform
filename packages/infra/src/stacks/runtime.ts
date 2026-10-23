@@ -155,6 +155,7 @@ export function s0StackRuntime() {
     return {
       appName: s0Config.deployment.appName,
       brand: s0Config.brand,
+      planetscaleConfig: s0Config.deployment.planetscale,
       apiEnv,
       cloudflareAccountId: yield* requiredConfigString("CLOUDFLARE_ACCOUNT_ID"),
       deploymentMetadata: createDeploymentMetadata({ repoRoot: REPO_ROOT }),

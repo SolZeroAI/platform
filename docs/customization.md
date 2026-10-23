@@ -43,7 +43,7 @@ the existing public brand environment overrides and SolZero defaults remain supp
 the effective brand once, includes it in the configuration digest, and compiles browser scalars and
 the server's `S0_BRAND_NAME` from that value. Worker requests do not read a deployment file.
 
-The same name appears in agent instructions, workflow-building copy, and Slack responses.
+The same name appears in OpenAPI/Scalar documentation, agent instructions, workflow-building copy, and Slack responses.
 `deployment.appName` controls resource names and the health service identifier
 `<appName>-agent-control-plane`. Changing it is a new resource identity, not a cosmetic rename.
 
@@ -69,7 +69,7 @@ enabled. Adding the gateway must not silently replace the existing default model
 
 ## Private deployment CI
 
-The shared templates accept both `main` and `master`. Set repository variable `S0_CI_RUNNER` to
+The shared templates support `master` only. Set repository variable `S0_CI_RUNNER` to
 `ubuntu-latest` when a fork does not use the default Blacksmith runner. Set repository variable
 `S0_CONFIG_PROFILE` so static validation checks the fork's profile. In each GitHub environment
 (`pre` or `prod`), set `S0_CONFIG_PROFILE`, `DATABASE`, `APP_DB_MODE`, and
@@ -86,6 +86,27 @@ Ephemeral PR previews stay on D1. Standing pre and production can select PlanetS
 paid per-PR databases until their provisioning, ownership receipts, and cleanup are supported.
 Public SolZero deployment guards and release ownership guards remain in force.
 
+## PlanetScale provisioning
+
+`deployment.planetscale` is optional and applies only to remote `DATABASE=planetscale` stages:
+
+```jsonc
+"planetscale": {
+  "clusterSize": "PS_10",
+  "logicalDatabaseName": "s0",
+  "region": "aws-us-east-1",
+  "arch": "arm",
+  "replicas": 0,
+  "majorVersion": "17"
+}
+```
+
+Supply both cluster size and logical name when overriding. Without this object, the existing `PS_10`
+size and `s0` logical database remain unchanged. Optional fields otherwise retain provider defaults.
+Replicas must be zero or at least two. Choose available SKUs and regions for the destination organization;
+validation checks shape, not live availability. Review Alchemy's plan before changing existing databases:
+region, architecture and replica changes can require replacement in the provider.
+
 ## Moving accounts or domains
 
 New account credentials do not transfer old resource identities. Plan separate source-read and
@@ -96,6 +117,7 @@ Database copy tooling moves relational rows only. Inventory workflow/skill R2 ob
 encrypted values, Durable Object conversation history, active Workflow executions, schedules,
 AI Search sources, and observability destinations separately. Preserve workflow IDs and webhook IDs.
 Do not assume that copying a session index row moves its Durable Object history or running work.
+See [offline migration](migration.md) for transfer tooling and compatibility gates.
 
 Keep the old stack available until data and functional checks pass. A rollback after new database
 writes needs explicit reconciliation; it is not just a previous Worker version.

@@ -2,7 +2,13 @@ import { randomBytes } from "node:crypto"
 import { readFileSync, statSync } from "node:fs"
 import { test, expect } from "e2e"
 import dotenv from "dotenv"
-import { resolveS0Config, s0ActiveSecretReferences } from "@solzero/shared"
+import {
+  resolveS0Config,
+  s0ActiveSecretReferences,
+  DEFAULT_PLANETSCALE_CONFIG,
+} from "@solzero/shared"
+import { OpenApi } from "effect/http-api"
+import { apiForBrand } from "../packages/api/src/http"
 import { getApiInfraEnv } from "../apps/api/infra"
 import {
   createPullRequestSkillMarkdown,
@@ -140,4 +146,46 @@ test("the CLI rejects incomplete branding and unsafe executable names before dep
     expect(unsafe.status).toBe(1)
     expect(unsafe.stderr).toContain("createPullRequestCommand")
   })
+})
+
+test("PlanetScale provisioning is optional, configurable, and rejects invalid capacity inputs", async () => {
+  const source = exampleDeploymentConfig()
+  expect(DEFAULT_PLANETSCALE_CONFIG).toEqual({ clusterSize: "PS_10", logicalDatabaseName: "s0" })
+  const planetscale = {
+    clusterSize: "PS_20",
+    logicalDatabaseName: "example_fork",
+    region: "aws-us-east-1",
+    arch: "arm" as const,
+    replicas: 2,
+    majorVersion: "17",
+  }
+  expect(
+    resolveS0Config({ ...source, deployment: { ...source.deployment, planetscale } }).deployment
+      .planetscale,
+  ).toEqual(planetscale)
+  withConfigFixture(source, (fixture) => {
+    fixture.writePre(
+      JSON.stringify({
+        ...source,
+        deployment: { ...source.deployment, planetscale: { ...planetscale, replicas: 1 } },
+      }),
+    )
+    const rejected = fixture.run(["stage-url", "pre"])
+    expect(rejected.status).toBe(1)
+    expect(rejected.stderr).toContain("replicas")
+  })
+})
+
+test("OpenAPI identity uses the configured runtime brand", async () => {
+  const document = OpenApi.fromApi(apiForBrand("Example Fork"))
+  expect(document.info.title).toBe("Example Fork Agent API")
+  expect(document.info.description).toBe("API for Example Fork Agent")
+})
+
+test("preview and validation workflows target master only", async () => {
+  for (const workflow of ["preview", "validate"]) {
+    const source = readFileSync(`.github/workflows/${workflow}.yml`, "utf8")
+    expect(source).toContain("branches:\n      - master")
+    expect(source).not.toContain("\n      - main")
+  }
 })
