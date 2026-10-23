@@ -159,6 +159,9 @@ jobs:
             node_modules/**/*.mts
             node_modules/**/*.cts
             node_modules/.store/drizzle-kit@*
+            node_modules/.store/@electric-sql+*
+            node_modules/.store/workerd@*/node_modules/workerd/bin/workerd
+            node_modules/.store/esbuild@*/node_modules/esbuild/bin/esbuild
             apps/web/dist/client/images
 
   # Pack preview only. No environment and no id-token.
@@ -206,4 +209,7 @@ jobs:
             node_modules/**/*.mts
             node_modules/**/*.cts
             node_modules/.store/drizzle-kit@*
+            node_modules/.store/@electric-sql+*
+            node_modules/.store/workerd@*/node_modules/workerd/bin/workerd
+            node_modules/.store/esbuild@*/node_modules/esbuild/bin/esbuild
             apps/web/dist/client/images
