@@ -13,14 +13,14 @@ test(
     try {
       await app.open("/settings?category=api-access")
       await expect(screen.getByText(label, { exact: true })).toBeVisible()
-      const authorized = await fetch("http://localhost:3100/sessions", {
+      const authorized = await fetch("http://localhost:3000/api/sessions", {
         headers: { "x-api-key": created.key },
       })
       expect(authorized.status).toBe(200)
     } finally {
       await api(browser, `/auth/api-keys/${created.keyId}`, "DELETE")
     }
-    const revoked = await fetch("http://localhost:3100/sessions", {
+    const revoked = await fetch("http://localhost:3000/api/sessions", {
       headers: { "x-api-key": created.key },
     })
     expect(revoked.status).toBe(401)

@@ -67,6 +67,35 @@ linking authority. Preserve encryption keys when importing encrypted records.
 The existing LiteLLM default remains authoritative when both LiteLLM and Cloudflare AI Gateway are
 enabled. Adding the gateway must not silently replace the existing default model.
 
+## API routing
+
+Separate web/API domains remain the default (`deployment.apiRouting: "subdomain"`). To expose one
+public origin instead, set `deployment.apiRouting: "same-origin"`, set `zone` and `webFqdn`, and
+omit `apiFqdn`. The public API base becomes `https://<webFqdn>/api`; Better Auth remains at
+`/api/auth/*`. This mode intentionally supports the fixed `/api` prefix, not arbitrary mount paths.
+
+Cloudflare routes `<webFqdn>/api` and `<webFqdn>/api/*` directly to the API Worker. The web Worker
+owns the custom domain and UI paths. API custom domains and workers.dev access are disabled in
+this mode. Keep the hostname proxied in the configured zone, and review route ownership in the
+Alchemy plan. Switching an existing deployment detaches its API domains; keep the old stack on
+its existing mode during a blue/green migration.
+
+Server-side web requests use the `S0_API` service binding, not the public origin. The combined stack
+binds the API it creates; a separate web stack references `S0Api` in the same stage, so deploy the
+API stack first. Local development and workers.dev previews forward `/api` through that binding.
+They preserve caller headers, bodies, redirects, streaming and WebSocket responses. The API owns
+session/API-key authentication and webhook signature checks; the web fallback imposes no browser
+session requirement on API clients or webhooks. Internal MCP endpoints retain their existing guards.
+
+Generated workflow and Slack URLs, agent callback bases and OpenAPI servers use the public API
+base, never a service-binding origin. Workflow/webhook IDs do not change. Update external callers,
+OAuth provider callbacks, GitHub App webhooks and Slack request URLs when moving public domains.
+Auth callbacks stay under the web origin's `/api/auth`, without a doubled `/api` prefix.
+
+`nub run test:config` includes owned local Worker transport tests. The full browser suite's profile
+selects same-origin mode; run that suite and review deployed routes, OAuth, signed webhooks,
+streaming, WebSockets and observability before cutting over a production hostname.
+
 ## Private deployment CI
 
 The shared templates support `master` only. Set repository variable `S0_CI_RUNNER` to

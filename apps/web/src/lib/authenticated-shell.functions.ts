@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequest } from "@tanstack/react-start/server"
 import type { ProviderSettingsResponse, PublicAuthProviderRegistry } from "@solzero/shared"
 import { getAuthSessionContext, type AuthSessionContext } from "@/lib/auth-session"
-import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"
+import { getControlPlaneHeaders, fetchControlPlane } from "@/lib/control-plane"
 
 export interface AuthenticatedShellRouteData {
   authSession: AuthSessionContext | null
@@ -38,7 +38,7 @@ function isPublicAuthProviderRegistry(value: unknown): value is PublicAuthProvid
 async function getAuthProviderConfig(): Promise<PublicAuthProviderRegistry> {
   try {
     const headers = await getControlPlaneHeaders({ Accept: "application/json" })
-    const response = await fetch(new URL("/api/auth/config", getControlPlaneUrl()), { headers })
+    const response = await fetchControlPlane("/api/auth/config", { headers })
     if (!response.ok) return EMPTY_AUTH_PROVIDER_CONFIG
 
     const config = (await response.json()) as unknown
@@ -54,7 +54,7 @@ async function getProviderSettingsForUser(
   try {
     const headers = getControlPlaneHeaders(request.headers)
     headers.set("Accept", "application/json")
-    const response = await fetch(new URL("/providers", getControlPlaneUrl()), { headers })
+    const response = await fetchControlPlane("/providers", { headers })
     if (!response.ok) return null
     return response.json()
   } catch {

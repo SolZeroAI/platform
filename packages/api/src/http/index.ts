@@ -31,9 +31,13 @@ export class S0Api extends HttpApi.make("S0Api")
     }),
   ) {}
 
-export function apiForBrand(name: string) {
+export function apiForBrand(name: string, serverUrl?: string) {
   return S0Api.annotateMerge(
-    OpenApi.annotations({ title: `${name} Agent API`, description: `API for ${name} Agent` }),
+    OpenApi.annotations({
+      title: `${name} Agent API`,
+      description: `API for ${name} Agent`,
+      servers: serverUrl ? [{ url: serverUrl }] : [],
+    }),
   )
 }
 

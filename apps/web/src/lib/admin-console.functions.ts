@@ -7,7 +7,7 @@ import type {
 } from "@solzero/api"
 import { getAuthSessionContext } from "@/lib/auth-session"
 import type { AdminAiSearchInitialData, AdminIntegrationsInitialData } from "@/lib/admin-console"
-import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"
+import { getControlPlaneHeaders, fetchControlPlane } from "@/lib/control-plane"
 
 async function readJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const text = await response.text()
@@ -29,7 +29,7 @@ async function readJsonResponse<T>(response: Response, fallback: string): Promis
 async function requestAdminJson<T>(path: string, request: Request, fallback: string): Promise<T> {
   const headers = getControlPlaneHeaders(request.headers)
   headers.set("Accept", "application/json")
-  const response = await fetch(new URL(path, getControlPlaneUrl()), { headers })
+  const response = await fetchControlPlane(path, { headers })
   return readJsonResponse<T>(response, fallback)
 }
 
