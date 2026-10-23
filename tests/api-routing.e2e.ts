@@ -130,15 +130,17 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
   )
   try {
     await runtime.ready
+    // Ephemeral transport markers, not credentials accepted by an auth service.
+    const marker = crypto.randomUUID()
     const response = await runtime.dispatchFetch(
       "https://public.example/api/workflows/webhooks/original-id?value=a%2Fb",
       {
         method: "POST",
         headers: {
-          authorization: "Bearer fixture",
-          "x-api-key": "fixture-key",
-          cookie: "session=fixture",
-          "x-hub-signature-256": "fixture-signature",
+          authorization: `Bearer ${marker}`,
+          "x-api-key": marker,
+          cookie: `session=${marker}`,
+          "x-hub-signature-256": marker,
         },
         body: new Uint8Array([0, 255, 10, 13, 123, 125]),
       },
@@ -147,10 +149,10 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
       pathname: "/workflows/webhooks/original-id",
       search: "?value=a%2Fb",
       method: "POST",
-      authorization: "Bearer fixture",
-      apiKey: "fixture-key",
-      cookie: "session=fixture",
-      signature: "fixture-signature",
+      authorization: `Bearer ${marker}`,
+      apiKey: marker,
+      cookie: `session=${marker}`,
+      signature: marker,
       body: [0, 255, 10, 13, 123, 125],
     })
     const withoutBrowserSession = await runtime.dispatchFetch(
@@ -158,7 +160,7 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
       {
         method: "POST",
         body: "signed payload",
-        headers: { "x-hub-signature-256": "fixture-signature" },
+        headers: { "x-hub-signature-256": marker },
       },
     )
     expect(await withoutBrowserSession.json()).toMatchObject({ cookie: null })
