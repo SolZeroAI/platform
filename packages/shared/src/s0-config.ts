@@ -69,6 +69,7 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   zone: Schema.String,
   webFqdn: Schema.optional(Schema.String),
   apiFqdn: Schema.optional(Schema.String),
+  apiRouting: Schema.optional(Schema.Literals(["subdomain", "same-origin"])),
   useApiShield: Schema.Boolean,
   planetscale: Schema.optional(S0PlanetscaleConfigSchema),
   observability: Schema.Struct({
@@ -409,6 +410,11 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),
       tracesDestinations: normalizeTextArray(decoded.deployment.observability.tracesDestinations),
     },
+  }
+  if (deployment.apiRouting === "same-origin" && deployment.apiFqdn !== undefined) {
+    throw new Error(
+      "Invalid s0 configuration: same-origin API routing must omit deployment.apiFqdn",
+    )
   }
   const normalizedAuth = adminPassword ? { ...auth, adminPassword } : { ...auth }
   const aiProviders: S0ResolvedConfig["aiProviders"] =
