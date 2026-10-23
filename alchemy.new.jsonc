@@ -1,5 +1,5 @@
 {
-  "$schema": "https://alchemy.new/schema/v1/project.json",
+  "$schema": "https://alchemy.new/schema/project.json",
   "schemaVersion": 1,
   "id": "solzero",
   "name": "SolZero",
@@ -10,12 +10,12 @@
     "website": "https://solzero.dev",
   },
   "source": {
-    "kind": "github-release",
-    "repository": "SolZeroAI/platform",
+    "kind": "registry",
+    "org": "solzero",
+    "project": "platform",
   },
   "deployment": {
     "entrypoint": "packages/infra/alchemy.run.ts",
-    "packageManager": "nub",
     "providers": ["cloudflare"],
     "defaultProvider": "cloudflare",
     "defaultStage": "prod",

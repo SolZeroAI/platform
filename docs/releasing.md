@@ -73,10 +73,29 @@ combined version and release-note preview. A change with no observable effect ca
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
-   creates its GitHub Release.
+   creates its GitHub Release. The same run publishes the alchemy.new registry package. See
+   [Registry package](#registry-package).
 
 Do not edit generated version files in a feature pull request. Review them in the version pull request
 before merge.
+
+## Registry package
+
+`alchemy.new.jsonc` names registry package `solzero/platform`. `.github/workflows/release.yml` publishes
+it with `SolZeroAI/alchemy-new-publish-action@v1` when the version tag does not already exist. The
+registry job checks out that release commit, uses GitHub Environment `alchemy-new`, and requests
+`id-token: write`. Pull requests pack the archive with `dry-run: true` and do not request a token.
+
+Allow this publisher before the first deploy. The OIDC `job_workflow_ref` must equal
+`SolZeroAI/platform/.github/workflows/release.yml@refs/heads/master`, and the `ref` claim must equal
+`refs/heads/master`.
+
+| Field | Value |
+| --- | --- |
+| Repository | `SolZeroAI/platform` |
+| Workflow | `release.yml` |
+| Ref | `refs/heads/master` |
+| Environment | `alchemy-new` |
 
 ## Repository settings
 
@@ -90,12 +109,14 @@ Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. 
 `contents: read`. The image publish job has `contents: read` and `packages: write`.
 
 Create the `release:none` label for pull requests that have no user-visible release note. Enable
-immutable releases after the repository supports that GitHub setting.
+immutable releases after the repository supports that GitHub setting. Create the `alchemy-new`
+environment for the registry job. It holds no registry token.
 
 ## Failure recovery
 
 Re-run the failed `Release` workflow after a network or GitHub API failure. Tegami checks existing
-tags and releases, so the retry continues the same version without duplicating work.
+tags and releases, so the retry continues the same version without duplicating work. Re-run the
+registry job on that same workflow run if the upload failed after the tag was created.
 
 If a released change has a defect, fix it in a new pull request and add a new release entry. Keep an
 existing release tag at its original commit. Never delete or move a published release tag.

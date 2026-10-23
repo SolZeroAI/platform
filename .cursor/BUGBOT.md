@@ -151,8 +151,12 @@ The public repo disables preview with `gh workflow disable preview.yml`.
 Those jobs need Cloudflare tokens.
 
 `.github/workflows/release.yml` runs Tegami version and release after Validate on master push.
-That job writes GitHub Release notes.
-That job is not a Cloudflare deploy.
+The release job writes GitHub Release notes.
+The registry job publishes the alchemy.new package when the version tag does not already exist.
+It uses environment `alchemy-new` and `id-token: write` only for `SolZeroAI/platform` on `refs/heads/master` after a master push.
+The dry-run job has `contents: read` only. It does not use that environment or `id-token`.
+Both publish steps use `SolZeroAI/alchemy-new-publish-action@v1`. Do not pin that action to a commit SHA or an exact version.
+Neither job is a Cloudflare deploy.
 
 `docs/releasing.md` and `CONTRIBUTING.md` state the same invert-guard policy.
 

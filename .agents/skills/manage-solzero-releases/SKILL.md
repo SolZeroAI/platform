@@ -63,6 +63,8 @@ request.
 - Review the generated version pull request before merge. Verify `VERSION`, `CHANGELOG.md`, and the
   release notes.
 - Re-run a failed release workflow after a transient failure. Tegami skips an existing tag and GitHub
-  Release.
+  Release. The registry job publishes with `SolZeroAI/alchemy-new-publish-action@v1` when that tag
+  does not already exist. Its trusted publisher row is repository `SolZeroAI/platform`, workflow
+  `release.yml`, ref `refs/heads/master`, and environment `alchemy-new`.
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.
