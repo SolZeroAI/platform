@@ -3,7 +3,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { ApiEnv } from "infra/types/env"
 import type { AgentRuntime, AuthPrincipal, RunSessionPayload, SessionKind } from "@solzero/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
+import { getInfraServerUrl, resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   parseStoredOpenCodeMcpServers,
   parseStoredSessionTools,
@@ -147,7 +147,7 @@ const createNewRunSession = Effect.fn("sessions.run.createNew")(function* (
     sessionKind,
     agentRuntime: requestedRuntime,
     source: context.initiationSource,
-    serverUrl: new URL(context.request.url).origin,
+    serverUrl: getInfraServerUrl(context.env),
     title: context.payload.title ?? null,
     model: context.payload.model,
     reasoningEffort: context.payload.reasoningEffort ?? null,

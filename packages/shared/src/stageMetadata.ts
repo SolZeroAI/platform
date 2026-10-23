@@ -27,6 +27,7 @@ export interface StageInfraConfig {
   readonly zone: Option.Option<string>
   readonly webFqdn: Option.Option<string>
   readonly apiFqdn: Option.Option<string>
+  readonly apiRouting: Option.Option<"subdomain" | "same-origin">
   readonly apiObservabilityLogsDestinations: Option.Option<readonly string[]>
   readonly apiObservabilityTracesDestinations: Option.Option<readonly string[]>
   readonly apiObservabilityLogsHeadSamplingRate: Option.Option<number>
@@ -39,6 +40,7 @@ const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
   zone: Option.none(),
   webFqdn: Option.none(),
   apiFqdn: Option.none(),
+  apiRouting: Option.none(),
   apiObservabilityLogsDestinations: Option.none(),
   apiObservabilityTracesDestinations: Option.none(),
   apiObservabilityLogsHeadSamplingRate: Option.none(),
@@ -59,6 +61,7 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
     zone: nonEmptyStringOption(config.zone),
     webFqdn: nonEmptyStringOption(config.webFqdn),
     apiFqdn: nonEmptyStringOption(config.apiFqdn),
+    apiRouting: Option.fromNullishOr(config.apiRouting),
     apiObservabilityLogsDestinations: Option.some(config.observability.logsDestinations),
     apiObservabilityTracesDestinations: Option.some(config.observability.tracesDestinations),
     apiObservabilityLogsHeadSamplingRate: Option.some(config.observability.logsHeadSamplingRate),
@@ -72,8 +75,11 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
 
 export interface InfraStageProps {
   readonly zone: string
-  /** Public origin for the API / control plane for this stage. */
+  readonly apiRouting: "subdomain" | "same-origin"
+  /** Public API base URL, including /api when using same-origin routing. */
   readonly serverUrl: string
+  /** Public path routes bound directly to the API Worker. */
+  readonly apiRoutes: readonly string[]
   /**
    * Public origin Better Auth should use when generating OAuth callbacks and
    * other browser-facing auth URLs. In local dev this is the web app origin,
@@ -152,6 +158,8 @@ export interface StageProps {
 // oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
 const InfraStagePropsSchema = Schema.Struct({
   zone: Schema.String,
+  apiRouting: Schema.Literals(["subdomain", "same-origin"]),
+  apiRoutes: Schema.Array(Schema.String),
   serverUrl: Schema.String,
   authBaseUrl: Schema.String,
   authTrustedOrigins: Schema.Array(Schema.String),
@@ -277,14 +285,18 @@ function localInfraStageProps(
   consoleOutputEnabled: boolean,
 ): InfraStageProps {
   const zone = "localhost"
-  const serverUrl = `http://${zone}:${LOCAL_API_PORT}`
+  const apiRouting = Option.getOrElse(config.apiRouting, () => "subdomain" as const)
   const authBaseUrl = "http://localhost:3000"
+  const apiOrigin = `http://${zone}:${LOCAL_API_PORT}`
+  const serverUrl = apiRouting === "same-origin" ? `${authBaseUrl}/api` : apiOrigin
 
   return {
     zone,
+    apiRouting,
+    apiRoutes: [],
     serverUrl,
     authBaseUrl,
-    authTrustedOrigins: [serverUrl, authBaseUrl, "http://127.0.0.1:3000", "http://[::1]:3000"],
+    authTrustedOrigins: [apiOrigin, authBaseUrl, "http://127.0.0.1:3000", "http://[::1]:3000"],
     apiDomains: [],
     webDomains: [],
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
@@ -350,15 +362,18 @@ function deployedInfraStageProps(input: {
   const webFqdn = Option.getOrElse(config.webFqdn, () => defaultWebFqdn)
   const defaultApiFqdn = `api.${webFqdn}`
   const apiFqdn = Option.getOrElse(config.apiFqdn, () => defaultApiFqdn)
-  const serverUrl = `https://${apiFqdn}`
+  const apiRouting = Option.getOrElse(config.apiRouting, () => "subdomain" as const)
   const authBaseUrl = `https://${webFqdn}`
+  const serverUrl = apiRouting === "same-origin" ? `${authBaseUrl}/api` : `https://${apiFqdn}`
 
   return {
     zone,
+    apiRouting,
+    apiRoutes: apiRouting === "same-origin" ? [`${webFqdn}/api`, `${webFqdn}/api/*`] : [],
     serverUrl,
     authBaseUrl,
     authTrustedOrigins: [authBaseUrl],
-    apiDomains: [apiFqdn],
+    apiDomains: apiRouting === "same-origin" ? [] : [apiFqdn],
     webDomains: [webFqdn],
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
     internalMcpOrigin: INTERNAL_MCP_INTERNAL_ORIGIN,
@@ -554,9 +569,12 @@ export function withWorkersDevOrigins(
     )
   }
 
-  const serverUrl = `https://${deployedApiWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
   const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
 
+  const serverUrl =
+    metadata.infra.apiRouting === "same-origin"
+      ? `${authBaseUrl}/api`
+      : `https://${deployedApiWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
   return stageMetadataFromBinding({
     _tag: metadata._tag,
     name: metadata.name,
@@ -567,6 +585,7 @@ export function withWorkersDevOrigins(
       authBaseUrl,
       authTrustedOrigins: [authBaseUrl],
       apiDomains: [],
+      apiRoutes: [],
       webDomains: [],
     },
   })

@@ -1,6 +1,7 @@
 import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Match from "effect/Match"
+import * as Option from "effect/Option"
 import type * as Schema from "effect/Schema"
 import { deployedWebWorkerName, type S0BrandConfig, type StageMetadata } from "@solzero/shared"
 import type { DeploymentMetadata } from "./deploymentMetadata"
@@ -29,6 +30,7 @@ export interface CreateWebOptions {
   deploymentMetadata: DeploymentMetadata
   repoRoot: string
   dev: boolean
+  apiWorker?: Cloudflare.Worker
 }
 
 export function createWeb(options: CreateWebOptions) {
@@ -47,6 +49,10 @@ export function createWeb(options: CreateWebOptions) {
     },
     ...webDevOptions(dev),
     env: {
+      ...Option.match(Option.fromNullishOr(options.apiWorker), {
+        onNone: () => ({}),
+        onSome: (api) => ({ S0_API: Cloudflare.WorkerEntrypoint(api) }),
+      }),
       STAGE: stageMetadata.name,
       VITE_STAGE: stageMetadata.name,
       VITE_APP_VERSION: deploymentMetadata.appVersion,

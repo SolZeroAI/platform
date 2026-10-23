@@ -1,5 +1,7 @@
 import * as Alchemy from "alchemy"
+import * as Cloudflare from "alchemy/Cloudflare"
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import { createS0Web } from "../s0"
 import { stackOptions, type StackOptionsInput } from "../stack"
 import { s0StackRuntime } from "./runtime"
@@ -14,7 +16,13 @@ export class S0Web extends Alchemy.Stack<S0Web, S0WebStackOutput>()("S0Web") {}
 export const S0WebProgram = Effect.gen(function* () {
   const runtime = yield* s0StackRuntime()
 
+  // A split web deployment binds the existing API stack, never provisions it again.
+  const apiWorker = yield* Match.value(runtime.stageMetadata.infra.apiRouting).pipe(
+    Match.when("same-origin", () => Cloudflare.Worker.ref("api", { stack: "S0Api" })),
+    Match.orElse(() => Effect.succeed(undefined)),
+  )
   return yield* createS0Web({
+    apiWorker,
     appName: runtime.appName,
     brand: runtime.brand,
     deploymentMetadata: runtime.deploymentMetadata,

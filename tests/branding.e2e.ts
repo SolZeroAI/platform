@@ -18,7 +18,7 @@ test("the selected deployment brand reaches the browser", async ({ app, browser,
 })
 
 test("health identifies the configured application without exposing configuration", async () => {
-  const response = await fetch("http://localhost:3100/health")
+  const response = await fetch("http://localhost:3000/api/health")
   expect(response.status).toBe(200)
   const body = await response.json()
   expect(body).toMatchObject({
@@ -30,9 +30,10 @@ test("health identifies the configured application without exposing configuratio
 })
 
 test("OpenAPI uses the selected deployment brand", async () => {
-  const response = await fetch("http://localhost:3100/openapi.json")
+  const response = await fetch("http://localhost:3000/api/openapi.json")
   expect(response.status).toBe(200)
   const document = await response.json()
   expect(document.info.title).toBe(`${testDeploymentConfig.brand.name} Agent API`)
   expect(document.info.description).toBe(`API for ${testDeploymentConfig.brand.name} Agent`)
+  expect(document.servers).toEqual([{ url: "http://localhost:3000/api" }])
 })

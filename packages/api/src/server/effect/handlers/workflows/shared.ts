@@ -1,4 +1,9 @@
-import { getInfraServerUrl, WORKFLOW_NODE_CATALOG, type WorkflowManifest } from "@solzero/shared"
+import {
+  getInfraServerUrl,
+  publicApiUrl,
+  WORKFLOW_NODE_CATALOG,
+  type WorkflowManifest,
+} from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -46,7 +51,7 @@ export function formatWorkflow(
   const webhookPath = `/workflows/webhooks/${record.webhook_id}`
 
   const webhookUrl = Option.match(Option.fromNullishOr(serverUrl), {
-    onSome: (base) => new URL(webhookPath, base).toString(),
+    onSome: (base) => publicApiUrl(base, webhookPath),
     onNone: () => null,
   })
 

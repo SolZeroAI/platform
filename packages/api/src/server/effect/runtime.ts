@@ -1,4 +1,5 @@
 import { apiForBrand } from "@solzero/api"
+import { getInfraServerUrl } from "@solzero/shared"
 import * as Context from "effect/Context"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
@@ -25,8 +26,8 @@ const scalarReferenceConfig = {
   mcp: true,
 } satisfies ScalarReferenceConfig
 
-function baseRoutes(brandName: string) {
-  const api = apiForBrand(brandName)
+function baseRoutes(brandName: string, serverUrl: string) {
+  const api = apiForBrand(brandName, serverUrl)
 
   return Layer.mergeAll(
     HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(Layer.provide(HttpRoutesLive)),
@@ -53,12 +54,16 @@ interface EffectApiWebHandler {
 
 type TelemetryLayerOptions = Parameters<typeof makeEffectLoggerLayer>[0]
 
-type ApiHandlerOptions = TelemetryLayerOptions & { readonly brandName: string }
+type ApiHandlerOptions = TelemetryLayerOptions & {
+  readonly brandName: string
+  readonly serverUrl: string
+}
 
 const handlerCache = new Map<string, EffectApiWebHandler>()
 
 const defaultTelemetryOptions: ApiHandlerOptions = {
   brandName: "SolZero",
+  serverUrl: getInfraServerUrl("test"),
   stageMetadataInput: "test",
   workerName: "s0-api",
 }
@@ -78,6 +83,7 @@ function telemetryOptionsFromContext(context?: Context.Context<never>): ApiHandl
       onNone: () => defaultTelemetryOptions,
       onSome: ({ env }) => ({
         brandName: env.S0_BRAND_NAME,
+        serverUrl: getInfraServerUrl(env),
         commitSha: env.COMMIT_SHA,
         stageMetadataInput: env,
         workerName: env.WORKER_NAME,
@@ -92,13 +98,16 @@ function telemetryCacheKey(options: ApiHandlerOptions): string {
     stage: telemetryStageName(options.stageMetadataInput),
     workerName: options.workerName,
     brandName: options.brandName,
+    serverUrl: options.serverUrl,
   })
 }
 
 function createWebHandler(key: string, options: ApiHandlerOptions): EffectApiWebHandler {
   // SAFETY: HttpRouter.toWebHandler expects a layer whose requirements are supplied by the web handler cache. The pipeline's remaining channel is erased at this edge.
   const generatedHandler = HttpRouter.toWebHandler(
-    baseRoutes(options.brandName).pipe(Layer.provide(makeEffectLoggerLayer(options))) as never,
+    baseRoutes(options.brandName, options.serverUrl).pipe(
+      Layer.provide(makeEffectLoggerLayer(options)),
+    ) as never,
     {
       disableLogger: true,
       middleware: observeEffectHttpApi,

@@ -15,7 +15,7 @@ for (const name of ["admin", "peer"] as const) {
       })
       const key = name.toUpperCase()
 
-      const response = await fetch("http://localhost:3100/api/auth/sign-in/email", {
+      const response = await fetch("http://localhost:3000/api/auth/sign-in/email", {
         method: "POST",
         headers: { "Content-Type": "application/json", Origin: "http://localhost:3000" },
         body: JSON.stringify({

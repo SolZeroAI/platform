@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { getAuthSessionContext } from "@/lib/auth-session"
-import { getControlPlaneHeaders, getControlPlaneUrl, getWebAppUrl } from "@/lib/control-plane"
+import {
+  getControlPlaneHeaders,
+  fetchControlPlane,
+  getWebAppUrl,
+  usesSameOriginApi,
+  forwardPublicApiRequest,
+} from "@/lib/control-plane"
 
 export const Route = createFileRoute("/api/$")({
   server: {
@@ -156,6 +162,9 @@ async function getProxyHeaders(
 }
 
 export async function proxyApiRequest(request: Request): Promise<Response> {
+  // Direct Cloudflare routes bypass this handler. Local/workers.dev ingress uses
+  // the same API entrypoint and its endpoint-specific authentication instead.
+  if (usesSameOriginApi()) return forwardPublicApiRequest(request)
   const url = new URL(request.url)
   const route = getUpstreamRoute(url.pathname)
   const headers = await getProxyHeaders(request, route)
@@ -164,11 +173,10 @@ export async function proxyApiRequest(request: Request): Promise<Response> {
     return headers
   }
 
-  const upstreamUrl = new URL(`${route.pathname}${url.search}`, getControlPlaneUrl())
   const hasBody = request.method !== "GET" && request.method !== "HEAD"
   const body = hasBody ? request.body : undefined
 
-  const response = await fetch(upstreamUrl, {
+  const response = await fetchControlPlane(`${route.pathname}${url.search}`, {
     method: request.method,
     headers,
     redirect: "manual",
