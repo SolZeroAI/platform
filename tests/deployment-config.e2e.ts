@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto"
-import { readFileSync, statSync } from "node:fs"
+import { readFileSync, statSync, writeFileSync, chmodSync } from "node:fs"
 import { test, expect } from "e2e"
 import dotenv from "dotenv"
 import {
@@ -104,6 +104,7 @@ test("profile validation and stage URLs select the same complete named file", as
       const checked = fixture.run(["check"])
       expect(checked.status).toBe(0)
       expect(checked.stdout).toContain("config/fixture-pre.config.jsonc")
+      expect(checked.stdout).toContain("config/fixture-test.config.jsonc")
       const url = fixture.run(["stage-url", "pre"])
       expect(url.status).toBe(0)
       expect(url.stdout.trim()).toBe("https://agent.example.test")
@@ -124,7 +125,8 @@ test("the stage secret writer includes only active references without printing t
 
   withConfigFixture(configured, (fixture) => {
     const value = randomBytes(48).toString("base64url")
-
+    writeFileSync(fixture.varsPath, "UNREFERENCED_TOKEN=\n")
+    chmodSync(fixture.varsPath, 0o644)
     const written = fixture.run(["write-stage-vars", "pre", fixture.varsPath], {
       FORK_TOKEN_KEY: value,
       UNREFERENCED_TOKEN: randomBytes(48).toString("base64url"),
