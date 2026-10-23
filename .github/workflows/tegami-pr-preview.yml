@@ -8,6 +8,13 @@ on:
       - opened
       - reopened
       - synchronize
+  push:
+    branches:
+      - master
+  merge_group:
+    types: [checks_requested]
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -18,12 +25,18 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
+      - name: Report the required check outside pull requests
+        if: github.event_name != 'pull_request'
+        run: echo "Release preview is built for pull requests. This event reports the required check as success."
+
       - name: Check out pull request
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Nub
+        if: github.event_name == 'pull_request'
         uses: nubjs/setup-nub@v0.6.0
         with:
           nub-version: 0.9.6
@@ -31,17 +44,21 @@ jobs:
           cache-dependency-path: nub.lock
 
       - name: Install native dependencies
+        if: github.event_name == 'pull_request'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
       - name: Install dependencies
+        if: github.event_name == 'pull_request'
         run: nub install --frozen-lockfile
 
       - name: Build release preview
+        if: github.event_name == 'pull_request'
         run: nub run tegami pr preview --artifact tegami-pr-preview.md
 
       - name: Upload release preview
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: tegami-pr-preview

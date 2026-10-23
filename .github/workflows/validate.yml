@@ -7,6 +7,10 @@ on:
   push:
     branches:
       - master
+  merge_group:
+    types: [checks_requested]
+    branches:
+      - master
   workflow_call:
     inputs:
       checkout_ref:
@@ -37,7 +41,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
+          # Pull requests use the head SHA. Push, merge_group, and dispatch use github.sha.
+          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Nub
         # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
@@ -88,6 +93,7 @@ jobs:
     concurrency:
       group: solzero-e2e-cloudflare-${{ github.repository }}
       cancel-in-progress: false
+    # Fork pull requests skip this job. merge_group has no pull request payload and still runs.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
@@ -102,7 +108,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
+          # Pull requests use the head SHA. Push, merge_group, and dispatch use github.sha.
+          ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.sha }}
       # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
       - uses: nubjs/setup-nub@v0.6.0
         with:

@@ -78,6 +78,34 @@ combined version and release-note preview. A change with no observable effect ca
 Do not edit generated version files in a feature pull request. Review them in the version pull request
 before merge.
 
+## Required checks
+
+These check contexts gate pull requests. The workflows also run on a push to `master` and on
+`merge_group` with type `checks_requested`.
+
+| Check context | Workflow | Job |
+| --- | --- | --- |
+| `Repository validation` | Validate (`.github/workflows/validate.yml`) | `validate` |
+| `Cloudflare end-to-end flows` | Validate (`.github/workflows/validate.yml`) | `e2e` |
+| `Build release preview` | Tegami PR Preview (`.github/workflows/tegami-pr-preview.yml`) | `preview` |
+| `Analyze (javascript-typescript)` | CodeQL (`.github/workflows/codeql.yml`) | `analyze-javascript-typescript` |
+| `Analyze (actions)` | CodeQL (`.github/workflows/codeql.yml`) | `analyze-actions` |
+| `actionlint` | Validate (`.github/workflows/validate.yml`) | `validate` (reviewdog check from the lint step) |
+| `CodeQL` | Code scanning upload from the CodeQL workflow | Not a job. The code scanning app posts this context. |
+
+`Build release preview` builds the Tegami preview on `pull_request` only. On push and on a merge
+group the same job reports success and does not read pull request fields.
+
+`Analyze (javascript-typescript)` and `Analyze (actions)` are fixed job names. They are the same
+contexts as the previous default setup. Disable CodeQL default setup
+(`dynamic/github-code-scanning/codeql`) when `.github/workflows/codeql.yml` is on `master`.
+Default setup cannot run on `merge_group`, and GitHub rejects an advanced setup upload while
+default setup stays enabled. See [`.github/codeql-notes.md`](../.github/codeql-notes.md).
+
+Release tags stay `vX.Y.Z`. GitHub Actions on SolZeroAI/platform do not promote a release to
+production. `Deploy` and `Deploy Preview` stay disabled. Do not add a `prod` environment or a
+`release: published` trigger.
+
 ## Repository settings
 
 The release job mints a GitHub App installation token with `actions/create-github-app-token`. The
