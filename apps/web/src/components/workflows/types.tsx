@@ -12,6 +12,7 @@ import {
   type WorkflowPortDefinition,
 } from "@solzero/shared"
 import { WorkflowCanvasNodeView } from "./builder-canvas"
+import { getS0Brand } from "@/lib/brand"
 import { parseWorkflowHeaderDraftRows, parseWorkflowHeaderOption } from "./header-utils"
 
 export type WorkflowCanvasNode = Node<
@@ -651,7 +652,7 @@ export const WORKFLOW_CREATION_DIALOG_CONFIG: Record<
   },
   import: {
     title: "Import",
-    description: "Load a SolZero workflow YAML export as an editable draft.",
+    description: `Load a ${getS0Brand().name} workflow YAML export as an editable draft.`,
     size: "lg",
     className: "flex max-h-[85vh] w-full max-w-xl flex-col p-0",
   },

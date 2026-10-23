@@ -33,6 +33,8 @@ export type RuntimeProviderConfig =
     }
 
 export interface RuntimeInitRequest {
+  brandName?: string
+  createPullRequestCommand?: string
   sessionId: string
   repoOwner?: string | null
   repoName?: string | null

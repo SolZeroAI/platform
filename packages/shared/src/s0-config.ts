@@ -12,6 +12,7 @@ import {
   type ProviderModelDefinition,
 } from "./provider-config"
 import { type S0DatabaseEngine } from "./database-engine"
+import { resolveS0Brand, type S0BrandEnvironment } from "./s0-brand"
 import {
   normalizeSecretReference,
   SecretReferenceSchema,
@@ -24,6 +25,22 @@ export type S0ConfigStageName = (typeof S0_CONFIG_STAGE_NAMES)[number]
 export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
+
+// oxlint-disable-next-line effect/prefer-schema-class -- public branding is a browser-safe JSON DTO.
+export const S0BrandConfigSchema = Schema.Struct({
+  name: Schema.String.check(Schema.isMinLength(1)),
+  logoLightPath: Schema.String.check(Schema.isMinLength(1)),
+  logoDarkPath: Schema.String.check(Schema.isMinLength(1)),
+  faviconPath: Schema.String.check(Schema.isMinLength(1)),
+  appleTouchIconPath: Schema.String.check(Schema.isMinLength(1)),
+})
+export type S0BrandConfig = typeof S0BrandConfigSchema.Type
+
+function normalizeS0Brand(brand: S0BrandConfig): S0BrandConfig {
+  return Schema.decodeUnknownSync(S0BrandConfigSchema)(
+    Object.fromEntries(Object.entries(brand).map(([key, value]) => [key, value.trim()])),
+  )
+}
 
 // oxlint-disable-next-line effect/prefer-schema-class -- root deployment configuration is a plain JSON DTO
 export const S0DeploymentConfigSchema = Schema.Struct({
@@ -98,6 +115,9 @@ export const S0GitHubAppConfigSchema = Schema.Struct({
   appId: Schema.String,
   clientId: Schema.String,
   slug: Schema.String,
+  createPullRequestCommand: Schema.optional(
+    Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), Schema.isMaxLength(64)),
+  ),
   clientSecret: SecretReferenceSchema,
   privateKey: SecretReferenceSchema,
   webhookSecret: Schema.optional(SecretReferenceSchema),
@@ -150,13 +170,17 @@ const S0ResolvedConfigFields = {
 } as const
 
 // oxlint-disable-next-line effect/prefer-schema-class -- resolved deployment config crosses infra and Worker JSON boundaries
-export const S0ResolvedConfigSchema = Schema.Struct(S0ResolvedConfigFields)
+export const S0ResolvedConfigSchema = Schema.Struct({
+  ...S0ResolvedConfigFields,
+  brand: S0BrandConfigSchema,
+})
 export type S0ResolvedConfig = typeof S0ResolvedConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- external JSONC is decoded to a plain DTO used by infra and Worker bindings
 export const S0ConfigFileSchema = Schema.Struct({
   $schema: Schema.optional(Schema.String),
   ...S0ResolvedConfigFields,
+  brand: Schema.optional(S0BrandConfigSchema),
 })
 export type S0ConfigFile = typeof S0ConfigFileSchema.Type
 
@@ -397,6 +421,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
         }
   const normalized: S0ResolvedConfig = {
     ...decoded,
+    brand: normalizeS0Brand(decoded.brand),
     deployment,
     application: {
       ...decoded.application,
@@ -454,11 +479,20 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
   return normalized
 }
 
-export function resolveS0Config(value: unknown): S0ResolvedConfig {
+export function resolveS0Config(
+  value: unknown,
+  brandEnvironment: S0BrandEnvironment = {},
+): S0ResolvedConfig {
   const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
   return normalizeResolvedConfig(
-    Schema.decodeUnknownSync(S0ResolvedConfigSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(config),
+    Schema.decodeUnknownSync(
+      S0ResolvedConfigSchema,
+      S0_CONFIG_JSON_SCHEMA_OPTIONS,
+    )({
+      ...config,
+      brand: config.brand ?? resolveS0Brand(brandEnvironment),
+    }),
   )
 }
 

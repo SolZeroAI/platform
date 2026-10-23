@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - master
+      - main
   push:
     branches:
       - master
+      - main
   workflow_call:
     inputs:
       checkout_ref:
@@ -29,7 +31,9 @@ permissions:
 jobs:
   validate:
     name: Repository validation
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
     timeout-minutes: 30
     steps:
       - name: Check out repository
@@ -55,6 +59,9 @@ jobs:
 
       - name: Validate configuration
         run: nub run config:check
+
+      - name: Check configuration CLI contracts
+        run: nub run test:config
 
       - name: Typecheck
         run: nub run typecheck
@@ -84,7 +91,7 @@ jobs:
       group: solzero-e2e-cloudflare-${{ github.repository }}
       cancel-in-progress: false
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

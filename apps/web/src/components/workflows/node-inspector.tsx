@@ -465,7 +465,7 @@ export function NodeInspector({
                     label="Command"
                     value={String(node.options.command ?? "")}
                     onChange={(value) => updateOption("command", value)}
-                    helpText="Slash command name for command triggers, for example /SolZero."
+                    helpText="Slash command name for command triggers, for example /workflow."
                   />
                   <LabeledInput
                     label="Action IDs"

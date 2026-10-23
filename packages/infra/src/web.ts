@@ -2,7 +2,7 @@ import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Match from "effect/Match"
 import type * as Schema from "effect/Schema"
-import { deployedWebWorkerName, resolveS0Brand, type StageMetadata } from "@solzero/shared"
+import { deployedWebWorkerName, type S0BrandConfig, type StageMetadata } from "@solzero/shared"
 import type { DeploymentMetadata } from "./deploymentMetadata"
 
 function jsonBinding(value: unknown): Schema.Json {
@@ -23,6 +23,7 @@ function webDevOptions(dev: boolean): Partial<Pick<Cloudflare.Website.ViteProps,
 
 export interface CreateWebOptions {
   appName: string
+  brand: S0BrandConfig
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   repoRoot: string
@@ -30,10 +31,8 @@ export interface CreateWebOptions {
 }
 
 export function createWeb(options: CreateWebOptions) {
-  const { appName, stageMetadata, deploymentMetadata, repoRoot, dev } = options
+  const { appName, brand, stageMetadata, deploymentMetadata, repoRoot, dev } = options
   const [primaryDomain, ...domainAliases] = stageMetadata.infra.webDomains
-  // oxlint-disable-next-line effect/avoid-process-env -- Public brand overrides are build-time inputs for the browser bundle.
-  const brand = resolveS0Brand(process.env)
 
   return Cloudflare.Website.Vite("web", {
     name: deployedWebWorkerName(appName, stageMetadata.name),

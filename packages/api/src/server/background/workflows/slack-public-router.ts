@@ -326,6 +326,7 @@ const processSlackRegistration = Effect.fn("workflows.slack.processRegistration"
 })
 
 function setupRequiredRuns(input: {
+  brandName: string
   registrations: SlackRegistration[]
   slackUserId: string
   setupUrl: string
@@ -334,7 +335,7 @@ function setupRequiredRuns(input: {
     workflowId: registration.workflow_id,
     nodeId: registration.node_id,
     status: "setup_required",
-    error: "Slack user is not linked to a SolZero account",
+    error: `Slack user is not linked to a ${input.brandName} account`,
     slackUserId: input.slackUserId,
     setupUrl: input.setupUrl,
   }))
@@ -428,6 +429,7 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
         Match.tag("setup_required", (setup) =>
           Effect.succeed(
             setupRequiredRuns({
+              brandName: input.env.S0_BRAND_NAME,
               registrations: matchingRegistrations,
               slackUserId: setup.slackUserId,
               setupUrl: setup.setupUrl,
@@ -452,15 +454,19 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
   })
 })
 
-function buildSlackResponse(surface: SlackSurface, runs: SlackRunResult[]): Response {
+function buildSlackResponse(
+  surface: SlackSurface,
+  runs: SlackRunResult[],
+  brandName: string,
+): Response {
   const setupRequired = Arr.findFirst(runs, (run) => run.status === "setup_required")
   const matchedText = Option.match(setupRequired, {
     onSome: (run) =>
-      `Link your Slack account to SolZero before using this workflow: ${run.setupUrl}`,
+      `Link your Slack account to ${brandName} before using this workflow: ${run.setupUrl}`,
     onNone: () =>
       Match.value(runs.length > 0).pipe(
-        Match.when(true, () => "Queued SolZero workflow run."),
-        Match.orElse(() => "No SolZero workflow matched this request."),
+        Match.when(true, () => `Queued ${brandName} workflow run.`),
+        Match.orElse(() => `No ${brandName} workflow matched this request.`),
       ),
   })
   const setupFields = Option.match(setupRequired, {
@@ -510,7 +516,7 @@ const runSlackWorkflowsForPayload = Effect.fn("workflows.slack.runWorkflowsForPa
     runCount: runs.length,
     statuses: runs.map((r) => r.status),
   })
-  return buildSlackResponse(ctx.route.surface, runs)
+  return buildSlackResponse(ctx.route.surface, runs, ctx.env.S0_BRAND_NAME)
 })
 
 const dispatchSlackPayload = Effect.fn("workflows.slack.dispatchPayload")(function* (

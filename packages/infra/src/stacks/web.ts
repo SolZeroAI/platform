@@ -14,6 +14,7 @@ export const S0WebProgram = Effect.gen(function* () {
   const runtime = yield* s0StackRuntime()
   return yield* createS0Web({
     appName: runtime.appName,
+    brand: runtime.brand,
     deploymentMetadata: runtime.deploymentMetadata,
     dev: runtime.dev,
     repoRoot: runtime.repoRoot,

@@ -59,6 +59,7 @@
     "format:fix": "oxfmt .",
     "lint:fix:max": "NODE_OPTIONS='--import tsx' oxlint --fix --fix-suggestions --fix-dangerously .",
     "test": "nub run test:e2e",
+    "test:config": "E2E_TELEMETRY_DISABLED=1 e2e run --config e2e.config-check.config.ts",
     "test:e2e": "tsx scripts/e2e/run.ts --exclude-tag external",
     "test:e2e:live": "tsx scripts/e2e/run.ts --no-cache --exclude-tag external",
     "test:e2e:cache-strict": "tsx scripts/e2e/run.ts --strict-cache --exclude-tag external",

@@ -18,7 +18,7 @@ import {
   type AppSchema,
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
-import { S0_CREATE_PR_SKILL_ID, S0_CREATE_PR_SKILL_MD } from "./built-ins"
+import { createPullRequestSkillMarkdown, isCreatePullRequestSkillId } from "./built-ins"
 
 const GLOBAL_SKILLS_PREFIX = "global/"
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -545,11 +545,13 @@ async function ensureBuiltInPackage(
   store: AgentSkillStore,
   bucket: R2Bucket,
   skill: AgentSkillRecord,
+  brandName: string,
+  command: string,
 ): Promise<AgentSkillRecord> {
-  if (skill.id !== S0_CREATE_PR_SKILL_ID || skill.origin !== "built-in") {
+  if (!isCreatePullRequestSkillId(skill.id) || skill.origin !== "built-in") {
     return skill
   }
-  const expected = S0_CREATE_PR_SKILL_MD
+  const expected = createPullRequestSkillMarkdown({ skillName: skill.name, brandName, command })
   const existing = await readGlobalSkillMarkdown(bucket, skill.slug)
   const contentHash = await hashSkillContent(expected)
   if (existing !== expected) {
@@ -644,6 +646,8 @@ export async function createAdminGlobalSkill(input: {
 }
 
 export async function resolveRuntimeSkillPackages(input: {
+  brandName: string
+  createPullRequestCommand: string
   db: D1Database | ControlPlaneDb
   bucket: R2Bucket
   userId: string
@@ -656,7 +660,13 @@ export async function resolveRuntimeSkillPackages(input: {
       .map(async (skill) =>
         loadRuntimeSkillPackage(
           input.bucket,
-          await ensureBuiltInPackage(store, input.bucket, skill),
+          await ensureBuiltInPackage(
+            store,
+            input.bucket,
+            skill,
+            input.brandName,
+            input.createPullRequestCommand,
+          ),
         ),
       ),
   )

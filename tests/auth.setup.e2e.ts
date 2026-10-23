@@ -1,4 +1,4 @@
-import "../scripts/e2e/environment"
+import { testDeploymentConfig } from "../scripts/e2e/environment"
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
 
@@ -11,7 +11,7 @@ for (const name of ["admin", "peer"] as const) {
       expect(health.status).toBe(200)
       expect(await health.json()).toMatchObject({
         status: "healthy",
-        service: "s0-agent-control-plane",
+        service: `${testDeploymentConfig.deployment.appName}-agent-control-plane`,
       })
       const key = name.toUpperCase()
       const response = await fetch("http://localhost:3100/api/auth/sign-in/email", {

@@ -42,8 +42,8 @@ const parsedConfig = parse(readFileSync(configPath, "utf8"), configErrors, {
   allowTrailingComma: true,
 })
 if (configErrors.length > 0) throw new Error("The selected e2e profile contains invalid JSONC.")
-const config = resolveS0Config(parsedConfig)
-if (!config.deployment.appName.startsWith("s0-e2e")) {
+export const testDeploymentConfig = resolveS0Config(parsedConfig)
+if (!testDeploymentConfig.deployment.appName.startsWith("s0-e2e")) {
   throw new Error(
     "The selected e2e configuration must use deployment.appName starting with s0-e2e.",
   )

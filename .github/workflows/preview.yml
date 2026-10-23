@@ -9,9 +9,11 @@ on:
   push:
     branches:
       - master
+      - main
   pull_request:
     branches:
       - master
+      - main
     types:
       - opened
       - reopened
@@ -58,9 +60,15 @@ jobs:
     name: Deploy preview stage
     needs: validate
     if: ${{ github.repository != 'SolZeroAI/platform' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: pre
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
+      # Ephemeral previews stay on D1. Paid PlanetScale is for standing pre/prod.
+      DATABASE: ${{ github.event_name == 'pull_request' && 'd1' || vars.DATABASE || 'd1' }}
+      APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
+      PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
     permissions:
       actions: read
       id-token: write
@@ -106,6 +114,7 @@ jobs:
       - name: Create config/.pre.vars file
         env:
           S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
@@ -137,6 +146,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
           CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
           WRANGLER_SEND_METRICS: "false"
           PREVIEW_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
@@ -187,9 +198,12 @@ jobs:
   cleanup-preview:
     name: Clean up preview stage
     if: ${{ github.repository != 'SolZeroAI/platform' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral')) }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: pre
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
+      DATABASE: d1
     permissions:
       actions: read
       id-token: write
@@ -218,6 +232,7 @@ jobs:
       - name: Create config/.pre.vars file
         env:
           S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}

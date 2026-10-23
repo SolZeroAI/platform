@@ -186,6 +186,7 @@ export class IsolateSessionAgent
 
   getSystemPrompt(): string {
     const basePrompt = buildIsolateTurnSystemPrompt({
+      brandName: this.env.S0_BRAND_NAME,
       state: this.state,
       activeTurn: this.activeTurn,
     })

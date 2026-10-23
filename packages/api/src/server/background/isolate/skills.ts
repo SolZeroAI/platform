@@ -45,32 +45,34 @@ const WORKFLOW_BUILDER_MANIFEST_REFERENCE = [
   "- Re-run validation after each material manifest change.",
 ].join("\n")
 
-const s0BuiltInSkillSource = skills.fromManifest({
-  id: "s0-built-in-skills",
-  fingerprint: "s0-built-in-skills:v1",
-  skills: [
-    {
-      name: WORKFLOW_BUILDER_SKILL_NAME,
-      description:
-        "Build, edit, validate, and submit SolZero Workflow manifests using the workflow builder tools.",
-      body: WORKFLOW_BUILDER_SKILL_BODY,
-      resources: [
-        {
-          path: "references/manifest-editing.md",
-          kind: "reference",
-          mimeType: "text/markdown",
-          content: WORKFLOW_BUILDER_MANIFEST_REFERENCE,
-        },
-      ],
-    },
-  ],
-})
+function builtInSkillSource(brandName: string) {
+  return skills.fromManifest({
+    id: "s0-built-in-skills",
+    fingerprint: `s0-built-in-skills:v1:${brandName}`,
+    skills: [
+      {
+        name: WORKFLOW_BUILDER_SKILL_NAME,
+        description: `Build, edit, validate, and submit ${brandName} Workflow manifests using the workflow builder tools.`,
+        body: WORKFLOW_BUILDER_SKILL_BODY.replaceAll("SolZero", brandName),
+        resources: [
+          {
+            path: "references/manifest-editing.md",
+            kind: "reference",
+            mimeType: "text/markdown",
+            content: WORKFLOW_BUILDER_MANIFEST_REFERENCE,
+          },
+        ],
+      },
+    ],
+  })
+}
 
 function hasWorkflowBuilderTool(tools: readonly SessionToolSpec[] | null | undefined): boolean {
   return (tools ?? []).some((tool) => tool.kind === "workflow_builder")
 }
 
 export function buildIsolateSkillSources(input: {
+  brandName: string
   tools: readonly SessionToolSpec[] | null | undefined
   skillsBucket?: R2Bucket
   userId?: string | null
@@ -78,7 +80,7 @@ export function buildIsolateSkillSources(input: {
 }): SkillSource[] {
   const sources: SkillSource[] = []
   if (hasWorkflowBuilderTool(input.tools)) {
-    sources.push(s0BuiltInSkillSource)
+    sources.push(builtInSkillSource(input.brandName))
   }
   if (input.skillsBucket && (input.globalSkillNames?.length ?? 0) > 0) {
     sources.push(
@@ -102,6 +104,7 @@ export function buildIsolateSkillSources(input: {
 }
 
 export async function buildResolvedIsolateSkillSources(input: {
+  brandName: string
   db: D1Database | ControlPlaneDb
   tools: readonly SessionToolSpec[] | null | undefined
   skillsBucket?: R2Bucket

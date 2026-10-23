@@ -503,6 +503,9 @@
             "appId": { "type": "string" },
             "clientId": { "type": "string" },
             "slug": { "type": "string" },
+            "createPullRequestCommand": {
+              "anyOf": [{ "type": "string", "maxLength": 64 }, { "type": "null" }]
+            },
             "clientSecret": {
               "type": "object",
               "properties": {
@@ -632,6 +635,29 @@
         }
       },
       "additionalProperties": false
+    },
+    "brand": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "logoLightPath": { "type": "string", "minLength": 1 },
+            "logoDarkPath": { "type": "string", "minLength": 1 },
+            "faviconPath": { "type": "string", "minLength": 1 },
+            "appleTouchIconPath": { "type": "string", "minLength": 1 }
+          },
+          "required": [
+            "name",
+            "logoLightPath",
+            "logoDarkPath",
+            "faviconPath",
+            "appleTouchIconPath"
+          ],
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
     }
   },
   "required": [

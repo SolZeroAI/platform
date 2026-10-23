@@ -6,6 +6,7 @@ dist/
 
 # deps
 node_modules/
+opensrc/
 .wrangler
 .turbo
 
