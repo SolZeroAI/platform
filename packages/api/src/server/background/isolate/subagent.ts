@@ -163,6 +163,7 @@ export class IsolateSubAgent extends Think<Env> {
     })
     return [
       buildIsolateSystemPrompt({
+        brandName: this.env.S0_BRAND_NAME,
         runtimeModelId: turn.model.runtimeModelId,
         providerId: turn.model.providerId,
         modelId: turn.model.modelId,
@@ -204,6 +205,7 @@ export class IsolateSubAgent extends Think<Env> {
     const input =
       this.activeTurn?.input ?? this.preparingInput ?? (await this.loadTrustedConfig(this.name))
     return buildResolvedIsolateSkillSources({
+      brandName: this.env.S0_BRAND_NAME,
       db: makeControlPlaneFromEnv(this.env),
       tools: input.selectedTools,
       skillsBucket: this.env.AGENT_SKILLS,

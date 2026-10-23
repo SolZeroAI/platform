@@ -4,7 +4,7 @@ import type { RuntimeInitRequest } from "./types"
 
 const GIT_ASKPASS_PATH = "/root/.s0-git-askpass.sh"
 const GIT_TOKEN_PATH = "/root/.s0-git-token"
-const CREATE_PR_SCRIPT_PATH = "/usr/local/bin/s0-create-pr"
+const DEFAULT_CREATE_PR_COMMAND = "s0-create-pr"
 
 interface CommandResult {
   exitCode: number
@@ -159,52 +159,60 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
   }
   const baseBranch = input.repoDefaultBranch?.trim() || "main"
   const defaultBranch = input.branchName?.trim() || `s0-agent/${input.sessionId}`
-  await writeFile(
-    CREATE_PR_SCRIPT_PATH,
-    [
-      "#!/bin/sh",
-      "set -eu",
-      `REPO_OWNER=${shellQuote(input.repoOwner)}`,
-      `REPO_NAME=${shellQuote(input.repoName)}`,
-      `BASE_BRANCH=${shellQuote(baseBranch)}`,
-      `DEFAULT_BRANCH=${shellQuote(defaultBranch)}`,
-      `TOKEN_FILE=${shellQuote(GIT_TOKEN_PATH)}`,
-      'TITLE="${1:-SolZero agent changes}"',
-      'BODY="${2:-Created by SolZero agent.}"',
-      'BRANCH="$(git branch --show-current 2>/dev/null || true)"',
-      'if [ -z "$BRANCH" ]; then BRANCH="$DEFAULT_BRANCH"; fi',
-      'if [ "$BRANCH" = "$BASE_BRANCH" ]; then',
-      '  echo "Refusing to push directly to base branch $BASE_BRANCH" >&2',
-      "  exit 1",
-      "fi",
-      'git push -u origin "HEAD:refs/heads/$BRANCH"',
-      'TOKEN="$(cat "$TOKEN_FILE")"',
-      "export TOKEN REPO_OWNER REPO_NAME TITLE BODY BRANCH BASE_BRANCH",
-      "node - <<'NODE'",
-      "const response = await fetch(`https://api.github.com/repos/${process.env.REPO_OWNER}/${process.env.REPO_NAME}/pulls`, {",
-      "  method: 'POST',",
-      "  headers: {",
-      "    Authorization: `Bearer ${process.env.TOKEN}` ,",
-      "    Accept: 'application/vnd.github+json',",
-      "    'X-GitHub-Api-Version': '2022-11-28',",
-      "    'User-Agent': 's0-agent',",
-      "    'Content-Type': 'application/json',",
-      "  },",
-      "  body: JSON.stringify({",
-      "    title: process.env.TITLE,",
-      "    body: process.env.BODY,",
-      "    head: process.env.BRANCH,",
-      "    base: process.env.BASE_BRANCH,",
-      "  }),",
-      "});",
-      "const text = await response.text();",
-      "if (!response.ok) { console.error(text); process.exit(1); }",
-      "console.log(JSON.parse(text).html_url);",
-      "NODE",
-      "",
-    ].join("\n"),
-  )
-  await chmod(CREATE_PR_SCRIPT_PATH, 0o700)
+  const command = input.createPullRequestCommand ?? DEFAULT_CREATE_PR_COMMAND
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(command) || command.length > 64) {
+    throw new Error("Invalid create-pull-request helper command")
+  }
+  const brandName = input.brandName ?? "SolZero"
+  const script = [
+    "#!/bin/sh",
+    "set -eu",
+    `REPO_OWNER=${shellQuote(input.repoOwner)}`,
+    `REPO_NAME=${shellQuote(input.repoName)}`,
+    `BASE_BRANCH=${shellQuote(baseBranch)}`,
+    `DEFAULT_BRANCH=${shellQuote(defaultBranch)}`,
+    `TOKEN_FILE=${shellQuote(GIT_TOKEN_PATH)}`,
+    `DEFAULT_TITLE=${shellQuote(`${brandName} agent changes`)}`,
+    `DEFAULT_BODY=${shellQuote(`Created by ${brandName} agent.`)}`,
+    'TITLE="${1:-$DEFAULT_TITLE}"',
+    'BODY="${2:-$DEFAULT_BODY}"',
+    'BRANCH="$(git branch --show-current 2>/dev/null || true)"',
+    'if [ -z "$BRANCH" ]; then BRANCH="$DEFAULT_BRANCH"; fi',
+    'if [ "$BRANCH" = "$BASE_BRANCH" ]; then',
+    '  echo "Refusing to push directly to base branch $BASE_BRANCH" >&2',
+    "  exit 1",
+    "fi",
+    'git push -u origin "HEAD:refs/heads/$BRANCH"',
+    'TOKEN="$(cat "$TOKEN_FILE")"',
+    "export TOKEN REPO_OWNER REPO_NAME TITLE BODY BRANCH BASE_BRANCH",
+    "node - <<'NODE'",
+    "const response = await fetch(`https://api.github.com/repos/${process.env.REPO_OWNER}/${process.env.REPO_NAME}/pulls`, {",
+    "  method: 'POST',",
+    "  headers: {",
+    "    Authorization: `Bearer ${process.env.TOKEN}` ,",
+    "    Accept: 'application/vnd.github+json',",
+    "    'X-GitHub-Api-Version': '2022-11-28',",
+    "    'User-Agent': 's0-agent',",
+    "    'Content-Type': 'application/json',",
+    "  },",
+    "  body: JSON.stringify({",
+    "    title: process.env.TITLE,",
+    "    body: process.env.BODY,",
+    "    head: process.env.BRANCH,",
+    "    base: process.env.BASE_BRANCH,",
+    "  }),",
+    "});",
+    "const text = await response.text();",
+    "if (!response.ok) { console.error(text); process.exit(1); }",
+    "console.log(JSON.parse(text).html_url);",
+    "NODE",
+    "",
+  ].join("\n")
+  for (const name of new Set([DEFAULT_CREATE_PR_COMMAND, command])) {
+    const scriptPath = `/usr/local/bin/${name}`
+    await writeFile(scriptPath, script, { mode: 0o700 })
+    await chmod(scriptPath, 0o700)
+  }
 }
 
 export async function initializeWorkspace(input: RuntimeInitRequest): Promise<void> {

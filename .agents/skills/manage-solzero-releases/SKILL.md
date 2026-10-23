@@ -57,6 +57,9 @@ request.
 
 ## Run or recover a release
 
+- The release workflow mints a repository-scoped GitHub App token from `RELEASE_APP_ID` and
+  `RELEASE_APP_PRIVATE_KEY`. Checkout and `nub run tegami ci` use that token for the version pull
+  request, the `vX.Y.Z` tag, and the GitHub Release. The job's `GITHUB_TOKEN` stays `contents: read`.
 - Review the generated version pull request before merge. Verify `VERSION`, `CHANGELOG.md`, and the
   release notes.
 - Re-run a failed release workflow after a transient failure. Tegami skips an existing tag and GitHub
@@ -65,9 +68,11 @@ request.
   alchemy.new deploys that registry archive and does not install dependencies. The manifest is
   uploaded separately and is not a member of the archive. The registry job uses GitHub Environment
   `alchemy-new` in `.github/workflows/release.yml` and runs only after a push to `master` in
-  `SolZeroAI/platform`. That workflow pins `SolZeroAI/alchemy-new-publish-action` at
-  `0a204b3ff07a4fc9e06e29f220b9e25906794f0f` (v1.0.0). The environment deployment policy allows only
-  branch `master`. The trusted publisher sets `workflowFilename` to `release.yml`, `environment` to
-  `alchemy-new`, and `ref` to `refs/heads/master`.
+  `SolZeroAI/platform`. That workflow uses `SolZeroAI/alchemy-new-publish-action@v1`. The environment
+  deployment policy allows only branch `master`. The trusted publisher row is repository
+  `SolZeroAI/platform`, workflow file `release.yml`, ref `refs/heads/master`, and environment
+  `alchemy-new`. Registry v0.7.0 requires `job_workflow_ref` to equal
+  `SolZeroAI/platform/.github/workflows/release.yml@refs/heads/master` and the `ref` claim to equal
+  `refs/heads/master`. A blank ref means `refs/heads/` plus the default branch.
 - Fix a released defect in a new pull request and add another release entry.
 - Keep published `vX.Y.Z` tags immutable.

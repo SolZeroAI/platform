@@ -39,6 +39,7 @@ function selectProviderPrompt(modelId: string): string {
 }
 
 function buildEnvironmentPrompt(input: {
+  brandName: string
   runtimeModelId: string
   providerId: string
   modelId: string
@@ -61,7 +62,7 @@ function buildEnvironmentPrompt(input: {
         `  Repository workspace root: ${REPO_ROOT}`,
         "  Structured repository tools: read_file, write_file, glob_files, search_files",
         "  Structured git tools: git_status, git_diff, git_log, git_create_pull_request",
-        "  Pull requests: use git_create_pull_request after making repository changes; it commits, pushes the s0-managed branch, and opens a PR against the default branch.",
+        "  Pull requests: use git_create_pull_request after making repository changes; it commits, pushes the managed branch, and opens a PR against the default branch.",
       ]
     : [
         "  Repository workspace: not attached",
@@ -92,7 +93,7 @@ function buildEnvironmentPrompt(input: {
     : "  External network access: unavailable except for configured internal docs search"
 
   return [
-    "You are a helpful s0 assistant for software engineering tasks.",
+    `You are a helpful ${input.brandName} assistant for software engineering tasks.`,
     `You are powered by the model named ${input.modelId}. The exact model ID is ${input.runtimeModelId}.`,
     "If the user asks what model you are, answer with the exact model ID above.",
     "Here is useful information about the environment you are running in:",
@@ -163,6 +164,7 @@ function buildMcpcfMcpLines(servers: readonly IsolateMcpcfMcpPromptServer[]): st
 // Adapted from https://github.com/anomalyco/opencode/blob/dev/packages/opencode/src/session/system.ts.
 // Future updates should compare this file against the upstream source before changing prompt selection or environment assembly.
 export function buildIsolateSystemPrompt(input: {
+  brandName: string
   runtimeModelId: string
   providerId: string
   modelId: string
@@ -172,5 +174,9 @@ export function buildIsolateSystemPrompt(input: {
   customMcpServerNames?: readonly string[]
   mcpcfMcpServers?: readonly IsolateMcpcfMcpPromptServer[]
 }): string {
-  return [selectProviderPrompt(input.modelId), buildEnvironmentPrompt(input)].join("\n\n")
+  const providerPrompt = selectProviderPrompt(input.modelId).replace(
+    "You are SolZero Agent",
+    `You are ${input.brandName} Agent`,
+  )
+  return [providerPrompt, buildEnvironmentPrompt(input)].join("\n\n")
 }

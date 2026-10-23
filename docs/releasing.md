@@ -57,7 +57,8 @@ combined version and release-note preview. A change with no observable effect ca
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
 2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
-   workflow then runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
+   workflow first runs the agent-container images job, then runs `nub run tegami ci` and opens or
+   updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
@@ -113,9 +114,8 @@ an absolute symlink target. Nub keeps the store in the project (`enableGlobalVir
 The publish action does not walk a directory link, and it requires
 `node_modules/alchemy/bin/cli.js` as an archive member. The file bytes stay in the store.
 
-`SolZeroAI/alchemy-new-publish-action` at commit `0a204b3ff07a4fc9e06e29f220b9e25906794f0f`
-(`alchemy-new-publish-action@1.0.0`, also tagged `v1`) packs the tree and publishes it with GitHub
-OIDC. The workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately
+`SolZeroAI/alchemy-new-publish-action@v1` packs the tree and publishes it with GitHub OIDC.
+The workflow sets `manifest` to `alchemy.new.jsonc`. The action uploads that file separately
 and leaves it out of the tar. The job summary includes the `manifest-sha256` output. The registry
 job is the only job that uses GitHub Environment `alchemy-new` or `id-token: write`. It runs only
 when this repository is `SolZeroAI/platform`, `github.ref` is `refs/heads/master`, and the workflow
@@ -133,8 +133,7 @@ metadata, and secret files. The archive root is the package root. It contains
 
 Pull requests from this repository run the same prepare steps with `dry-run: true`. That job has
 `contents: read` only. It does not use the `alchemy-new` environment, it does not request
-`id-token`, and it does not publish. The workflow pins the action by that commit SHA. `v1` still
-moves when a later 1.x release is cut.
+`id-token`, and it does not publish. Both publish steps use the action major tag `v1`.
 
 Archives over 80 MiB warn. Archives over 256 MiB fail. Deploy runs `vite build` from `apps/web`,
 and Vite copies `public/` into the client output, so `apps/web/public/images` stays in the archive.
@@ -149,24 +148,27 @@ failed jobs on the same Release workflow run to retry. A later run does not publ
 release it did not create. Tegami skips an existing tag and GitHub Release. A workflow triggered by
 `release: published` does not start, because Tegami creates the release with the workflow token.
 
-After the registry production deploy, allow this publisher at alchemy.new `/packages`. The registry
-stores GitHub's repository id and owner id for `SolZeroAI/platform`. It checks `job_workflow_ref`
-is present. When these optional fields are set, it matches them too:
+After the registry production deploy, allow this publisher at alchemy.new `/packages`. Production
+runs registry v0.7.0 at `api.alchemy.new`. Pre runs at `api-pre.alchemy.new`. The publisher row
+stores an exact git ref: `refs/heads/...` or `refs/tags/...`. A blank ref means `refs/heads/` plus
+the repository default branch. The registry requires the OIDC `job_workflow_ref` claim to equal
+`<owner>/<repo>/.github/workflows/<file>@<ref>`, and it requires the `ref` claim to equal that same
+ref.
 
 | Field | Value |
 | --- | --- |
 | Organization | `solzero` |
 | Package | `platform` |
 | Repository | `SolZeroAI/platform` |
-| `workflowFilename` | `release.yml` |
-| `environment` | `alchemy-new` |
-| `ref` | `refs/heads/master` |
+| Workflow file | `release.yml` |
+| Git ref | `refs/heads/master` |
+| Environment | `alchemy-new` |
 
-`workflowFilename` matches the prefix `SolZeroAI/platform/.github/workflows/release.yml@`. It does
-not match the ref after `@`. A token whose `job_workflow_ref` ends in `@refs/tags/v1.2.3` still
-passes that filename check. Set `ref` to `refs/heads/master` so the separate `ref` claim must be the
-master branch. The OIDC `sub` for this environment job is
-`repo:SolZeroAI/platform:environment:alchemy-new` and does not include the ref.
+For this row, `job_workflow_ref` must be
+`SolZeroAI/platform/.github/workflows/release.yml@refs/heads/master` and `ref` must be
+`refs/heads/master`. The OIDC `sub` for this environment job is
+`repo:SolZeroAI/platform:environment:alchemy-new` and does not include the ref. The `ref` claim and
+the ref at the end of `job_workflow_ref` carry that binding.
 
 Create the `alchemy-new` environment in this repository before the first registry publish. Do not
 store a registry token in it. The job requests an OIDC token for
@@ -176,9 +178,14 @@ See [Repository settings](#repository-settings).
 
 ## Repository settings
 
-Enable **Allow GitHub Actions to create and approve pull requests** in the repository Actions
-settings. Keep workflow permissions restricted to the values in each workflow. The version workflow
-needs `contents: write` and `pull-requests: write`.
+The release job mints a GitHub App installation token with `actions/create-github-app-token`. The
+action is pinned by commit SHA. Secrets `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` identify the
+app. The token is limited to this repository. It requests contents write and pull requests write.
+Checkout and `nub run tegami ci` use that token for the version pull request, the `vX.Y.Z` tag, and
+the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
+
+Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. The release job has
+`contents: read`. The image publish job has `contents: read` and `packages: write`.
 
 Create the `release:none` label for pull requests that have no user-visible release note. The
 registry package is not a GitHub Release asset. GitHub's immutable-release setting can stay enabled.

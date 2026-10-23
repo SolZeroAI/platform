@@ -1,13 +1,13 @@
 export type HarnessRuntimeName = "opencode" | "codex" | "claude-code"
 
-export interface RuntimeAuthOpenAICompatible {
+interface RuntimeAuthOpenAICompatible {
   apiKey: string
   baseUrl: string
   name?: string
   modelProviderName?: string
 }
 
-export interface RuntimeAuthAnthropic {
+interface RuntimeAuthAnthropic {
   apiKey: string
   baseUrl: string
 }
@@ -33,6 +33,8 @@ export type RuntimeProviderConfig =
     }
 
 export interface RuntimeInitRequest {
+  brandName?: string
+  createPullRequestCommand?: string
   sessionId: string
   repoOwner?: string | null
   repoName?: string | null
@@ -64,12 +66,12 @@ export type RuntimeMcpServer =
 
 export type RuntimeMcpServers = Record<string, RuntimeMcpServer>
 
-export interface RuntimeSkillFile {
+interface RuntimeSkillFile {
   path: string
   content: string
 }
 
-export interface RuntimeSkillPackage {
+interface RuntimeSkillPackage {
   id: string
   contentHash: string
   name: string
@@ -78,7 +80,7 @@ export interface RuntimeSkillPackage {
   files?: RuntimeSkillFile[]
 }
 
-export interface RuntimeRepositoryContext {
+interface RuntimeRepositoryContext {
   owner: string
   name: string
   defaultBranch: string | null

@@ -4,15 +4,15 @@ import { DatabaseSync } from "node:sqlite"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
-import { Command, Flag } from "effect/unstable/cli"
+import { Command, Flag } from "effect/cli"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import {
   DATABASE_ENV,
-  LOCAL_PGLITE_DATABASE_URL,
   PLANETSCALE_ORGANIZATION_ENV,
   PLANETSCALE_SERVICE_TOKEN_ENV,
   PLANETSCALE_SERVICE_TOKEN_ID_ENV,
+  s0ConfigPathForStage,
 } from "@solzero/shared"
 import { pgRelations } from "../server/effect/db/control-plane-db"
 import {
@@ -25,7 +25,7 @@ import { planPlanetscaleCutoverEdits } from "./d1-to-planetscale-cutover-diff"
 
 export const COPY_D1_TO_PLANETSCALE_BANNER = [
   "This is a one-shot convenience copy, not an online or zero-downtime migration.",
-  "Writes can land on D1 during the copy window. After the copy succeeds, you deploy.",
+  "Freeze source writes and drain running work before the final export; keep writes frozen through cutover.",
   "Production stays on D1 until that deploy.",
 ].join("\n")
 
@@ -38,7 +38,12 @@ export function openSourceSqlite(path: string): DatabaseSync {
   }
   if (resolved.endsWith(".sql")) {
     const sqlite = new DatabaseSync(":memory:")
-    sqlite.exec(readFileSync(resolved, "utf8"))
+    try {
+      sqlite.exec(readFileSync(resolved, "utf8"))
+    } catch {
+      sqlite.close()
+      throw new Error("Invalid source SQL dump")
+    }
     return sqlite
   }
   return new DatabaseSync(resolved, { readOnly: true })
@@ -57,11 +62,12 @@ export function formatCopyReport(report: CopyReport): string {
     `conflicts=${report.conflicts}`,
     `overwritten=${report.overwritten}`,
   ]
-  if (report.error) lines.push(`error=${report.error}`)
+  lines.push(`missingSourceTables=${report.missingSourceTables.join(",")}`)
+  lines.push(`reconciledBuiltinSeed=${report.reconciledBuiltinSeed}`)
   lines.push("tables:")
   for (const table of report.tables) {
     lines.push(
-      `  ${table.table} source=${table.sourceRows} destBefore=${table.destRowsBefore} destAfter=${table.destRowsAfter} inserted=${table.inserted} skipped=${table.skipped} conflicts=${table.conflicts} overwritten=${table.overwritten}`,
+      `  ${table.table} source=${table.sourceRows} destBefore=${table.destRowsBefore} destAfter=${table.destRowsAfter} inserted=${table.inserted} skipped=${table.skipped} conflicts=${table.conflicts} overwritten=${table.overwritten} verified=${table.verified} sourceChecksum=${table.sourceChecksum ?? "unverified"} destChecksum=${table.destChecksum ?? "unverified"}`,
     )
   }
   return lines.join("\n")
@@ -70,31 +76,51 @@ export function formatCopyReport(report: CopyReport): string {
 export const copyD1ToPlanetscaleCommand = Command.make(
   COPY_D1_TO_PLANETSCALE_NAME,
   {
-    apply: Flag.boolean("apply").pipe(
+    apply: Flag.Boolean("apply").pipe(
+      Flag.withDefault(false),
       Flag.withDescription("Write rows to PlanetScale. Default is dry-run and writes nothing."),
     ),
-    overwrite: Flag.boolean("overwrite").pipe(
+    overwrite: Flag.Boolean("overwrite").pipe(
+      Flag.withDefault(false),
       Flag.withDescription(
         "Upsert destination rows that already exist with different values. Default fails closed.",
       ),
     ),
-    sourceSqlite: Flag.file("source-sqlite", { mustExist: true }).pipe(
+    verifyOnly: Flag.Boolean("verify-only").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Independently verify all source keys, counts and checksums without writing.",
+      ),
+    ),
+    sourceWritesFrozen: Flag.Boolean("source-writes-frozen").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Acknowledge that source writes are frozen and the destination is offline. Required for --apply.",
+      ),
+    ),
+    batchSize: Flag.Int("batch-size").pipe(
+      Flag.withDefault(100),
+      Flag.withDescription("Rows per read/write batch (1-500)."),
+    ),
+    sourceSqlite: Flag.File("source-sqlite", { mustExist: true }).pipe(
       Flag.withDescription(
         "Operator D1 dump. Use a sqlite file from wrangler d1 export, or the exported .sql.",
       ),
     ),
-    destUrl: Flag.optional(Flag.string("dest-url")).pipe(
+    destUrl: Flag.optional(Flag.String("dest-url")).pipe(
       Flag.withDescription(
-        "PlanetScale or Hyperdrive postgres URL. Defaults to DATABASE_URL or the local PGLite URL.",
+        "PlanetScale postgres URL. Prefer the DATABASE_URL environment variable to avoid command-line credential exposure.",
       ),
     ),
-    config: Flag.optional(Flag.file("config")).pipe(
-      Flag.withDescription("Operator s0 jsonc to diff. Defaults to config/prod.config.jsonc."),
+    config: Flag.optional(Flag.File("config")).pipe(
+      Flag.withDescription(
+        "Operator stage JSONC to diff. Defaults to the prod file selected by S0_CONFIG_PROFILE.",
+      ),
     ),
-    envFile: Flag.optional(Flag.file("env-file")).pipe(
+    envFile: Flag.optional(Flag.File("env-file")).pipe(
       Flag.withDescription("Operator env file to diff. Defaults to config/.env."),
     ),
-    patchOut: Flag.optional(Flag.string("patch-out")).pipe(
+    patchOut: Flag.optional(Flag.String("patch-out")).pipe(
       Flag.withDescription(
         "Optional sidecar directory for the printed jsonc and env diffs. Never rewrites the live jsonc on dry-run.",
       ),
@@ -103,16 +129,29 @@ export const copyD1ToPlanetscaleCommand = Command.make(
   (flags) =>
     Effect.gen(function* () {
       yield* Console.log(COPY_D1_TO_PLANETSCALE_BANNER)
+      if (flags.apply && !flags.sourceWritesFrozen)
+        return yield* Effect.fail(
+          new CopyConflictError(
+            "--apply requires --source-writes-frozen. Freeze writes and drain runs before the final export.",
+          ),
+        )
+      if (flags.apply && flags.verifyOnly)
+        return yield* Effect.fail(
+          new CopyConflictError("--apply and --verify-only are mutually exclusive."),
+        )
       yield* Console.log("")
       const cwd = process.cwd()
       const jsoncPath = Option.getOrElse(flags.config, () =>
-        resolve(cwd, "config/prod.config.jsonc"),
+        resolve(cwd, s0ConfigPathForStage("prod", process.env.S0_CONFIG_PROFILE)),
       )
       const envPath = Option.getOrElse(flags.envFile, () => resolve(cwd, "config/.env"))
-      const destUrl = Option.getOrElse(
-        flags.destUrl,
-        () => process.env.DATABASE_URL ?? LOCAL_PGLITE_DATABASE_URL,
-      )
+      const destUrl = Option.getOrElse(flags.destUrl, () => process.env.DATABASE_URL ?? "")
+      if (!destUrl)
+        return yield* Effect.fail(
+          new CopyConflictError(
+            "Supply DATABASE_URL or --dest-url; no implicit destination is selected.",
+          ),
+        )
       const jsonc = existsSync(jsoncPath) ? readFileSync(jsoncPath, "utf8") : "{\n}\n"
       const envFile = existsSync(envPath) ? readFileSync(envPath, "utf8") : ""
       const edits = planPlanetscaleCutoverEdits({
@@ -136,19 +175,41 @@ export const copyD1ToPlanetscaleCommand = Command.make(
       Option.match(flags.patchOut, {
         onNone: () => undefined,
         onSome: (directory) => {
-          writeFileSync(resolve(directory, "s0-planetscale-cutover.jsonc.diff"), edits.jsoncDiff)
-          writeFileSync(resolve(directory, "s0-planetscale-cutover.env.diff"), edits.envDiff)
+          writeFileSync(resolve(directory, "s0-planetscale-cutover.jsonc.diff"), edits.jsoncDiff, {
+            flag: "wx",
+            mode: 0o600,
+          })
+          writeFileSync(resolve(directory, "s0-planetscale-cutover.env.diff"), edits.envDiff, {
+            flag: "wx",
+            mode: 0o600,
+          })
         },
       })
       if (!flags.apply) {
         yield* Console.log("Dry-run: planning the copy. Destination writes are disabled.")
       }
-      const source = openSourceSqlite(flags.sourceSqlite)
-      const client = postgres(destUrl, {
-        max: 1,
-        prepare: false,
-        fetch_types: false,
-        connect_timeout: 20,
+      const { source, client } = yield* Effect.try({
+        try: () => {
+          const source = openSourceSqlite(flags.sourceSqlite)
+          try {
+            return {
+              source,
+              client: postgres(destUrl, {
+                max: 1,
+                prepare: false,
+                fetch_types: false,
+                connect_timeout: 20,
+              }),
+            }
+          } catch {
+            source.close()
+            throw new Error("Destination client setup failed")
+          }
+        },
+        catch: () =>
+          new CopyConflictError(
+            "Could not open the source dump or destination client. File and connection details are suppressed.",
+          ),
       })
       const destDrizzle = drizzle({ client, relations: pgRelations })
       const dest = makeDrizzleCopyDestination(destDrizzle, {
@@ -163,20 +224,20 @@ export const copyD1ToPlanetscaleCommand = Command.make(
         dest,
         apply: flags.apply,
         overwrite: flags.overwrite,
+        verifyOnly: flags.verifyOnly,
+        batchSize: flags.batchSize,
       }).pipe(
-        Effect.tapError((error) =>
-          Console.log(error instanceof CopyConflictError ? error.message : String(error)),
+        Effect.ensuring(
+          Effect.promise(async () => {
+            try {
+              await client.end({ timeout: 1 })
+            } finally {
+              source.close()
+            }
+          }),
         ),
       )
       yield* Console.log(formatCopyReport(report))
-      yield* Effect.tryPromise({
-        try: () => client.end({ timeout: 1 }),
-        catch: (cause) => new Error(`Failed to close postgres client: ${String(cause)}`),
-      })
-      source.close()
-      if (report.status === "failed") {
-        return yield* Effect.fail(new CopyConflictError(report.error ?? "copy failed"))
-      }
     }),
 ).pipe(
   Command.withDescription(
@@ -196,7 +257,7 @@ export const copyD1ToPlanetscaleCommand = Command.make(
     },
     {
       command:
-        "nub run db:copy-d1-to-planetscale -- --apply --source-sqlite ./d1-export.sql --dest-url $DATABASE_URL",
+        "nub run db:copy-d1-to-planetscale -- --apply --source-writes-frozen --source-sqlite ./d1-export.sql",
       description:
         "Write the copy. Deploy yourself after it succeeds. Production stays on D1 until then.",
     },

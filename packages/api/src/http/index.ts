@@ -1,4 +1,4 @@
-import { HttpApi, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, OpenApi } from "effect/http-api"
 import { AdminGroup } from "./groups/admin"
 import { AuthGroup } from "./groups/auth"
 import { BotsGroup } from "./groups/bots"
@@ -30,6 +30,12 @@ export class S0Api extends HttpApi.make("S0Api")
       version: "0.1.0",
     }),
   ) {}
+
+export function apiForBrand(name: string) {
+  return S0Api.annotateMerge(
+    OpenApi.annotations({ title: `${name} Agent API`, description: `API for ${name} Agent` }),
+  )
+}
 
 export * from "./errors"
 export * from "./groups"

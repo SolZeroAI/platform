@@ -10,6 +10,8 @@ import {
   LOCAL_PGLITE_DATABASE_URL,
   type AppDbMode,
   type S0DatabaseEngine,
+  type S0BrandConfig,
+  type S0PlanetscaleConfig,
   type StageMetadata,
 } from "@solzero/shared"
 import {
@@ -27,6 +29,8 @@ import { createWeb } from "./web"
 
 export interface CreateS0Options {
   appName: string
+  brand: S0BrandConfig
+  planetscaleConfig?: S0PlanetscaleConfig
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   databaseEngine: S0DatabaseEngine
@@ -43,6 +47,7 @@ export type CreateS0ApiOptions = CreateS0Options
 
 export interface CreateS0WebOptions {
   appName: string
+  brand: S0BrandConfig
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   repoRoot: string
@@ -84,7 +89,7 @@ function createCloudflareAiGateway(input: {
       storeId: secretsStore.storeId,
     }
     // Only an isolated development test launcher may supply durable run ownership.
-    const runOwner = yield* Config.string("S0_E2E_RUN_ID").pipe(Config.option)
+    const runOwner = yield* Config.String("S0_E2E_RUN_ID").pipe(Config.option)
     const forbiddenOwner = Option.filter(
       runOwner,
       (id) =>
@@ -99,7 +104,7 @@ function createCloudflareAiGateway(input: {
           new Error("E2E run ownership requires an isolated development profile and UUID."),
         ),
     })
-    const ci = yield* Config.boolean("CI").pipe(Config.withDefault(false))
+    const ci = yield* Config.Boolean("CI").pipe(Config.withDefault(false))
     const scope = Match.value(ci).pipe(
       Match.when(true, () => "-ci"),
       Match.orElse(() => ""),
@@ -191,10 +196,11 @@ export function createS0Api(options: CreateS0ApiOptions) {
       databaseEngine,
       appDbMode,
       databaseUrl: databaseUrl ?? LOCAL_PGLITE_DATABASE_URL,
+      planetscaleConfig: options.planetscaleConfig,
     })
     const api = yield* createApi({
       appName,
-      e2eAiUsage: yield* Config.boolean("E2E_AI_USAGE").pipe(Config.withDefault(false)),
+      e2eAiUsage: yield* Config.Boolean("E2E_AI_USAGE").pipe(Config.withDefault(false)),
       stageMetadata,
       deploymentMetadata,
       dev,
@@ -230,6 +236,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
 export function createS0Web(options: CreateS0WebOptions) {
   return createWeb({
     appName: options.appName,
+    brand: options.brand,
     stageMetadata: options.stageMetadata,
     deploymentMetadata: options.deploymentMetadata,
     repoRoot: options.repoRoot,

@@ -50,7 +50,8 @@ export function loadS0ConfigFile(
       .join(", ")
     throw new Error(`Invalid JSONC in ${configPath}: ${details}`)
   }
-  return resolveS0Config(parsed)
+  // oxlint-disable-next-line effect/avoid-process-env -- Existing public brand environment overrides remain supported when the stage JSONC omits brand.
+  return resolveS0Config(parsed, process.env)
 }
 
 export function loadStageVars(stageTag: string) {
@@ -153,6 +154,8 @@ export function s0StackRuntime() {
 
     return {
       appName: s0Config.deployment.appName,
+      brand: s0Config.brand,
+      planetscaleConfig: s0Config.deployment.planetscale,
       apiEnv,
       cloudflareAccountId: yield* requiredConfigString("CLOUDFLARE_ACCOUNT_ID"),
       deploymentMetadata: createDeploymentMetadata({ repoRoot: REPO_ROOT }),

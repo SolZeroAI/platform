@@ -25,8 +25,8 @@
     "dev:apps": "nub run dev:app",
     "dev:logs": "./scripts/watch-logs.sh",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck && nub run typecheck:e2e",
-    "lint": "NODE_OPTIONS='--import tsx' turbo run lint && NODE_OPTIONS='--import tsx' oxlint packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/agent-container-build.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts e2e.config.ts scripts/e2e apps/api/index.ts apps/api/env.d.ts",
+    "typecheck": "turbo run typecheck && nub run typecheck:e2e && nub run typecheck:migration",
+    "lint": "NODE_OPTIONS='--import tsx' turbo run lint && NODE_OPTIONS='--import tsx' oxlint packages/infra tests scripts/workflows scripts/migration scripts/publish-agent-container-images.ts scripts/agent-container-build.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts e2e.config.ts scripts/e2e apps/api/index.ts apps/api/env.d.ts",
     "lint:fix": "NODE_OPTIONS='--import tsx' turbo run lint -- --fix && NODE_OPTIONS='--import tsx' oxlint --fix packages/infra tests scripts/workflows scripts/publish-agent-container-images.ts scripts/agent-container-build.ts scripts/sync-github-env-secrets.ts scripts/copy-d1-to-planetscale.ts e2e.config.ts scripts/e2e apps/api/index.ts apps/api/env.d.ts",
     "alchemy:state:bootstrap": "nub run --cwd packages/infra alchemy cloudflare bootstrap",
     "alchemy:state:tree": "CI=true nub run --cwd packages/infra alchemy state tree alchemy.state.run.ts",
@@ -42,6 +42,9 @@
     "db:generate:pg": "drizzle-kit generate --config packages/infra/drizzle.config.ts",
     "db:pglite": "tsx scripts/pglite-dev-server.ts",
     "db:copy-d1-to-planetscale": "tsx scripts/copy-d1-to-planetscale.ts",
+    "migration:types": "tsx scripts/migration/generate-types.ts",
+    "migration:storage": "tsx scripts/migration/storage.ts",
+    "typecheck:migration": "tsrs --noEmit -p tsconfig.migration.json",
     "creative:release-card": "nub run --filter @solzero/background-web render:release",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "tegami": "tsx scripts/tegami.mts",
@@ -59,12 +62,13 @@
     "format:fix": "oxfmt .",
     "lint:fix:max": "NODE_OPTIONS='--import tsx' oxlint --fix --fix-suggestions --fix-dangerously .",
     "test": "nub run test:e2e",
+    "test:config": "E2E_TELEMETRY_DISABLED=1 e2e run --config e2e.config-check.config.ts",
     "test:e2e": "tsx scripts/e2e/run.ts --exclude-tag external",
     "test:e2e:live": "tsx scripts/e2e/run.ts --no-cache --exclude-tag external",
     "test:e2e:cache-strict": "tsx scripts/e2e/run.ts --strict-cache --exclude-tag external",
     "test:e2e:cleanup": "tsx scripts/e2e/cleanup.ts",
     "test:e2e:install": "e2e-web install chromium --with-deps",
-    "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
+    "typecheck:e2e": "tsrs --noEmit -p tsconfig.e2e.json",
     "test:e2e:list": "e2e list",
     "test:e2e:all": "tsx scripts/e2e/run.ts",
     "test:e2e:external": "tsx scripts/e2e/run.ts --tag external",
@@ -72,11 +76,11 @@
     "test:e2e:mcp": "tsx scripts/e2e/run.ts --mcp"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.0-beta.107",
-    "alchemy": "2.0.0-beta.74",
+    "@effect/platform-node": "4.0.3",
+    "alchemy": "2.0.0-beta.81",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.0-beta.107"
+    "effect": "4.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
@@ -86,36 +90,47 @@
     "@electric-sql/pglite-socket": "0.1.5",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@mpsuesser/oxlint-plugin-effect": "0.2.2",
-    "@oxlint/plugins": "1.86.0",
+    "@oxlint/plugins": "1.87.0",
     "@types/node": "^24.13.3",
     "@types/pngjs": "6.0.5",
     "@types/semver": "7.8.0",
     "anti-slop": "github:dmmulroy/anti-slop",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "e2e": "0.17.0",
+    "esbuild": "0.28.2",
     "jpeg-js": "0.4.4",
     "jsonc-parser": "^3.3.1",
+    "miniflare": "5.20261006.1-alpha",
     "oxfmt": "^0.49.0",
-    "oxlint": "1.86.0",
+    "oxlint": "1.87.0",
     "pngjs": "7.0.0",
+    "postgres": "3.4.9",
     "semver": "7.8.5",
     "tegami": "1.5.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "tsx": "^4.23.13",
-    "turbo": "2.11.5",
+    "turbo": "2.11.7",
     "typescript": "^7.0.2",
-    "wrangler": "4.143.0"
+    "wrangler": "4.149.0"
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.1",
+    "@effect/platform-node": "4.0.3",
+    "@effect/platform-node-shared": "4.0.3",
+    "@effect/sql-d1": "4.0.3",
+    "@effect/sql-pg": "4.0.3",
+    "@effect/sql-sqlite-do": "4.0.3",
+    "@effect/vitest": "4.0.3",
     "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.93",
     "chat": "4.40.0",
-    "workerd": "1.20260926.1"
+    "effect": "4.0.3",
+    "workerd": "1.20261006.1"
   },
   "devEngines": {
     "packageManager": {
       "name": "nub",
-      "version": "0.4.11",
+      "version": "0.9.6",
       "onFail": "warn"
     },
     "runtime": {
@@ -126,8 +141,8 @@
   "engines": {
     "node": ">=24.15.0 <25"
   },
-  "packageManager": "nub@0.4.11",
-  "allowBuilds": {
+  "packageManager": "nub@0.9.6",
+  "allowScripts": {
     "@mongodb-js/zstd": true,
     "core-js-pure": true,
     "esbuild": true,
@@ -139,7 +154,7 @@
   },
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
-    "alchemy@2.0.0-beta.74": "patches/alchemy@2.0.0-beta.74.patch",
+    "alchemy@2.0.0-beta.81": "patches/alchemy@2.0.0-beta.81.patch",
     "@e2e-dev/web@0.12.0": "patches/@e2e-dev+web@0.12.0.patch",
     "e2e@0.17.0": "patches/e2e@0.17.0.patch",
     "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch"

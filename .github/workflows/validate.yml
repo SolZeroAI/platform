@@ -29,7 +29,9 @@ permissions:
 jobs:
   validate:
     name: Repository validation
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
     timeout-minutes: 30
     steps:
       - name: Check out repository
@@ -38,9 +40,10 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@47e5e7393d50f4e9544ddaf756aa277972afba2d # v0.4.0
+        # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -54,6 +57,9 @@ jobs:
 
       - name: Validate configuration
         run: nub run config:check
+
+      - name: Check configuration CLI contracts
+        run: nub run test:config
 
       - name: Typecheck
         run: nub run typecheck
@@ -83,7 +89,7 @@ jobs:
       group: solzero-e2e-cloudflare-${{ github.repository }}
       cancel-in-progress: false
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -97,9 +103,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
-      - uses: nubjs/setup-nub@47e5e7393d50f4e9544ddaf756aa277972afba2d # v0.4.0
+      # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
+      - uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
       - name: Install dependencies

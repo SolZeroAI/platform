@@ -8,6 +8,12 @@ on these ports before running the suite. Existing applications are never reused.
 
 ## Run locally
 
+`nub run test:config` runs account-free configuration and offline migration contracts in the same runner,
+with owned SQLite, PostgreSQL-wire/PGLite and workerd KV/R2/Durable Object fixtures. It checks bounded
+copying, seed/ID preservation, transactional rollback, secret-safe reports and independent state digests.
+It does not prove old production object-schema compatibility, PlanetScale connectivity, cross-account
+access, callbacks, rotation or live cutover. Those require the [migration gates](migration.md).
+
 Start Docker before the core suite. The launcher fails with an actionable message if its
 daemon is unavailable.
 

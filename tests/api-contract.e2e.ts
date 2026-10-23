@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema"
 import { CreatedApiKeyResponse, ApiKeysResponse } from "../packages/api/src/http/schemas/auth"
 import { SessionResponse } from "../packages/api/src/http/schemas/sessions"
 import { api, uniqueName } from "./support/api"
+import { resolveOpenApiSchema } from "./support/openapi"
 
 test(
   "exported API key and session schemas decode actual Worker responses",
@@ -29,23 +30,19 @@ test(
       const createdSchema = document.components.schemas.CreatedApiKeyResponseEncoded
       expect(createdSchema.required).toEqual(["keyId", "key", "label", "createdAt"])
       expect(Object.hasOwn(createdSchema.properties, "apiKey")).toBe(false)
-      const runRef = document.paths["/sessions/run"].post.requestBody.content[
-        "application/json"
-      ].schema.$ref
-        .split("/")
-        .pop()
-      const runSchema = document.components.schemas[runRef]
-      expect(runSchema.required ?? []).not.toContain("sessionKind")
-      expect(Object.hasOwn(runSchema.properties.sessionKind, "default")).toBe(false)
-      const stateRef = document.paths["/sessions/{id}"].get.responses["200"].content[
-        "application/json"
-      ].schema.$ref
-        .split("/")
-        .pop()
-      const stateSchema = document.components.schemas[stateRef]
+      const runSchema = resolveOpenApiSchema(
+        document,
+        document.paths["/sessions/run"].post.requestBody.content["application/json"].schema,
+      )
+      expect(runSchema.required).not.toContain("sessionKind")
+      expect(runSchema.propertyHasDefault("sessionKind")).toBe(false)
+      const stateSchema = resolveOpenApiSchema(
+        document,
+        document.paths["/sessions/{id}"].get.responses["200"].content["application/json"].schema,
+      )
       expect(stateSchema.required).toContain("id")
       expect(stateSchema.required).toContain("agentRuntime")
-      expect(Object.hasOwn(stateSchema.properties, "session")).toBe(false)
+      expect(stateSchema.hasProperty("session")).toBe(false)
     } finally {
       await api(browser, `/auth/api-keys/${created.keyId}`, "DELETE")
       await api(browser, `/sessions/${session.sessionId}`, "DELETE")

@@ -26,9 +26,14 @@ jobs:
   deploy:
     name: Deploy
     if: ${{ github.repository != 'SolZeroAI/platform' }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
+      DATABASE: ${{ vars.DATABASE || 'd1' }}
+      APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
+      PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
     permissions:
       id-token: write
       contents: read
@@ -41,9 +46,9 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.4.0
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -58,6 +63,7 @@ jobs:
       - name: Create stage vars file
         env:
           S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
           S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
@@ -81,5 +87,7 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
           CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
           WRANGLER_SEND_METRICS: "false"

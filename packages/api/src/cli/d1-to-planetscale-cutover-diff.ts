@@ -8,7 +8,7 @@ import {
 
 export const CUTOVER_JSONC_COMMENT_LINES = [
   "// One-shot D1 to PlanetScale convenience copy. This is not an online or zero-downtime migration.",
-  "// Writes can still land on D1 during the copy window. Production stays on D1 until you deploy.",
+  "// Freeze source writes and drain running work before the final export. Keep writes frozen through verification and cutover.",
   "// After copy succeeds, set process env DATABASE=planetscale (alchemy.new contract; missing/empty = d1).",
   "// For remote PlanetScale also set PLANETSCALE_SERVICE_TOKEN_ID, PLANETSCALE_SERVICE_TOKEN, and PLANETSCALE_ORGANIZATION.",
   "// Do not add a second engine field to this file. Deploy yourself after the copy.",
@@ -45,8 +45,24 @@ export function planPlanetscaleCutoverEdits(input: {
     nextJsonc,
     nextEnv,
     jsoncDiff: unifiedDiff(input.jsoncPath, input.jsonc, nextJsonc),
-    envDiff: unifiedDiff(input.envPath, input.envFile, nextEnv),
+    envDiff: unifiedDiff(input.envPath, publicCutoverEnv(input.envFile), publicCutoverEnv(nextEnv)),
   }
+}
+
+function publicCutoverEnv(contents: string): string {
+  return (
+    ENV_ASSIGNMENTS.map((assignment) => {
+      const key = assignment.slice(0, assignment.indexOf("="))
+      const line = contents.split("\n").find((candidate) => envLineKey(candidate) === key)
+      if (line === undefined) return `${key}=<unset>`
+      const value = envLineValue(line).trim()
+      if (key === DATABASE_ENV && ["d1", "planetscale", ""].includes(value))
+        return `${key}=${value}`
+      if (key === APP_DB_MODE_ENV && ["local", "remote", ""].includes(value))
+        return `${key}=${value}`
+      return `${key}=${value ? "<set; value omitted>" : "<required>"}`
+    }).join("\n") + "\n"
+  )
 }
 
 export function applyJsoncCutoverComments(jsonc: string): string {

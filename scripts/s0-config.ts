@@ -8,6 +8,7 @@ import * as JsonSchema from "effect/JsonSchema"
 import * as Schema from "effect/Schema"
 import {
   getStageMetadataFromConfigSync,
+  S0_CONFIG_JSON_SCHEMA_OPTIONS,
   S0_CONFIG_STAGE_NAMES,
   S0ConfigFileSchema,
   s0ActiveSecretReferences,
@@ -39,7 +40,7 @@ function readConfigFile(stage: string, profile?: string): unknown {
 }
 
 async function generatedSchema(): Promise<string> {
-  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema)
+  const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)
   const schema = {
     $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
     ...document.schema,
@@ -90,7 +91,7 @@ function dotenvQuote(value: string): string {
 }
 
 function writeStageVars(stage: string, outputPath: string): void {
-  const config = resolveS0Config(readConfigFile(stage))
+  const config = resolveS0Config(readConfigFile(stage, process.env.S0_CONFIG_PROFILE))
   const resolvedOutputPath = resolve(repoRoot, outputPath)
   const existing = existsSync(resolvedOutputPath)
     ? dotenv.parse(readFileSync(resolvedOutputPath))
@@ -106,7 +107,7 @@ function writeStageVars(stage: string, outputPath: string): void {
 }
 
 function printStageWebUrl(stage: string): void {
-  const config = resolveS0Config(readConfigFile(stage))
+  const config = resolveS0Config(readConfigFile(stage, process.env.S0_CONFIG_PROFILE))
   const metadata = getStageMetadataFromConfigSync(stage, config.deployment, config.application)
   process.stdout.write(`${metadata.infra.authBaseUrl}\n`)
 }
@@ -114,7 +115,7 @@ function printStageWebUrl(stage: string): void {
 const args = process.argv.slice(2).filter((argument) => argument !== "--")
 const [command, second, third] = args
 if (command === "check" && args.length === 1) {
-  await checkConfig()
+  await checkConfig(process.env.S0_CONFIG_PROFILE)
 } else if (command === "check" && second === "--profile" && third && args.length === 3) {
   await checkConfig(third)
 } else if (command === "schema" && args.length === 1) {

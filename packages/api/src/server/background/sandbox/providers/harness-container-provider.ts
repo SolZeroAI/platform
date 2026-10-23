@@ -427,6 +427,8 @@ export class HarnessContainerProvider implements SandboxProvider {
       const skills = yield* Effect.tryPromise({
         try: () =>
           resolveRuntimeSkillPackages({
+            brandName: this.env.S0_BRAND_NAME,
+            createPullRequestCommand: this.env.S0_CREATE_PR_COMMAND,
             db: makeControlPlaneFromEnv(this.env),
             bucket: this.env.AGENT_SKILLS,
             userId: request.author.userId,
@@ -486,6 +488,8 @@ export class HarnessContainerProvider implements SandboxProvider {
       yield* Effect.tryPromise({
         try: () =>
           postJson(stub, "/init", {
+            brandName: this.env.S0_BRAND_NAME,
+            createPullRequestCommand: this.env.S0_CREATE_PR_COMMAND,
             sessionId: config.sessionId,
             repoOwner: config.repoOwner ?? null,
             repoName: config.repoName ?? null,

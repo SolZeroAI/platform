@@ -17,7 +17,9 @@ Missing fixtures fail fast; they do not skip. Use the real Alchemy stack with an
 Keep these product facts honest:
 
 - GitHub (`github`): linked identity finds the exact isolated repository named by
-  `E2E_GITHUB_REPOSITORY`.
+  `E2E_GITHUB_REPOSITORY`. Accounts settings loads `/account-info` and
+  `get-access-token` with the local `account.id` (the provider-side `accountId` is
+  unknown). Do not unlink the shared GitHub fixture.
 - MCP (`mcpcf`): available server, live invocation, expected fixture output from
   `E2E_MCPCF_*`.
 - AI Search (`ai-search`): live source retrieval yields the indexed marker from

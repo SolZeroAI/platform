@@ -6,7 +6,12 @@ import * as Config from "effect/Config"
 import * as Option from "effect/Option"
 import * as Match from "effect/Match"
 import type { Success } from "effect/Effect"
-import type { AppDbMode, S0DatabaseEngine, StageMetadata } from "@solzero/shared"
+import type {
+  AppDbMode,
+  S0DatabaseEngine,
+  StageMetadata,
+  S0PlanetscaleConfig,
+} from "@solzero/shared"
 import { AGENT_CONTAINER_IMAGES } from "../../../packages/agent-container/src/images"
 import { createAppPostgresHyperdrive } from "../../../packages/infra/src/app-postgres-hyperdrive"
 import { createPlanetscaleAppDatabase } from "../../../packages/infra/src/stacks/db"
@@ -14,10 +19,6 @@ import {
   getAiSearchNamespaceName,
   getWorkflowAiSearchNamespaceName,
 } from "../../../packages/infra/src/aiSearch"
-
-export function getApiResourceName(appName: string): string {
-  return `${appName}-api`
-}
 
 export type AgentContainerRuntime = "opencode" | "codex" | "claude-code"
 
@@ -55,7 +56,7 @@ export function createAgentContainerApplication(
 ) {
   return Effect.gen(function* () {
     const { appName, stageMetadata } = options
-    const localContexts = yield* Config.string("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
+    const localContexts = yield* Config.String("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
     const forbiddenContext = Option.filter(
       localContexts,
       () => !appName.startsWith("s0-e2e") || stageMetadata.name !== "dev",
@@ -101,6 +102,7 @@ export function createAgentContainerApplications(options: CreateAgentContainerOp
 }
 
 export interface CreateAgentResourcesOptions {
+  planetscaleConfig?: S0PlanetscaleConfig
   appName: string
   dev: boolean
   stageMetadata: StageMetadata
@@ -146,6 +148,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
             createPlanetscaleAppDatabase({
               appName,
               stageName: stageMetadata.name,
+              config: options.planetscaleConfig,
             }),
           ),
           Match.orElse(() => Effect.succeed(undefined)),
@@ -158,7 +161,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
           appRole: planetscale?.appRole,
           logicalDatabaseName: Match.value(planetscale).pipe(
             Match.when(Match.undefined, () => undefined),
-            Match.orElse(() => "s0"),
+            Match.orElse((resource) => resource.logicalDatabase.name),
           ),
         })
         return { db: undefined, appHyperdrive, planetscale }

@@ -235,7 +235,7 @@ export function ApiAccessSettings({
     const loadGithubProfile = async () => {
       try {
         const response = await fetch(
-          `/api/auth/account-info?accountId=${encodeURIComponent(githubAccount.accountId)}`,
+          `/api/auth/account-info?accountId=${encodeURIComponent(githubAccount.id)}`,
         )
         if (!response.ok) {
           throw new Error("Failed to load GitHub profile")
@@ -526,14 +526,13 @@ export function ApiAccessSettings({
     })
   }
 
-  const handleUnlinkAccount = async (providerId: string, accountId?: string) => {
+  const handleUnlinkAccount = async (providerId: string, accountId: string) => {
     setStatusMessage(null)
     setErrorMessage(null)
 
     try {
       await authClient.unlinkAccount({
-        providerId,
-        ...(accountId ? { accountId } : {}),
+        accountId,
       })
       setStatusMessage(`${providerId} account unlinked.`)
       await load()
@@ -593,7 +592,7 @@ export function ApiAccessSettings({
                     type="button"
                     onClick={() =>
                       account
-                        ? handleUnlinkAccount(provider.id, account.accountId)
+                        ? handleUnlinkAccount(provider.id, account.id)
                         : void handleLinkConfiguredProvider(provider)
                     }
                     className="rounded-lg border border-kumo-line px-3 py-2 text-sm transition hover:bg-kumo-tint"
@@ -716,7 +715,7 @@ export function ApiAccessSettings({
             {githubAccount ? (
               <button
                 type="button"
-                onClick={() => handleUnlinkAccount("github", githubAccount.accountId)}
+                onClick={() => handleUnlinkAccount("github", githubAccount.id)}
                 className="rounded-lg border border-kumo-line px-3 py-2 text-sm transition hover:bg-kumo-tint"
               >
                 Unlink
@@ -926,7 +925,7 @@ export function ApiAccessSettings({
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleUnlinkAccount("slack", account.accountId)}
+                  onClick={() => handleUnlinkAccount("slack", account.id)}
                   className="rounded-lg border border-kumo-line px-2 py-1 text-xs transition hover:bg-kumo-tint"
                 >
                   Unlink

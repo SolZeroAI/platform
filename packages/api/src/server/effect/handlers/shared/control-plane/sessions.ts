@@ -945,7 +945,9 @@ export const resolveSlackLinkedUserId = Effect.fn("controlPlane.resolveSlackLink
       {
         onSome: (userId) => Effect.succeed(userId),
         onNone: () =>
-          failSetup(env, "Slack user is not linked to a SolZero account", 403, { slackUserId }),
+          failSetup(env, `Slack user is not linked to a ${env.S0_BRAND_NAME} account`, 403, {
+            slackUserId,
+          }),
       },
     )
     return linkedUserId

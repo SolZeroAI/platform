@@ -159,7 +159,7 @@ It does not publish the current master tree as an older version.
 The manifest is schema version 1. The action uploads `alchemy.new.jsonc` separately. The archive does not contain that file.
 Pull requests run that pack with `dry-run: true`.
 The dry-run job has `contents: read` only. It does not use environment `alchemy-new` and it does not request `id-token`.
-The action is pinned at `0a204b3ff07a4fc9e06e29f220b9e25906794f0f` (v1.0.0). Do not retarget that step to the floating `v1` tag.
+Both publish steps use `SolZeroAI/alchemy-new-publish-action@v1`. Do not pin that action to a commit SHA or an exact version. Leave SHA pins that already exist on other actions.
 Neither job is a Cloudflare deploy.
 The registry job uses GitHub Environment `alchemy-new` and OIDC.
 It does not add a preview or prod deploy.

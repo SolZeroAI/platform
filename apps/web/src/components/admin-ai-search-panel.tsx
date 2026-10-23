@@ -69,7 +69,7 @@ const DATA_SOURCE_OPTIONS = [
 
 const SOURCE_FIELD_HELP = {
   sourceId:
-    "Used as the SolZero source ID, Cloudflare AI Search instance ID, and basis for MCP tool names.",
+    "Used as the source ID, Cloudflare AI Search instance ID, and basis for MCP tool names.",
   label: "Human-readable name shown to admins and used in agent-facing tool descriptions.",
   dataSource: "Cloudflare AI Search data source type backing this instance.",
   maxResults: "Maximum number of search results returned by the source search tool.",

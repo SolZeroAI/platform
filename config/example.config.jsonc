@@ -3,6 +3,15 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
+  // Optional. A complete brand object takes precedence over VITE_S0_BRAND_* environment values.
+  // Omit it to keep the existing environment overrides or SolZero defaults.
+  // "brand": {
+  //   "name": "My Agent",
+  //   "logoLightPath": "/images/my-logo-light.svg",
+  //   "logoDarkPath": "/images/my-logo-dark.svg",
+  //   "faviconPath": "/my-favicon.svg",
+  //   "appleTouchIconPath": "/my-apple-touch-icon.png"
+  // },
   "deployment": {
     "appName": "s0",
     "zone": "localhost",
@@ -55,6 +64,7 @@
 
       // Any social or OIDC provider can become a sign-in authority. Its kind does not grant
       // authority; the capabilities below do. Keep implicit account linking disabled.
+      // Register <authBaseUrl>/api/auth/callback/<providerId> with the identity provider.
       // "company-oidc": {
       //   "kind": "oidc",
       //   "enabled": true,
@@ -153,6 +163,8 @@
     // When enabled, register <authBaseUrl>/api/auth/callback/github in the GitHub App and
     // grant read-only access to account email addresses for Better Auth profile resolution.
     "githubApp": {
+      // Optional executable alias. Existing database skill IDs and names are not renamed.
+      // "createPullRequestCommand": "my-create-pr",
       "enabled": false,
       "appId": "",
       "clientId": "",

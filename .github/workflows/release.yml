@@ -11,9 +11,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +21,7 @@ jobs:
   images:
     name: Publish agent container images
     if: >-
+      github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
@@ -36,26 +35,44 @@ jobs:
     name: Version or release SolZero
     needs: images
     if: >-
+      github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # Writes go through the release app token. This job's GITHUB_TOKEN stays read-only.
+    permissions:
+      contents: read
     outputs:
       published: ${{ steps.published.outputs.published }}
       tag: ${{ steps.published.outputs.tag }}
       sha: ${{ steps.published.outputs.sha }}
     steps:
+      # The app opens tegami/version-packages, so pull_request workflows start.
+      - name: Create release app token
+        id: release-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Check out validated commit
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          # Credentials stay in the checkout so the v* tag push uses this token.
+          token: ${{ steps.release-token.outputs.token }}
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.4.0
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -65,7 +82,7 @@ jobs:
       - name: Version or publish release
         run: nub run tegami ci
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.release-token.outputs.token }}
           S0_CREATIVE_RELEASE_ASSETS: "true"
 
       - name: Record whether this run published the release
@@ -170,9 +187,9 @@ jobs:
           echo "Registry publish is allowed for ${RELEASE_TAG} at ${EXPECTED_SHA}."
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.4.0
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -199,7 +216,7 @@ jobs:
 
       - name: Publish to alchemy.new
         id: publish
-        uses: SolZeroAI/alchemy-new-publish-action@0a204b3ff07a4fc9e06e29f220b9e25906794f0f # v1.0.0
+        uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
           package: solzero/platform
           version: ${{ needs.release.outputs.tag }}
@@ -232,9 +249,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.4.0
+        uses: nubjs/setup-nub@v0.6.0
         with:
-          nub-version: 0.4.11
+          nub-version: 0.9.6
           node-version-file: .nvmrc
           cache-dependency-path: nub.lock
 
@@ -261,7 +278,7 @@ jobs:
 
       - name: Dry-run publish to alchemy.new
         id: publish
-        uses: SolZeroAI/alchemy-new-publish-action@0a204b3ff07a4fc9e06e29f220b9e25906794f0f # v1.0.0
+        uses: SolZeroAI/alchemy-new-publish-action@v1
         with:
           package: solzero/platform
           version: 0.0.0-dry-run

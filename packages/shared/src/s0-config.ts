@@ -12,6 +12,7 @@ import {
   type ProviderModelDefinition,
 } from "./provider-config"
 import { type S0DatabaseEngine } from "./database-engine"
+import { resolveS0Brand, type S0BrandEnvironment } from "./s0-brand"
 import {
   normalizeSecretReference,
   SecretReferenceSchema,
@@ -25,6 +26,43 @@ export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
 
+// oxlint-disable-next-line effect/prefer-schema-class -- public branding is a browser-safe JSON DTO.
+export const S0BrandConfigSchema = Schema.Struct({
+  name: Schema.String.check(Schema.isMinLength(1)),
+  logoLightPath: Schema.String.check(Schema.isMinLength(1)),
+  logoDarkPath: Schema.String.check(Schema.isMinLength(1)),
+  faviconPath: Schema.String.check(Schema.isMinLength(1)),
+  appleTouchIconPath: Schema.String.check(Schema.isMinLength(1)),
+})
+export type S0BrandConfig = typeof S0BrandConfigSchema.Type
+
+// oxlint-disable-next-line effect/prefer-schema-class -- PlanetScale provisioning is a deployment JSON DTO, not Worker state.
+export const S0PlanetscaleConfigSchema = Schema.Struct({
+  clusterSize: Schema.String.check(Schema.isPattern(/^[A-Z0-9]+(?:[_-][A-Z0-9]+)*$/)),
+  logicalDatabaseName: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,62}$/)),
+  region: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))),
+  arch: Schema.optional(Schema.Literals(["x86", "arm"])),
+  replicas: Schema.optional(
+    Schema.Union([
+      Schema.Literal(0),
+      Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(2)),
+    ]),
+  ),
+  majorVersion: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9]+$/))),
+})
+export type S0PlanetscaleConfig = typeof S0PlanetscaleConfigSchema.Type
+
+export const DEFAULT_PLANETSCALE_CONFIG: S0PlanetscaleConfig = {
+  clusterSize: "PS_10",
+  logicalDatabaseName: "s0",
+}
+
+function normalizeS0Brand(brand: S0BrandConfig): S0BrandConfig {
+  return Schema.decodeUnknownSync(S0BrandConfigSchema)(
+    Object.fromEntries(Object.entries(brand).map(([key, value]) => [key, value.trim()])),
+  )
+}
+
 // oxlint-disable-next-line effect/prefer-schema-class -- root deployment configuration is a plain JSON DTO
 export const S0DeploymentConfigSchema = Schema.Struct({
   appName: Schema.String,
@@ -32,6 +70,7 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   webFqdn: Schema.optional(Schema.String),
   apiFqdn: Schema.optional(Schema.String),
   useApiShield: Schema.Boolean,
+  planetscale: Schema.optional(S0PlanetscaleConfigSchema),
   observability: Schema.Struct({
     logsDestinations: Schema.Array(Schema.String),
     tracesDestinations: Schema.Array(Schema.String),
@@ -98,6 +137,9 @@ export const S0GitHubAppConfigSchema = Schema.Struct({
   appId: Schema.String,
   clientId: Schema.String,
   slug: Schema.String,
+  createPullRequestCommand: Schema.optional(
+    Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), Schema.isMaxLength(64)),
+  ),
   clientSecret: SecretReferenceSchema,
   privateKey: SecretReferenceSchema,
   webhookSecret: Schema.optional(SecretReferenceSchema),
@@ -150,15 +192,28 @@ const S0ResolvedConfigFields = {
 } as const
 
 // oxlint-disable-next-line effect/prefer-schema-class -- resolved deployment config crosses infra and Worker JSON boundaries
-export const S0ResolvedConfigSchema = Schema.Struct(S0ResolvedConfigFields)
+export const S0ResolvedConfigSchema = Schema.Struct({
+  ...S0ResolvedConfigFields,
+  brand: S0BrandConfigSchema,
+})
 export type S0ResolvedConfig = typeof S0ResolvedConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- external JSONC is decoded to a plain DTO used by infra and Worker bindings
 export const S0ConfigFileSchema = Schema.Struct({
   $schema: Schema.optional(Schema.String),
   ...S0ResolvedConfigFields,
+  brand: Schema.optional(S0BrandConfigSchema),
 })
 export type S0ConfigFile = typeof S0ConfigFileSchema.Type
+
+/**
+ * Effect 4 leaves structs open by default (`onExcessProperty: "ignore"`).
+ * Operator config keeps the closed contract: unknown keys fail decode and
+ * the generated editor schema emits `additionalProperties: false`.
+ */
+export const S0_CONFIG_JSON_SCHEMA_OPTIONS = {
+  onExcessProperty: "error",
+} as const
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -388,6 +443,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
         }
   const normalized: S0ResolvedConfig = {
     ...decoded,
+    brand: normalizeS0Brand(decoded.brand),
     deployment,
     application: {
       ...decoded.application,
@@ -445,10 +501,21 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
   return normalized
 }
 
-export function resolveS0Config(value: unknown): S0ResolvedConfig {
-  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema)(value)
+export function resolveS0Config(
+  value: unknown,
+  brandEnvironment: S0BrandEnvironment = {},
+): S0ResolvedConfig {
+  const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
-  return normalizeResolvedConfig(Schema.decodeUnknownSync(S0ResolvedConfigSchema)(config))
+  return normalizeResolvedConfig(
+    Schema.decodeUnknownSync(
+      S0ResolvedConfigSchema,
+      S0_CONFIG_JSON_SCHEMA_OPTIONS,
+    )({
+      ...config,
+      brand: config.brand ?? resolveS0Brand(brandEnvironment),
+    }),
+  )
 }
 
 function sortForCanonicalJson(value: unknown): unknown {

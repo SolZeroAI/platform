@@ -39,7 +39,7 @@ const appName = config.deployment.appName
 if (!/^s0-e2e(?:-[a-z0-9-]+)?$/.test(appName)) {
   throw new Error("Cleanup requires an isolated s0-e2e development profile.")
 }
-const ci = await Effect.runPromise(Config.boolean("CI").pipe(Config.withDefault(false)))
+const ci = await Effect.runPromise(Config.Boolean("CI").pipe(Config.withDefault(false)))
 const gatewayId = `${appName}${ci ? "-ci" : ""}-dev-ai-gateway`
 const tokenName = `${appName}-dev-ai-gateway-run`
 const stateRoot = resolve("packages/infra/.alchemy/state/S0/dev")

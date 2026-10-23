@@ -36,7 +36,7 @@ stays on D1.
 
 ## PlanetScale Postgres (paid)
 
-PlanetScale has no free plan. Budget about **$5/month** for a small cluster. Required only when
+PlanetScale is a paid service. Provisioning credentials are required only when
 `DATABASE=planetscale` **and** `APP_DB_MODE=remote`.
 
 Add these IaC credentials to `config/.env` for remote PlanetScale stages. Names match alchemy.new:
@@ -50,15 +50,18 @@ PLANETSCALE_ORGANIZATION=
 
 Public CI stays secret-less. PGLite tests do not need these tokens.
 
-Alchemy 2.0.0-beta.74 still reads `PLANETSCALE_API_TOKEN_ID` and `PLANETSCALE_API_TOKEN` internally.
+Alchemy reads `PLANETSCALE_API_TOKEN_ID` and `PLANETSCALE_API_TOKEN` internally.
 The stack copies the service-token names into those Alchemy names only when the PlanetScale Layers
 merge. Operators should set the service-token names.
 
-Alchemy creates one Postgres cluster, admin and app roles, one logical database named `s0`, and a
+Alchemy creates one Postgres cluster, admin and app roles, one logical database (default `s0`), and a
 Hyperdrive connection. The Worker binding is `APP_HYPERDRIVE`. Runtime uses Hyperdrive with
 postgres.js for promise Drizzle and Better Auth, plus `@effect/sql-pg` for Effect-native paths. It
 does not use `drizzle-orm/pglite` or Node `pg` inside the Worker. The D1 Worker graph does not load
 the postgres client.
+
+Configure capacity, region and logical name through `deployment.planetscale`; see
+[customization](customization.md#planetscale-provisioning).
 
 ### `APP_DB_MODE` (postgres flavor only)
 
@@ -95,7 +98,8 @@ D1 hand SQL is not applied to postgres. The postgres tree starts at
 
 This is **not** an online or zero-downtime migration. The operator copies
 control-plane rows once from a D1 dump, then deploys. Production stays on D1
-until that deploy. Writes can still land on D1 during the copy window.
+until cutover. Freeze writes and drain work before the final export. Keep the destination offline
+until independent verification and cutover checks pass.
 
 The first-party path is a typed Effect CLI that reuses the same Drizzle schemas
 and `DATABASE` contract as the app. Control-plane tables only. It does not copy
@@ -105,12 +109,15 @@ Durable Object sqlite, R2, or AI Search.
 # Export the operator D1 database (sqlite dump or SQL).
 wrangler d1 export <D1_NAME> --output ./d1-export.sql --remote
 
-# Dry-run is the default. It plans the copy, prints the jsonc and env unified
-# diff for the next deploy, and writes nothing.
-nub run db:copy-d1-to-planetscale -- --source-sqlite ./d1-export.sql --dest-url "$DATABASE_URL"
+# Supply DATABASE_URL securely through the environment, not command-line arguments.
+# Default: plan only, bounded reads, no destination writes.
+nub run db:copy-d1-to-planetscale -- --source-sqlite ./d1-export.sql
 
 # Write the copy. Deploy yourself after it succeeds.
-nub run db:copy-d1-to-planetscale -- --apply --source-sqlite ./d1-export.sql --dest-url "$DATABASE_URL"
+nub run db:copy-d1-to-planetscale -- --apply --source-writes-frozen --source-sqlite ./d1-export.sql
+
+# Independently re-read all keys, counts and checksums.
+nub run db:copy-d1-to-planetscale -- --verify-only --source-sqlite ./d1-export.sql
 ```
 
 After copy succeeds, set process env `DATABASE=planetscale` before the next
@@ -119,17 +126,22 @@ field to jsonc. For remote PlanetScale also set `PLANETSCALE_SERVICE_TOKEN_ID`,
 `PLANETSCALE_SERVICE_TOKEN`, and `PLANETSCALE_ORGANIZATION`. The dry-run prints
 that jsonc and env diff. It never rewrites the live jsonc and never deploys.
 
-`--apply` reports status, duration, source and destination sizes, and per-table
-row, skip, and conflict counts. The copy fails closed if the destination
-already has conflicting rows unless you pass `--overwrite`.
+`--apply` verifies inside a serializable transaction, then re-reads after commit. Reports contain actual
+counts and checksums, not row data or secret values. `--batch-size` is bounded to 1–500 rows. Unknown
+source tables/columns, unrelated destination rows, duplicate built-ins and changed destination seeds
+fail closed. Missing tables in older sources are listed explicitly and must have no destination rows.
+Only the untouched canonical PR skill seed can be reconciled to its legacy identity; existing IDs and
+preferences remain intact. Conflicting rows require a fresh destination or explicit `--overwrite`.
 
-Official Cloudflare / PlanetScale dump tools (`wrangler d1 export` plus
-`pscale import d1` or pgloader) can still be used. This CLI is the typed
-first-party path.
+The selected profile determines the default prod JSONC path; use `--config` for a different stage.
+Printed cutover diffs omit secret values and unrelated assignments. Optional `--patch-out` files are
+created exclusively with mode 0600 and never rewrite deployment files. See [offline migration](migration.md)
+for portable-state transfers, source inventory requirements and rollback limits. Relational copy alone
+is not a cutover gate.
 
 ## What does not change
 
 - Durable Object sqlite for session messages, events, and artifacts
 - R2 buckets
 - Cloudflare AI Search
-- Alchemy `2.0.0-beta.74`, Effect `4.0.0-beta.107`, wrangler `4.143.0`, and better-auth `1.6.24`
+- Alchemy `2.0.0-beta.81`, Effect `4.0.3`, wrangler `4.149.0`, and better-auth `1.7.7`

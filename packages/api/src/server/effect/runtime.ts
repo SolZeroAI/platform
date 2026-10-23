@@ -1,18 +1,14 @@
-import { S0Api } from "@solzero/api"
+import { apiForBrand } from "@solzero/api"
 import * as Context from "effect/Context"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import { HttpRouter, HttpServer } from "effect/unstable/http"
-import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi"
+import { HttpRouter, HttpServer } from "effect/http"
+import { HttpApiBuilder, HttpApiScalar } from "effect/http-api"
 import { stringifyJson } from "../lib/json"
 import { HttpRoutesLive } from "./routes"
 import { CloudflareContext } from "./services/cloudflare"
 import { makeEffectLoggerLayer, observeEffectHttpApi } from "./services/observability"
-
-const ApiRoutes = HttpApiBuilder.layer(S0Api, {
-  openapiPath: "/openapi.json",
-}).pipe(Layer.provide(HttpRoutesLive))
 
 type ScalarReferenceConfig = HttpApiScalar.ScalarConfig & {
   readonly persistAuth: boolean
@@ -28,21 +24,22 @@ const scalarReferenceConfig = {
   mcp: true,
 } satisfies ScalarReferenceConfig
 
-const DocsRoute = HttpApiScalar.layer(S0Api, {
-  path: "/reference",
-  scalar: scalarReferenceConfig,
-})
-
-const BaseRoutes = Layer.mergeAll(ApiRoutes, DocsRoute).pipe(
-  Layer.provide(
-    HttpRouter.cors({
-      allowedOrigins: ["*"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-trace-id"],
-      allowedMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    }),
-  ),
-  Layer.provide(HttpServer.layerServices),
-)
+function baseRoutes(brandName: string) {
+  const api = apiForBrand(brandName)
+  return Layer.mergeAll(
+    HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(Layer.provide(HttpRoutesLive)),
+    HttpApiScalar.layer(api, { path: "/reference", scalar: scalarReferenceConfig }),
+  ).pipe(
+    Layer.provide(
+      HttpRouter.cors({
+        allowedOrigins: ["*"],
+        allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-trace-id"],
+        allowedMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      }),
+    ),
+    Layer.provide(HttpServer.layerServices),
+  )
+}
 
 interface EffectApiWebHandler {
   readonly dispose: () => Promise<void>
@@ -52,10 +49,12 @@ interface EffectApiWebHandler {
   ) => Promise<globalThis.Response>
 }
 type TelemetryLayerOptions = Parameters<typeof makeEffectLoggerLayer>[0]
+type ApiHandlerOptions = TelemetryLayerOptions & { readonly brandName: string }
 
 const handlerCache = new Map<string, EffectApiWebHandler>()
 
-const defaultTelemetryOptions: TelemetryLayerOptions = {
+const defaultTelemetryOptions: ApiHandlerOptions = {
+  brandName: "SolZero",
   stageMetadataInput: "test",
   workerName: "s0-api",
 }
@@ -67,13 +66,14 @@ function telemetryStageName(input: TelemetryLayerOptions["stageMetadataInput"]):
   )
 }
 
-function telemetryOptionsFromContext(context?: Context.Context<never>): TelemetryLayerOptions {
+function telemetryOptionsFromContext(context?: Context.Context<never>): ApiHandlerOptions {
   return Option.fromNullishOr(context).pipe(
     Option.filter(Context.isContext),
     Option.flatMap((ctx) => Context.getOption(ctx, CloudflareContext)),
     Option.match({
       onNone: () => defaultTelemetryOptions,
       onSome: ({ env }) => ({
+        brandName: env.S0_BRAND_NAME,
         commitSha: env.COMMIT_SHA,
         stageMetadataInput: env,
         workerName: env.WORKER_NAME,
@@ -82,17 +82,18 @@ function telemetryOptionsFromContext(context?: Context.Context<never>): Telemetr
   )
 }
 
-function telemetryCacheKey(options: TelemetryLayerOptions): string {
+function telemetryCacheKey(options: ApiHandlerOptions): string {
   return stringifyJson({
     commitSha: options.commitSha,
     stage: telemetryStageName(options.stageMetadataInput),
     workerName: options.workerName,
+    brandName: options.brandName,
   })
 }
 
-function createWebHandler(key: string, options: TelemetryLayerOptions): EffectApiWebHandler {
+function createWebHandler(key: string, options: ApiHandlerOptions): EffectApiWebHandler {
   const generatedHandler = HttpRouter.toWebHandler(
-    BaseRoutes.pipe(Layer.provide(makeEffectLoggerLayer(options))) as never,
+    baseRoutes(options.brandName).pipe(Layer.provide(makeEffectLoggerLayer(options))) as never,
     {
       disableLogger: true,
       middleware: observeEffectHttpApi,
