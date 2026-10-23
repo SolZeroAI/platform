@@ -108,8 +108,8 @@ function writeStageVars(stage: string, outputPath: string): void {
   const contents = names
     .map((name) => `${name}=${dotenvQuote(process.env[name] ?? existing[name] ?? "")}`)
     .join("\n")
+  if (existsSync(resolvedOutputPath)) chmodSync(resolvedOutputPath, 0o600)
   writeFileSync(resolvedOutputPath, `${contents}\n`, { mode: 0o600 })
-  chmodSync(resolvedOutputPath, 0o600)
   process.stdout.write(`Wrote ${names.length} secret references to ${outputPath}\n`)
 }
 
