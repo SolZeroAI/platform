@@ -6,6 +6,7 @@ dist/
 
 # deps
 node_modules/
+opensrc/
 .wrangler
 .turbo
 
@@ -39,3 +40,7 @@ config/.e2e-password
 
 # Optional isolated external-integration profiles contain local deployment details.
 config/e2e-*-dev.config.jsonc
+
+# Temporary migration operator configuration and private export bundles.
+scripts/migration/*.local.jsonc
+.migration/

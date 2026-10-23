@@ -1,3 +1,7 @@
+import type { S0BrandConfig } from "./s0-config"
+
+export type { S0BrandConfig } from "./s0-config"
+
 export interface S0BrandEnvironment {
   readonly VITE_S0_BRAND_NAME?: string
   readonly VITE_S0_BRAND_LOGO_PATH?: string
@@ -7,20 +11,19 @@ export interface S0BrandEnvironment {
   readonly VITE_S0_BRAND_APPLE_TOUCH_ICON_PATH?: string
 }
 
-export interface S0BrandConfig {
-  readonly name: string
-  readonly logoLightPath: string
-  readonly logoDarkPath: string
-  readonly faviconPath: string
-  readonly appleTouchIconPath: string
-}
-
 const DEFAULT_SOLZERO_BRAND: S0BrandConfig = {
   name: "SolZero",
   logoLightPath: "/images/solzero-logo-light.png",
   logoDarkPath: "/images/solzero-logo-dark.png",
   faviconPath: "/favicon.svg",
   appleTouchIconPath: "/apple-touch-icon.png",
+}
+
+export function hasCustomS0Logo(brand: S0BrandConfig): boolean {
+  return (
+    brand.logoLightPath !== DEFAULT_SOLZERO_BRAND.logoLightPath ||
+    brand.logoDarkPath !== DEFAULT_SOLZERO_BRAND.logoDarkPath
+  )
 }
 
 function nonEmpty(value: string | undefined): string | undefined {

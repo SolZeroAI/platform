@@ -58,6 +58,9 @@ SolZero includes code for these integrations:
 
 Deployment owners store non-secret platform settings in a JSONC file for each stage. Administrators can manage other integration settings at runtime from the Admin dashboard. Values in the stage file have priority, which makes required settings clear during review.
 
+See [deployment customization](docs/customization.md) for branded profiles, environment credentials,
+private-fork CI, and account/domain migration boundaries.
+
 ## Tech stack
 
 - Cloudflare Workers, Durable Objects, Workflows, Containers, D1 (default control-plane database), KV, R2, and AI Search. Optional PlanetScale Postgres for the control-plane index.

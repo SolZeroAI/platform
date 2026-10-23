@@ -10,6 +10,8 @@ import {
   LOCAL_PGLITE_DATABASE_URL,
   type AppDbMode,
   type S0DatabaseEngine,
+  type S0BrandConfig,
+  type S0PlanetscaleConfig,
   type StageMetadata,
 } from "@solzero/shared"
 import {
@@ -27,6 +29,8 @@ import { createWeb } from "./web"
 
 export interface CreateS0Options {
   appName: string
+  brand: S0BrandConfig
+  planetscaleConfig?: S0PlanetscaleConfig
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   databaseEngine: S0DatabaseEngine
@@ -43,6 +47,7 @@ export type CreateS0ApiOptions = CreateS0Options
 
 export interface CreateS0WebOptions {
   appName: string
+  brand: S0BrandConfig
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   repoRoot: string
@@ -191,6 +196,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
       databaseEngine,
       appDbMode,
       databaseUrl: databaseUrl ?? LOCAL_PGLITE_DATABASE_URL,
+      planetscaleConfig: options.planetscaleConfig,
     })
     const api = yield* createApi({
       appName,
@@ -230,6 +236,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
 export function createS0Web(options: CreateS0WebOptions) {
   return createWeb({
     appName: options.appName,
+    brand: options.brand,
     stageMetadata: options.stageMetadata,
     deploymentMetadata: options.deploymentMetadata,
     repoRoot: options.repoRoot,

@@ -14,6 +14,7 @@ import {
 } from "./types"
 import { formatWorkflowNodeLabel } from "./save-utils"
 import { asJsonRecord, formatJson, parseJsonInput } from "./header-utils"
+import { getS0Brand } from "@/lib/brand"
 
 export async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init)
@@ -44,7 +45,7 @@ export function sanitizeFilename(value: string): string {
 
 export function buildWorkflowBuilderPrompt(userPrompt: string): string {
   return [
-    "Build a SolZero workflow draft from the user's request.",
+    `Build a ${getS0Brand().name} workflow draft from the user's request.`,
     "",
     "Activate the s0.workflow-builder skill before editing the manifest.",
     "",
@@ -66,7 +67,7 @@ export function buildWorkflowEditorPrompt(input: {
   runEventsById?: Readonly<Record<string, WorkflowRunEvent[]>>
 }): string {
   const promptParts = [
-    "Edit the current SolZero workflow draft according to the requested change.",
+    `Edit the current ${getS0Brand().name} workflow draft according to the requested change.`,
     "",
     "Activate the s0.workflow-builder skill before editing the manifest.",
     "",

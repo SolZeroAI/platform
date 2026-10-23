@@ -3,6 +3,13 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
+  "brand": {
+    "name": "Fork Fixture",
+    "logoLightPath": "/images/solzero-logo.svg",
+    "logoDarkPath": "/images/solzero-logo.svg",
+    "faviconPath": "/favicon.svg",
+    "appleTouchIconPath": "/apple-touch-icon.png",
+  },
   "deployment": {
     "appName": "s0-e2e",
     "zone": "localhost",

@@ -12,6 +12,41 @@
         "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "apiFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "useApiShield": { "type": "boolean" },
+        "planetscale": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "clusterSize": { "type": "string" },
+                "logicalDatabaseName": { "type": "string" },
+                "region": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                "arch": {
+                  "anyOf": [{ "type": "string", "enum": ["x86", "arm"] }, { "type": "null" }]
+                },
+                "replicas": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        { "type": "number", "enum": [0] },
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "allOf": [{ "minimum": 2 }]
+                        }
+                      ]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "majorVersion": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+              },
+              "required": ["clusterSize", "logicalDatabaseName"],
+              "additionalProperties": false
+            },
+            { "type": "null" }
+          ]
+        },
         "observability": {
           "type": "object",
           "properties": {
@@ -503,6 +538,9 @@
             "appId": { "type": "string" },
             "clientId": { "type": "string" },
             "slug": { "type": "string" },
+            "createPullRequestCommand": {
+              "anyOf": [{ "type": "string", "maxLength": 64 }, { "type": "null" }]
+            },
             "clientSecret": {
               "type": "object",
               "properties": {
@@ -632,6 +670,29 @@
         }
       },
       "additionalProperties": false
+    },
+    "brand": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "logoLightPath": { "type": "string", "minLength": 1 },
+            "logoDarkPath": { "type": "string", "minLength": 1 },
+            "faviconPath": { "type": "string", "minLength": 1 },
+            "appleTouchIconPath": { "type": "string", "minLength": 1 }
+          },
+          "required": [
+            "name",
+            "logoLightPath",
+            "logoDarkPath",
+            "faviconPath",
+            "appleTouchIconPath"
+          ],
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
     }
   },
   "required": [

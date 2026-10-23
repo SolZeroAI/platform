@@ -10,7 +10,11 @@ function columnTypeName(column: { columnType: string }): string {
 }
 
 function sqliteIntegerAsBoolean(value: unknown): boolean {
-  return value === true || value === 1 || value === "1" || value === "t" || value === "true"
+  if (value === true || value === 1 || value === "1" || value === "t" || value === "true")
+    return true
+  if (value === false || value === 0 || value === "0" || value === "f" || value === "false")
+    return false
+  throw new Error("Invalid boolean in source data")
 }
 
 function asJsonValue(value: unknown): unknown {
@@ -19,14 +23,17 @@ function asJsonValue(value: unknown): unknown {
 }
 
 function asUnixMsNumber(value: unknown): unknown {
-  if (typeof value === "bigint") return Number(value)
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value)
-  }
-  return value
+  const converted =
+    typeof value === "bigint" || (typeof value === "string" && value.trim() !== "")
+      ? Number(value)
+      : value
+  if (typeof converted !== "number" || !Number.isSafeInteger(converted))
+    throw new Error("Unsafe integer in source data")
+  return converted
 }
 
 export function mapSqliteCellToPostgres(value: unknown, destColumnType: string): unknown {
+  if (value === null) return null
   if (BOOLEAN_COLUMN_TYPES.has(destColumnType)) return sqliteIntegerAsBoolean(value)
   if (JSONB_COLUMN_TYPES.has(destColumnType)) return asJsonValue(value)
   if (BIGINT_NUMBER_COLUMN_TYPES.has(destColumnType)) return asUnixMsNumber(value)
@@ -66,6 +73,19 @@ export function rowsEqual(left: Record<string, unknown>, right: Record<string, u
 
 function sortRecord(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(row).sort(([left], [right]) => left.localeCompare(right)),
+    Object.entries(row)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => [key, canonicalValue(value)]),
   )
+}
+
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalValue)
+  if (typeof value === "object" && value !== null)
+    return sortRecord(value as Record<string, unknown>)
+  return value
+}
+
+export function canonicalCopyRow(row: Record<string, unknown>): string {
+  return JSON.stringify(sortRecord(row))
 }

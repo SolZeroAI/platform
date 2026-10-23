@@ -20,6 +20,7 @@ jobs:
   images:
     name: Publish agent container images
     if: >-
+      github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
@@ -33,6 +34,7 @@ jobs:
     name: Version or release SolZero
     needs: images
     if: >-
+      github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository

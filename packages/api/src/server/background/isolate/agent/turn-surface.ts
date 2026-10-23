@@ -22,6 +22,7 @@ const ISOLATE_FALLBACK_SYSTEM_PROMPT =
 
 /** The parent agent's base system prompt, before feature modules append their sections. */
 export function buildIsolateTurnSystemPrompt(input: {
+  brandName: string
   state: IsolateSessionAgentState
   activeTurn: ActiveTurn | null
 }): string {
@@ -32,7 +33,7 @@ export function buildIsolateTurnSystemPrompt(input: {
 }
 
 function promptForModel(
-  input: { state: IsolateSessionAgentState; activeTurn: ActiveTurn | null },
+  input: { brandName: string; state: IsolateSessionAgentState; activeTurn: ActiveTurn | null },
   model: IsolateModelContext,
 ): string {
   const facts = buildIsolateSystemPromptFacts({
@@ -40,6 +41,7 @@ function promptForModel(
     customMcpServers: input.state.customMcpServers,
   })
   return buildIsolateSystemPrompt({
+    brandName: input.brandName,
     runtimeModelId: model.runtimeModelId,
     providerId: model.providerId,
     modelId: model.modelId,
@@ -81,6 +83,7 @@ export function buildIsolateTurnTools(input: {
 
 export function buildIsolateTurnSkills(input: { env: Env; state: IsolateSessionAgentState }) {
   return buildResolvedIsolateSkillSources({
+    brandName: input.env.S0_BRAND_NAME,
     db: makeControlPlaneFromEnv(input.env),
     tools: input.state.tools,
     skillsBucket: input.env.AGENT_SKILLS,

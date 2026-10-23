@@ -30,6 +30,7 @@ import {
   type WorkflowTemplate,
 } from "@solzero/shared"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
+import { getS0Brand } from "@/lib/brand"
 import {
   getRouteWorkflowId,
   WORKFLOW_PAGE_SIZE_OPTIONS,
@@ -120,7 +121,7 @@ export function WorkflowCreationModePanel({
         <FileUp className="h-7 w-7 text-kumo-subtle" aria-hidden />
         <span className="mt-3 text-sm font-medium text-kumo-default">Choose YAML file</span>
         <span className="mt-1 text-sm text-kumo-subtle">
-          Portable SolZero workflow exports load as unsaved drafts.
+          Portable {getS0Brand().name} workflow exports load as unsaved drafts.
         </span>
         <input
           type="file"
@@ -289,7 +290,7 @@ export function WorkflowIndexLanding({
             <WorkflowCreationCard
               icon={FileUp}
               title="Import"
-              description="Load a SolZero workflow YAML export as an editable draft."
+              description={`Load a ${getS0Brand().name} workflow YAML export as an editable draft.`}
               iconClassName="workflow-icon-sky"
               onClick={() => onOpenCreationMode("import")}
             />

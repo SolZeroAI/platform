@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useId, useRef, type ReactNode } from "react"
+import { hasCustomS0Logo } from "@solzero/shared"
+import { getS0Brand } from "@/lib/brand"
+import { S0LogoSvg } from "@/components/s0-logo-svg"
 
 interface S0LoaderProps {
   size?: number
@@ -42,6 +45,22 @@ function sanitizeSvgId(id: string): string {
 }
 
 export function S0Loader({ size = 64, className = "" }: S0LoaderProps) {
+  if (hasCustomS0Logo(getS0Brand())) {
+    return (
+      <span
+        aria-label="Loading"
+        className={`inline-flex motion-safe:animate-pulse ${className}`.trim()}
+        role="img"
+        style={{ height: size, width: size }}
+      >
+        <S0LogoSvg aria-hidden height={size} width={size} />
+      </span>
+    )
+  }
+  return <SolZeroLoader size={size} className={className} />
+}
+
+function SolZeroLoader({ size = 64, className = "" }: S0LoaderProps) {
   const containerRef = useRef<HTMLSpanElement>(null)
   const instanceId = sanitizeSvgId(useId())
   const filterId = `s0-loader-bloom-${instanceId}`
