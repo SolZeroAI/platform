@@ -49,3 +49,13 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Error logs should explain where the failure happened and include non-secret context that helps debug it later, such as session id, user id, runtime kind, route branch, tool/source ids, model, request/message ids, and sanitized upstream status/error details.
 - Never log bearer tokens, refresh tokens, authorization headers, cookies, or raw custom MCP server definitions. Log names, ids, counts, and boolean capability flags instead.
 - Do not add noisy catch-all logs. Log at decision points where context would otherwise be lost across Durable Object, Worker, RPC, MCP, workflow, or external API boundaries.
+
+## Cloud-agent PR artifacts
+
+A cloud-agent pull request that changes user-visible behavior must attach proof. Skip this proof for a pin bump, a config-only change, or a markdown-only change.
+
+- Boot `apps/web` (port 3000) and `apps/api` (port 3100). The verify skill starts that pair on the isolated Alchemy stack from `e2e.config.ts`.
+- Run the affected end-to-end tests with `.cursor/skills/verify-solzero/SKILL.md` (Launch, Doctor, Drive, Evidence).
+- Select those tests with the e2e Test Filters API. Use the Cloudflare Clef decision model through Cloudflare AI Gateway. The keys are already in the cloud-agent environment. Do not print the keys.
+- Attach the Evidence output (screenshots, video, and test logs) as cloud-agent pull request artifacts. Do not commit screenshot binaries.
+- Artifact rules: https://cursor.com/docs/cloud-agent/capabilities
