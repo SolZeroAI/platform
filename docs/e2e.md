@@ -50,7 +50,10 @@ Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and `CF_AI_GATEWAY_E2E_T
 The semantic executor calls `@cf/cloudflare/clef` through the Cloudflare Workers AI REST
 route with `cf-aig-gateway-id`, defaulting to `default` or `CF_AI_GATEWAY_E2E_ID`.
 The token needs permission to execute Workers AI. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses
-gateway response caching independently of e2e action replay. No Jev or text reasoning
+gateway response caching independently of e2e action replay. The same Clef route is the
+`decisionFilter` model in `e2e.config.ts`. `e2e list --changed-since <ref>` and
+`e2e run --changed-since <ref>` ask it which tests the change can affect. A change to
+the loaded config or a known lockfile keeps every test. No Jev or text reasoning
 model is substituted. Clef chooses actions and semantic verdicts from the observed tree
 and redacted screenshots; exact text values come from `agent.act` params. Use `expect`
 for polling and extraction: Clef does not implement `agent.waitFor` or `agent.extract`.
