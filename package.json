@@ -84,8 +84,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
-    "@e2e-dev/github": "0.3.3",
-    "@e2e-dev/web": "0.12.0",
+    "@e2e-dev/decision": "0.3.0",
+    "@e2e-dev/github": "0.4.3",
+    "@e2e-dev/web": "0.15.3",
     "@electric-sql/pglite": "0.4.5",
     "@electric-sql/pglite-socket": "0.1.5",
     "@modelcontextprotocol/sdk": "1.30.0",
@@ -94,9 +95,10 @@
     "@types/node": "^24.13.3",
     "@types/pngjs": "6.0.5",
     "@types/semver": "7.8.0",
+    "ai": "7.0.152",
     "anti-slop": "github:dmmulroy/anti-slop",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "e2e": "0.17.0",
+    "e2e": "0.21.3",
     "esbuild": "0.28.2",
     "jpeg-js": "0.4.4",
     "jsonc-parser": "^3.3.1",
@@ -122,7 +124,7 @@
     "@effect/sql-sqlite-do": "4.0.3",
     "@effect/vitest": "4.0.3",
     "@modelcontextprotocol/sdk": "1.30.0",
-    "ai": "7.0.93",
+    "ai": "7.0.152",
     "chat": "4.40.0",
     "effect": "4.0.3",
     "workerd": "1.20261006.1"
@@ -155,8 +157,8 @@
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
     "alchemy@2.0.0-beta.81": "patches/alchemy@2.0.0-beta.81.patch",
-    "@e2e-dev/web@0.12.0": "patches/@e2e-dev+web@0.12.0.patch",
-    "e2e@0.17.0": "patches/e2e@0.17.0.patch",
-    "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch"
+    "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch",
+    "e2e@0.21.3": "patches/e2e@0.21.3.patch",
+    "@e2e-dev/web@0.15.3": "patches/@e2e-dev+web@0.15.3.patch"
   }
 }
