@@ -22,6 +22,13 @@ nub run test:e2e:cache-strict
 nub run test:e2e:list
 ```
 
+Select the tests a change can affect before a full run. `e2e.config.ts` registers `decisionFilter` with `clefDecisionModel()`, which asks `@cf/cloudflare/clef` through Cloudflare AI Gateway. The filter runs only with `--changed-since`. `e2e list` prints the selection and does not boot the app. A change to the loaded config file, a file named like an e2e config, or a known lockfile keeps every test and does not call Clef.
+
+```sh
+nub exec e2e list --changed-since origin/master
+nub run test:e2e -- --changed-since origin/master
+```
+
 The environment loader reads the selected private file, then `config/.env` and `config/.dev.vars`; existing environment values win. Supply the documented Cloudflare account, application, and Clef gateway credentials. Never print their values. The launcher creates its owned run’s `.dev.vars` with mode 0600 and generates the isolated administrator password in an ignored file. Use the suite's registered secret handles for browser credential input.
 
 `nub run test` runs core flows, including real source-image OpenCode and Codex prompts, tools, follow-ups and persisted history. `nub run test:e2e:all` adds the deferred external integrations and Claude Code; `nub run test:e2e:external` selects only those deferred cases. Focus one area with `nub run test:e2e -- tests/<file>.e2e.ts` after reading its feature file under `features/`. Read External fixture preflight in `docs/e2e.md` before deferred suites. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
