@@ -34,6 +34,8 @@ Verify credential sign-in by reaching the authenticated UI; a healthy port is in
 
 Read `.e2e/report.json`, `.e2e/summary.md`, failure evidence, and the ignored stack log. Distinguish live execution from strict replay and identify any unverified external flows. Raw network/browser traces are disabled because dynamically minted credentials cannot be registered for redaction by the published SDK. Retain sanitized screenshots and reports, keep secrets out of model observations, and leave credential displays before failure capture.
 
+Cloud-agent proof follows [Cloud-agent PR artifacts](../../../AGENTS.md#cloud-agent-pr-artifacts). Evidence output survives cleanup in `.e2e/artifacts`.
+
 ## Scope and cleanup
 
 Use only the isolated e2e profile and disposable fixtures. Do not run `infra:deploy:*` or `db:copy-d1-to-planetscale` during verification. Preserve pinned Alchemy, Effect, Wrangler, and provider versions unless the requested fix requires a change. The e2e launcher owns process cleanup; stop only its recorded processes and preserve unrelated development stacks. Delete temporary integration fixtures and revoke minted tokens in `finally` blocks.
