@@ -167,7 +167,9 @@ export default {
   },
   filters: [decisionFilter({ model: decisionModel })],
   workers: 1,
-  retries: 0,
+  // gpt-oss sometimes spends the output budget before the JSON answer. A second
+  // attempt builds a new page, so the gateway does not replay that body.
+  retries: 1,
   timeout: 180_000,
   assertionTimeout: 20_000,
   cache: { mode: "read-write", dir: process.env.E2E_ACTION_CACHE_DIR ?? ".e2e/cache" },
