@@ -14,7 +14,7 @@ const models = new Map([
   ["unknown", null],
 ])
 const cacheModes = new Set(["hit", "miss", "bypass", "unknown"])
-const layers = new Set(["gateway", "stagehand", "none"])
+const layers = new Set(["gateway", "disk", "stagehand", "none"])
 const replayReasons = new Set([
   "retry",
   "no-entry",

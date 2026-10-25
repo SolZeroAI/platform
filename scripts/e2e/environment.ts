@@ -72,8 +72,8 @@ export const appEnvironment = Object.fromEntries(
     // env key set is part of that digest, so a worker-only key fails the run
     // with CONFIG_NOT_DETERMINISTIC before any test starts.
     if (name.startsWith("E2E_WEB_BROWSERS_") || name === "E2E_WARNED_TSCONFIGS") return false
+    // CF_AI_GATEWAY_E2E_TOKEN stays. Local alchemy dev reads it for the shared gateway.
     return ![
-      "CF_AI_GATEWAY_E2E_TOKEN",
       "GH_TOKEN",
       "GITHUB_TOKEN",
       // Process-control metadata from the config-loader/watch process must not reach a new child.

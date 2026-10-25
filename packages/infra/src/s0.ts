@@ -61,6 +61,31 @@ function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
   ) as Redacted.Redacted<string>
 }
 
+function localE2eAiGateway() {
+  return Effect.gen(function* () {
+    const gatewayId = (yield* Config.String("CF_AI_GATEWAY_E2E_ID").pipe(
+      Config.withDefault("default"),
+    )).trim()
+    const runToken = (yield* Config.String("CF_AI_GATEWAY_E2E_TOKEN").pipe(
+      Config.withDefault(""),
+    )).trim()
+    // oxlint-disable-next-line s0-lint/no-if-statement -- Reject an unusable shared gateway before the local binding is returned.
+    if (!/^[A-Za-z0-9_-]+$/.test(gatewayId) || runToken.length === 0) {
+      return yield* Effect.die(
+        new Error(
+          "Isolated e2e dev calls the existing AI Gateway. Set CF_AI_GATEWAY_E2E_TOKEN and an optional CF_AI_GATEWAY_E2E_ID. This launcher does not create a gateway or an account API token.",
+        ),
+      )
+    }
+    return {
+      resource: Cloudflare.Workers.AI("AI_GATEWAY"),
+      gatewayId,
+      runToken,
+      secretsStoreId: "local-ai-gateway-secrets-store",
+    } satisfies ApiAiGatewayBinding
+  })
+}
+
 function createCloudflareAiGateway(input: {
   appName: string
   stageMetadata: StageMetadata
@@ -81,13 +106,6 @@ function createCloudflareAiGateway(input: {
       } satisfies ApiAiGatewayBinding
     }
 
-    const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
-    const gatewayProps = {
-      authentication: true,
-      cacheTtl: config.cacheTtl,
-      collectLogs: config.collectLogs,
-      storeId: secretsStore.storeId,
-    }
     // Only an isolated development test launcher may supply durable run ownership.
     const runOwner = yield* Config.String("S0_E2E_RUN_ID").pipe(Config.option)
     const forbiddenOwner = Option.filter(
@@ -104,6 +122,16 @@ function createCloudflareAiGateway(input: {
           new Error("E2E run ownership requires an isolated development profile and UUID."),
         ),
     })
+    // oxlint-disable-next-line s0-lint/no-if-statement -- An owned e2e run stays on local Miniflare resources and an existing gateway. It must not call the Cloudflare API.
+    if (Option.isSome(runOwner)) return yield* localE2eAiGateway()
+
+    const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
+    const gatewayProps = {
+      authentication: true,
+      cacheTtl: config.cacheTtl,
+      collectLogs: config.collectLogs,
+      storeId: secretsStore.storeId,
+    }
     const ci = yield* Config.Boolean("CI").pipe(Config.withDefault(false))
     const scope = Match.value(ci).pipe(
       Match.when(true, () => "-ci"),

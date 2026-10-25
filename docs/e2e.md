@@ -35,10 +35,12 @@ its optional environment-file path to exist. The comment-only files supply no de
 secrets; real credentials still come from the environment.
 
 After stopping the local test stack, run `test:e2e:cleanup` with the same credential file
-and profile. It validates persisted account, Worker, gateway and token ownership, then
-runs normal Alchemy destruction of that isolated local stack. It refuses unknown remote
-resources. The dedicated gateway and generated application run token are deleted; replay
-cache remains available. Stopping dev alone does not remove account-level resources.
+and profile. It validates the run's local Alchemy state, then destroys that state and
+removes the run directory, labelled containers, and images. It refuses an unexpected
+remote resource. The launcher does not create an AI Gateway or an account API token.
+When `CLOUDFLARE_API_TOKEN` is unset, cleanup does not call the Cloudflare API. Replay
+cache and `.e2e/decision-cache` remain available. Stopping dev alone does not remove
+the run directory.
 
 The environment loader reads an explicitly selected `E2E_ENV_FILE`, then this repository's
 `config/.env` and `config/.dev.vars`. Values already supplied by the shell or CI win.
@@ -46,7 +48,7 @@ It never prints values. The shared local gateway credentials can be selected wit
 `E2E_ENV_FILE=/Users/jbeckman/projects/personal/alchemy-new/config/.env` on the maintainer's
 machine; this path is optional and is never assumed in CI.
 
-Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and `CF_AI_GATEWAY_E2E_TOKEN`.
+Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. The launcher does not read `CLOUDFLARE_API_TOKEN`. `alchemy dev` keeps D1, KV, R2, and Durable Objects in the run directory. The application calls the existing AI Gateway with `CF_AI_GATEWAY_E2E_TOKEN` and `CF_AI_GATEWAY_E2E_ID` (default `default`). Identical Clef decision responses are also stored in `.e2e/decision-cache`.
 The semantic executor calls `@cf/cloudflare/clef` through the Cloudflare Workers AI REST
 route with `cf-aig-gateway-id`, defaulting to `default` or `CF_AI_GATEWAY_E2E_ID`.
 The token needs permission to execute Workers AI. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses
@@ -308,17 +310,21 @@ are deleted in cleanup; all mutations are limited to the isolated profile.
 `Validate` runs static checks and discovers all e2e tests without secrets. Its dedicated
 Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes and manual
 runs, including the canonical repository. Fork pull requests cannot access its credentials.
-Configure repository secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and
-`CF_AI_GATEWAY_E2E_TOKEN`; the workflow generates and masks a fresh disposable account
-password. Do not use production identity or integration secrets for tests.
+Configure repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`.
+The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev` and restores
+`.e2e/decision-cache` for identical Clef decision responses, with AI Gateway response
+caching left on (`CF_AI_GATEWAY_E2E_SKIP_CACHE=0`). The workflow generates and masks a
+fresh disposable account password. Do not use production identity or integration secrets
+for tests. Preview and production deploy jobs still read `CLOUDFLARE_API_TOKEN` because
+Alchemy's Cloudflare CI credentials require it for a real stage deploy or destroy.
 
-Each launcher owns `.e2e/runs/<UUID>/stack`, including Alchemy state, simulator D1/KV/R2/DO data and source-container build contexts. It runs the shipping stack and normal Alchemy destruction from that directory. The application gateway and token names contain the same run UUID; local and CI names have separate scopes. Cleanup never treats a shared name or prefix as ownership. Application run tokens have account-level AI permissions; a gateway name is not a token authorization boundary.
+Each launcher owns `.e2e/runs/<UUID>/stack`, including Alchemy state, simulator D1/KV/R2/DO data and source-container build contexts. It runs the shipping stack and normal Alchemy destruction from that directory. The ownership record still names a per-run gateway id so a deploy token, when present, can only revoke that id. Local emulation does not create that gateway. It reuses `CF_AI_GATEWAY_E2E_ID`. Local and CI names have separate scopes. Cleanup never treats a shared name or prefix as ownership. A gateway name is not a token authorization boundary.
 
 The default `test:e2e` command wraps the SDK and verifies recovery after exit. Cleanup failures make the command fail even if SDK teardown ignored the app's exit code. The launcher records exact process birth times and descendants, including detached sidecar groups. Both SDK and Alchemy children must publish a durable launch intent and their own PID/birth before importing the real CLI. Unresolved registration, failed process inspection and a same-birth process moving groups retain evidence and block storage removal. Process inspection and signaling use portable POSIX tools; they cannot eliminate every operating-system identity race. Cancellation signals the owned launcher, and recovery stops only birth-matched descendants before deleting storage. Run `nub run test:e2e:cleanup` again with the same credentials, profile and CI scope after an abrupt termination. Completed receipts make repeated recovery a no-op; active launchers and mismatched ownership are refused.
 
-Cleanup reconciles a token created before its state record was flushed by exact UUID name, account, permission policy and creation time. It verifies gateway/token HTTP 404 and owned Docker label absence before removing the run directory. The directory removal also clears every run-owned identity, auth session/API key, session/workspace/history, bot/routine, agent/skill/MCP definition, uploaded attachment, secret and runtime preference. Most tests also delete their entities or restore settings in `finally`; storage teardown recovers interrupted requests and APIs without individual delete endpoints.
+When `CLOUDFLARE_API_TOKEN` is set, cleanup reconciles a token created before its state record was flushed by exact UUID name, account, permission policy and creation time, then verifies gateway and token HTTP 404. Without that token, cleanup skips those Cloudflare API calls. It still verifies owned Docker label absence before removing the run directory. The directory removal also clears every run-owned identity, auth session/API key, session/workspace/history, bot/routine, agent/skill/MCP definition, uploaded attachment, secret and runtime preference. Most tests also delete their entities or restore settings in `finally`; storage teardown recovers interrupted requests and APIs without individual delete endpoints.
 
-`nub run test:e2e:lifecycle` exercises real success/failure recovery: launcher SIGTERM; SIGKILL with a real Codex container and missing token state; killed CLI leader with detached runtime descendants; an intentionally failing SDK suite; outer-command SIGTERM and SIGKILL after creating an authenticated session; a failed process inspector; and a genuine filesystem publication failure before Alchemy loads; and an official MCP open/observe/close session with valid JSON-RPC stdout and verified app teardown. It verifies receipts, state removal and idempotent recovery. These lifecycle fixtures are excluded from the ordinary core catalogue. To run them on the normal hosted validation job, dispatch `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. The boolean defaults to false, so ordinary PR and push validation still runs only the core suite; an opt-in dispatch adds lifecycle cases after core. Lifecycle reports use `.e2e/cleanup-proof`; intentional inner failures use separate private report directories.
+`nub run test:e2e:lifecycle` exercises real success/failure recovery: launcher SIGTERM; SIGKILL after a real Codex container with local simulator state and no minted account token; killed CLI leader with detached runtime descendants; an intentionally failing SDK suite; outer-command SIGTERM and SIGKILL after creating an authenticated session; a failed process inspector; and a genuine filesystem publication failure before Alchemy loads; and an official MCP open/observe/close session with valid JSON-RPC stdout and verified app teardown. It verifies receipts, state removal and idempotent recovery. These lifecycle fixtures are excluded from the ordinary core catalogue. To run them on the normal hosted validation job, dispatch `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. The boolean defaults to false, so ordinary PR and push validation still runs only the core suite; an opt-in dispatch adds lifecycle cases after core. Lifecycle reports use `.e2e/cleanup-proof`; intentional inner failures use separate private report directories.
 
 Sanitized CI diagnostics retain `cleanup-summary.json` (counts/types/verified status) for seven days. A separate `solzero-cleanup-ownership-<run>-<attempt>` artifact retains only `cleanup-ownership.json` (repository/run/account hash/profile and exact run-owned resource metadata) for 30 days and uploads even on cancellation. Private state, credentials, logs and journals are never uploaded. Before new allocations, CI examines up to 10,000 repository artifact records and restores pending ownership from completed same-repository Validate attempts, including earlier attempts of the current run. It verifies original producer metadata and byte-equivalent pending rows in immutable dedicated archives. A newer empty or completed inventory does not discard older pending evidence; recovery verifies absence again. Active producers are preserved. Unavailable, conflicting or malformed claimed ownership evidence blocks recovery. Explicit manual recovery can also use a historical diagnostic archive containing the exact ownership file: `CI=1 nub exec tsx scripts/e2e/cleanup.ts /path/to/cleanup-ownership.json`, with the same isolated profile/account and an Actions-read token. Live token IDs are reconciled from exact UUID ownership; supplied IDs do not authorize deletion. Evidence beyond the retention and inventory bounds requires operator review; it is never replaced by a prefix sweep.
 
@@ -338,9 +344,10 @@ raw stack logs are local diagnostics and are never uploaded by CI. This preserve
 the original Alchemy process lifecycle while exposing errors before a final watch
 process failure.
 
-The workflow verifies Docker, builds the current harness source images through Alchemy,
-installs Chromium separately, restores `.e2e/cache`, runs the core suite,
-saves replay recordings and uploads reports and failure artifacts. `.e2e/` is ignored
+The workflow verifies Docker, builds the current harness source images through local
+`alchemy dev`, installs Chromium separately, restores `.e2e/cache` and
+`.e2e/decision-cache`, runs the core suite, saves replay recordings and Clef decision
+responses, and uploads reports and failure artifacts. `.e2e/` is ignored
 locally. Chromium receives native clipboard read/write permissions through the small
 pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
 have no Copy button in the current UI; the runtime response's existing Copy markdown

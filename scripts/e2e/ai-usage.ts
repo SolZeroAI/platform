@@ -5,7 +5,7 @@ export type AiUsage = {
   source: "executor" | "filter"
   model: "@cf/cloudflare/clef"
   cache: "hit" | "miss" | "bypass" | "unknown"
-  cacheLayer: "gateway"
+  cacheLayer: "gateway" | "disk"
   requests: 1
   operations: 0
   inputTokens: number | null

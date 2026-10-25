@@ -3,6 +3,7 @@ import { AgentError } from "e2e"
 
 import { gatewayCache, measuredTokens, recordAiUsage } from "./ai-usage"
 import type { AiUsage } from "./ai-usage"
+import { readClefDecisionCache, writeClefDecisionCache } from "./clef-decision-cache"
 
 export const CLEF_MODEL_ID = "@cf/cloudflare/clef"
 
@@ -45,6 +46,48 @@ export async function postClef<T>(options: {
     .update(JSON.stringify([credentials.account, credentials.gateway, CLEF_MODEL_ID, body]))
     .digest("hex")}`
   const bypass = process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1"
+  const cached = readDiskClefResult(cacheKey, bypass)
+  const replay = cached ? replayDiskClef(cached) : undefined
+  if (replay) return replay.value
+
+  function replayDiskClef(hit: {
+    answers: Record<string, unknown>
+    usage?: ClefUsage
+  }): { value: T } | undefined {
+    let value: T
+    try {
+      value = options.accept(hit.answers, hit.usage)
+    } catch (error) {
+      if (!(error instanceof AgentError)) throw error
+      return undefined
+    }
+    options.prepare?.()
+    const startedAt = new Date().toISOString()
+    recordAiUsage({
+      schemaVersion: 1,
+      source: options.source,
+      model: CLEF_MODEL_ID,
+      cache: "hit",
+      cacheLayer: "disk",
+      requests: 1,
+      operations: 0,
+      inputTokens: measuredTokens(hit.usage?.input_tokens),
+      outputTokens: measuredTokens(hit.usage?.output_tokens),
+      cachedInputTokens: null,
+      status: "success",
+      httpStatus: null,
+      startedAt,
+    })
+    options.onAttempt?.({
+      usage: hit.usage,
+      cache: "hit",
+      httpStatus: null,
+      status: "success",
+      startedAt,
+      durationMs: 0,
+    })
+    return { value }
+  }
   for (let attempt = 0; attempt < 3; attempt += 1) {
     options.prepare?.()
     const started = performance.now()
@@ -98,6 +141,7 @@ export async function postClef<T>(options: {
           throw new AgentError("MODEL_OUTPUT_INVALID", "Cloudflare Clef returned no result.")
         usage = envelope.result.usage
         const value = options.accept(envelope.result.answers ?? {}, usage)
+        writeClefDecisionCache(cacheKey, envelope.result)
         status = "success"
         return value
       }
@@ -143,6 +187,22 @@ export async function postClef<T>(options: {
     "MODEL_PROVIDER_FAILED",
     "Cloudflare Clef exhausted its bounded transport retries.",
   )
+}
+
+function readDiskClefResult(
+  cacheKey: string,
+  bypass: boolean,
+): { answers: Record<string, unknown>; usage?: ClefUsage } | undefined {
+  if (bypass || process.env.E2E_CLEF_DECISION_CACHE === "0") return undefined
+  const value = readClefDecisionCache(cacheKey)
+  if (typeof value !== "object" || value === null) return undefined
+  const answers = Reflect.get(value, "answers")
+  if (typeof answers !== "object" || answers === null || Array.isArray(answers)) return undefined
+  const usage = Reflect.get(value, "usage")
+  return {
+    answers: answers as Record<string, unknown>,
+    ...(typeof usage === "object" && usage !== null ? { usage: usage as ClefUsage } : {}),
+  }
 }
 
 function clefCredentials(): ClefCredentials {

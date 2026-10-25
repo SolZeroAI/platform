@@ -484,6 +484,17 @@ export function stackDirectory(run: RunManifest) {
 }
 export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, prepared?: string) {
   const launch = command === "dev" ? (prepared ?? prepareLaunch("alchemy", run)) : undefined
+  // Local Miniflare emulation must not receive a deploy token. Account id and the
+  // Clef gateway token stay so Workers AI calls keep a real account route.
+  const env: NodeJS.ProcessEnv = {
+    ...appEnvironment,
+    S0_E2E_RUN_ID: run.runId,
+    S0_E2E_APP_CHILD: "1",
+  }
+  delete env.CLOUDFLARE_API_TOKEN
+  // Alchemy selects Bun when npm_execpath contains "bun". The Nub binary path
+  // on an Ubuntu home directory matches that check and then fails to spawn Bun.
+  delete env.npm_execpath
   return spawn(
     process.execPath,
     [
@@ -501,7 +512,7 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
     ],
     {
       cwd: stackDirectory(run),
-      env: { ...appEnvironment, S0_E2E_RUN_ID: run.runId, S0_E2E_APP_CHILD: "1" },
+      env,
       stdio: "inherit",
       detached: command === "dev",
       ...(command === "destroy" ? { signal: AbortSignal.timeout(120_000) } : {}),
@@ -664,6 +675,8 @@ const TokenList = Schema.Struct({
   result_info: Schema.Struct({ total_count: Schema.Number }),
 })
 async function reconcileTokens(run: RunManifest) {
+  // Local emulation does not mint account tokens. Revocation runs only when a deploy token is present.
+  if (!process.env.CLOUDFLARE_API_TOKEN) return run
   const createdAt = Date.parse(run.createdAt)
   if (!Number.isFinite(createdAt))
     throw new Error("Cleanup refused an invalid run creation timestamp.")
@@ -768,45 +781,49 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
     })
     if (code !== 0) throw new Error("Alchemy cleanup failed; ownership receipt retained.")
   }
-  const gateway = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${run.account}/ai-gateway/gateways/${run.gatewayId}`,
-    {
-      headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-      signal: AbortSignal.timeout(20_000),
-    },
-  )
-  if (gateway.status === 200) {
-    const removed = await fetch(
+  if (process.env.CLOUDFLARE_API_TOKEN) {
+    const gateway = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${run.account}/ai-gateway/gateways/${run.gatewayId}`,
       {
-        method: "DELETE",
         headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
         signal: AbortSignal.timeout(20_000),
       },
     )
-    if (removed.status !== 200) throw new Error("Owned gateway removal failed.")
-  } else if (gateway.status !== 404) throw new Error("Owned gateway status could not be verified.")
-  await absent(run, `ai-gateway/gateways/${run.gatewayId}`)
-  for (const id of run.tokenIds) {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
-      {
-        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    )
-    if (response.status === 200) {
+    if (gateway.status === 200) {
       const removed = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
+        `https://api.cloudflare.com/client/v4/accounts/${run.account}/ai-gateway/gateways/${run.gatewayId}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
           signal: AbortSignal.timeout(20_000),
         },
       )
-      if (removed.status !== 200) throw new Error("Owned token revocation failed.")
-    } else if (response.status !== 404) throw new Error("Owned token status could not be verified.")
-    await absent(run, `tokens/${id}`)
+      if (removed.status !== 200) throw new Error("Owned gateway removal failed.")
+    } else if (gateway.status !== 404)
+      throw new Error("Owned gateway status could not be verified.")
+    await absent(run, `ai-gateway/gateways/${run.gatewayId}`)
+    for (const id of run.tokenIds) {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
+        {
+          headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
+          signal: AbortSignal.timeout(20_000),
+        },
+      )
+      if (response.status === 200) {
+        const removed = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
+            signal: AbortSignal.timeout(20_000),
+          },
+        )
+        if (removed.status !== 200) throw new Error("Owned token revocation failed.")
+      } else if (response.status !== 404)
+        throw new Error("Owned token status could not be verified.")
+      await absent(run, `tokens/${id}`)
+    }
   }
   const dockerReceipt = cleanDocker(run)
   rmSync(stackDirectory(run), { recursive: true, force: true })
@@ -820,6 +837,7 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
     revokedTokens: run.tokenIds.length,
     simulatorRemoved: true,
     resourceTypes: run.resources,
+    remoteRevocation: process.env.CLOUDFLARE_API_TOKEN ? "ran" : "skipped",
   }
   const summaryPath = resolve(repo, ".e2e/cleanup-summary.json")
   const summaries = existsSync(summaryPath) ? JSON.parse(readFileSync(summaryPath, "utf8")) : []

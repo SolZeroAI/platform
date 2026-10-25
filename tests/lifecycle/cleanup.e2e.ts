@@ -10,7 +10,6 @@ import {
   openSync,
   readdirSync,
   readFileSync,
-  unlinkSync,
   mkdirSync,
   writeFileSync,
   rmSync,
@@ -132,17 +131,8 @@ for (const stop of ["SIGTERM", "SIGKILL", "orphaned CLI"] as const) {
           execFileSync("docker", ["rm", "-f", item.containerId], { stdio: "ignore" })
       }
       if (stop === "SIGKILL") {
-        // Model a crash after real token creation but before its state becomes durable.
-        // Remove only this run's token resource receipt; unique remote intent must recover it.
-        const state = resolve(root, receipt!.runId, "stack/.alchemy/state/S0/dev")
-        const tokenFile = readdirSync(state).find(
-          (file) =>
-            file.endsWith(".json") &&
-            JSON.parse(readFileSync(resolve(state, file), "utf8")).resourceType ===
-              "Cloudflare.ApiToken.AccountApiToken",
-        )
-        expect(tokenFile).toBeDefined()
-        unlinkSync(resolve(state, tokenFile!))
+        // Local emulation does not mint an account API token. The simulator state must still exist.
+        expect(existsSync(resolve(root, receipt!.runId, "stack/.alchemy/state/S0/dev"))).toBe(true)
       }
       child.kill(stop === "SIGTERM" ? "SIGTERM" : "SIGKILL")
       if (stop === "orphaned CLI") {
@@ -172,7 +162,7 @@ for (const stop of ["SIGTERM", "SIGKILL", "orphaned CLI"] as const) {
     expect(receipt).toBeDefined()
     const final = receipts().find((item) => item.runId === receipt!.runId)!
     expect(final.completedAt).toBeDefined()
-    expect(final.tokenIds.length).toBe(1)
+    expect(final.tokenIds.length).toBe(0)
     expect(final.resources.length).toBeGreaterThan(0)
     expect(existsSync(resolve(root, receipt!.runId, "stack"))).toBe(false)
     const second = spawn(
