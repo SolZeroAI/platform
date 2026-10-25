@@ -58,12 +58,18 @@ bypasses gateway response caching independently of e2e action replay. The gatewa
 retries with three attempts and exponential backoff. The decision adapter sends
 `reasoning_effort: none` and array message content. This model rejects `none`
 and array content, and its default token budget stops during reasoning, so the
-request uses `low`, joins text parts into a string, and allows 8192 output tokens.
+request uses `low`, joins text parts into a string, and allows 8193 output tokens.
+The gateway cache key includes that token budget. 8192 had stored a length finish
+and an inconclusive verdict, so this budget misses those entries. Later identical
+requests still cache for 3600 seconds.
 The route calls chat models. It does not expose a Clef decision model. The test filter
 and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
 The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
 The workflow rename action question adds one sentence: choose the button named
-Save workflow name, and choose done when that button is not offered.
+Save workflow name, and choose done when that button is not offered. The completion
+question for that task adds one sentence: the save holds when that button was
+activated and is now absent. A conditional action sentence still activated the
+selected Overview tab.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language

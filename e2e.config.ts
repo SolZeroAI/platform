@@ -32,24 +32,35 @@ const cloudflare = createOpenAICompatible({
     const request: Record<string, unknown> = {
       ...body,
       reasoning_effort: body.reasoning_effort === "none" ? "low" : body.reasoning_effort,
-      max_tokens: body.max_tokens ?? 8192,
+      // The cache key includes this field. 8192 stored a length finish and an
+      // inconclusive verdict. 8193 misses those entries. Later identical
+      // requests still cache for the 3600 second TTL.
+      max_tokens: body.max_tokens ?? 8193,
     }
     if (!Array.isArray(request.messages)) return request
     return {
       ...request,
       messages: request.messages.map((message: { content?: unknown }) => {
         if (!Array.isArray(message.content)) return message
-        const content = message.content
+        let content = message.content
           .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
           .filter((text: unknown): text is string => typeof text === "string")
           .join("\n")
-        // A conditional sentence still activated the selected Overview tab.
-        // The direct sentence selected the save button. Choose done after it leaves.
-        // Match the executor question only, so a verdict or the test filter is unchanged.
-        const saveHint = content.includes("Goal of this step: Save the changed workflow name")
-          ? '\n\nChoose the button named "Save workflow name". If it is not offered, choose done.'
-          : ""
-        return { ...message, content: content + saveHint }
+        // The direct sentence selected the save button. A conditional sentence
+        // activated the selected Overview tab. The action question says
+        // "Goal of this step"; the verdict says "Task of this step".
+        if (content.includes("Goal of this step: Save the changed workflow name")) {
+          content +=
+            '\n\nChoose the button named "Save workflow name". If it is not offered, choose done.'
+        }
+        const saveVerdict = "Task of this step: Save the changed workflow name"
+        if (content.includes(saveVerdict)) {
+          content = content.replace(
+            saveVerdict,
+            `${saveVerdict}\n\nAnswer holds when the actions activated the button named "Save workflow name" and that button is absent. That absence is the saved result. Answer fails when the screen shows an error.`,
+          )
+        }
+        return { ...message, content }
       }),
     }
   },
