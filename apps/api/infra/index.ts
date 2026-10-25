@@ -310,7 +310,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     E2E_AI_USAGE:
       options.e2eAiUsage === true &&
       options.dev &&
-      stageMetadata.name === "dev" &&
+      stageMetadata.infra.e2eAiUsagePermitted &&
       /^s0-e2e(?:-[a-z0-9-]+)?$/.test(appName),
     STAGE: stageMetadata.name,
     WORKER_NAME: workerName,

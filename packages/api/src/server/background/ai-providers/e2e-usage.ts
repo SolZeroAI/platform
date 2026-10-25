@@ -1,4 +1,5 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/avoid-direct-json -- Native provider accounting projects only allowlisted metadata at the SDK/HTTP boundary; missing measurements stay null. */
+import { getStageMetadataSync } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Logger from "effect/Logger"
 import type { Env } from "../types"
@@ -52,7 +53,7 @@ export function startApplicationAiUsage(
   const enabled =
     env.E2E_AI_USAGE === true &&
     typeof model === "string" &&
-    env.STAGE === "dev" &&
+    getStageMetadataSync(env).infra.e2eAiUsagePermitted &&
     /^s0-e2e(?:-[a-z0-9-]+)?-api-dev$/.test(env.WORKER_NAME)
   const startedAt = new Date().toISOString()
   let completed = false

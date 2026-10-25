@@ -126,6 +126,8 @@ export interface InfraStageProps {
    * Local stages use disk `.alchemy/` state. Deployed stages use Cloudflare.state().
    */
   readonly alchemyStateStore: AlchemyStateStoreKind
+  /** Development stage permits content-free e2e AI usage accounting. */
+  readonly e2eAiUsagePermitted: boolean
 }
 
 export interface AppStageProps {
@@ -167,6 +169,7 @@ const InfraStagePropsSchema = Schema.Struct({
   apiObservabilityLogsDestinations: Schema.Array(Schema.String),
   apiObservabilityTracesDestinations: Schema.Array(Schema.String),
   alchemyStateStore: Schema.Literals(["local", "cloudflare"]),
+  e2eAiUsagePermitted: Schema.Boolean,
 })
 
 // oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
@@ -268,6 +271,7 @@ export function getAppStageMetadataSync(input: string | StageMetadataEnv) {
 function localInfraStageProps(
   config: StageInfraConfig,
   consoleOutputEnabled: boolean,
+  e2eAiUsagePermitted: boolean,
 ): InfraStageProps {
   const zone = "localhost"
   const serverUrl = `http://${zone}:${LOCAL_API_PORT}`
@@ -303,6 +307,7 @@ function localInfraStageProps(
       () => [],
     ),
     alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "local"),
+    e2eAiUsagePermitted,
   }
 }
 
@@ -374,6 +379,7 @@ function deployedInfraStageProps(input: {
       () => [],
     ),
     alchemyStateStore: Option.getOrElse(config.alchemyStateStore, () => "cloudflare"),
+    e2eAiUsagePermitted: false,
   }
 }
 
@@ -394,7 +400,7 @@ export class Dev extends Data.TaggedClass("dev")<StageProps> {
     return new Dev({
       name: "dev",
       app,
-      infra: localInfraStageProps(config, true),
+      infra: localInfraStageProps(config, true, true),
     })
   }
 }
@@ -416,7 +422,7 @@ export class Test extends Data.TaggedClass("test")<StageProps> {
     return new Test({
       name: "test",
       app,
-      infra: localInfraStageProps(config, false),
+      infra: localInfraStageProps(config, false, false),
     })
   }
 }
