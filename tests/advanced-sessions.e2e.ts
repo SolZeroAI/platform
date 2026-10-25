@@ -1,6 +1,7 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
 import { api, uniqueName } from "./support/api"
+import { workersAiDeploySkip } from "./support/external-fixtures"
 
 test(
   "incognito sessions stay outside normal lists but open directly",
@@ -144,7 +145,7 @@ test(
 
 test(
   "isolate delegation records child events and returns the result",
-  { session: "admin", tags: ["runtime"] },
+  { session: "admin", tags: ["runtime"], skip: workersAiDeploySkip() },
   async ({ browser }) => {
     const marker = uniqueName("delegated")
     const result = await api<{

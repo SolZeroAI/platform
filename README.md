@@ -233,8 +233,8 @@ nub run test:e2e:all # requires the isolated external fixtures documented below
 ```
 
 The private environment supplies `CLOUDFLARE_ACCOUNT_ID` and
-`CF_AI_GATEWAY_E2E_TOKEN` for Clef and the application AI Gateway route. The e2e
-launcher does not read `CLOUDFLARE_API_TOKEN`. See [end-to-end testing](docs/e2e.md)
+`CF_AI_GATEWAY_E2E_TOKEN` for the Clef semantic executor. The e2e
+launcher does not read `CLOUDFLARE_API_TOKEN`, and it does not pass the e2e token to the application. See [end-to-end testing](docs/e2e.md)
 for CI setup, flow coverage, replay recordings, and external runtime prerequisites.
 
 ## Roadmap

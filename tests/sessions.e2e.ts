@@ -1,6 +1,6 @@
 import { test } from "@e2e-dev/web"
 import { expect, unique } from "e2e"
-import { requireFixture } from "./support/external-fixtures"
+import { requireFixture, workersAiDeploySkip } from "./support/external-fixtures"
 import { api, uniqueName } from "./support/api"
 
 test(
@@ -104,6 +104,7 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
     `${runtime} executes a real prompt and persists its output`,
     {
       session: "admin",
+      skip: workersAiDeploySkip(),
       tags:
         runtime === "isolate"
           ? ["runtime"]

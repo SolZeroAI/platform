@@ -484,8 +484,8 @@ export function stackDirectory(run: RunManifest) {
 }
 export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, prepared?: string) {
   const launch = command === "dev" ? (prepared ?? prepareLaunch("alchemy", run)) : undefined
-  // Local Miniflare emulation must not receive a deploy token. Account id and the
-  // Clef gateway token stay so Workers AI calls keep a real account route.
+  // Local Miniflare emulation must not receive a deploy token. The e2e gateway
+  // token stays on the test runner for Clef and is not copied into this child.
   const env: NodeJS.ProcessEnv = {
     ...appEnvironment,
     S0_E2E_RUN_ID: run.runId,

@@ -1,13 +1,13 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
 import { api, uniqueName } from "./support/api"
-import { requireFixture } from "./support/external-fixtures"
+import { requireFixture, workersAiDeploySkip } from "./support/external-fixtures"
 import { verifyExplicitNativeLimit } from "./support/native-provider"
 
 for (const runtime of ["opencode", "codex"] as const) {
   test(
     `${runtime} executes multiple shell tools, follows up, and persists both turns`,
-    { session: "admin", tags: ["harness", "harness-tools"] },
+    { session: "admin", tags: ["harness", "harness-tools"], skip: workersAiDeploySkip() },
     async ({ app, browser, screen }) => {
       requireFixture("E2E_CONTAINER_RUNTIME")
       const title = uniqueName(`e2e-${runtime}-tool`)

@@ -61,31 +61,16 @@ function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
   ) as Redacted.Redacted<string>
 }
 
-function localE2eAiGateway() {
-  return Effect.gen(function* () {
-    const gatewayId = (yield* Config.String("CF_AI_GATEWAY_E2E_ID").pipe(
-      Config.withDefault("default"),
-    )).trim()
-    const runToken = (yield* Config.String("CF_AI_GATEWAY_E2E_TOKEN").pipe(
-      Config.withDefault(""),
-    )).trim()
-    // oxlint-disable-next-line s0-lint/no-if-statement -- Reject an unusable shared gateway before the local binding is returned.
-    if (!/^[A-Za-z0-9_-]+$/.test(gatewayId) || runToken.length === 0) {
-      return yield* Effect.die(
-        new Error(
-          "Isolated e2e dev calls the existing AI Gateway. Set CF_AI_GATEWAY_E2E_TOKEN and an optional CF_AI_GATEWAY_E2E_ID. This launcher does not create a gateway or an account API token.",
-        ),
-      )
-    }
-    return {
-      resource: Cloudflare.Workers.AI("AI_GATEWAY"),
-      gatewayId,
-      runToken,
-      secretsStoreId: "local-ai-gateway-secrets-store",
-      // The dev AI binding is a remote proxy and waits for a deploy token. Owned e2e calls the gateway REST route instead.
-      localWorkersAiRest: true,
-    } satisfies ApiAiGatewayBinding
-  })
+function localOwnedAiGateway(appName: string): ApiAiGatewayBinding {
+  // Owned local dev must not call the Cloudflare API. The binding is the same
+  // local Workers AI shape as the mock stack. It is not the e2e gateway, and
+  // it does not receive the e2e run token.
+  return {
+    resource: Cloudflare.Workers.AI("AI_GATEWAY"),
+    gatewayId: `${appName}-dev-local-ai-gateway`,
+    runToken: "local-ai-gateway-run-token",
+    secretsStoreId: "local-ai-gateway-secrets-store",
+  }
 }
 
 function createCloudflareAiGateway(input: {
@@ -124,8 +109,8 @@ function createCloudflareAiGateway(input: {
           new Error("E2E run ownership requires an isolated development profile and UUID."),
         ),
     })
-    // oxlint-disable-next-line s0-lint/no-if-statement -- An owned e2e run stays on local Miniflare resources and an existing gateway. It must not call the Cloudflare API.
-    if (Option.isSome(runOwner)) return yield* localE2eAiGateway()
+    // oxlint-disable-next-line s0-lint/no-if-statement -- An owned e2e run stays on local Miniflare resources. It must not call the Cloudflare API or use the e2e gateway token.
+    if (Option.isSome(runOwner)) return localOwnedAiGateway(input.appName)
 
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
     const gatewayProps = {

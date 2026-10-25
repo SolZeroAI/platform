@@ -95,7 +95,7 @@ for (const stop of ["SIGTERM", "SIGKILL", "orphaned CLI"] as const) {
       })
       expect(created.status).toBe(201)
       expect(existsSync(resolve(root, receipt!.runId, "stack/.alchemy/local"))).toBe(true)
-      if (stop === "SIGKILL") {
+      if (stop === "SIGKILL" && process.env.CLOUDFLARE_API_TOKEN?.trim()) {
         const invoked = await fetch("http://localhost:3100/sessions/run", {
           method: "POST",
           headers: {
