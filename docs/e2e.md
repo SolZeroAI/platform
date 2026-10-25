@@ -49,6 +49,7 @@ machine; this path is optional and is never assumed in CI.
 Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. `CLOUDFLARE_API_TOKEN` stays
 the Alchemy deployment token. The semantic model does not read it, and it does not
 read the gateway or run token the application provisions for a stage or a run.
+The suite does not read that gateway's logs.
 `e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
 gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
 `CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Response caching uses a
@@ -137,27 +138,19 @@ For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init`
 the tests and `nub exec tsx scripts/e2e/ai-report.mjs summarize` afterward. These commands
 use the pinned Node runtime and do not make model calls.
 
-The isolated launcher enables `E2E_AI_USAGE=1`. The API binding defaults to disabled and
-also requires the isolated development Worker name. Application records contain only an
-allowlisted model, request count, gateway cache result, status, token counts and start
-time. They exclude request content, credentials, URLs and identifiers. Accounting does
-not add inference calls, retries, or change provider options. Set `E2E_AI_USAGE=0` to
-disable application accounting for a local test run.
-
-OpenCode, Codex and the bounded native-provider probe reuse the existing buffered
-response parser for measured usage. Isolate binding JSON is observed before the SDK's
-fallback zeros. Streaming bindings do not expose HTTP cache headers or reliable usage
-presence at that boundary; these measurements remain unknown. Missing token counts or
-cache status never imply zero cost. Provider prompt-cache tokens are separate from an
-AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions cache.
+The summary counts the suite's own decision-model calls. Executor token counts and cost come from
+the model records in the e2e report. Decision-filter spend comes from the usage suffix on
+that report's filter note, and is left unknown when the suffix is absent. The summary does
+not measure application inference, and it does not read AI Gateway logs. Missing
+measurements stay unknown. Provider prompt-cache tokens are separate from an AI Gateway
+response-cache hit, e2e action replay, and a restored GitHub Actions cache.
 
 CI initializes and summarizes usage around the test run and uploads only sanitized
-`summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and accounting ledgers are
-not uploaded. The official `@e2e-dev/github@0.3.3` reporter writes e2e results and SDK-measured
-model usage to the job summary and updates its pull-request comment. Core and lifecycle
-runs use distinct stable keys. `GITHUB_TOKEN` is scoped to the test step and stripped from
-application children. Application accounting remains a sanitized receipt/job summary;
-there is no custom AI-only PR publisher. Missing measurements remain explicit.
+`summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and e2e reports are not
+uploaded by that step. The official `@e2e-dev/github` reporter writes e2e results and
+SDK-measured model usage to the job summary and updates its pull-request comment. Core and
+lifecycle runs use distinct stable keys. `GITHUB_TOKEN` is scoped to the test step and
+stripped from application children. There is no custom AI-only PR publisher.
 SDK telemetry is disabled with `E2E_TELEMETRY_DISABLED=1`.
 
 The installed CLI refreshed the pristine `.agents/skills/e2e` guidance and the Claude
@@ -222,7 +215,7 @@ starts. Enable the commented integration blocks in this profile:
 | Claude Code | Gateway providerKeys.anthropic references `S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY`; `E2E_CLAUDE_CODE_MODEL=cloudflare-ai-gateway/anthropic/claude-opus-5` | Anthropic messages-compatible model and container bootstrap |
 | OpenCode/Codex (core) | Shipped Workers AI GPT-OSS120b; override independently with `E2E_OPENCODE_MODEL`, `E2E_CODEX_MODEL` | Docker and the configured application Workers AI binding/run token; optional OpenAI gateway models additionally need `S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY` in providerKeys.openai |
 | OIDC | `auth.providers.<id>` kind=oidc, issuer/clientId and a chosen clientSecret env reference; signIn/provisionUsers/link capabilities | Isolated IdP clients with localhost callback URLs; distinct admin/member users |
-| LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the Clef decision token as an application provider |
+| LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the e2e AI Gateway token as an application provider |
 
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
