@@ -10,7 +10,6 @@ on:
 permissions:
   actions: read
   contents: read
-  pull-requests: write
 
 jobs:
   comment:
@@ -20,12 +19,17 @@ jobs:
       github.event.workflow_run.event == 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
+    # Posts the release preview comment. Checkout stays on the default branch.
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
     steps:
       - name: Check out trusted release tooling
         uses: actions/checkout@v7
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc

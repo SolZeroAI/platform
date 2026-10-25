@@ -41,6 +41,8 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # The release environment is limited to master and holds the app id and private key.
+    environment: release
     # Writes go through the release app token. This job's GITHUB_TOKEN stays read-only.
     permissions:
       contents: read
@@ -52,9 +54,9 @@ jobs:
       # The app opens tegami/version-packages, so pull_request workflows start.
       - name: Create release app token
         id: release-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          client-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
@@ -70,7 +72,7 @@ jobs:
           token: ${{ steps.release-token.outputs.token }}
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
@@ -130,7 +132,7 @@ jobs:
           ref: ${{ needs.release.outputs.sha }}
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
@@ -179,7 +181,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
