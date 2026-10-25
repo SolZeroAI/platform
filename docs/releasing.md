@@ -61,15 +61,17 @@ combined version and release-note preview. A change with no observable effect ca
    updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
-   YAML in the tree. The invert guard skips secret-using jobs on this public repository even if the
-   workflow is enabled. Fork owners enable it on their own Actions page. Do not run `Deploy Preview`
-   or `Deploy` on SolZeroAI/platform. The canonical `Validate` e2e job uses dedicated Cloudflare test credentials; deployment remains disabled. On the private fork, **Run
+   YAML in the tree. Deploy Preview and Deploy jobs run only when the repository variable
+   `CLOUDFLARE_DEPLOY` is `true`. SolZeroAI/platform does not set that variable, so the jobs skip
+   even if a workflow is enabled, and this repository does not need `CLOUDFLARE_API_TOKEN`.
+   Fork owners enable Deploy Preview on their Actions page, set `CLOUDFLARE_DEPLOY` to `true`, and
+   set the token. See [deployment customization](customization.md#private-deployment-ci). The canonical `Validate` e2e job uses dedicated Cloudflare test credentials; deployment remains disabled. On a fork that sets the variable, **Run
    workflow** on `Deploy Preview` can refresh standing Alchemy stage `pre` (`deploy-standing-pre`)
    or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a canonical `pre-<positive-number>` stage for a currently closed, same-repository pull request).
    The lifetime guard preserves standing `pre`, open/reopened previews and unrelated stages. Manual `Deploy`
    (`deploy.yml`) stays a separate `workflow_dispatch` with a required `environment` choice of `pre`
    or `prod`. Do not fold those Deploy Preview actions into `Deploy`. It runs only when
-   `github.repository != 'SolZeroAI/platform'` (the private deploy fork `jonbeckman/solzero`).
+   `CLOUDFLARE_DEPLOY` is `true`. Put production deploy secrets in a `prod` environment limited to `master`. Only that Deploy job selects `prod`.
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.
 4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
