@@ -10,23 +10,47 @@ import { appEnvironment } from "./scripts/e2e/environment"
 // CF_AI_GATEWAY_E2E_TOKEN. This is not the gateway or run token the application
 // provisions for a stage. Placeholders let secret-free test collection load
 // this module. The gateway has no Clef decision model, so the adapter asks
-// gpt-oss-120b on the OpenAI-compatible route.
+// gpt-oss-120b on the unified chat route. Harmony rejects reasoning_effort
+// "none", and it rejects array message content, so both are normalized.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
 const cloudflare = createOpenAICompatible({
   name: "cloudflare-ai-gateway",
-  baseURL: `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(accountId)}/${encodeURIComponent(gatewayId)}/compat`,
+  baseURL: `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1`,
+  apiKey: gatewayToken,
   supportsStructuredOutputs: true,
   headers: {
-    "cf-aig-authorization": `Bearer ${gatewayToken}`,
+    "cf-aig-gateway-id": gatewayId,
     "cf-aig-cache-ttl": "3600",
     "cf-aig-skip-cache": process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1" ? "true" : "false",
     "cf-aig-max-attempts": "3",
     "cf-aig-backoff": "exponential",
   },
+  transformRequestBody(body) {
+    const request =
+      body.reasoning_effort === "none"
+        ? (({ reasoning_effort: _reasoningEffort, ...rest }) => rest)(body)
+        : body
+    if (!Array.isArray(request.messages)) return request
+    return {
+      ...request,
+      messages: request.messages.map((message) => {
+        if (!Array.isArray(message.content)) return message
+        return {
+          ...message,
+          content: message.content
+            .map((part: { text?: unknown } | string) =>
+              typeof part === "string" ? part : part.text,
+            )
+            .filter((text: unknown): text is string => typeof text === "string")
+            .join("\n"),
+        }
+      }),
+    }
+  },
 })
-const languageModel = cloudflare.chatModel("workers-ai/@cf/openai/gpt-oss-120b")
+const languageModel = cloudflare.chatModel("@cf/openai/gpt-oss-120b")
 const decisionModel = new Experimental_DecisionLanguageModel({ model: languageModel })
 
 export default {

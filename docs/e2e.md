@@ -49,15 +49,17 @@ machine; this path is optional and is never assumed in CI.
 Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. `CLOUDFLARE_API_TOKEN` stays
 the Alchemy deployment token. The semantic model does not read it, and it does not
 read the gateway or run token the application provisions for a stage or a run.
-`e2e.config.ts` calls that gateway's OpenAI-compatible route with
-`createOpenAICompatible`. The gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`.
-`CF_AI_GATEWAY_E2E_TOKEN` is sent as `cf-aig-authorization`. Response caching uses a
+`e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
+gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
+`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Response caching uses a
 3600 second TTL. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` sets `cf-aig-skip-cache` and
 bypasses gateway response caching independently of e2e action replay. The gateway
-retries with three attempts and exponential backoff.
-The compatible route calls chat models. It does not expose a Clef decision model. The test filter
+retries with three attempts and exponential backoff. The decision adapter sends
+`reasoning_effort: none` and array message content. This model rejects both, so
+the request omits that field and joins text parts into a string.
+The route calls chat models. It does not expose a Clef decision model. The test filter
 and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
-The AI SDK decision adapter asks `workers-ai/@cf/openai/gpt-oss-120b` through that gateway.
+The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language
