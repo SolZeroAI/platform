@@ -143,3 +143,67 @@ export function withApplicationAiUsage(binding: Ai, env: Env): Ai {
     },
   })
 }
+
+function workersAiModelFromRequest(input: Parameters<typeof fetch>[0]): string {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+  const marker = "/workers-ai/run/"
+  const path = url.split("?")[0] ?? ""
+  const index = path.lastIndexOf(marker)
+  if (index === -1) return ""
+  return decodeURIComponent(path.slice(index + marker.length))
+}
+
+function requestAskedForStream(body: BodyInit | null | undefined): boolean {
+  return typeof body === "string" && body.includes('"stream":true')
+}
+
+async function recordWorkersAiRestResponse(
+  finish: ReturnType<typeof startApplicationAiUsage>,
+  response: Response,
+  body: BodyInit | null | undefined,
+  bypass: boolean,
+) {
+  const cache = gatewayCacheStatus(response.headers, bypass)
+  if (!response.ok) {
+    finish({ status: "error", httpStatus: response.status, cache })
+    return
+  }
+  const contentType = response.headers.get("content-type") ?? ""
+  // GPT-OSS answers a streaming /run request with empty JSON, then the provider retries without stream.
+  if (requestAskedForStream(body) && contentType.includes("json")) return
+  if (!contentType.includes("json")) {
+    finish({ status: "success", httpStatus: response.status, cache })
+    return
+  }
+  const payload = await response
+    .clone()
+    .json()
+    .catch(() => undefined)
+  finish({
+    ...nativeWorkersAiUsage(payload),
+    status: "success",
+    httpStatus: response.status,
+    cache,
+  })
+}
+
+async function observeWorkersAiRest(
+  env: Env,
+  input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1],
+): Promise<Response> {
+  const finish = startApplicationAiUsage(env, workersAiModelFromRequest(input))
+  const bypass = new Headers(init?.headers).get("cf-aig-skip-cache") === "true"
+  // oxlint-disable-next-line effect/avoid-native-fetch -- Local e2e Workers AI uses the gateway REST route; the dev binding is a remote proxy that requires a deploy token.
+  const response = await fetch(input, init).catch((cause: unknown) => {
+    finish({ status: "error", cache: bypass ? "bypass" : "unknown" })
+    throw cause
+  })
+  await recordWorkersAiRestResponse(finish, response, init?.body, bypass)
+  return response
+}
+
+/** Records one REST dispatch. Does not change the request. */
+export function observeWorkersAiRestFetch(env: Env): typeof fetch {
+  return (input, init) => observeWorkersAiRest(env, input, init)
+}

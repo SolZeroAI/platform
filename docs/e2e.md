@@ -48,7 +48,7 @@ It never prints values. The shared local gateway credentials can be selected wit
 `E2E_ENV_FILE=/Users/jbeckman/projects/personal/alchemy-new/config/.env` on the maintainer's
 machine; this path is optional and is never assumed in CI.
 
-Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. The launcher does not read `CLOUDFLARE_API_TOKEN`. `alchemy dev` keeps D1, KV, R2, and Durable Objects in the run directory. The application calls the existing AI Gateway with `CF_AI_GATEWAY_E2E_TOKEN` and `CF_AI_GATEWAY_E2E_ID` (default `default`). Identical Clef decision responses are also stored in `.e2e/decision-cache`.
+Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. The launcher does not read `CLOUDFLARE_API_TOKEN`. `alchemy dev` keeps D1, KV, R2, and Durable Objects in the run directory. The application calls the existing AI Gateway with `CF_AI_GATEWAY_E2E_TOKEN` and `CF_AI_GATEWAY_E2E_ID` (default `default`). Owned local runs send Isolate Workers AI calls to that gateway's REST route. The dev AI binding is a remote proxy and does not start without a deploy token. Identical Clef decision responses are also stored in `.e2e/decision-cache`.
 The semantic executor calls `@cf/cloudflare/clef` through the Cloudflare Workers AI REST
 route with `cf-aig-gateway-id`, defaulting to `default` or `CF_AI_GATEWAY_E2E_ID`.
 The token needs permission to execute Workers AI. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses
@@ -137,7 +137,8 @@ disable application accounting for a local test run.
 
 OpenCode, Codex and the bounded native-provider probe reuse the existing buffered
 response parser for measured usage. Isolate binding JSON is observed before the SDK's
-fallback zeros. Streaming bindings do not expose HTTP cache headers or reliable usage
+fallback zeros. Owned local Isolate calls use the gateway REST route, so their cache
+header is visible. Streaming bindings do not expose HTTP cache headers or reliable usage
 presence at that boundary; these measurements remain unknown. Missing token counts or
 cache status never imply zero cost. Provider prompt-cache tokens are separate from an
 AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions cache.

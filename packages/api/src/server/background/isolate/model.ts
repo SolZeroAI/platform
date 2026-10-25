@@ -13,7 +13,7 @@ import {
   normalizeCloudflareAiGatewayResponse,
 } from "../ai-providers/cloudflare-ai-gateway"
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
-import { withApplicationAiUsage } from "../ai-providers/e2e-usage"
+import { observeWorkersAiRestFetch, withApplicationAiUsage } from "../ai-providers/e2e-usage"
 import {
   BackgroundTracing,
   // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate model.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
@@ -247,12 +247,7 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
   return async function cloudflareAiGatewayProviderNativeFetch(request, init) {
     const providerRequest = new Request(request, init)
     const headers = new Headers(providerRequest.headers)
-    const runToken = Option.getOrThrowWith(
-      stringOption(Reflect.get(input.env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET)).pipe(
-        Option.filter((value) => value.trim().length > 0),
-      ),
-      () => new Error("Cloudflare AI Gateway run token is missing"),
-    )
+    const runToken = requireAiGatewayRunToken(input.env)
     headers.set("cf-aig-authorization", `Bearer ${runToken}`)
     Match.value(input.storedKey).pipe(
       Match.when(true, () => {
@@ -264,6 +259,62 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
     // oxlint-disable-next-line effect/avoid-native-fetch -- Provider-native AI Gateway execution is the outbound AI provider boundary required for stored and per-request BYOK.
     return fetch(new Request(providerRequest, { headers }))
   }
+}
+
+function copyGatewayAuthorization(headers: Headers, authorization: string): Headers {
+  headers.set("cf-aig-authorization", authorization)
+  return headers
+}
+
+function gatewayRestInit(init: RequestInit | undefined): RequestInit {
+  const headers = new Headers(init?.headers)
+  const authorization = Option.fromNullishOr(headers.get("authorization")).pipe(
+    Option.filter(() => !headers.has("cf-aig-authorization")),
+  )
+  const authorizedHeaders = Option.match(authorization, {
+    onNone: () => headers,
+    onSome: (value) => copyGatewayAuthorization(headers, value),
+  })
+  return { ...init, headers: authorizedHeaders }
+}
+
+function requireCloudflareAccountId(env: Env): string {
+  return Option.getOrThrowWith(
+    stringOption(env.CLOUDFLARE_ACCOUNT_ID).pipe(
+      Option.map((accountId) => accountId.trim()),
+      Option.filter((accountId) => accountId.length > 0),
+    ),
+    () => new Error("Cloudflare account id is missing"),
+  )
+}
+
+function requireAiGatewayRunToken(env: Env): string {
+  return Option.getOrThrowWith(
+    stringOption(Reflect.get(env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET)).pipe(
+      Option.filter((value) => value.trim().length > 0),
+    ),
+    () => new Error("Cloudflare AI Gateway run token is missing"),
+  )
+}
+
+function localWorkersAiRestFetch(env: Env): typeof fetch {
+  return (input, init) => observeWorkersAiRestFetch(env)(input, gatewayRestInit(init))
+}
+
+function workersAiSettings(input: CompiledProviderContext) {
+  const gateway = { id: requireAiGatewayId(input.env) }
+  return Match.value(input.env.S0_LOCAL_WORKERS_AI_REST).pipe(
+    Match.when(true, () => ({
+      accountId: requireCloudflareAccountId(input.env),
+      apiKey: requireAiGatewayRunToken(input.env),
+      gateway,
+      fetch: localWorkersAiRestFetch(input.env),
+    })),
+    Match.orElse(() => ({
+      binding: withApplicationAiUsage(requireAiGatewayBinding(input.env), input.env),
+      gateway,
+    })),
+  )
 }
 
 function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
@@ -298,10 +349,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
 
   return Match.value(providerPackage).pipe(
     Match.when("workers-ai-provider", () =>
-      createWorkersAI({
-        binding: withApplicationAiUsage(requireAiGatewayBinding(input.env), input.env),
-        gateway: { id: requireAiGatewayId(input.env) },
-      })(input.modelId),
+      createWorkersAI(workersAiSettings(input))(input.modelId),
     ),
     Match.when("@ai-sdk/openai", () =>
       createOpenAI({

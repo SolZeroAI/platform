@@ -206,6 +206,7 @@ export interface ApiAiGatewayBinding {
   readonly gatewayId: string | Output.Output<string>
   readonly runToken: ApiSecretInput
   readonly secretsStoreId: string | Output.Output<string>
+  readonly localWorkersAiRest?: boolean
 }
 
 interface CreateApiBindingsOptions {
@@ -312,6 +313,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
       options.dev &&
       stageMetadata.name === "dev" &&
       /^s0-e2e(?:-[a-z0-9-]+)?$/.test(appName),
+    S0_LOCAL_WORKERS_AI_REST: aiGateway?.localWorkersAiRest === true,
     STAGE: stageMetadata.name,
     WORKER_NAME: workerName,
     APP_VERSION: deploymentMetadata.appVersion,

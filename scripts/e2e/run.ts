@@ -19,7 +19,7 @@ if (process.env.E2E_CLEANUP_APPEND !== "1")
 let interrupted = false
 let childActive = true
 const launch = prepareLaunch("sdk")
-const env = {
+const env: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_E2E_RUNNER_PID: String(process.pid),
 }

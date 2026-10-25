@@ -82,6 +82,8 @@ function localE2eAiGateway() {
       gatewayId,
       runToken,
       secretsStoreId: "local-ai-gateway-secrets-store",
+      // The dev AI binding is a remote proxy and waits for a deploy token. Owned e2e calls the gateway REST route instead.
+      localWorkersAiRest: true,
     } satisfies ApiAiGatewayBinding
   })
 }
