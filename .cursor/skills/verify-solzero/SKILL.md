@@ -22,7 +22,7 @@ nub run test:e2e:cache-strict
 nub run test:e2e:list
 ```
 
-Select the tests a change can affect before a full run. `e2e.config.ts` registers `decisionFilter` with `clefDecisionModel()`, which asks `@cf/cloudflare/clef` through Cloudflare AI Gateway. The filter runs only with `--changed-since`. `e2e list` prints the selection and does not boot the app. A change to the loaded config file, a file named like an e2e config, or a known lockfile keeps every test and does not call Clef.
+Select the tests a change can affect before a full run. `e2e.config.ts` registers `decisionFilter` with `clefDecisionModel()`, which asks `@cf/cloudflare/clef` through the account's default AI Gateway. Authenticate with `CF_AI_GATEWAY_E2E_TOKEN`. The filter runs only with `--changed-since`. `e2e list` prints the selection and does not boot the app. A change to the loaded config file, a file named like an e2e config, or a known lockfile keeps every test and does not call Clef.
 
 ```sh
 nub exec e2e list --changed-since origin/master
@@ -35,7 +35,7 @@ The environment loader reads the selected private file, then `config/.env` and `
 
 ## Prove behavior
 
-Drive the public UI and HTTP endpoints through the configured e2e browser and live fetch helpers. Cloudflare Clef (`@cf/cloudflare/clef`) through AI Gateway supplies semantic actions and visual assertions. Follow each action with an exact deterministic assertion. Use `expect` for waiting; this executor supports `act` and `assert` only.
+Drive the public UI and HTTP endpoints through the configured e2e browser and live fetch helpers. Cloudflare Clef (`@cf/cloudflare/clef`) through the account's default AI Gateway supplies semantic actions and visual assertions. Follow each action with an exact deterministic assertion. Use `expect` for waiting; this executor supports `act` and `assert` only.
 
 Verify credential sign-in by reaching the authenticated UI; a healthy port is insufficient. A missing sign-in provider or `Sign-in is not configured for this deployment.` remains a product failure. Verify mutations through reload or a second user-facing view, including saved settings, bot/workflow records, session history, and authorization boundaries. Exercise real Cloudflare services and providers without interception, module mocks, or separate browser/test runners.
 

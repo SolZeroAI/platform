@@ -2,8 +2,7 @@ import { Buffer } from "node:buffer"
 import { AgentError } from "e2e"
 import type { Experimental_DecisionModel } from "ai"
 
-import { measuredTokens } from "./ai-usage"
-import { CLEF_MODEL_ID, postClef } from "./clef-client"
+import { CLEF_MODEL_ID, measuredTokens, postClef } from "./clef-client"
 
 type ClefDecisionModel = Extract<
   Exclude<Experimental_DecisionModel, string>,
@@ -43,7 +42,6 @@ export function clefDecisionModel(): ClefDecisionModel {
             slice.map((id) => [id, noulQuestion(options.questions[id]!)]),
           ),
           ...(images.length > 0 ? { images } : {}),
-          source: "filter",
           accept: (raw, usage) => ({
             answers: Object.fromEntries(slice.map((id) => [id, booleanAnswer(raw[id])])),
             usage,
