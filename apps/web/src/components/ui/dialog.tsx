@@ -9,10 +9,10 @@ import { cn } from "@cloudflare/kumo/utils"
 /**
  * Near-fullscreen dialog panel preset.
  *
- * Kumo's base panel class is `... w-full sm:w-auto max-w-[calc(100vw-2rem)] ...`,
- * so a bare `w-[95vw]` is overridden by `sm:w-auto` on desktop. This preset sets
- * the `sm:` width too, and uses `dvh` so the panel isn't clipped by mobile
- * browser chrome.
+ * Kumo's panel is `w-full max-w-[calc(100vw-2rem)]` plus the default size
+ * variant `sm:w-96`. A bare `w-[95vw]` loses to that `sm:` width on desktop.
+ * This preset sets `sm:w-[95vw]` too, and uses `dvh` so the panel isn't
+ * clipped by mobile browser chrome.
  */
 export const NEAR_FULL_DIALOG_CLASS_NAME =
   "flex h-[95dvh] max-h-[95dvh] w-[95vw] sm:w-[95vw] max-w-[calc(100vw-2rem)] flex-col p-0"
