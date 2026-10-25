@@ -1,18 +1,30 @@
 import { createHmac } from "node:crypto"
 import { AgentError } from "e2e"
 
-import { gatewayCache, measuredTokens, recordAiUsage } from "./ai-usage"
-import type { AiUsage } from "./ai-usage"
-
 export const CLEF_MODEL_ID = "@cf/cloudflare/clef"
+/** The account's existing default gateway. The suite never selects the gateway the application provisions. */
+const DEFAULT_AI_GATEWAY_ID = "default"
 
 type ClefUsage = { input_tokens?: number; output_tokens?: number }
+type ClefCache = "hit" | "miss" | "bypass" | "unknown"
+type ClefStatus = "success" | "error"
+
+export function measuredTokens(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function gatewayCache(headers: Headers, bypass: boolean): ClefCache {
+  const status = headers.get("cf-aig-cache-status")?.toUpperCase()
+  if (status === "HIT") return "hit"
+  if (bypass) return "bypass"
+  return status === "MISS" ? "miss" : "unknown"
+}
 
 export type ClefAttempt = {
   usage: ClefUsage | undefined
-  cache: AiUsage["cache"]
+  cache: ClefCache
   httpStatus: number | null
-  status: AiUsage["status"]
+  status: ClefStatus
   startedAt: string
   durationMs: number
 }
@@ -26,7 +38,6 @@ export async function postClef<T>(options: {
   state: unknown
   questions: Record<string, unknown>
   images?: readonly string[]
-  source: AiUsage["source"]
   prepare?: () => void
   onAttempt?: (attempt: ClefAttempt) => void
   accept: (answers: Record<string, unknown>, usage: ClefUsage | undefined) => T
@@ -51,9 +62,9 @@ export async function postClef<T>(options: {
     const startedAt = new Date().toISOString()
     let usage: ClefUsage | undefined
     let retryDelay: number | undefined
-    let cache: AiUsage["cache"] = bypass ? "bypass" : "unknown"
+    let cache: ClefCache = bypass ? "bypass" : "unknown"
     let httpStatus: number | null = null
-    let status: AiUsage["status"] = "error"
+    let status: ClefStatus = "error"
     try {
       const response = await fetch(clefUrl(credentials.account), {
         method: "POST",
@@ -111,23 +122,6 @@ export async function postClef<T>(options: {
           "The Cloudflare Clef request failed or exceeded its deadline.",
         )
     } finally {
-      const inputTokens = measuredTokens(usage?.input_tokens)
-      const outputTokens = measuredTokens(usage?.output_tokens)
-      recordAiUsage({
-        schemaVersion: 1,
-        source: options.source,
-        model: CLEF_MODEL_ID,
-        cache,
-        cacheLayer: "gateway",
-        requests: 1,
-        operations: 0,
-        inputTokens,
-        outputTokens,
-        cachedInputTokens: null,
-        status,
-        httpStatus,
-        startedAt,
-      })
       options.onAttempt?.({
         usage,
         cache,
@@ -148,15 +142,14 @@ export async function postClef<T>(options: {
 function clefCredentials(): ClefCredentials {
   const account = process.env.CLOUDFLARE_ACCOUNT_ID
   const token = process.env.CF_AI_GATEWAY_E2E_TOKEN
-  const gateway = process.env.CF_AI_GATEWAY_E2E_ID ?? "default"
   if (!account || !token)
     throw new AgentError(
       "MODEL_UNAVAILABLE",
       "Set CLOUDFLARE_ACCOUNT_ID and CF_AI_GATEWAY_E2E_TOKEN for live Clef steps.",
     )
-  if (!/^[a-f0-9]{32}$/i.test(account) || !/^[a-zA-Z0-9_-]+$/.test(gateway))
-    throw new AgentError("MODEL_UNAVAILABLE", "Invalid Cloudflare account or gateway identifier.")
-  return { account, token, gateway }
+  if (!/^[a-f0-9]{32}$/i.test(account))
+    throw new AgentError("MODEL_UNAVAILABLE", "Invalid Cloudflare account identifier.")
+  return { account, token, gateway: DEFAULT_AI_GATEWAY_ID }
 }
 
 function clefUrl(account: string): string {
