@@ -189,7 +189,6 @@ export function getApiInfraEnv(
 
 export interface CreateApiOptions {
   appName: string
-  e2eAiUsage?: boolean
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
   dev: boolean
@@ -210,7 +209,6 @@ export interface ApiAiGatewayBinding {
 
 interface CreateApiBindingsOptions {
   appName: string
-  e2eAiUsage?: boolean
   dev: boolean
   stageMetadata: StageMetadata
   deploymentMetadata: DeploymentMetadata
@@ -307,11 +305,6 @@ function createApiBindings(options: CreateApiBindingsOptions) {
   } = options
 
   const variables = {
-    E2E_AI_USAGE:
-      options.e2eAiUsage === true &&
-      options.dev &&
-      stageMetadata.name === "dev" &&
-      /^s0-e2e(?:-[a-z0-9-]+)?$/.test(appName),
     STAGE: stageMetadata.name,
     WORKER_NAME: workerName,
     APP_VERSION: deploymentMetadata.appVersion,
@@ -485,7 +478,6 @@ export function createApi(options: CreateApiOptions) {
     crons: ["0 13 * * *", "0 14 * * *"],
     env: createApiBindings({
       appName,
-      e2eAiUsage: options.e2eAiUsage,
       dev,
       stageMetadata,
       deploymentMetadata,

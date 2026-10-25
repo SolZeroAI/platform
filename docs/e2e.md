@@ -47,13 +47,15 @@ It never prints values. The shared local gateway credentials can be selected wit
 machine; this path is optional and is never assumed in CI.
 
 Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and `CF_AI_GATEWAY_E2E_TOKEN`.
-The semantic executor calls `@cf/cloudflare/clef` through the Cloudflare Workers AI REST
-route with `cf-aig-gateway-id`, defaulting to `default` or `CF_AI_GATEWAY_E2E_ID`.
-The token needs permission to execute Workers AI. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses
-gateway response caching independently of e2e action replay. The same Clef route is the
-`decisionFilter` model in `e2e.config.ts`. `e2e list --changed-since <ref>` and
-`e2e run --changed-since <ref>` ask it which tests the change can affect. A change to
-the loaded config or a known lockfile keeps every test. No Jev or text reasoning
+The Clef step executor and the `decisionFilter` in `e2e.config.ts` both call
+`@cf/cloudflare/clef` through the account's existing default AI Gateway. The gateway id
+is `default`. `CF_AI_GATEWAY_E2E_TOKEN` is the token with access to that gateway and
+permission to execute Workers AI. These calls do not use the AI Gateway the application
+provisions for a stage or a run, and the suite does not read that gateway's logs.
+`CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses response caching on the default gateway,
+independently of e2e action replay. `e2e list --changed-since <ref>` and
+`e2e run --changed-since <ref>` ask the decision filter which tests the change can affect.
+A change to the loaded config or a known lockfile keeps every test. No Jev or text reasoning
 model is substituted. Clef chooses actions and semantic verdicts from the observed tree
 and redacted screenshots; exact text values come from `agent.act` params. Use `expect`
 for polling and extraction: Clef does not implement `agent.waitFor` or `agent.extract`.
@@ -126,27 +128,19 @@ For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init`
 the tests and `nub exec tsx scripts/e2e/ai-report.mjs summarize` afterward. These commands
 use the pinned Node runtime and do not make model calls.
 
-The isolated launcher enables `E2E_AI_USAGE=1`. The API binding defaults to disabled and
-also requires the isolated development Worker name. Application records contain only an
-allowlisted model, request count, gateway cache result, status, token counts and start
-time. They exclude request content, credentials, URLs and identifiers. Accounting does
-not add inference calls, retries, or change provider options. Set `E2E_AI_USAGE=0` to
-disable application accounting for a local test run.
-
-OpenCode, Codex and the bounded native-provider probe reuse the existing buffered
-response parser for measured usage. Isolate binding JSON is observed before the SDK's
-fallback zeros. Streaming bindings do not expose HTTP cache headers or reliable usage
-presence at that boundary; these measurements remain unknown. Missing token counts or
-cache status never imply zero cost. Provider prompt-cache tokens are separate from an
-AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions cache.
+The summary counts the suite's own Clef calls. Executor token counts and cost come from
+the model records in the e2e report. Decision-filter spend comes from the usage suffix on
+that report's filter note, and is left unknown when the suffix is absent. The summary does
+not measure application inference, and it does not read AI Gateway logs. Missing
+measurements stay unknown. Provider prompt-cache tokens are separate from an AI Gateway
+response-cache hit, e2e action replay, and a restored GitHub Actions cache.
 
 CI initializes and summarizes usage around the test run and uploads only sanitized
-`summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and accounting ledgers are
-not uploaded. The official `@e2e-dev/github@0.3.3` reporter writes e2e results and SDK-measured
-model usage to the job summary and updates its pull-request comment. Core and lifecycle
-runs use distinct stable keys. `GITHUB_TOKEN` is scoped to the test step and stripped from
-application children. Application accounting remains a sanitized receipt/job summary;
-there is no custom AI-only PR publisher. Missing measurements remain explicit.
+`summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and e2e reports are not
+uploaded by that step. The official `@e2e-dev/github` reporter writes e2e results and
+SDK-measured model usage to the job summary and updates its pull-request comment. Core and
+lifecycle runs use distinct stable keys. `GITHUB_TOKEN` is scoped to the test step and
+stripped from application children. There is no custom AI-only PR publisher.
 SDK telemetry is disabled with `E2E_TELEMETRY_DISABLED=1`.
 
 The installed CLI refreshed the pristine `.agents/skills/e2e` guidance and the Claude

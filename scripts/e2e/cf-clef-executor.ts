@@ -11,8 +11,7 @@ import type {
   StepTurn,
 } from "e2e"
 
-import { measuredTokens } from "./ai-usage"
-import { CLEF_MODEL_ID, postClef } from "./clef-client"
+import { CLEF_MODEL_ID, measuredTokens, postClef } from "./clef-client"
 
 type Choice = { description: string; run: () => Promise<void> }
 type Answer = {
@@ -150,7 +149,6 @@ async function ask(
     },
     questions: { decision: { type: "choice", instructions, criteria } },
     ...(pixels ? { images: [clefImage(pixels)] } : {}),
-    source: "executor",
     prepare: () => {
       if (usageBudget.calls >= ctx.budgets.maxModelCalls)
         throw new AgentError(

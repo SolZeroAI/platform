@@ -102,9 +102,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_AI_GATEWAY_E2E_TOKEN: ${{ secrets.CF_AI_GATEWAY_E2E_TOKEN }}
-      CF_AI_GATEWAY_E2E_ID: default
       E2E_CONTAINER_RUNTIME: "1"
-      E2E_AI_USAGE: "1"
       E2E_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
