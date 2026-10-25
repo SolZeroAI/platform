@@ -12,8 +12,7 @@ import { appEnvironment } from "./scripts/e2e/environment"
 // this module. The gateway has no Clef decision model, so the adapter asks
 // gpt-oss-120b on the unified chat route. Harmony rejects reasoning_effort
 // "none" and array message content, and its default budget ends in reasoning
-// before the JSON answer. Those requests are normalized below. A short note
-// is added for the two goals whose first choice otherwise misses the control.
+// before the JSON answer. Those requests are normalized below.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
@@ -44,19 +43,13 @@ const cloudflare = createOpenAICompatible({
           .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
           .filter((text: unknown): text is string => typeof text === "string")
           .join("\n")
-        if (content.includes("Save the changed workflow name")) {
-          return {
-            ...message,
-            content: `${content}\n\nChoose the button named "Save workflow name".`,
-          }
-        }
-        if (content.includes("Set Sub-agents to Disabled")) {
-          return {
-            ...message,
-            content: `${content}\n\nTap the Sub-agents control. Do not answer none.`,
-          }
-        }
-        return { ...message, content }
+        // The workflow rename goal otherwise activates the selected Overview tab.
+        // After the save button leaves the tree, the same sentence selects done.
+        // Match the executor question only, so a verdict or the test filter is unchanged.
+        const saveHint = content.includes("Goal of this step: Save the changed workflow name")
+          ? '\n\nIf a button named "Save workflow name" is offered, tap it. If it is not offered, choose done.'
+          : ""
+        return { ...message, content: content + saveHint }
       }),
     }
   },
