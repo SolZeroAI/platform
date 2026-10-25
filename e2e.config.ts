@@ -11,7 +11,8 @@ import { appEnvironment } from "./scripts/e2e/environment"
 // provisions for a stage. Placeholders let secret-free test collection load
 // this module. The gateway has no Clef decision model, so the adapter asks
 // gpt-oss-120b on the unified chat route. Harmony rejects reasoning_effort
-// "none", and it rejects array message content, so both are normalized.
+// "none" and array message content, and its default budget ends in reasoning
+// before the JSON answer. Those requests are normalized below.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
@@ -27,15 +28,16 @@ const cloudflare = createOpenAICompatible({
     "cf-aig-max-attempts": "3",
     "cf-aig-backoff": "exponential",
   },
-  transformRequestBody(body) {
-    const request =
-      body.reasoning_effort === "none"
-        ? (({ reasoning_effort: _reasoningEffort, ...rest }) => rest)(body)
-        : body
+  transformRequestBody(body: Record<string, unknown>) {
+    const request: Record<string, unknown> = {
+      ...body,
+      reasoning_effort: body.reasoning_effort === "none" ? "low" : body.reasoning_effort,
+      max_tokens: body.max_tokens ?? 8192,
+    }
     if (!Array.isArray(request.messages)) return request
     return {
       ...request,
-      messages: request.messages.map((message) => {
+      messages: request.messages.map((message: { content?: unknown }) => {
         if (!Array.isArray(message.content)) return message
         return {
           ...message,

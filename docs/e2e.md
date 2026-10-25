@@ -55,8 +55,9 @@ gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
 3600 second TTL. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` sets `cf-aig-skip-cache` and
 bypasses gateway response caching independently of e2e action replay. The gateway
 retries with three attempts and exponential backoff. The decision adapter sends
-`reasoning_effort: none` and array message content. This model rejects both, so
-the request omits that field and joins text parts into a string.
+`reasoning_effort: none` and array message content. This model rejects `none`
+and array content, and its default token budget stops during reasoning, so the
+request uses `low`, joins text parts into a string, and allows 8192 output tokens.
 The route calls chat models. It does not expose a Clef decision model. The test filter
 and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
 The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
