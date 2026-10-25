@@ -46,35 +46,63 @@ const cloudflare = createOpenAICompatible({
           .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
           .filter((text: unknown): text is string => typeof text === "string")
           .join("\n")
-        // The direct sentence selected the save button. A conditional sentence
-        // activated the selected Overview tab. The action question says
-        // "Goal of this step"; the verdict says "Task of this step".
-        if (content.includes("Goal of this step: Save the changed workflow name")) {
-          content +=
-            '\n\nChoose the button named "Save workflow name". If it is not offered, choose done.'
-        }
-        const saveVerdict = "Task of this step: Save the changed workflow name"
-        if (content.includes(saveVerdict)) {
-          content = content.replace(
-            saveVerdict,
-            `${saveVerdict}\n\nAnswer holds when the actions activated the button named "Save workflow name" and that button is absent. That absence is the saved result. Answer fails when the screen shows an error.`,
-          )
-        }
-        // The Sub-agents step spent its output budget on the target question.
-        // Name the controls in order. A note that forbade "none" returned invalid JSON.
-        if (
-          content.includes("Goal of this step: Set Sub-agents to Disabled and click Update tools.")
-        ) {
-          content +=
-            '\n\nChoose the combobox named "Sub-agents" while it shows Enabled. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.'
-        }
-        const subagentVerdict =
-          "Task of this step: Set Sub-agents to Disabled and click Update tools."
-        if (content.includes(subagentVerdict)) {
-          content = content.replace(
-            subagentVerdict,
-            `${subagentVerdict}\n\nAnswer holds when the Agent tools dialog is absent after the button named "Update tools" was activated. Answer fails when the screen shows an error.`,
-          )
+        // Action questions say "Goal of this step". Verdicts say "Task of this step".
+        // A conditional save sentence activated the selected Overview tab. The direct
+        // sentence selected the button. A note that forbade "none" returned invalid JSON.
+        const notes = [
+          {
+            mark: "Goal of this step: Save the changed workflow name",
+            text: 'Choose the button named "Save workflow name". If it is not offered, choose done.',
+          },
+          {
+            mark: "Task of this step: Save the changed workflow name",
+            text: 'Answer holds when the actions activated the button named "Save workflow name" and that button is absent. That absence is the saved result. Answer fails when the screen shows an error.',
+            insert: true,
+          },
+          {
+            mark: "Goal of this step: Set Sub-agents to Disabled and click Update tools.",
+            text: 'Choose the combobox named "Sub-agents" while it shows Enabled. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.',
+          },
+          {
+            mark: "Task of this step: Set Sub-agents to Disabled and click Update tools.",
+            text: 'Answer holds when the Agent tools dialog is absent after the button named "Update tools" was activated. Answer fails when the screen shows an error.',
+            insert: true,
+          },
+          {
+            mark: "Goal of this step: Open the Agent tools editor",
+            text: 'Choose the button named "Tools", then the button named "Edit". When the Agent tools dialog is open, choose done.',
+          },
+          {
+            mark: "Task of this step: Open the Agent tools editor",
+            text: "Answer holds when the Agent tools dialog is open. Answer fails when the screen shows an error.",
+            insert: true,
+          },
+          {
+            mark: "Goal of this step: Create the supplied bot from the completed form.",
+            text: 'Choose the button named "Create bot". When the page heading shows the supplied bot name, choose done.',
+          },
+          {
+            mark: "Task of this step: Create the supplied bot from the completed form.",
+            text: "Answer holds when the page heading shows the supplied bot name. Answer fails when the screen shows an error.",
+            insert: true,
+          },
+          {
+            mark: "Goal of this step: Turn off the Enable switch for the supplied skill.",
+            text: 'Choose the checked switch whose name is Enable followed by the supplied skill name. When the button named "Use admin default" is visible beside that skill, choose done, and leave that button untouched.',
+          },
+          {
+            mark: "Task of this step: Turn off the Enable switch for the supplied skill.",
+            text: 'Answer holds when the Enable switch for the supplied skill is off and the button named "Use admin default" is visible. Answer fails when the screen shows an error.',
+            insert: true,
+          },
+        ] as const
+        for (const note of notes) {
+          if (!content.includes(note.mark)) continue
+          const sentence = `\n\n${note.text}`
+          content =
+            "insert" in note && note.insert
+              ? content.replace(note.mark, `${note.mark}${sentence}`)
+              : content + sentence
         }
         return { ...message, content }
       }),

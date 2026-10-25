@@ -72,7 +72,9 @@ activated and is now absent. A conditional action sentence still activated the
 selected Overview tab. The Sub-agents action question names the combobox, the
 Disabled option, and the Update tools button in that order, and chooses done
 when the dialog is gone. Its completion question holds when that dialog is absent
-after Update tools was activated.
+after Update tools was activated. The same request names the controls for opening
+the Agent tools editor, creating a bot, and turning off a skill Enable switch,
+and each of those completion questions states the visible result that holds.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language
