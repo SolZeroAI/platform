@@ -23,8 +23,6 @@ on:
 permissions:
   contents: read
   actions: read
-  checks: write
-  pull-requests: write
 
 jobs:
   validate:
@@ -33,15 +31,19 @@ jobs:
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
     timeout-minutes: 30
+    # actionlint's default reporter is github-pr-check, which writes a check run.
+    permissions:
+      contents: read
+      actions: read
+      checks: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
 
       - name: Set up Nub
-        # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
@@ -71,7 +73,7 @@ jobs:
         run: nub run format
 
       - name: Lint GitHub Actions workflows
-        uses: reviewdog/action-actionlint@1758727be30241166609dad4c97588b6ad411f32 # v1
+        uses: reviewdog/action-actionlint@v1
         with:
           fail_level: error
           filter_mode: nofilter
@@ -91,6 +93,11 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
+    # The github reporter edits one pull request comment. Artifact recovery reads Actions APIs.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -100,11 +107,10 @@ jobs:
       E2E_AI_USAGE: "1"
       E2E_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
-      # Allowlist accepts nubjs/setup-nub@v0* and the v0.4.0 SHA, not the v0.6.0 commit.
-      - uses: nubjs/setup-nub@v0.6.0
+      - uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
@@ -135,7 +141,7 @@ jobs:
           echo "E2E_USER_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
       - name: Restore action replay cache
         id: action-replay-cache
-        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache/restore@v5
         with:
           path: .e2e/cache
           key: e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -176,13 +182,13 @@ jobs:
         run: node scripts/e2e/ai-report.mjs summarize
       - name: Preserve successful replay recordings
         if: success() && steps.e2e-run.outcome == 'success'
-        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache/save@v5
         with:
           path: .e2e/cache
           key: e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Preserve exact cleanup ownership for recovery
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: solzero-cleanup-ownership-${{ github.run_id }}-${{ github.run_attempt }}
           path: .e2e/cleanup-ownership.json
@@ -191,7 +197,7 @@ jobs:
           retention-days: 30
       - name: Upload diagnostic reports
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: solzero-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

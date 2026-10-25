@@ -99,9 +99,10 @@ Allow this publisher before the first deploy. The OIDC `job_workflow_ref` must e
 
 ## Repository settings
 
-The release job mints a GitHub App installation token with `actions/create-github-app-token`. The
-action is pinned by commit SHA. Secrets `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` identify the
-app. The token is limited to this repository. It requests contents write and pull requests write.
+The release job mints a GitHub App installation token with `actions/create-github-app-token@v3`.
+That job selects the `release` environment. The environment is limited to `master` and holds
+`RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY`. The action reads the app id through its `client-id`
+input. The token is limited to this repository. It requests contents write and pull requests write.
 Checkout and `nub run tegami ci` use that token for the version pull request, the `vX.Y.Z` tag, and
 the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
 

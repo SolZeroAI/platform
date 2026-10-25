@@ -15,7 +15,6 @@ on:
           - prod
 
 permissions:
-  id-token: write
   contents: read
 
 concurrency:
@@ -34,9 +33,6 @@ jobs:
       DATABASE: ${{ vars.DATABASE || 'd1' }}
       APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
       PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -46,7 +42,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Nub
-        uses: nubjs/setup-nub@v0.6.0
+        uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
           node-version-file: .nvmrc
