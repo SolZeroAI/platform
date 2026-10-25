@@ -43,11 +43,11 @@ const cloudflare = createOpenAICompatible({
           .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
           .filter((text: unknown): text is string => typeof text === "string")
           .join("\n")
-        // The workflow rename goal otherwise activates the selected Overview tab.
-        // After the save button leaves the tree, the same sentence selects done.
+        // A conditional sentence still activated the selected Overview tab.
+        // The direct sentence selected the save button. Choose done after it leaves.
         // Match the executor question only, so a verdict or the test filter is unchanged.
         const saveHint = content.includes("Goal of this step: Save the changed workflow name")
-          ? '\n\nIf a button named "Save workflow name" is offered, tap it. If it is not offered, choose done.'
+          ? '\n\nChoose the button named "Save workflow name". If it is not offered, choose done.'
           : ""
         return { ...message, content: content + saveHint }
       }),

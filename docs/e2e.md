@@ -62,8 +62,8 @@ request uses `low`, joins text parts into a string, and allows 8192 output token
 The route calls chat models. It does not expose a Clef decision model. The test filter
 and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
 The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
-The workflow rename step adds one sentence to its action question: tap the button
-named Save workflow name while that button is offered, and choose done when it is not.
+The workflow rename action question adds one sentence: choose the button named
+Save workflow name, and choose done when that button is not offered.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language
