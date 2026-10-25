@@ -1,10 +1,33 @@
 import type { E2EConfig } from "e2e"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import { Experimental_DecisionLanguageModel } from "@ai-sdk/provider-utils/experimental-decision"
 import { web } from "@e2e-dev/web"
 import { github } from "@e2e-dev/github"
-import { decisionFilter } from "@e2e-dev/decision"
+import { decisionExecutor, decisionFilter } from "@e2e-dev/decision"
 import { appEnvironment } from "./scripts/e2e/environment"
-import { createClefExecutor } from "./scripts/e2e/cf-clef-executor"
-import { clefDecisionModel } from "./scripts/e2e/clef-decision-model"
+
+// The suite calls the account's existing default AI Gateway. The token is
+// CF_AI_GATEWAY_E2E_TOKEN. This is not the gateway or run token the application
+// provisions for a stage. Placeholders let secret-free test collection load
+// this module. The gateway has no Clef decision model, so the adapter asks
+// gpt-oss-120b on the OpenAI-compatible route.
+const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
+const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
+const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
+const cloudflare = createOpenAICompatible({
+  name: "cloudflare-ai-gateway",
+  baseURL: `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(accountId)}/${encodeURIComponent(gatewayId)}/compat`,
+  supportsStructuredOutputs: true,
+  headers: {
+    "cf-aig-authorization": `Bearer ${gatewayToken}`,
+    "cf-aig-cache-ttl": "3600",
+    "cf-aig-skip-cache": process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1" ? "true" : "false",
+    "cf-aig-max-attempts": "3",
+    "cf-aig-backoff": "exponential",
+  },
+})
+const languageModel = cloudflare.chatModel("workers-ai/@cf/openai/gpt-oss-120b")
+const decisionModel = new Experimental_DecisionLanguageModel({ model: languageModel })
 
 export default {
   projectId: "solzero",
@@ -29,7 +52,7 @@ export default {
   ],
   agents: {
     default: {
-      executor: createClefExecutor(),
+      executor: decisionExecutor({ model: decisionModel, textModel: languageModel }),
       maxModelCalls: 20,
       maxSteps: 20,
       context:
@@ -59,7 +82,7 @@ export default {
     fixture: () => process.env.E2E_FIXTURE_SECRET ?? "disposable-e2e-value",
     ...(process.env.E2E_BYOK_API_KEY ? { byok: process.env.E2E_BYOK_API_KEY } : {}),
   },
-  filters: [decisionFilter({ model: clefDecisionModel() })],
+  filters: [decisionFilter({ model: decisionModel })],
   workers: 1,
   retries: 0,
   timeout: 180_000,

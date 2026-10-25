@@ -106,7 +106,6 @@ async function init() {
       2,
     ) + "\n",
   )
-  await privateWrite("executor.jsonl", "")
   // Old output must not be published when this run fails before summarization.
   await Promise.all(["summary.json", "summary.md"].map((name) => privateWrite(name, "")))
 }
@@ -266,10 +265,6 @@ async function summarize() {
     else if (!value) rejectedRecords += 1
     else entries.push(value)
   }
-  for (const line of (await readFile(`${directory}/executor.jsonl`, "utf8").catch(() => "")).split(
-    "\n",
-  ))
-    parseLine(line)
   for (const path of await logs()) {
     const buffer = await readFile(path)
     const previous = metadata.logOffsets?.[path]
