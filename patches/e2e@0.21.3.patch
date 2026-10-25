@@ -1,7 +1,7 @@
 diff --git a/dist/run/managed-process.js b/dist/run/managed-process.js
 --- a/dist/run/managed-process.js
 +++ b/dist/run/managed-process.js
-@@ -258,7 +258,7 @@
+@@ -293,7 +293,7 @@
          return new InfrastructureError('APP_UNREACHABLE', `${message}\n${detail}`);
      }
      /**
@@ -10,7 +10,7 @@ diff --git a/dist/run/managed-process.js b/dist/run/managed-process.js
       * stripped, bounded in bytes before lines so a chatty process cannot turn
       * the message into the whole log.
       */
-@@ -283,7 +283,19 @@
+@@ -318,7 +318,19 @@
                  .filter((line) => line.length > 0);
              if (cutMidLine)
                  lines.shift();

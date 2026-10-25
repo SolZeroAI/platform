@@ -93,8 +93,8 @@ export interface InfraStageProps {
   /**
    * Origin (scheme + host + optional port) the sandbox container uses to reach
    * the internal MCP handler. In production, outbound Workers intercept
-   * the non-resolvable hostname. In dev, the container reaches the wrangler
-   * server directly via Docker host networking.
+   * the non-resolvable hostname. In dev, the container reaches the local
+   * workerd dev server directly via Docker host networking.
    */
   readonly internalMcpOrigin: string
   /**

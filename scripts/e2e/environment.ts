@@ -64,18 +64,23 @@ process.env.E2E_USER_ADMIN_PASSWORD = process.env.S0_CONFIG_SECRETS_AUTH_ADMIN_P
 process.env.E2E_USER_PEER_PASSWORD = process.env.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD
 
 export const appEnvironment = Object.fromEntries(
-  Object.entries(process.env).filter(
-    (entry): entry is [string, string] =>
-      entry[1] !== undefined &&
-      ![
-        "CF_AI_GATEWAY_E2E_TOKEN",
-        "GH_TOKEN",
-        "GITHUB_TOKEN",
-        // Process-control metadata from the config-loader/watch process must not reach a new child.
-        "NODE_CHANNEL_FD",
-        "NODE_CHANNEL_SERIALIZATION_MODE",
-        "NODE_UNIQUE_ID",
-        "WATCH_REPORT_DEPENDENCIES",
-      ].includes(entry[0]),
-  ),
+  Object.entries(process.env).filter((entry): entry is [string, string] => {
+    const [name, value] = entry
+    if (value === undefined) return false
+    // e2e 0.21 forks each worker with these variables after the runner has
+    // digested the config. The worker re-imports this module, and the command
+    // env key set is part of that digest, so a worker-only key fails the run
+    // with CONFIG_NOT_DETERMINISTIC before any test starts.
+    if (name.startsWith("E2E_WEB_BROWSERS_") || name === "E2E_WARNED_TSCONFIGS") return false
+    return ![
+      "CF_AI_GATEWAY_E2E_TOKEN",
+      "GH_TOKEN",
+      "GITHUB_TOKEN",
+      // Process-control metadata from the config-loader/watch process must not reach a new child.
+      "NODE_CHANNEL_FD",
+      "NODE_CHANNEL_SERIALIZATION_MODE",
+      "NODE_UNIQUE_ID",
+      "WATCH_REPORT_DEPENDENCIES",
+    ].includes(name)
+  }),
 )

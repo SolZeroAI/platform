@@ -1,5 +1,4 @@
 import {
-  buildSessionToolRuntimePlan,
   normalizeAiSearchSourceId,
   normalizeMcpcfServerId,
   getInternalMcpOrigin,
@@ -9,7 +8,6 @@ import {
   type OpenCodeMcpServers,
   type StageMetadataInput,
   type SessionToolRuntimePlan,
-  type SessionToolSpec,
 } from "@solzero/shared"
 
 export const INTERNAL_AI_SEARCH_MCP_SERVER_NAME = "ai_search"
@@ -42,28 +40,6 @@ export function getMcpcfMcpUrl(stage: StageMetadataInput): string {
 
 export function getMcpcfIsolateMcpUrl(stage: StageMetadataInput): string {
   return `${getInfraServerUrl(stage)}${MCPCF_PROXY_MCP_ROUTE}`
-}
-
-export function buildSessionMcpServers(input: {
-  tools: readonly SessionToolSpec[] | null | undefined
-  customMcpServers?: OpenCodeMcpServers | null
-  mcpcfServers?: readonly McpcfServerDefinition[] | null
-  sessionId?: string | null
-  mcpcfCapability?: string | null
-  stage?: StageMetadataInput | null
-}): OpenCodeMcpServers {
-  const plan = buildSessionToolRuntimePlan({
-    tools: input.tools,
-    customMcpServers: input.customMcpServers,
-    mcpcfServers: input.mcpcfServers,
-  })
-
-  return buildSessionMcpServersFromPlan({
-    plan,
-    sessionId: input.sessionId,
-    mcpcfCapability: input.mcpcfCapability,
-    stage: input.stage,
-  })
 }
 
 export function buildSessionMcpServersFromPlan(input: {
