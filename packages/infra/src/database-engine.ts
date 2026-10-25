@@ -41,7 +41,7 @@ function requiredServiceToken(name: (typeof PLANETSCALE_REMOTE_SERVICE_TOKEN_ENV
 }
 
 /**
- * alchemy.new supplies service-token names. Alchemy 2.0.0-beta.74 AuthProvider
+ * alchemy.new supplies service-token names. Alchemy 2.0.0-beta.81 AuthProvider
  * still reads PLANETSCALE_API_TOKEN_*. Copy only when the Alchemy names are empty.
  */
 export function bindPlanetscaleAlchemyAuthFromServiceTokens() {
