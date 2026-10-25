@@ -1,5 +1,8 @@
-# Template for the private deploy fork. Keep this file valid YAML. Do not comment it out.
-# The invert guard skips this job on SolZeroAI/platform, so the public repository never deploys.
+# Copyable Deploy template. Keep this file valid YAML. Do not comment it out.
+# The job runs only when the repository variable CLOUDFLARE_DEPLOY is the exact value true.
+# SolZeroAI/platform does not set that variable, so the job skips and this repository
+# does not need CLOUDFLARE_API_TOKEN. A fork sets CLOUDFLARE_DEPLOY to true and sets the token.
+# The prod environment is selected only by this job. Limit that environment to master.
 # Do not add secrets on SolZeroAI/platform.
 name: Deploy
 
@@ -24,7 +27,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy
-    if: ${{ github.repository != 'SolZeroAI/platform' }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
