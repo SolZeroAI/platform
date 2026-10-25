@@ -116,12 +116,6 @@ function attempt<A>(thunk: () => Promise<A>) {
   return Effect.tryPromise({ try: thunk, catch: toError })
 }
 
-export function getEnabledRemoteCustomMcpServerNames(
-  customMcpServers: OpenCodeMcpServers | null | undefined,
-): string[] {
-  return buildSessionToolRuntimePlan({ customMcpServers }).isolatePromptFacts.customMcpServerNames
-}
-
 function asRecord(value: unknown): Option.Option<Record<string, unknown>> {
   return Option.liftPredicate(
     value,
@@ -293,34 +287,8 @@ function buildRegistrationOptions(
   }
 }
 
-export function buildRemoteCustomMcpServerRegistrations(
-  customMcpServers: OpenCodeMcpServers | null | undefined,
-): RemoteCustomMcpServerRegistration[] {
-  const plan = buildSessionToolRuntimePlan({ customMcpServers })
-  return plan.mcpRegistration.remoteCustomMcpServers.map(buildRemoteCustomMcpServerRegistration)
-}
-
 function isMcpcfMcpServerRow(row: McpServerRow): boolean {
   return row.id === INTERNAL_MCPCF_MCP_SERVER_NAME || row.id.startsWith("mcpcf_")
-}
-
-export function buildInternalMcpcfMcpServerRegistrations(input: {
-  tools: readonly SessionToolSpec[] | null | undefined
-  mcpcfServers?: readonly McpcfServerDefinition[] | null
-  sessionId?: string | null
-  stage?: StageMetadataInput | null
-  mcpcfCapability?: string | null
-}): RemoteCustomMcpServerRegistration[] {
-  const plan = buildSessionToolRuntimePlan({
-    tools: input.tools,
-    mcpcfServers: input.mcpcfServers,
-  })
-  return buildInternalMcpcfMcpServerRegistrationsFromPlan({
-    plan,
-    sessionId: input.sessionId,
-    stage: input.stage,
-    mcpcfCapability: input.mcpcfCapability,
-  })
 }
 
 function buildRemoteCustomMcpServerRegistration(
@@ -709,13 +677,6 @@ function applyRegistrationSync(
     Effect.map(connectedOutcome),
     Effect.catch((errorValue) => handleRegistrationSyncFailure(manager, registration, errorValue)),
   )
-}
-
-export function syncIsolateCustomMcpServers(
-  manager: IsolateMcpManager,
-  customMcpServers: OpenCodeMcpServers | null | undefined,
-) {
-  return syncIsolateMcpServers(manager, { customMcpServers })
 }
 
 function shouldRemoveRow(
