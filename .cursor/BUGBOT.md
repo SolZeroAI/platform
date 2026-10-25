@@ -140,7 +140,9 @@ This public repo must not gain GitHub Actions that publish preview or prod.
 They are not GHA Environments on SolZeroAI/platform.
 
 `.github/workflows/deploy.yml` and `.github/workflows/preview.yml` are copyable templates.
-Invert guards are `github.repository != 'SolZeroAI/platform'`.
+Cloudflare jobs run only when `vars.CLOUDFLARE_DEPLOY == 'true'`.
+Do not replace that switch with `github.repository != 'SolZeroAI/platform'`.
+SolZeroAI/platform does not set `CLOUDFLARE_DEPLOY` and does not need `CLOUDFLARE_API_TOKEN`.
 Comments say do not add secrets on SolZeroAI/platform.
 Keep the YAML valid.
 Do not comment the workflows out.
@@ -158,7 +160,7 @@ The dry-run job has `contents: read` only. It does not use that environment or `
 Both publish steps use `SolZeroAI/alchemy-new-publish-action@v1`. Do not pin that action to a commit SHA or an exact version.
 Neither job is a Cloudflare deploy.
 
-`docs/releasing.md` and `CONTRIBUTING.md` state the same invert-guard policy.
+`docs/releasing.md` and `CONTRIBUTING.md` state the same `CLOUDFLARE_DEPLOY` switch.
 
 ### Tests
 
@@ -233,7 +235,7 @@ When the copy CLI calls `infra:deploy:*`, flag it.
 ### Secrets and deploy
 
 Flag secret leakage in source, logs, or public GHA.
-When a PR removes invert guards, flag it.
+When a PR removes the `CLOUDFLARE_DEPLOY` condition from Deploy or Deploy Preview, flag it.
 When a PR adds deploy secrets to SolZeroAI/platform, flag it.
 When preview or deploy jobs would run on this public repository, flag it.
 
