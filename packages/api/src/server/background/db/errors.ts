@@ -1,4 +1,5 @@
 import * as Match from "effect/Match"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 // Typed failures for the background DB layer. Wrapping drizzle/D1 awaits in tagged errors keeps
@@ -32,6 +33,40 @@ export function d1FailureCause(cause: unknown): D1FailureCause {
       name: error.name,
     })),
     Match.orElse(() => ({ message: String(cause) })),
+  )
+}
+
+function errorMessageHead(record: Record<string, unknown>): string[] {
+  return Option.match(
+    Option.fromNullishOr(record.message).pipe(
+      Option.filter((message): message is string => typeof message === "string"),
+    ),
+    {
+      onNone: () => [] as string[],
+      onSome: (message) => [message],
+    },
+  )
+}
+
+function collectErrorChainMessages(current: unknown): string[] {
+  return Option.match(
+    Option.fromNullishOr(current).pipe(Option.filter((value) => typeof value === "object")),
+    {
+      onNone: () => [],
+      onSome: (value) => [
+        ...errorMessageHead(value as Record<string, unknown>),
+        ...collectErrorChainMessages((value as Record<string, unknown>).cause),
+      ],
+    },
+  )
+}
+
+/** Messages on a value and its `cause` chain, including plain objects such as `D1FailureCause`. */
+export function getErrorMessages(errorValue: unknown): string[] {
+  const chainMessages = collectErrorChainMessages(errorValue)
+  return Match.value(typeof errorValue === "string").pipe(
+    Match.when(true, () => [...chainMessages, errorValue as string]),
+    Match.orElse(() => chainMessages),
   )
 }
 
