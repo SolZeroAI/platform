@@ -22,7 +22,7 @@ import {
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
-import { D1Error, UserProviderPreferenceMigrationError, d1Error } from "./errors"
+import { D1Error, UserProviderPreferenceMigrationError, d1Error, getErrorMessages } from "./errors"
 
 export type UserProviderScope = "shared_override" | "custom_provider"
 
@@ -136,39 +136,6 @@ function buildCustomRuntimeRecord(
     models: payload.models,
     apiKey,
   }
-}
-
-function errorMessageHead(record: Record<string, unknown>): string[] {
-  return Option.match(
-    Option.fromNullishOr(record.message).pipe(
-      Option.filter((message): message is string => typeof message === "string"),
-    ),
-    {
-      onNone: () => [] as string[],
-      onSome: (message) => [message],
-    },
-  )
-}
-
-function collectErrorChainMessages(current: unknown): string[] {
-  return Option.match(
-    Option.fromNullishOr(current).pipe(Option.filter((value) => typeof value === "object")),
-    {
-      onNone: () => [],
-      onSome: (value) => [
-        ...errorMessageHead(value as Record<string, unknown>),
-        ...collectErrorChainMessages((value as Record<string, unknown>).cause),
-      ],
-    },
-  )
-}
-
-function getErrorMessages(errorValue: unknown): string[] {
-  const chainMessages = collectErrorChainMessages(errorValue)
-  return Match.value(typeof errorValue === "string").pipe(
-    Match.when(true, () => [...chainMessages, errorValue as string]),
-    Match.orElse(() => chainMessages),
-  )
 }
 
 function isMissingOpenCodePermissionPreferenceColumn(errorValue: unknown): boolean {
