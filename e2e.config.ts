@@ -60,6 +60,22 @@ const cloudflare = createOpenAICompatible({
             `${saveVerdict}\n\nAnswer holds when the actions activated the button named "Save workflow name" and that button is absent. That absence is the saved result. Answer fails when the screen shows an error.`,
           )
         }
+        // The Sub-agents step spent its output budget on the target question.
+        // Name the controls in order. A note that forbade "none" returned invalid JSON.
+        if (
+          content.includes("Goal of this step: Set Sub-agents to Disabled and click Update tools.")
+        ) {
+          content +=
+            '\n\nChoose the combobox named "Sub-agents" while it shows Enabled. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.'
+        }
+        const subagentVerdict =
+          "Task of this step: Set Sub-agents to Disabled and click Update tools."
+        if (content.includes(subagentVerdict)) {
+          content = content.replace(
+            subagentVerdict,
+            `${subagentVerdict}\n\nAnswer holds when the Agent tools dialog is absent after the button named "Update tools" was activated. Answer fails when the screen shows an error.`,
+          )
+        }
         return { ...message, content }
       }),
     }

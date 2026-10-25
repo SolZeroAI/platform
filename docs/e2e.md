@@ -69,7 +69,10 @@ The workflow rename action question adds one sentence: choose the button named
 Save workflow name, and choose done when that button is not offered. The completion
 question for that task adds one sentence: the save holds when that button was
 activated and is now absent. A conditional action sentence still activated the
-selected Overview tab.
+selected Overview tab. The Sub-agents action question names the combobox, the
+Disabled option, and the Update tools button in that order, and chooses done
+when the dialog is gone. Its completion question holds when that dialog is absent
+after Update tools was activated.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language
