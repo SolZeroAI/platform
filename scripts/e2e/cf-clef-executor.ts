@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer"
-import { createHmac } from "node:crypto"
 import jpeg from "jpeg-js"
 import { PNG } from "pngjs"
 import { AgentError } from "e2e"
@@ -12,8 +11,8 @@ import type {
   StepTurn,
 } from "e2e"
 
-import { gatewayCache, measuredTokens, recordAiUsage } from "./ai-usage"
-import type { AiUsage } from "./ai-usage"
+import { measuredTokens } from "./ai-usage"
+import { CLEF_MODEL_ID, postClef } from "./clef-client"
 
 type Choice = { description: string; run: () => Promise<void> }
 type Answer = {
@@ -22,11 +21,6 @@ type Answer = {
   probabilities: Record<string, number>
   confidence: number
 }
-type ClefResult = {
-  answers: Record<string, Answer>
-  usage: { input_tokens: number; output_tokens: number }
-}
-
 /** Clef's System One API is a decision API, not a chat-completions model. */
 export function createClefExecutor(): StepExecutor {
   return {
@@ -141,20 +135,10 @@ async function ask(
   criteria: Record<string, string>,
   instructions: string,
 ): Promise<string> {
-  const account = process.env.CLOUDFLARE_ACCOUNT_ID
-  const token = process.env.CF_AI_GATEWAY_E2E_TOKEN
-  const gateway = process.env.CF_AI_GATEWAY_E2E_ID ?? "default"
-  if (!account || !token)
-    throw new AgentError(
-      "MODEL_UNAVAILABLE",
-      "Set CLOUDFLARE_ACCOUNT_ID and CF_AI_GATEWAY_E2E_TOKEN for live Clef steps.",
-    )
-  if (!/^[a-f0-9]{32}$/i.test(account) || !/^[a-zA-Z0-9_-]+$/.test(gateway))
-    throw new AgentError("MODEL_UNAVAILABLE", "Invalid Cloudflare account or gateway identifier.")
   const pixels = observation.pixels
-  const images = pixels ? [clefImage(pixels)] : []
-  const body = JSON.stringify({
-    model: "clef",
+  return postClef({
+    signal: ctx.signal,
+    timeoutMs: () => Math.max(1, Math.min(120_000, ctx.budgets.remainingMs())),
     state: {
       goal: ctx.step.instruction,
       context: ctx.agentContext,
@@ -165,128 +149,24 @@ async function ask(
       pixelsWithheld: observation.pixelsWithheld,
     },
     questions: { decision: { type: "choice", instructions, criteria } },
-    ...(images.length ? { images } : {}),
-  })
-  // Opt in even when the Gateway's default caching is disabled. Scope the opaque
-  // key to the credential, account, endpoint and complete identical request.
-  const cacheKey = `e2e-clef-${createHmac("sha256", token)
-    .update(JSON.stringify([account, gateway, "@cf/cloudflare/clef", body]))
-    .digest("hex")}`
-  const bypass = process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1"
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (usageBudget.calls >= ctx.budgets.maxModelCalls)
-      throw new AgentError(
-        "STEP_BUDGET_EXHAUSTED",
-        "Clef reached the model-call budget before another request.",
-      )
-    usageBudget.calls += 1
-    const started = performance.now()
-    const startedAt = new Date().toISOString()
-    let usage: ClefResult["usage"] | undefined
-    let retryDelay: number | undefined
-    let cache: AiUsage["cache"] = bypass ? "bypass" : "unknown"
-    let httpStatus: number | null = null
-    let status: AiUsage["status"] = "error"
-    try {
-      const response = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/@cf/cloudflare/clef`,
-        {
-          method: "POST",
-          signal: AbortSignal.any([
-            ctx.signal,
-            AbortSignal.timeout(Math.max(1, Math.min(120_000, ctx.budgets.remainingMs()))),
-          ]),
-          headers: {
-            authorization: `Bearer ${token}`,
-            "content-type": "application/json",
-            "cf-aig-gateway-id": gateway,
-            "cf-aig-authorization": `Bearer ${token}`,
-            "cf-aig-cache-ttl": "3600",
-            "cf-aig-cache-key": cacheKey,
-            "cf-aig-skip-cache": bypass ? "true" : "false",
-          },
-          body,
-        },
-      )
-      httpStatus = response.status
-      cache = gatewayCache(response.headers, bypass)
-      if (!response.ok) {
-        if (attempt < 2 && (response.status === 429 || response.status >= 500)) {
-          const seconds = Number(response.headers.get("retry-after"))
-          retryDelay =
-            Number.isFinite(seconds) && seconds > 0
-              ? Math.min(seconds * 1000, 5000)
-              : 500 * 2 ** attempt
-          await response.body?.cancel()
-        } else {
-          throw new AgentError(
-            "MODEL_PROVIDER_FAILED",
-            `Cloudflare Clef request failed (HTTP ${response.status}).`,
-          )
-        }
-      } else {
-        const envelope = (await response.json()) as { success?: boolean; result?: ClefResult }
-        if (envelope.success === false || !envelope.result)
-          throw new AgentError("MODEL_OUTPUT_INVALID", "Cloudflare Clef returned no result.")
-        const answer = envelope.result.answers?.decision
-        usage = envelope.result.usage
-        if (
-          !answer ||
-          answer.type !== "choice" ||
-          !Object.hasOwn(criteria, answer.choice) ||
-          !answer.probabilities ||
-          !Number.isFinite(answer.confidence) ||
-          answer.confidence < 0 ||
-          answer.confidence > 1
-        ) {
-          throw new AgentError("MODEL_OUTPUT_INVALID", "Clef returned an invalid decision.")
-        }
-        const probabilities = Object.values(answer.probabilities)
-        if (
-          Object.keys(criteria).some((key) => !Object.hasOwn(answer.probabilities, key)) ||
-          probabilities.some((value) => !Number.isFinite(value) || value < 0 || value > 1) ||
-          Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) > 0.02
-        ) {
-          throw new AgentError(
-            "MODEL_OUTPUT_INVALID",
-            "Clef returned an invalid probability distribution.",
-          )
-        }
-        status = "success"
-        return answer.choice
-      }
-    } catch (error) {
-      ctx.signal.throwIfAborted()
-      if (error instanceof AgentError) throw error
-      if (error instanceof TypeError && attempt < 2) retryDelay = 500 * 2 ** attempt
-      else
+    ...(pixels ? { images: [clefImage(pixels)] } : {}),
+    source: "executor",
+    prepare: () => {
+      if (usageBudget.calls >= ctx.budgets.maxModelCalls)
         throw new AgentError(
-          "MODEL_PROVIDER_FAILED",
-          "The Cloudflare Clef request failed or exceeded its deadline.",
+          "STEP_BUDGET_EXHAUSTED",
+          "Clef reached the model-call budget before another request.",
         )
-    } finally {
+      usageBudget.calls += 1
+    },
+    onAttempt: ({ usage, cache, startedAt, durationMs }) => {
       const inputTokens = measuredTokens(usage?.input_tokens)
       const outputTokens = measuredTokens(usage?.output_tokens)
-      recordAiUsage({
-        schemaVersion: 1,
-        source: "executor",
-        model: "@cf/cloudflare/clef",
-        cache,
-        cacheLayer: "gateway",
-        requests: 1,
-        operations: 0,
-        inputTokens,
-        outputTokens,
-        cachedInputTokens: null,
-        status,
-        httpStatus,
-        startedAt,
-      })
       ctx.budgets.recordModelCall({
         provider: "cloudflare-ai-gateway",
-        modelId: "@cf/cloudflare/clef",
+        modelId: CLEF_MODEL_ID,
         startedAt,
-        durationMs: performance.now() - started,
+        durationMs,
         ...(inputTokens !== null ? { inputTokens } : {}),
         ...(outputTokens !== null ? { outputTokens } : {}),
         ...(cache === "hit"
@@ -295,26 +175,34 @@ async function ask(
             ? { estimatedCostUsd: (inputTokens * 0.24) / 1_000_000 }
             : {}),
       })
-    }
-    if (retryDelay !== undefined) {
-      await new Promise<void>((resolve, reject) => {
-        ctx.signal.throwIfAborted()
-        const abort = () => {
-          clearTimeout(timer)
-          reject(ctx.signal.reason)
-        }
-        const timer = setTimeout(() => {
-          ctx.signal.removeEventListener("abort", abort)
-          resolve()
-        }, retryDelay)
-        ctx.signal.addEventListener("abort", abort, { once: true })
-      })
-    }
-  }
-  throw new AgentError(
-    "MODEL_PROVIDER_FAILED",
-    "Cloudflare Clef exhausted its bounded transport retries.",
-  )
+    },
+    accept: (answers) => {
+      const answer = answers.decision as Answer | undefined
+      if (
+        !answer ||
+        answer.type !== "choice" ||
+        !Object.hasOwn(criteria, answer.choice) ||
+        !answer.probabilities ||
+        !Number.isFinite(answer.confidence) ||
+        answer.confidence < 0 ||
+        answer.confidence > 1
+      ) {
+        throw new AgentError("MODEL_OUTPUT_INVALID", "Clef returned an invalid decision.")
+      }
+      const probabilities = Object.values(answer.probabilities)
+      if (
+        Object.keys(criteria).some((key) => !Object.hasOwn(answer.probabilities, key)) ||
+        probabilities.some((value) => !Number.isFinite(value) || value < 0 || value > 1) ||
+        Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) > 0.02
+      ) {
+        throw new AgentError(
+          "MODEL_OUTPUT_INVALID",
+          "Clef returned an invalid probability distribution.",
+        )
+      }
+      return answer.choice
+    },
+  })
 }
 
 function actionChoices(ctx: StepExecutorContext, root: ExecutorNode): Map<string, Choice> {
