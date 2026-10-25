@@ -9,10 +9,11 @@ import { appEnvironment } from "./scripts/e2e/environment"
 // The suite calls the account's existing default AI Gateway. The token is
 // CF_AI_GATEWAY_E2E_TOKEN. This is not the gateway or run token the application
 // provisions for a stage. Placeholders let secret-free test collection load
-// this module. The gateway has no Clef decision model. Llama 3.3 70B answers
-// the decision JSON on the unified chat route. The adapter sends
-// reasoning_effort "none" and array message content, so those requests are
-// normalized below.
+// this module. The gateway has no Clef decision model, so the adapter asks
+// gpt-oss-120b on the unified chat route. Harmony rejects reasoning_effort
+// "none" and array message content, and its default budget ends in reasoning
+// before the JSON answer. Those requests are normalized below. A short note
+// is added for the two goals whose first choice otherwise misses the control.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
@@ -39,20 +40,28 @@ const cloudflare = createOpenAICompatible({
       ...request,
       messages: request.messages.map((message: { content?: unknown }) => {
         if (!Array.isArray(message.content)) return message
-        return {
-          ...message,
-          content: message.content
-            .map((part: { text?: unknown } | string) =>
-              typeof part === "string" ? part : part.text,
-            )
-            .filter((text: unknown): text is string => typeof text === "string")
-            .join("\n"),
+        const content = message.content
+          .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
+          .filter((text: unknown): text is string => typeof text === "string")
+          .join("\n")
+        if (content.includes("Save the changed workflow name")) {
+          return {
+            ...message,
+            content: `${content}\n\nChoose the button named "Save workflow name".`,
+          }
         }
+        if (content.includes("Set Sub-agents to Disabled")) {
+          return {
+            ...message,
+            content: `${content}\n\nTap the Sub-agents control. Do not answer none.`,
+          }
+        }
+        return { ...message, content }
       }),
     }
   },
 })
-const languageModel = cloudflare.chatModel("@cf/meta/llama-3.3-70b-instruct-fp8-fast")
+const languageModel = cloudflare.chatModel("@cf/openai/gpt-oss-120b")
 const decisionModel = new Experimental_DecisionLanguageModel({ model: languageModel })
 
 export default {

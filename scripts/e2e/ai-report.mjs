@@ -8,7 +8,6 @@ const directory = ".e2e/ai-usage"
 const sources = new Set(["executor", "filter", "application", "stagehand"])
 const models = new Map([
   ["@cf/cloudflare/clef", { input: 0.24, output: 0 }],
-  ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", { input: 0.293, output: 2.253 }],
   ["@cf/openai/gpt-oss-120b", { input: 0.35, output: 0.75 }],
   ["@cf/openai/gpt-oss-20b", { input: 0.2, output: 0.3 }],
   ["google/gemini-3-flash-preview", { input: 0.5, output: 3, cached: 0.05 }],
@@ -456,7 +455,7 @@ async function summarize() {
     `Estimated inference ${rows.some((row) => row.costStatus === "upper-bound") ? "upper bound" : "total"}: ${money(summary.totals.estimatedCostUsd)}; confirmed priced subtotal: ${money(summary.totals.knownCostUsd)}; uncertain priced upper-bound subtotal: ${money(summary.totals.uncertainCostUsd)}.`,
     "",
     "Token counts are provider-reported response usage; a cached response may repeat original token counts, so these are not billable token totals. Estimates are not a provider invoice. Full response-cache hits are priced at zero inference; unknown cache status is an upper-bound estimate. Missing usage or an unpriced model stays unavailable, never inferred as zero. Stagehand operations are not exact provider request counts. Gemini output includes thinking; prompt-cache discounts apply only when reported. Infrastructure, browser hosting and gateway fees are excluded.",
-    "Rates checked 2026-10-05: [Clef](https://developers.cloudflare.com/workers-ai/models/clef/), [GPT OSS 120B](https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/), [GPT OSS 20B](https://developers.cloudflare.com/workers-ai/models/gpt-oss-20b/), [Gemini](https://ai.google.dev/gemini-api/docs/pricing). [Llama 3.3 70B](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/) checked 2026-10-25.",
+    "Rates checked 2026-10-05: [Clef](https://developers.cloudflare.com/workers-ai/models/clef/), [GPT OSS 120B](https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/), [GPT OSS 20B](https://developers.cloudflare.com/workers-ai/models/gpt-oss-20b/), [Gemini](https://ai.google.dev/gemini-api/docs/pricing).",
     "",
   ].join("\n")
   await mkdir(directory, { recursive: true, mode: 0o700 })
