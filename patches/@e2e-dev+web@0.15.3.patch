@@ -1,7 +1,7 @@
 diff --git a/dist/engine.js b/dist/engine.js
 --- a/dist/engine.js
 +++ b/dist/engine.js
-@@ -40,6 +40,9 @@
+@@ -41,6 +41,9 @@
      if (options.connect !== undefined && typeof options.browser === 'string' && options.browser !== 'chromium') {
          throw new ConfigurationError('INVALID_CONFIG', `web({ connect }) requires the chromium browser; CDP attach is chromium-only, got "${options.browser}"`);
      }
@@ -11,7 +11,7 @@ diff --git a/dist/engine.js b/dist/engine.js
      if (options.headers !== undefined)
          validateHeaders(options.headers);
      if (options.basicAuth !== undefined)
-@@ -128,6 +131,7 @@
+@@ -125,6 +128,7 @@
  const WEB_OPTION_KEYS = Object.keys({
      browser: true,
      viewport: true,
@@ -19,7 +19,7 @@ diff --git a/dist/engine.js b/dist/engine.js
      screencast: true,
      connect: true,
      headers: true,
-@@ -139,7 +143,7 @@
+@@ -138,7 +142,7 @@
      initScripts: true,
  });
  /** The options applied when the engine creates a browser context, which a persistent context never is. */
@@ -31,16 +31,16 @@ diff --git a/dist/engine.js b/dist/engine.js
 diff --git a/dist/surface.d.ts b/dist/surface.d.ts
 --- a/dist/surface.d.ts
 +++ b/dist/surface.d.ts
-@@ -70,6 +70,8 @@
-  * the target's `app`.
-  */
- export interface WebOptions {
+@@ -86,6 +86,8 @@
+      * `browser.setViewport` still fixes one for the rest of the attempt.
+      */
+     readonly viewport?: ViewportSize | null;
 +    /** Native permissions granted on each newly created browser context. Browser support varies. */
 +    readonly permissions?: readonly string[];
      /**
-      * Browser to launch, `chromium` by default. A `BrowserProvider` leases
-      * hosted browsers instead: one per worker slot at `prepare`, or one per
-@@ -171,6 +173,7 @@
+      * How the engine's own screencast records an attempt that records video.
+      * A browser provider that records (`BrowserProvider.record`) records in
+@@ -187,6 +189,7 @@
      private session;
      private readonly usedContexts;
      private readonly viewport;
@@ -51,7 +51,7 @@ diff --git a/dist/surface.d.ts b/dist/surface.d.ts
 diff --git a/dist/surface.js b/dist/surface.js
 --- a/dist/surface.js
 +++ b/dist/surface.js
-@@ -57,6 +57,7 @@
+@@ -59,6 +59,7 @@
      session;
      usedContexts = new Set();
      viewport;
@@ -59,7 +59,7 @@ diff --git a/dist/surface.js b/dist/surface.js
      screencast;
      /** Injected request headers, names lowercased so they replace the browser's own of the same name. */
      headers;
-@@ -85,6 +86,7 @@
+@@ -93,6 +94,7 @@
          this.leases = typeof options.browser === 'object' && options.browser !== null ? new LeasedBrowsers(options.browser) : undefined;
          this.connect = options.connect;
          this.viewport = options.viewport === undefined ? DEFAULT_VIEWPORT : options.viewport;
@@ -67,7 +67,7 @@ diff --git a/dist/surface.js b/dist/surface.js
          this.screencast = options.screencast ?? {};
          this.headers = options.headers === undefined ? undefined : lowercaseNames(options.headers);
          this.basicAuth = options.basicAuth;
-@@ -250,6 +252,7 @@
+@@ -261,6 +263,7 @@
              contextOptions: {
                  viewport: this.viewport,
                  acceptDownloads: true,

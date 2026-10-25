@@ -1,8 +1,10 @@
 import type { E2EConfig } from "e2e"
 import { web } from "@e2e-dev/web"
 import { github } from "@e2e-dev/github"
+import { decisionFilter } from "@e2e-dev/decision"
 import { appEnvironment } from "./scripts/e2e/environment"
 import { createClefExecutor } from "./scripts/e2e/cf-clef-executor"
+import { clefDecisionModel } from "./scripts/e2e/clef-decision-model"
 
 export default {
   projectId: "solzero",
@@ -57,6 +59,7 @@ export default {
     fixture: () => process.env.E2E_FIXTURE_SECRET ?? "disposable-e2e-value",
     ...(process.env.E2E_BYOK_API_KEY ? { byok: process.env.E2E_BYOK_API_KEY } : {}),
   },
+  filters: [decisionFilter({ model: clefDecisionModel() })],
   workers: 1,
   retries: 0,
   timeout: 180_000,
