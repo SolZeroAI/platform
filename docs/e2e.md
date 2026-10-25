@@ -37,7 +37,7 @@ secrets; real credentials still come from the environment.
 After stopping the local test stack, run `test:e2e:cleanup` with the same credential file
 and profile. It validates the run's local Alchemy state, then destroys that state and
 removes the run directory, labelled containers, and images. It refuses an unexpected
-remote resource. The launcher does not create an AI Gateway or an account API token.
+remote resource. `config/e2e-dev.config.jsonc` sets `aiProviders.cloudflareAiGateway.localBinding`, so local `alchemy dev` binds Workers AI and does not provision an account AI Gateway or run token. Any developer can set the same field.
 When `CLOUDFLARE_API_TOKEN` is unset, cleanup does not call the Cloudflare API. Replay
 cache and `.e2e/decision-cache` remain available. Stopping dev alone does not remove
 the run directory.
@@ -127,20 +127,17 @@ For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init`
 the tests and `nub exec tsx scripts/e2e/ai-report.mjs summarize` afterward. These commands
 use the pinned Node runtime and do not make model calls.
 
-The isolated launcher enables `E2E_AI_USAGE=1`. The API binding defaults to disabled and
-also requires the isolated development Worker name. Application records contain only an
-allowlisted model, request count, gateway cache result, status, token counts and start
-time. They exclude request content, credentials, URLs and identifiers. Accounting does
-not add inference calls, retries, or change provider options. Set `E2E_AI_USAGE=0` to
-disable application accounting for a local test run.
+The isolated launcher enables `E2E_AI_USAGE=1` for the test runner's Clef ledger in
+`scripts/e2e`. The application does not read that variable and does not emit usage
+records. Runner records contain only an allowlisted model, request count, gateway or
+disk cache result, status, token counts and start time. They exclude request content,
+credentials, URLs and identifiers. Accounting does not add inference calls, retries, or
+change provider options. Set `E2E_AI_USAGE=0` to disable the runner ledger for a local
+test run.
 
-OpenCode, Codex and the bounded native-provider probe reuse the existing buffered
-response parser for measured usage. Isolate binding JSON is observed before the SDK's
-fallback zeros. Owned local Isolate calls use the gateway REST route, so their cache
-header is visible. Streaming bindings do not expose HTTP cache headers or reliable usage
-presence at that boundary; these measurements remain unknown. Missing token counts or
-cache status never imply zero cost. Provider prompt-cache tokens are separate from an
-AI Gateway response-cache hit, e2e action replay and a restored GitHub Actions cache.
+Missing token counts or cache status never imply zero cost. Provider prompt-cache
+tokens are separate from an AI Gateway response-cache hit, e2e action replay and a
+restored GitHub Actions cache.
 
 CI initializes and summarizes usage around the test run and uploads only sanitized
 `summary.json` and `summary.md` from `.e2e/ai-usage`. Raw logs and accounting ledgers are

@@ -488,7 +488,6 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
   // token stays on the test runner for Clef and is not copied into this child.
   const env: NodeJS.ProcessEnv = {
     ...appEnvironment,
-    S0_E2E_RUN_ID: run.runId,
     S0_E2E_APP_CHILD: "1",
   }
   delete env.CLOUDFLARE_API_TOKEN

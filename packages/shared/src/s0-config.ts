@@ -105,6 +105,8 @@ export type S0LitellmConfig = typeof S0LitellmConfigSchema.Type
 // oxlint-disable-next-line effect/prefer-schema-class -- deployment-managed AI Gateway configuration is a plain JSON DTO
 export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
+  // A local binding lets any alchemy dev deployment skip account gateway and run-token provisioning.
+  localBinding: Schema.optional(Schema.Boolean),
   cacheTtl: Schema.NullOr(Schema.Number),
   collectLogs: Schema.Boolean,
   defaultModel: Schema.String,

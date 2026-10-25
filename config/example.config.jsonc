@@ -99,6 +99,7 @@
   // Remove an optional runtime-configurable domain to manage it from Admin instead.
   "aiProviders": {
     // Cloudflare AI Gateway is deployment-managed and available to Isolate and compatible container runtimes.
+    // Set "localBinding": true to bind Workers AI locally without provisioning an account gateway or run token.
     "cloudflareAiGateway": {
       "enabled": true,
       "cacheTtl": null,

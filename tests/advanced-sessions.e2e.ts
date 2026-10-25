@@ -85,7 +85,7 @@ test(
 
 test(
   "an attachment-bearing prompt can be cancelled without leaving processing",
-  { session: "admin", tags: ["runtime"] },
+  { session: "admin", tags: ["runtime"], skip: workersAiDeploySkip() },
   async ({ app, browser, screen }) => {
     const title = uniqueName("e2e-cancel")
     const { sessionId } = await api<{ sessionId: string }>(browser, "/sessions", "POST", {

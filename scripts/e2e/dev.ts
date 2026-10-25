@@ -40,7 +40,7 @@ try {
         `\nLABEL dev.solzero.e2e.run="${run.runId}"\n`,
       )
     }
-    appEnvironment.S0_E2E_CONTAINER_CONTEXTS = contexts
+    appEnvironment.S0_LOCAL_CONTAINER_CONTEXTS = contexts
   }
 
   // The same Alchemy CLI/stack/watch runs in an owned directory: simulator data never shares dev storage.

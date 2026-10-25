@@ -261,6 +261,7 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
+            "localBinding": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] },
             "cacheTtl": {
               "anyOf": [
                 {
