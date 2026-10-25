@@ -61,7 +61,7 @@ const cloudflare = createOpenAICompatible({
           },
           {
             mark: "Goal of this step: Set Sub-agents to Disabled and click Update tools.",
-            text: 'Choose the combobox named "Sub-agents" while it shows Enabled. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.',
+            text: 'The next target is the combobox that shows Enabled. Its name is Sub-agents. Choose it even though this goal has more parts. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.',
           },
           {
             mark: "Task of this step: Set Sub-agents to Disabled and click Update tools.",
@@ -70,7 +70,7 @@ const cloudflare = createOpenAICompatible({
           },
           {
             mark: "Goal of this step: Open the Agent tools editor",
-            text: 'Choose the button named "Tools", then the button named "Edit". When the Agent tools dialog is open, choose done.',
+            text: 'Choose the button named "Tools". When the menu is open, choose the button named "Edit". When the Agent tools dialog is open, choose done. Choose a button, not a textbox.',
           },
           {
             mark: "Task of this step: Open the Agent tools editor",
