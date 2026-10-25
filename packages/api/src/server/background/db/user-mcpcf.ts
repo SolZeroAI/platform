@@ -11,7 +11,7 @@ import {
   type AppSchema,
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
-import { d1Error, UserMcpcfMigrationError, type D1Error } from "./errors"
+import { d1Error, getErrorMessages, UserMcpcfMigrationError, type D1Error } from "./errors"
 
 export interface UserMcpcfServerConfigRecord {
   userId: string
@@ -66,39 +66,6 @@ function rowToConfig(row: UserMcpcfServerConfigRow): UserMcpcfServerConfigRecord
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
-}
-
-function errorMessageHead(record: Record<string, unknown>): string[] {
-  return Option.match(
-    Option.fromNullishOr(record.message).pipe(
-      Option.filter((message): message is string => typeof message === "string"),
-    ),
-    {
-      onNone: () => [] as string[],
-      onSome: (message) => [message],
-    },
-  )
-}
-
-function collectErrorChainMessages(current: unknown): string[] {
-  return Option.match(
-    Option.fromNullishOr(current).pipe(Option.filter((value) => typeof value === "object")),
-    {
-      onNone: () => [],
-      onSome: (value) => [
-        ...errorMessageHead(value as Record<string, unknown>),
-        ...collectErrorChainMessages((value as Record<string, unknown>).cause),
-      ],
-    },
-  )
-}
-
-function getErrorMessages(errorValue: unknown): string[] {
-  const chainMessages = collectErrorChainMessages(errorValue)
-  return Match.value(typeof errorValue === "string").pipe(
-    Match.when(true, () => [...chainMessages, errorValue as string]),
-    Match.orElse(() => chainMessages),
-  )
 }
 
 function isMissingUserMcpcfConfigTableError(errorValue: unknown): boolean {
