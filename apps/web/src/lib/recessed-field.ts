@@ -1,13 +1,15 @@
 /**
  * Recessed form fields.
  *
- * A "recessed" field uses the `bg-kumo-recessed` surface (#262626) so it reads as inset on an
- * elevated card surface (`bg-kumo-base` / `bg-kumo-elevated`, #2d2d2d). Reach for these whenever
+ * A "recessed" field uses the `bg-kumo-recessed` surface so it reads as inset on a card.
+ * Dark mode paints recessed `#262626`, base `#2d2d2d`, and elevated `#1f1f1f`. Light mode
+ * paints recessed `#ebebeb`, base `#ffffff`, and elevated `#f6f6f6`. Reach for these whenever
  * an input, select, textarea, or Kumo `InputGroup` sits on top of a card.
  *
  * Why overrides are needed at all:
- * - `app.css` sets a global `input, select, textarea { background: #2d2d2d }` rule.
- * - Kumo's `InputGroup` defaults its surface to `bg-kumo-control` (#2d2d2d).
+ * - `app.css` sets mode-specific `input, select, textarea` backgrounds
+ *   (`#2d2d2d` in dark mode, `#ffffff` in light mode).
+ * - Kumo's `InputGroup` defaults its surface to `bg-kumo-control`.
  *
  * The remaining helpers use Tailwind v4 important (suffix `!`, not prefix) to override Kumo's own
  * utilities.
