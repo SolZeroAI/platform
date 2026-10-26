@@ -9,6 +9,11 @@ on:
     branches:
       - master
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 permissions:
   contents: read
@@ -24,7 +29,8 @@ jobs:
       github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/agent-container-images.yml
     cache-mode: read
     permissions:
@@ -38,7 +44,8 @@ jobs:
       github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     # The release environment is limited to master and holds the app id and private key.
@@ -118,7 +125,8 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       needs.release.outputs.published == 'true' &&
       needs.images.result == 'success' &&
-      needs.release.result == 'success'
+      needs.release.result == 'success' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     environment: alchemy-new
@@ -171,7 +179,8 @@ jobs:
     name: Dry-run alchemy.new registry package
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     permissions:

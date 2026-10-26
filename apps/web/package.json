@@ -64,7 +64,7 @@
     "@types/semver": "7.8.0",
     "semver": "7.8.5",
     "takumi-js": "2.13.7",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "tsrs": "0.20.0-ts7.1.0-beta",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
