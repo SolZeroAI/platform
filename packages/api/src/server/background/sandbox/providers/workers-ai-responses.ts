@@ -1,7 +1,10 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- This HTTP protocol adapter validates untrusted provider JSON at the container fetch boundary. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- This HTTP protocol adapter validates untrusted provider JSON at the container fetch boundary. */
+import * as Match from "effect/Match"
 
 type JsonObject = Record<string, unknown>
+
 type FunctionNames = Map<string, { name: string; namespace: string }>
+
 function object(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -14,16 +17,19 @@ export async function prepareWorkersAiResponses(request: Request): Promise<{
 }> {
   const unchanged = { request, streaming: false }
   const url = new URL(request.url)
+
   if (
     url.hostname !== "api.cloudflare.com" ||
     !/^\/client\/v4\/accounts\/[^/]+\/ai\/v1\/responses$/.test(url.pathname) ||
     request.method !== "POST"
   )
     return unchanged
+
   const body: unknown = await request
     .clone()
     .json()
     .catch(() => undefined)
+
   if (
     !object(body) ||
     typeof body.model !== "string" ||
@@ -38,6 +44,7 @@ export async function prepareWorkersAiResponses(request: Request): Promise<{
   const input = responsesToChat(body, functionNames)
   url.pathname = url.pathname.replace(/\/v1\/responses$/, `/run/${body.model}`)
   const { model: _model, ...nativeInput } = input
+
   return {
     request: new Request(url, {
       method: request.method,
@@ -55,30 +62,39 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames): JsonOb
     throw new Error("Workers AI Chat requires full history; previous_response_id is unsupported")
   const messages: JsonObject[] = []
   const callNames = new Map<unknown, unknown>()
+
   if (typeof body.instructions === "string")
     messages.push({ role: "system", content: body.instructions })
+
   const input =
     typeof body.input === "string" ? [{ role: "user", content: body.input }] : body.input
+
   if (!Array.isArray(input))
     throw new Error("Workers AI GPT-OSS requires explicit Responses input history")
+
   for (const item of input) {
     if (!object(item)) throw new Error("Workers AI does not support Responses input")
+
     if (typeof item.role === "string") {
       const content = Array.isArray(item.content)
         ? item.content.map((part: unknown) => {
             if (!object(part)) throw new Error("Workers AI does not support Responses content")
+
             if (part.type === "input_text" || part.type === "output_text")
               return { type: "text", text: part.text }
+
             if (part.type === "input_image")
               return { type: "image_url", image_url: { url: part.image_url, detail: part.detail } }
             throw new Error(`Workers AI does not support Responses content: ${String(part.type)}`)
           })
         : item.content
+
       const text =
         Array.isArray(content) &&
         content.every((part) => part.type === "text" && typeof part.text === "string")
           ? content.map((part) => part.text).join("")
           : content
+
       messages.push({ role: item.role === "developer" ? "system" : item.role, content: text })
     } else if (item.type === "function_call") {
       const call = {
@@ -89,8 +105,10 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames): JsonOb
           arguments: item.arguments,
         },
       }
+
       callNames.set(item.call_id, call.function.name)
       const previous = messages.at(-1)
+
       if (previous?.role === "assistant" && Array.isArray(previous.tool_calls))
         previous.tool_calls.push(call)
       else messages.push({ role: "assistant", content: "", tool_calls: [call] })
@@ -107,14 +125,17 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames): JsonOb
         .filter(object)
         .map((part) => (typeof part.text === "string" ? part.text : ""))
         .join("\n")
+
       if (summary)
         throw new Error(
           "Workers AI cannot replay public Responses reasoning summaries through Chat",
         )
+
       if (item.encrypted_content)
         throw new Error("Workers AI cannot replay encrypted Responses reasoning")
     } else throw new Error(`Workers AI does not support Responses item: ${String(item.type)}`)
   }
+
   const tools = Array.isArray(body.tools)
     ? body.tools.flatMap((tool: unknown) => {
         if (
@@ -124,6 +145,7 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames): JsonOb
           Array.isArray(tool.tools)
         ) {
           const namespace = tool.name
+
           return tool.tools.map((fn: unknown) => {
             if (!object(fn) || fn.type !== "function" || typeof fn.name !== "string")
               throw new Error(
@@ -132,55 +154,65 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames): JsonOb
             const qualified = `${namespace}__${fn.name}`
             functionNames.set(qualified, { name: fn.name, namespace })
             const { type: _type, ...definition } = fn
+
             return { type: "function", function: { ...definition, name: qualified } }
           })
         }
+
         if (!object(tool) || tool.type !== "function" || typeof tool.name !== "string")
           throw new Error(
             `Workers AI GPT-OSS does not support Responses tool type: ${object(tool) ? String(tool.type) : "invalid"}`,
           )
         const { type: _type, ...fn } = tool
+
         return [{ type: "function", function: fn }]
       })
     : undefined
+
   const names = tools?.map((tool) => tool.function.name)
+
   if (names && new Set(names).size !== names.length)
     throw new Error("Workers AI function names collide across namespaces")
-  return {
-    model: body.model,
-    messages,
-    stream: false,
-    ...(tools ? { tools } : {}),
-    ...(body.tool_choice
-      ? {
-          tool_choice:
-            object(body.tool_choice) && body.tool_choice.type === "function"
-              ? {
-                  type: "function",
-                  function: {
-                    name:
-                      typeof body.tool_choice.namespace === "string"
-                        ? `${body.tool_choice.namespace}__${body.tool_choice.name}`
-                        : body.tool_choice.name,
-                  },
-                }
-              : body.tool_choice,
-        }
-      : {}),
-    // Native default is 256, too small for coding-tool JSON and a final response.
-    max_tokens: typeof body.max_output_tokens === "number" ? body.max_output_tokens : 4096,
-    ...(typeof body.temperature === "number" ? { temperature: body.temperature } : {}),
-    ...(typeof body.top_p === "number" ? { top_p: body.top_p } : {}),
-    ...(typeof body.parallel_tool_calls === "boolean"
-      ? { parallel_tool_calls: body.parallel_tool_calls }
-      : {}),
-    ...(object(body.reasoning) && typeof body.reasoning.effort === "string"
-      ? { reasoning_effort: body.reasoning.effort }
-      : {}),
+
+  let chat: JsonObject = {}
+  chat.model = body.model
+  chat.messages = messages
+  chat.stream = false
+
+  if (tools) chat.tools = tools
+
+  if (body.tool_choice) {
+    chat.tool_choice =
+      object(body.tool_choice) && body.tool_choice.type === "function"
+        ? {
+            type: "function",
+            function: {
+              name:
+                typeof body.tool_choice.namespace === "string"
+                  ? `${body.tool_choice.namespace}__${body.tool_choice.name}`
+                  : body.tool_choice.name,
+            },
+          }
+        : body.tool_choice
   }
+  // Native default is 256, too small for coding-tool JSON and a final response.
+
+  chat.max_tokens = typeof body.max_output_tokens === "number" ? body.max_output_tokens : 4096
+
+  if (typeof body.temperature === "number") chat.temperature = body.temperature
+
+  if (typeof body.top_p === "number") chat.top_p = body.top_p
+
+  if (typeof body.parallel_tool_calls === "boolean")
+    chat.parallel_tool_calls = body.parallel_tool_calls
+
+  if (object(body.reasoning) && typeof body.reasoning.effort === "string")
+    chat.reasoning_effort = body.reasoning.effort
+
+  return chat
 }
 
-function chatToResponses(value: unknown, functionNames: FunctionNames): unknown {
+function chatToResponses(value: unknown, functionNames: FunctionNames) {
   if (
     !object(value) ||
     !Array.isArray(value.choices) ||
@@ -189,8 +221,12 @@ function chatToResponses(value: unknown, functionNames: FunctionNames): unknown 
   )
     return value
   const choice = value.choices[0]
-  const message = choice.message as JsonObject
+
+  const message =
+    /* SAFETY: choice.message has the JsonObject shape established by the check or writer around this read. */ choice.message as JsonObject
+
   const output: JsonObject[] = []
+
   // Provider-private reasoning is not a public Responses summary.
   if (typeof message.content === "string" && message.content.length)
     output.push({
@@ -200,6 +236,7 @@ function chatToResponses(value: unknown, functionNames: FunctionNames): unknown 
       status: "completed",
       content: [{ type: "output_text", text: message.content, annotations: [] }],
     })
+
   if (Array.isArray(message.tool_calls))
     for (const call of message.tool_calls) {
       if (
@@ -210,21 +247,22 @@ function chatToResponses(value: unknown, functionNames: FunctionNames): unknown 
         typeof call.function.arguments !== "string"
       )
         throw new Error("Invalid Workers AI function response")
-      output.push({
-        id: call.id,
-        call_id: call.id,
-        type: "function_call",
-        status: "completed",
-        name:
-          typeof call.function.name === "string"
-            ? (functionNames.get(call.function.name)?.name ?? call.function.name)
-            : call.function.name,
-        ...(typeof call.function.name === "string" && functionNames.has(call.function.name)
-          ? { namespace: functionNames.get(call.function.name)!.namespace }
-          : {}),
-        arguments: call.function.arguments,
-      })
+      let callOutput: JsonObject = {}
+      callOutput.id = call.id
+      callOutput.call_id = call.id
+      callOutput.type = "function_call"
+      callOutput.status = "completed"
+      callOutput.name =
+        typeof call.function.name === "string"
+          ? (functionNames.get(call.function.name)?.name ?? call.function.name)
+          : call.function.name
+
+      if (typeof call.function.name === "string" && functionNames.has(call.function.name))
+        callOutput.namespace = functionNames.get(call.function.name)!.namespace
+      callOutput.arguments = call.function.arguments
+      output.push(callOutput)
     }
+
   const usage = object(value.usage)
     ? {
         input_tokens: value.usage.prompt_tokens,
@@ -242,6 +280,7 @@ function chatToResponses(value: unknown, functionNames: FunctionNames): unknown 
         },
       }
     : null
+
   return {
     id: value.id,
     object: "response",
@@ -274,25 +313,31 @@ export async function streamWorkersAiResponse(
   functionNames: FunctionNames = new Map(),
 ): Promise<Response> {
   if (!response.ok) return response
+
   const envelope: unknown = await response
     .clone()
     .json()
     .catch(() => undefined)
+
   const value = chatToResponses(
     object(envelope) && object(envelope.result) ? envelope.result : envelope,
     functionNames,
   )
+
   if (!object(value) || typeof value.id !== "string" || !Array.isArray(value.output))
     return response
   const events: string[] = []
   let sequence = 0
+
   const emit = (type: string, fields: JsonObject) => {
     events.push(
       `event: ${type}\ndata: ${JSON.stringify({ type, sequence_number: sequence++, ...fields })}\n\n`,
     )
   }
+
   emit("response.created", { response: { ...value, status: "in_progress", output: [] } })
   emit("response.in_progress", { response: { ...value, status: "in_progress", output: [] } })
+
   for (const [outputIndex, item] of value.output.entries()) {
     if (!object(item)) continue
     const common = { output_index: outputIndex, item_id: item.id }
@@ -304,6 +349,7 @@ export async function streamWorkersAiResponse(
         ...(item.type === "function_call" ? { arguments: "" } : { content: [] }),
       },
     })
+
     if (item.type === "function_call" && typeof item.arguments === "string") {
       emit("response.function_call_arguments.delta", { ...common, delta: item.arguments })
       emit("response.function_call_arguments.done", {
@@ -312,6 +358,7 @@ export async function streamWorkersAiResponse(
         name: item.name,
       })
     }
+
     if (item.type === "reasoning" && Array.isArray(item.summary))
       for (const [summaryIndex, part] of item.summary.entries()) {
         if (!object(part) || typeof part.text !== "string") continue
@@ -321,34 +368,44 @@ export async function streamWorkersAiResponse(
         emit("response.reasoning_summary_text.done", { ...summary, text: part.text })
         emit("response.reasoning_summary_part.done", { ...summary, part })
       }
+
     if (Array.isArray(item.content)) {
       for (const [contentIndex, part] of item.content.entries()) {
         if (!object(part)) continue
         const content = { ...common, content_index: contentIndex }
+        let addedPart: JsonObject = {}
+        Object.assign(addedPart, part)
+
+        if (part.type === "output_text") addedPart.text = ""
         emit("response.content_part.added", {
           ...content,
-          part: { ...part, ...(part.type === "output_text" ? { text: "" } : {}) },
+          part: addedPart,
         })
+
         if (part.type === "output_text" && typeof part.text === "string") {
           emit("response.output_text.delta", { ...content, delta: part.text })
           emit("response.output_text.done", { ...content, text: part.text })
         }
+
         emit("response.content_part.done", { ...content, part })
       }
     }
+
     emit("response.output_item.done", { output_index: outputIndex, item })
   }
-  const terminal =
-    value.status === "failed"
-      ? "failed"
-      : value.status === "incomplete"
-        ? "incomplete"
-        : "completed"
+
+  const terminal = Match.value(value.status).pipe(
+    Match.when("failed", () => "failed"),
+    Match.when("incomplete", () => "incomplete"),
+    Match.orElse(() => "completed"),
+  )
+
   emit(`response.${terminal}`, { response: value })
   const headers = new Headers(response.headers)
   headers.set("content-type", "text/event-stream; charset=utf-8")
   headers.delete("content-length")
   headers.delete("content-encoding")
+
   return new Response(events.join(""), {
     status: response.status,
     statusText: response.statusText,

@@ -17,6 +17,7 @@ export const SlackQueuePromptPayload = Schema.Struct({
   session: SlackCreateSessionPayload,
   prompt: PromptPayload,
 })
+
 export type SlackQueuePromptPayload = typeof SlackQueuePromptPayload.Type
 
 export class SlackQueuedPromptResponse extends Schema.Class<SlackQueuedPromptResponse>(

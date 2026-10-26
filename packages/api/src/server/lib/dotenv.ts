@@ -51,6 +51,7 @@ export const dotenvAssignment = Effect.fn("dotenv.assignment")((name: string, va
         (candidate) =>
           new DotenvExportError({ message: `Invalid dotenv variable name '${candidate}'` }),
       )
+
       return `${variableName}=${yield* quoteDotenvValue(value)}`
     }),
   ),

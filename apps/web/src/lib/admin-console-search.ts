@@ -1,6 +1,9 @@
 export type AdminView = "sessions" | "workflows" | "ai-search" | "integrations"
+
 export type AdminIntegrationTab = "ai-providers" | "mcps" | "skills"
+
 export type SortDir = "asc" | "desc"
+
 export type AdminRoutePath =
   | "/admin/agents"
   | "/admin/workflows"
@@ -77,6 +80,7 @@ export type AdminRouteSearch = {
 
 export const DEFAULT_PAGE_SIZE = 10
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
+
 export const SESSION_STATUS_OPTIONS = [
   "created",
   "active",
@@ -84,6 +88,7 @@ export const SESSION_STATUS_OPTIONS = [
   "archived",
   "deleted",
 ] as const
+
 export const SESSION_RUNTIME_OPTIONS = AGENT_RUNTIMES
 export const SESSION_SOURCE_OPTIONS = ["web", "api", "slack"] as const
 export const WORKFLOW_STATUS_OPTIONS = ["active", "archived"] as const
@@ -106,15 +111,19 @@ export function adminViewFromPath(
   if (pathname?.startsWith("/admin/workflows")) {
     return "workflows"
   }
+
   if (pathname?.startsWith("/admin/integrations")) {
     return "integrations"
   }
+
   if (pathname?.startsWith("/admin/ai-search")) {
     return "ai-search"
   }
+
   if (pathname?.startsWith("/admin/agents")) {
     return "sessions"
   }
+
   return parseAdminView(search ?? {})
 }
 
@@ -124,11 +133,13 @@ export function normalizeAdminSearch(
 ): AdminSearch {
   const view = viewOverride ?? parseAdminView(search)
   const requestedIntegrationTab = search.tab ?? search.integrationTab
+
   const integrationTab =
     view === "integrations" &&
     (requestedIntegrationTab === "mcps" || requestedIntegrationTab === "skills")
       ? requestedIntegrationTab
       : "ai-providers"
+
   return {
     view,
     integrationTab,
@@ -239,6 +250,7 @@ function serializeAdminSearch(search: Record<string, unknown>): string {
     Object.entries(search)
       .flatMap(([key, value]) => {
         const serializedValue = serializeAdminSearchValue(value)
+
         return serializedValue === undefined ? [] : [[key, serializedValue]]
       })
       .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey)),
@@ -249,9 +261,11 @@ function serializeAdminSearchValue(value: unknown): string | undefined {
   if (value === undefined || value === null || value === "") {
     return undefined
   }
+
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return String(value)
   }
+
   return JSON.stringify(value)
 }
 
@@ -302,6 +316,7 @@ function parseRoutePageSize(
 
 function defaultStringToUndefined(value: string, defaultValue: string): string | undefined {
   const compactValue = emptyToUndefined(value)
+
   return compactValue === defaultValue ? undefined : compactValue
 }
 
@@ -385,14 +400,14 @@ function parseSortDir(value: unknown): SortDir {
 
 function parsePositiveInt(value: unknown, fallback: number): number {
   const parsed = Number(value)
+
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback
 }
 
 function parsePageSize(value: unknown): number {
   const parsed = parsePositiveInt(value, DEFAULT_PAGE_SIZE)
-  return PAGE_SIZE_OPTIONS.includes(parsed as (typeof PAGE_SIZE_OPTIONS)[number])
-    ? parsed
-    : DEFAULT_PAGE_SIZE
+
+  return PAGE_SIZE_OPTIONS.some((option) => option === parsed) ? parsed : DEFAULT_PAGE_SIZE
 }
 
 function emptyToUndefined(value: string | undefined): string | undefined {
@@ -407,6 +422,7 @@ export function sessionQueryParams(state: SessionTableState): URLSearchParams {
   setOptionalParam(params, "userId", state.userId)
   setOptionalParam(params, "repoOwner", state.repoOwner)
   setOptionalParam(params, "repoName", state.repoName)
+
   return params
 }
 
@@ -414,6 +430,7 @@ export function workflowQueryParams(state: WorkflowTableState): URLSearchParams 
   const params = baseTableQueryParams(state)
   setOptionalParam(params, "status", state.status)
   setOptionalParam(params, "userId", state.userId)
+
   return params
 }
 
@@ -430,6 +447,7 @@ function baseTableQueryParams(state: {
   params.set("sortBy", state.sortBy)
   params.set("sortDir", state.sortDir)
   setOptionalParam(params, "q", state.q)
+
   return params
 }
 
@@ -438,4 +456,5 @@ function setOptionalParam(params: URLSearchParams, key: string, value: string | 
     params.set(key, value.trim())
   }
 }
+
 import { AGENT_RUNTIMES } from "@solzero/shared"

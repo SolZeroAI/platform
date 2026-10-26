@@ -27,6 +27,7 @@ function botFailure(cause: unknown): ControlPlaneFailure {
     Match.when(Match.instanceOf(BotRoutineValidationError), () => 400),
     Match.orElse(() => 500),
   )
+
   return new ControlPlaneFailure({ payload: { error: describeError(cause) }, status })
 }
 
@@ -39,6 +40,7 @@ export function list() {
     Effect.fn("bots.list")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
       const bots = yield* service(context).listBots(userId).pipe(Effect.mapError(botFailure))
+
       return json({ bots })
     }),
   )
@@ -48,9 +50,11 @@ export function create({ payload }: { payload: CreateBotPayload }) {
   return runControlPlane(
     Effect.fn("bots.create")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const bot = yield* service(context)
         .createBot(userId, payload)
         .pipe(Effect.mapError(botFailure))
+
       return json({ bot })
     }),
   )
@@ -60,9 +64,11 @@ export function get({ params }: { params: BotIdParams }) {
   return runControlPlane(
     Effect.fn("bots.get")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const bot = yield* service(context)
         .getBot(userId, params.id)
         .pipe(Effect.mapError(botFailure))
+
       return json({ bot })
     }),
   )
@@ -74,9 +80,11 @@ export function open({ params, payload }: { params: BotIdParams; payload: OpenBo
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
       const sessionId = payload.sessionId?.trim() ?? ""
       yield* failUnless(sessionId.length > 0, "sessionId is required", 400)
+
       const bot = yield* service(context)
         .attachSession(userId, params.id, sessionId)
         .pipe(Effect.mapError(botFailure))
+
       return json({ bot })
     }),
   )
@@ -86,9 +94,11 @@ export function listRoutines({ params }: { params: BotIdParams }) {
   return runControlPlane(
     Effect.fn("bots.listRoutines")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const routines = yield* service(context)
         .listRoutines(userId, params.id)
         .pipe(Effect.mapError(botFailure))
+
       return json({ routines })
     }),
   )
@@ -104,9 +114,11 @@ export function createRoutine({
   return runControlPlane(
     Effect.fn("bots.createRoutine")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const routine = yield* service(context)
         .createRoutine(userId, params.id, payload)
         .pipe(Effect.mapError(botFailure))
+
       return json({ routine })
     }),
   )
@@ -116,9 +128,11 @@ export function deleteRoutine({ params }: { params: BotRoutineParams }) {
   return runControlPlane(
     Effect.fn("bots.deleteRoutine")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const routine = yield* service(context)
         .deleteRoutine(userId, params.id, params.routineId)
         .pipe(Effect.mapError(botFailure))
+
       return json({ status: "deleted", routineId: routine.id })
     }),
   )
@@ -128,9 +142,11 @@ export function completeRoutine({ params }: { params: BotRoutineParams }) {
   return runControlPlane(
     Effect.fn("bots.completeRoutine")(function* (context) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       const routine = yield* service(context)
         .completeRoutine(userId, params.id, params.routineId)
         .pipe(Effect.mapError(botFailure))
+
       return json({ status: "deleted", routineId: routine.id })
     }),
   )

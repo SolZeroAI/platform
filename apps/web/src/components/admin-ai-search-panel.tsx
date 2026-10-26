@@ -97,6 +97,7 @@ export function AdminAiSearchPanel({
   const [exportDotenv, setExportDotenv] = useState<string | null>(null)
   const [draft, setDraft] = useState<SourceDraft>(EMPTY_DRAFT)
   const [fieldError, setFieldError] = useState("")
+
   const [dialogSelectPortalContainer, setDialogSelectPortalContainer] =
     useState<HTMLElement | null>(null)
 
@@ -108,6 +109,7 @@ export function AdminAiSearchPanel({
     () => data?.sources.find((source) => source.id === editingSourceId) ?? null,
     [data?.sources, editingSourceId],
   )
+
   const sourceLocked = editingSource?.locked ?? false
   const sourceLockEnvVar = sourceLocked ? editingSource?.envVarName : null
   const editingMode: "create" | "update" = editingSource ? "update" : "create"
@@ -137,13 +139,18 @@ export function AdminAiSearchPanel({
 
   const submitSource = async () => {
     const payload = payloadFromDraft(draft)
+
     if (typeof payload === "string") {
       setFieldError(payload)
+
       return
     }
+
     const saved = await onSaveSource(payload, editingMode)
+
     if (saved) {
       closeSourceDialog()
+
       if (editingMode === "create") {
         setEditingSourceId(null)
         setDraft(EMPTY_DRAFT)
@@ -153,9 +160,11 @@ export function AdminAiSearchPanel({
 
   const exportConfig = async () => {
     const dotenv = await onExport()
+
     if (dotenv === null) {
       return
     }
+
     setExportDotenv(dotenv)
     setExportDialogOpen(true)
   }
@@ -164,12 +173,15 @@ export function AdminAiSearchPanel({
     if (!sourcePendingDelete) {
       return
     }
+
     const deleted = await onDeleteSource(sourcePendingDelete.id)
+
     if (deleted && editingSourceId === sourcePendingDelete.id) {
       setEditingSourceId(null)
       setDraft(EMPTY_DRAFT)
       closeSourceDialog()
     }
+
     if (deleted) {
       setSourcePendingDelete(null)
     }
@@ -262,6 +274,7 @@ export function AdminAiSearchPanel({
                             <Button
                               type="button"
                               size="sm"
+                              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                               shape="circle"
                               variant="secondary"
                               aria-label={`Edit ${source.label}`}
@@ -273,6 +286,7 @@ export function AdminAiSearchPanel({
                             <Button
                               type="button"
                               size="sm"
+                              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                               shape="circle"
                               variant="secondary-destructive"
                               aria-label={`Delete ${source.label}`}
@@ -297,8 +311,10 @@ export function AdminAiSearchPanel({
           onOpenChange={(open) => {
             if (!open) {
               closeSourceDialog()
+
               return
             }
+
             setSourceDialogOpen(true)
           }}
         >
@@ -318,6 +334,7 @@ export function AdminAiSearchPanel({
               <Button
                 type="button"
                 variant="ghost"
+                // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                 shape="circle"
                 icon={<X className="h-4 w-4" aria-hidden />}
                 aria-label="Close AI Search source dialog"
@@ -445,6 +462,7 @@ export function AdminAiSearchPanel({
             if (busy?.startsWith("ai-search-source-delete-")) {
               return
             }
+
             if (!open) {
               setSourcePendingDelete(null)
             }
@@ -641,6 +659,7 @@ function draftFromSource(source: AdminAiSearchSource): SourceDraft {
       r2Jurisdiction: source.dataSource.r2Jurisdiction ?? "",
     }
   }
+
   if (source.dataSource.type === "website") {
     return {
       ...base,
@@ -652,20 +671,25 @@ function draftFromSource(source: AdminAiSearchSource): SourceDraft {
       websiteIncludeImages: source.dataSource.includeImages,
     }
   }
+
   return base
 }
 
 function payloadFromDraft(draft: SourceDraft): AdminAiSearchSourcePayload | string {
   const id = draft.id.trim()
+
   if (!id) {
     return "ID is required."
   }
+
   const maxResults = Number(draft.maxResults)
+
   if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 20) {
     return "Max results must be an integer between 1 and 20."
   }
 
   const dataSource = dataSourceFromDraft(draft)
+
   if (typeof dataSource === "string") {
     return dataSource
   }
@@ -686,9 +710,11 @@ function dataSourceFromDraft(draft: SourceDraft): AdminAiSearchDataSource | stri
       return { type: "built-in" }
     case "r2": {
       const bucketName = draft.r2BucketName.trim()
+
       if (!bucketName) {
         return "R2 bucket is required."
       }
+
       return {
         type: "r2",
         bucketName,
@@ -696,11 +722,14 @@ function dataSourceFromDraft(draft: SourceDraft): AdminAiSearchDataSource | stri
         r2Jurisdiction: draft.r2Jurisdiction.trim() || null,
       }
     }
+
     case "website": {
       const domain = draft.websiteDomain.trim()
+
       if (!domain) {
         return "Website domain is required."
       }
+
       return {
         type: "website",
         domain,

@@ -57,6 +57,7 @@ export function S0Loader({ size = 64, className = "" }: S0LoaderProps) {
       </span>
     )
   }
+
   return <SolZeroLoader size={size} className={className} />
 }
 
@@ -75,10 +76,12 @@ function SolZeroLoader({ size = 64, className = "" }: S0LoaderProps) {
       }
 
       const mm = gsap.matchMedia()
+
       const context = gsap.context(() => {
         const pieces = Array.from(
           containerRef.current?.querySelectorAll<SVGGElement>("[data-s0-loader-piece]") ?? [],
         )
+
         if (pieces.length !== LOADER_PIECES.length) {
           return
         }
@@ -90,6 +93,7 @@ function SolZeroLoader({ size = 64, className = "" }: S0LoaderProps) {
         mm.add("(prefers-reduced-motion: no-preference)", () => {
           pieces.forEach((piece, index) => {
             const motion = LOADER_PIECES[index]
+
             if (!motion) {
               return
             }
@@ -107,6 +111,7 @@ function SolZeroLoader({ size = 64, className = "" }: S0LoaderProps) {
 
           pieces.forEach((piece, index) => {
             const motion = LOADER_PIECES[index]
+
             if (!motion) {
               return
             }

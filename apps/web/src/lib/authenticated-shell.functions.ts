@@ -16,22 +16,41 @@ const EMPTY_AUTH_PROVIDER_CONFIG: PublicAuthProviderRegistry = {
   configurationFile: "config/dev.config.jsonc",
 }
 
+type AuthConfigCandidate = {
+  defaultSignInProviderId?: unknown
+  providers?: unknown
+  configurationFile?: unknown
+}
+
+type AuthProviderCandidate = {
+  id?: unknown
+  kind?: unknown
+  displayName?: unknown
+}
+
+function isAuthConfigCandidate(value: unknown): value is AuthConfigCandidate {
+  return typeof value === "object" && value !== null
+}
+
+function isAuthProviderCandidate(value: unknown): value is AuthProviderCandidate {
+  return typeof value === "object" && value !== null
+}
+
 function isPublicAuthProviderRegistry(value: unknown): value is PublicAuthProviderRegistry {
-  if (!value || typeof value !== "object") return false
-  const config = value as Record<string, unknown>
+  if (!isAuthConfigCandidate(value)) return false
+
   return (
-    typeof config.defaultSignInProviderId === "string" &&
-    Array.isArray(config.providers) &&
-    config.providers.every(
+    typeof value.defaultSignInProviderId === "string" &&
+    Array.isArray(value.providers) &&
+    value.providers.every(
       (provider) =>
-        provider &&
-        typeof provider === "object" &&
-        typeof Reflect.get(provider, "id") === "string" &&
-        typeof Reflect.get(provider, "kind") === "string" &&
-        typeof Reflect.get(provider, "displayName") === "string",
+        isAuthProviderCandidate(provider) &&
+        typeof provider.id === "string" &&
+        typeof provider.kind === "string" &&
+        typeof provider.displayName === "string",
     ) &&
-    typeof config.configurationFile === "string" &&
-    config.configurationFile.endsWith(".config.jsonc")
+    typeof value.configurationFile === "string" &&
+    value.configurationFile.endsWith(".config.jsonc")
   )
 }
 
@@ -39,9 +58,12 @@ async function getAuthProviderConfig(): Promise<PublicAuthProviderRegistry> {
   try {
     const headers = await getControlPlaneHeaders({ Accept: "application/json" })
     const response = await fetch(new URL("/api/auth/config", getControlPlaneUrl()), { headers })
+
     if (!response.ok) return EMPTY_AUTH_PROVIDER_CONFIG
 
+    // SAFETY: /api/auth/config returns JSON that is checked as unknown before the public provider registry predicate.
     const config = (await response.json()) as unknown
+
     return isPublicAuthProviderRegistry(config) ? config : EMPTY_AUTH_PROVIDER_CONFIG
   } catch {
     return EMPTY_AUTH_PROVIDER_CONFIG
@@ -55,7 +77,9 @@ async function getProviderSettingsForUser(
     const headers = getControlPlaneHeaders(request.headers)
     headers.set("Accept", "application/json")
     const response = await fetch(new URL("/providers", getControlPlaneUrl()), { headers })
+
     if (!response.ok) return null
+
     return response.json()
   } catch {
     return null
@@ -68,6 +92,7 @@ export const loadAuthenticatedShellForRoute = createServerFn({
 }).handler(async (): Promise<AuthenticatedShellRouteData> => {
   const request = getRequest()
   const authSession = await getAuthSessionContext(request)
+
   const [authProviderConfig, providerSettings] = await Promise.all([
     getAuthProviderConfig(),
     authSession?.user.id ? getProviderSettingsForUser(request) : null,

@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens user MCP config tables from the Worker env at the store composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
@@ -70,6 +71,7 @@ function rowToConfig(row: UserMcpcfServerConfigRow): UserMcpcfServerConfigRecord
 
 function isMissingUserMcpcfConfigTableError(errorValue: unknown): boolean {
   const messages = getErrorMessages(errorValue).join("\n")
+
   return (
     messages.includes("user_mcpcf_server_configs") &&
     (/no such table/i.test(messages) || /Failed query:/i.test(messages))
@@ -107,9 +109,13 @@ export class UserMcpcfServerConfigStore {
     }).pipe(
       Effect.catchIf(
         (error) => isMissingUserMcpcfConfigTableError(error.cause),
-        () => Effect.succeed([] as UserMcpcfServerConfigRow[]),
+        () =>
+          Effect.succeed(
+            /* SAFETY: This branch has no UserMcpcfServerConfigRow[] elements, so the array is empty. */ [] as UserMcpcfServerConfigRow[],
+          ),
       ),
     )
+
     return Option.map(Option.fromNullishOr(rows[0]), rowToConfig)
   })
 
@@ -121,8 +127,13 @@ export class UserMcpcfServerConfigStore {
     const uniqueServerIds = [...new Set(serverIds.map((serverId) => serverId.trim()))].filter(
       Boolean,
     )
+
     return yield* Match.value(uniqueServerIds.length === 0).pipe(
-      Match.when(true, () => Effect.succeed([] as UserMcpcfServerConfigRecord[])),
+      Match.when(true, () =>
+        Effect.succeed(
+          /* SAFETY: This branch has no UserMcpcfServerConfigRecord[] elements, so the array is empty. */ [] as UserMcpcfServerConfigRecord[],
+        ),
+      ),
       Match.orElse(() => this.queryByServerIds(userId, uniqueServerIds)),
     )
   })
@@ -147,9 +158,13 @@ export class UserMcpcfServerConfigStore {
     }).pipe(
       Effect.catchIf(
         (error) => isMissingUserMcpcfConfigTableError(error.cause),
-        () => Effect.succeed([] as UserMcpcfServerConfigRow[]),
+        () =>
+          Effect.succeed(
+            /* SAFETY: This branch has no UserMcpcfServerConfigRow[] elements, so the array is empty. */ [] as UserMcpcfServerConfigRow[],
+          ),
       ),
     )
+
     return rows.map(rowToConfig)
   })
 
@@ -174,6 +189,7 @@ export class UserMcpcfServerConfigStore {
       Option.map(existing, (record) => record.defaultToolsEnabled),
       () => true,
     )
+
     const defaultToolsEnabled = Option.match(Option.fromNullishOr(update.defaultToolsEnabled), {
       onNone: () => Number(existingEnabled),
       onSome: (enabled) => Number(Boolean(enabled)),
@@ -183,12 +199,15 @@ export class UserMcpcfServerConfigStore {
       Match.when(true, () =>
         Option.getOrElse(
           Option.map(existing, (record) => record.disabledTools),
-          () => [] as string[],
+          () =>
+            /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
         ),
       ),
       Match.orElse(() => normalizeDisabledTools(update.disabledTools)),
     )
+
     const disabledToolsJson = stringifyJson(disabledTools)
+
     const createdAt = Option.getOrElse(
       Option.map(existing, (record) => record.createdAt),
       () => now,
@@ -228,6 +247,7 @@ export class UserMcpcfServerConfigStore {
     )
 
     const saved = yield* this.get(update.userId, update.serverId)
+
     return yield* Option.match(saved, {
       onNone: () =>
         Effect.fail(new UserMcpcfMigrationError({ message: USER_MCPCF_MIGRATION_MESSAGE })),
@@ -264,6 +284,7 @@ export function createUserMcpcfServerConfigStoreFromD1(
       Match.orElse((d1) => makeD1Drizzle(d1)),
     ),
   )
+
   return {
     listByUserAndServerIds: (userId, serverIds) =>
       runUserMcpcfEffect(store.listByUserAndServerIds(userId, serverIds)),

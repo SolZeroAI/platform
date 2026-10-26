@@ -25,6 +25,7 @@ export function stackProviders(input: StackOptionsInput = {}) {
       PlanetscaleLogicalDb.providers(),
     )
   }
+
   return Cloudflare.providers()
 }
 
@@ -35,11 +36,13 @@ export function stackState() {
       // oxlint-disable-next-line effect/avoid-process-env -- An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
       const configProfile = process.env.S0_CONFIG_PROFILE
       const s0Config = loadS0ConfigFile(REPO_ROOT, stage, configProfile)
+
       const metadata = yield* getStageMetadataFromConfig(
         stage,
         s0Config.deployment,
         s0Config.application,
       ).pipe(Effect.orDie)
+
       return Match.value(metadata.infra.alchemyStateStore).pipe(
         Match.when("local", () => localState()),
         Match.when("cloudflare", () => Cloudflare.state()),
@@ -50,6 +53,7 @@ export function stackState() {
 }
 
 export function stackOptions<Req = never>(input: StackOptionsInput = {}): Alchemy.StackProps<Req> {
+  // SAFETY: providers and state are the Alchemy layers selected for this deployment, and StackProps accepts that pair under the caller's Req channel.
   return {
     providers: input.providers ?? stackProviders(input),
     state: input.state ?? stackState(),

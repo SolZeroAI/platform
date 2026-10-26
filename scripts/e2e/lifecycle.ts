@@ -327,6 +327,7 @@ export function cancelLaunch(id: string, signal: "SIGINT" | "SIGTERM") {
     try {
       process.kill(leader.pid, signal)
     } catch (error) {
+      // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
     }
   }
@@ -414,6 +415,7 @@ async function stopSnapshots(
         try {
           process.kill(item.pid, kind)
         } catch (error) {
+          // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
           if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
         }
       }
@@ -475,6 +477,7 @@ export function signalOwnLaunchers(runnerPid: number, signal: "SIGINT" | "SIGTER
       try {
         process.kill(run.launcherPid, signal)
       } catch (error) {
+        // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
         if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
       }
   }
@@ -484,6 +487,13 @@ export function stackDirectory(run: RunManifest) {
 }
 export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, prepared?: string) {
   const launch = command === "dev" ? (prepared ?? prepareLaunch("alchemy", run)) : undefined
+  const options = {
+    cwd: stackDirectory(run),
+    env: { ...appEnvironment, S0_E2E_RUN_ID: run.runId, S0_E2E_APP_CHILD: "1" },
+    stdio: "inherit" as const,
+    detached: command === "dev",
+  }
+  if (command === "destroy") Object.assign(options, { signal: AbortSignal.timeout(120_000) })
   return spawn(
     process.execPath,
     [
@@ -499,13 +509,7 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
       resolve(stackDirectory(run), ".dev.vars"),
       ...(command === "destroy" ? ["--yes"] : []),
     ],
-    {
-      cwd: stackDirectory(run),
-      env: { ...appEnvironment, S0_E2E_RUN_ID: run.runId, S0_E2E_APP_CHILD: "1" },
-      stdio: "inherit",
-      detached: command === "dev",
-      ...(command === "destroy" ? { signal: AbortSignal.timeout(120_000) } : {}),
-    },
+    options,
   )
 }
 function capture(run: RunManifest) {
@@ -740,6 +744,7 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
       try {
         process.kill(run.launcherPid, "SIGTERM")
       } catch (error) {
+        // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
         if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
       }
       for (

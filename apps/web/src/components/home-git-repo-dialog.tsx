@@ -64,11 +64,13 @@ interface HomeGitRepoDialogProps {
 
 function setSelectedRepo(tools: SessionToolSpec[], repoFullName: string | null): SessionToolSpec[] {
   const withoutRepo = tools.filter((tool) => tool.kind !== "github_repo")
+
   if (!repoFullName) {
     return normalizeSessionTools(withoutRepo)
   }
 
   const [repoOwner, repoName] = repoFullName.split("/")
+
   if (!repoOwner || !repoName) {
     return normalizeSessionTools(withoutRepo)
   }
@@ -115,16 +117,22 @@ export function HomeGitRepoDialog({
   const selectedToolsRef = useRef(selectedTools)
   selectedToolsRef.current = selectedTools
   const selectedRepo = getGitHubRepoTool(draftTools)
+
   const selectedRepoFullName = selectedRepo
     ? `${selectedRepo.repoOwner}/${selectedRepo.repoName}`
     : ""
+
   const activeRepoQuery = repoQuery ?? DEFAULT_REPO_QUERY
+
   const repoCountStart =
     repos.length > 0 ? (activeRepoQuery.page - 1) * activeRepoQuery.perPage + 1 : 0
+
   const repoCountEnd = repoCountStart > 0 ? repoCountStart + repos.length - 1 : 0
+
   const paginationTotalCount =
     repoPagination?.totalCount ??
     (repoCountEnd > 0 ? repoCountEnd + (repoPagination?.hasMore ? 1 : 0) : 0)
+
   const showGitHubLinkEmptyState = needsGitHubLink && !loadingRepos && repos.length === 0
 
   const selectRepo = (repoFullName: string | null) => {
@@ -152,6 +160,7 @@ export function HomeGitRepoDialog({
     }
 
     document.addEventListener("keydown", handleKeyDown)
+
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [onClose, open])
 

@@ -10,6 +10,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { createSessionIndexStoreFromD1 } from "../../background/db/session-index"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- workflow-builder/server.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the MCP server resolves sessions before a request layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { raise } from "../../lib/effect-errors"
 import {
@@ -53,11 +54,13 @@ function jsonToolResult(value: unknown) {
 
 function rewriteRequestPathname(request: Request, url: URL, pathname: string): Request {
   url.pathname = pathname
+
   return new Request(url.toString(), request)
 }
 
 export function normalizeWorkflowBuilderMcpRequest(request: Request): Request {
   const url = new URL(request.url)
+
   return Match.value(url.pathname === `${INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE}/`).pipe(
     Match.when(true, () =>
       rewriteRequestPathname(request, url, INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE),
@@ -80,10 +83,12 @@ export async function resolveWorkflowBuilderContext(
   const session = await createSessionIndexStoreFromD1(makeControlPlaneFromEnv(env)).getById(
     sessionId,
   )
+
   const resolved = Option.getOrThrowWith(
     Option.fromNullishOr(session),
     () => new Error("Workflow builder MCP session was not found"),
   )
+
   return {
     env,
     sessionId,

@@ -6,6 +6,7 @@ import { deployedWebWorkerName, type S0BrandConfig, type StageMetadata } from "@
 import type { DeploymentMetadata } from "./deploymentMetadata"
 
 function jsonBinding(value: unknown): Schema.Json {
+  // SAFETY: Alchemy's JSON binding requires an index signature, and this stage metadata object is a decoded configuration DTO with an exact interface.
   return value as Schema.Json
 }
 
@@ -34,7 +35,7 @@ export function createWeb(options: CreateWebOptions) {
   const { appName, brand, stageMetadata, deploymentMetadata, repoRoot, dev } = options
   const [primaryDomain, ...domainAliases] = stageMetadata.infra.webDomains
 
-  return Cloudflare.Website.Vite("web", {
+  const website = {
     name: deployedWebWorkerName(appName, stageMetadata.name),
     rootDir: resolve(repoRoot, "apps/web"),
     compatibility: {
@@ -45,16 +46,6 @@ export function createWeb(options: CreateWebOptions) {
       enabled: true,
     },
     ...webDevOptions(dev),
-    // oxlint-disable-next-line s0-lint/no-ternary -- Alchemy domain config is optional only for deployed stages.
-    ...(primaryDomain
-      ? {
-          domain: {
-            name: primaryDomain,
-            aliases: domainAliases,
-          },
-          workersDev: false,
-        }
-      : {}),
     env: {
       STAGE: stageMetadata.name,
       VITE_STAGE: stageMetadata.name,
@@ -78,7 +69,25 @@ export function createWeb(options: CreateWebOptions) {
       ),
       VITE_S0_SANDBOX_INACTIVITY_TIMEOUT_MS: String(stageMetadata.app.sandboxInactivityTimeoutMs),
     },
-  })
+  }
+
+  return Cloudflare.Website.Vite(
+    "web",
+    Match.value(primaryDomain).pipe(
+      Match.when(
+        (domain): domain is string => typeof domain === "string" && domain.length > 0,
+        (name) =>
+          Object.assign(website, {
+            domain: {
+              name,
+              aliases: domainAliases,
+            },
+            workersDev: false,
+          }),
+      ),
+      Match.orElse(() => website),
+    ),
+  )
 }
 
 export type WebResource = Awaited<ReturnType<typeof createWeb>>

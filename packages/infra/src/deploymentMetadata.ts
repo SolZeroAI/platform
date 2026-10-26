@@ -18,6 +18,7 @@ export interface CreateDeploymentMetadataOptions {
 
 function normalizePackageVersion(version: string): string {
   const trimmed = version.trim()
+
   return trimmed.startsWith("v") ? trimmed.slice(1) : trimmed
 }
 
@@ -27,6 +28,7 @@ function formatVersionLabel(version: string): string {
 
 function shortenCommitSha(commitSha: string | undefined): string | undefined {
   const trimmed = commitSha?.trim()
+
   if (!trimmed) {
     return undefined
   }
@@ -40,9 +42,11 @@ function readLocalCommitSha(repoRoot: string): string | undefined {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   })
+
   if (result.status !== 0 || result.error) {
     return undefined
   }
+
   return result.stdout.trim() || undefined
 }
 
@@ -74,13 +78,17 @@ function countCommitsSinceRelease(repoRoot: string, version: string): number | u
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   })
+
   if (result.status !== 0 || result.error) {
     return undefined
   }
+
   const count = Number.parseInt(result.stdout.trim(), 10)
+
   if (Number.isNaN(count)) {
     return undefined
   }
+
   return count
 }
 
@@ -90,9 +98,11 @@ function countCommitsSinceRelease(repoRoot: string, version: string): number | u
  */
 function releaseOffsetLabel(repoRoot: string, version: string): string {
   const commitsSinceRelease = countCommitsSinceRelease(repoRoot, version)
+
   if (commitsSinceRelease === undefined || commitsSinceRelease === 0) {
     return ""
   }
+
   return `+${commitsSinceRelease}`
 }
 
@@ -101,9 +111,11 @@ export function createDeploymentMetadata(
 ): DeploymentMetadata {
   // oxlint-disable-next-line effect/avoid-process-env -- CLI callers may omit env; tests pass explicit env.
   const env = options.env ?? process.env
+
   const packageVersion = normalizePackageVersion(
     options.packageVersion ?? readProductVersion(options.repoRoot),
   )
+
   const commitSha = getCommitSha(env, options.repoRoot)
   const releaseOffset = releaseOffsetLabel(options.repoRoot, packageVersion)
 

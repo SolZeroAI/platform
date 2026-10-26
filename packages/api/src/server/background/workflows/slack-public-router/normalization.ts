@@ -69,6 +69,7 @@ export type SlackRunResult = {
 }
 
 export type SlackRegistration = WorkflowSlackTriggerRegistrationRecord
+
 export type SlackDelivery = Awaited<
   ReturnType<WorkflowSlackAppStorePromise["createDeliveryIfAbsent"]>
 >
@@ -128,8 +129,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function recordOrEmpty(value: unknown): Record<string, unknown> {
   return Match.value(isRecord(value)).pipe(
-    Match.when(true, () => value as Record<string, unknown>),
-    Match.orElse(() => ({}) as Record<string, unknown>),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: value was checked to be a non-array object before it is read as Record<string, unknown>. */ value as Record<
+          string,
+          unknown
+        >,
+    ),
+    Match.orElse(
+      () =>
+        /* SAFETY: An empty object has no fields, so it satisfies Record<string, unknown>. */ ({}) as Record<
+          string,
+          unknown
+        >,
+    ),
   )
 }
 
@@ -144,10 +158,13 @@ function readString(value: unknown): Option.Option<string> {
 
 function slackResponseMessages(data: Record<string, unknown> | null): string[] {
   const metadata = data?.response_metadata
+
   return Match.value(isRecord(metadata) && Array.isArray(metadata.messages)).pipe(
     Match.when(false, () => []),
     Match.orElse(() =>
-      (metadata as { messages: unknown[] }).messages.reduce<string[]>(
+      /* SAFETY: metadata contains only { messages: unknown[] } values established by the surrounding filter or writer. */ (
+        metadata as { messages: unknown[] }
+      ).messages.reduce<string[]>(
         (messages, value) =>
           Option.match(readString(value), {
             onNone: () => messages,
@@ -162,6 +179,7 @@ function slackResponseMessages(data: Record<string, unknown> | null): string[] {
 export function buildSetupUrl(env: Env, slackUserId: string): string {
   const baseUrl = getWebUrl(env).replace(/\/+$/, "")
   const params = new URLSearchParams({ slackUserId })
+
   return `${baseUrl}/settings?${params.toString()}`
 }
 
@@ -202,6 +220,7 @@ export function readRouteMatch(pathname: string): Option.Option<SlackRouteMatch>
 
 const signHex = Effect.fn("workflows.slack.signHex")(function* (message: string, secret: string) {
   const encoder = new TextEncoder()
+
   const key = yield* Effect.tryPromise({
     try: () =>
       crypto.subtle.importKey(
@@ -213,10 +232,12 @@ const signHex = Effect.fn("workflows.slack.signHex")(function* (message: string,
       ),
     catch: toError,
   })
+
   const signature = yield* Effect.tryPromise({
     try: () => crypto.subtle.sign("HMAC", key, encoder.encode(message)),
     catch: toError,
   })
+
   return Arr.join(
     Arr.map(Array.from(new Uint8Array(signature)), (byte) => byte.toString(16).padStart(2, "0")),
     "",
@@ -244,9 +265,13 @@ export const verifySlackSignatureHmac = Effect.fn("workflows.slack.verifySignatu
 ) {
   const baseString = `${SLACK_SIGNATURE_VERSION}:${timestamp}:${input.body}`
   const expected = `${SLACK_SIGNATURE_VERSION}=${yield* signHex(baseString, input.signingSecret)}`
+
   return Match.value(timingSafeEqual(signature, expected)).pipe(
     Match.when(false, () => json({ error: "Invalid Slack request signature" }, 401)),
-    Match.orElse(() => null as Response | null),
+    Match.orElse(
+      () =>
+        /* SAFETY: This branch has no Response, so the result is null. */ null as Response | null,
+    ),
   )
 })
 
@@ -258,9 +283,11 @@ export const verifySlackSignature = Effect.fn("workflows.slack.verifySignature")
   const timestamp = input.request.headers.get("x-slack-request-timestamp") ?? ""
   const signature = input.request.headers.get("x-slack-signature") ?? ""
   const timestampSeconds = Number.parseInt(timestamp, 10)
+
   const validTimestamp =
     Number.isFinite(timestampSeconds) &&
     Math.abs(Date.now() / 1000 - timestampSeconds) <= SLACK_SIGNATURE_TOLERANCE_SECONDS
+
   return yield* Match.value(validTimestamp).pipe(
     Match.when(false, () =>
       Effect.succeed(json({ error: "Invalid Slack request timestamp" }, 401)),
@@ -277,7 +304,14 @@ export const verifySlackSignature = Effect.fn("workflows.slack.verifySignature")
 
 function sanitizeArrayItem(item: unknown): unknown {
   return Match.value(isRecord(item)).pipe(
-    Match.when(true, () => sanitizeRawPayload(item as Record<string, unknown>)),
+    Match.when(true, () =>
+      sanitizeRawPayload(
+        /* SAFETY: item was checked to be a non-array object before it is read as Record<string, unknown>. */ item as Record<
+          string,
+          unknown
+        >,
+      ),
+    ),
     Match.orElse(() => item),
   )
 }
@@ -298,13 +332,27 @@ function sanitizeChild(child: unknown): unknown {
 
 function sanitizeEntry(key: string, child: unknown): [string, unknown] {
   const normalizedKey = key.toLowerCase()
+
   return Match.value(
     normalizedKey.includes("token") ||
       normalizedKey === "authorization" ||
       normalizedKey === "response_url",
   ).pipe(
-    Match.when(true, () => [key, "[redacted]"] as [string, unknown]),
-    Match.orElse(() => [key, sanitizeChild(child)] as [string, unknown]),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: [key, "[redacted]"] has the [string, unknown] shape established by the check or writer around this read. */ [
+          key,
+          "[redacted]",
+        ] as [string, unknown],
+    ),
+    Match.orElse(
+      () =>
+        /* SAFETY: [key, sanitizeChild(child)] has the [string, unknown] shape established by the check or writer around this read. */ [
+          key,
+          sanitizeChild(child),
+        ] as [string, unknown],
+    ),
   )
 }
 
@@ -321,14 +369,23 @@ function sanitizeRawPayload(value: unknown): Record<string, unknown> {
           Arr.map(Object.entries(record), ([key, child]) => sanitizeEntry(key, child)),
         ),
     ),
-    Match.orElse(() => ({}) as Record<string, unknown>),
+    Match.orElse(
+      () =>
+        /* SAFETY: An empty object has no fields, so it satisfies Record<string, unknown>. */ ({}) as Record<
+          string,
+          unknown
+        >,
+    ),
   )
 }
 
 const parseJsonBody = <T>(value: string) =>
   Effect.tryPromise({
-    try: () => new Response(value).json() as Promise<T>,
-    catch: () => null as T | null,
+    try: () =>
+      /* SAFETY: The JSON body is the Promise<T> shape read by this caller after the response arrives. */ new Response(
+        value,
+      ).json() as Promise<T>,
+    catch: () => /* SAFETY: This branch has no T, so the result is null. */ null as T | null,
   })
 
 const sha256Hex = Effect.fn("workflows.slack.sha256Hex")(function* (value: string) {
@@ -336,6 +393,7 @@ const sha256Hex = Effect.fn("workflows.slack.sha256Hex")(function* (value: strin
     try: () => crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)),
     catch: toError,
   })
+
   return Arr.join(
     Arr.map(Array.from(new Uint8Array(digest)), (byte) => byte.toString(16).padStart(2, "0")),
     "",
@@ -373,6 +431,7 @@ const buildSlackEventPayload = Effect.fn("workflows.slack.buildEventPayload")(fu
   body: string,
 ) {
   const channel = slackChannelFromEvent(event)
+
   const userId = Option.getOrNull(
     Option.orElse(readString(event.user), () =>
       Match.value(event.channel).pipe(
@@ -384,6 +443,7 @@ const buildSlackEventPayload = Effect.fn("workflows.slack.buildEventPayload")(fu
       ),
     ),
   )
+
   const text = Option.getOrElse(
     Option.orElse(readString(event.text), () => readString(event.name)),
     () =>
@@ -392,27 +452,36 @@ const buildSlackEventPayload = Effect.fn("workflows.slack.buildEventPayload")(fu
         Match.orElse(() => ""),
       ),
   )
+
   const messageTs = Option.getOrNull(
     Option.orElse(readString(event.ts), () => readString(event.event_ts)),
   )
+
   const threadTs = Option.getOrNull(
     Option.orElse(readString(event.thread_ts), () => Option.fromNullishOr(messageTs)),
   )
+
   const eventType = Option.getOrNull(readString(event.type))
+
   const teamId = Option.getOrNull(
     Option.orElse(readString(envelope.team_id), () => readString(event.team)),
   )
+
   const channelType = Option.getOrNull(readString(event.channel_type))
   const eventIdKey = Option.getOrNull(readString(envelope.event_id))
+
   const compositeKey = Arr.filter(
     [eventType, channel.id, messageTs, userId, text],
     (part): part is string => Boolean(part),
   ).join(":")
+
   const fallbackKey = eventIdKey || compositeKey
+
   const deliveryKey = yield* Match.value(fallbackKey.length > 0).pipe(
     Match.when(true, () => Effect.succeed(fallbackKey)),
     Match.orElse(() => sha256Hex(body)),
   )
+
   return {
     payload: {
       surface: "event" as const,
@@ -443,6 +512,7 @@ const normalizeUserEvent = Effect.fn("workflows.slack.normalizeUserEvent")(funct
 ) {
   const isBotOrSubtype =
     Option.isSome(readString(event.bot_id)) || Option.isSome(readString(event.subtype))
+
   return yield* Match.value(isBotOrSubtype).pipe(
     Match.when(true, () => Effect.succeed({ payload: null, response: json({ ok: true }) })),
     Match.orElse(() => buildSlackEventPayload(envelope, event, body)),
@@ -457,6 +527,7 @@ const normalizeEventCallback = Effect.fn("workflows.slack.normalizeEventCallback
     Option.filter(Option.fromNullishOr(envelope.event), isRecord),
     () => envelope.type === "event_callback",
   )
+
   return yield* Option.match(eventOption, {
     onNone: () => Effect.succeed({ payload: null, response: json({ ok: true }) }),
     onSome: (event) => normalizeUserEvent(envelope, event, body),
@@ -479,6 +550,7 @@ export const normalizeSlackEvent = Effect.fn("workflows.slack.normalizeEvent")(f
   body: string,
 ) {
   const envelope = yield* parseJsonBody<SlackEventEnvelope>(body)
+
   return yield* Option.match(Option.fromNullishOr(envelope), {
     onNone: () =>
       Effect.succeed({
@@ -495,6 +567,7 @@ const buildCommandDeliveryKey = Effect.fn("workflows.slack.buildCommandDeliveryK
   body: string,
 ) {
   const hash = yield* sha256Hex(body)
+
   return `${commandId ?? "command"}:${form.get("team_id") ?? ""}:${form.get("user_id") ?? ""}:${
     form.get("channel_id") ?? ""
   }:${hash}`
@@ -506,10 +579,12 @@ export const normalizeSlackCommand = Effect.fn("workflows.slack.normalizeCommand
 ) {
   const form = new URLSearchParams(body)
   const triggerId = Option.getOrNull(readString(form.get("trigger_id")))
+
   const deliveryKey = yield* Option.match(Option.fromNullishOr(triggerId), {
     onNone: () => buildCommandDeliveryKey(form, commandId, body),
     onSome: (resolved) => Effect.succeed(resolved),
   })
+
   return {
     payload: {
       surface: "command" as const,
@@ -537,16 +612,19 @@ function buildSlackInteractionPayload(parsed: Record<string, unknown>): Normaliz
   const action = Match.value(parsed.actions).pipe(
     Match.when(
       (candidate: unknown): candidate is unknown[] => Array.isArray(candidate),
-      (actions) => actions[0] as unknown,
+      (actions) =>
+        /* SAFETY: actions[0] has the unknown shape established by the check or writer around this read. */ actions[0] as unknown,
     ),
     Match.orElse(() => null),
   )
+
   const actionRecord = recordOrEmpty(action)
   const user = recordOrEmpty(parsed.user)
   const channel = recordOrEmpty(parsed.channel)
   const message = recordOrEmpty(parsed.message)
   const messageTs = Option.getOrNull(readString(message.ts))
   const actionId = Option.getOrNull(readString(actionRecord.action_id))
+
   const deliveryKey = Option.getOrElse(readString(parsed.trigger_id), () =>
     Arr.filter(
       [
@@ -558,11 +636,13 @@ function buildSlackInteractionPayload(parsed: Record<string, unknown>): Normaliz
       (part): part is string => Boolean(part),
     ).join(":"),
   )
+
   const teamId = Option.getOrNull(
     Option.flatMap(Option.filter(Option.fromNullishOr(parsed.team), isRecord), (team) =>
       readString(team.id),
     ),
   )
+
   return {
     payload: {
       surface: "interaction" as const,
@@ -593,6 +673,7 @@ export const normalizeSlackInteraction = Effect.fn("workflows.slack.normalizeInt
     const form = new URLSearchParams(body)
     const rawPayload = form.get("payload") || ""
     const parsed = yield* parseJsonBody<Record<string, unknown>>(rawPayload)
+
     return Option.match(Option.fromNullishOr(parsed), {
       onNone: () => ({
         payload: null,
@@ -607,10 +688,21 @@ const applyHydratedChannelName = Effect.fn("workflows.slack.applyHydratedChannel
   payload: NormalizedSlackPayload,
   response: Response,
 ) {
-  const data = (yield* Effect.tryPromise({
-    try: () => response.json() as Promise<Record<string, unknown>>,
-    catch: () => null as Record<string, unknown> | null,
-  })) as Record<string, unknown> | null
+  const data =
+    /* SAFETY: The JSON body is the Record<string, unknown> | null shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
+      {
+        try: () =>
+          /* SAFETY: The JSON body is the Promise<Record<string, unknown>> shape read by this caller after the response arrives. */ response.json() as Promise<
+            Record<string, unknown>
+          >,
+        catch: () =>
+          /* SAFETY: This branch has no Record<string, unknown>, so the result is null. */ null as Record<
+            string,
+            unknown
+          > | null,
+      },
+    )) as Record<string, unknown> | null
+
   const channelName = Option.flatMap(Option.fromNullishOr(data), (resolved) =>
     Match.value(resolved.channel).pipe(
       Match.when(
@@ -620,6 +712,7 @@ const applyHydratedChannelName = Effect.fn("workflows.slack.applyHydratedChannel
       Match.orElse(() => Option.none<string>()),
     ),
   )
+
   yield* log("slack.hydrate.response", {
     channelId: payload.channelId,
     status: response.status,
@@ -630,6 +723,7 @@ const applyHydratedChannelName = Effect.fn("workflows.slack.applyHydratedChannel
     slackResponseMessages: slackResponseMessages(data),
     hadName: Option.isSome(channelName),
   })
+
   return Option.match(channelName, {
     onNone: () => payload,
     onSome: (name) => ({ ...payload, channelName: name }),
@@ -640,6 +734,7 @@ const fetchHydratedChannelName = Effect.fn("workflows.slack.fetchHydratedChannel
   function* (input: { payload: NormalizedSlackPayload; botToken: string | null }) {
     const url = new URL("https://slack.com/api/conversations.info")
     url.searchParams.set("channel", input.payload.channelId ?? "")
+
     const response = yield* Effect.tryPromise({
       try: () =>
         // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (Slack conversations.info) inside a Worker entry handler; no HttpClient layer is in scope for this public-router path.
@@ -649,11 +744,18 @@ const fetchHydratedChannelName = Effect.fn("workflows.slack.fetchHydratedChannel
             Authorization: `Bearer ${input.botToken}`,
           },
         }),
-      catch: () => null as Response | null,
+      catch: () =>
+        /* SAFETY: This branch has no Response, so the result is null. */ null as Response | null,
     })
+
     return yield* Match.value(Boolean(response?.ok)).pipe(
       Match.when(false, () => Effect.succeed(input.payload)),
-      Match.orElse(() => applyHydratedChannelName(input.payload, response as Response)),
+      Match.orElse(() =>
+        applyHydratedChannelName(
+          input.payload,
+          /* SAFETY: response has the Response shape established by the check or writer around this read. */ response as Response,
+        ),
+      ),
     )
   },
 )
@@ -662,20 +764,24 @@ export const hydrateChannelName = Effect.fn("workflows.slack.hydrateChannelName"
   function* (input: { payload: NormalizedSlackPayload; botToken: string | null }) {
     const needsHydration =
       !input.payload.channelName && Boolean(input.payload.channelId) && Boolean(input.botToken)
+
     const shouldLogHydration = Effect.succeed(needsHydration)
     yield* log("slack.hydrate.start", {
       channelId: input.payload.channelId,
       hasBotToken: Boolean(input.botToken),
     }).pipe(Effect.when(shouldLogHydration))
+
     const result = yield* Match.value(needsHydration).pipe(
       Match.when(false, () => Effect.succeed(input.payload)),
       Match.orElse(() => fetchHydratedChannelName(input)),
     )
+
     yield* log("slack.hydrate.result", {
       channelId: result.channelId,
       channelName: result.channelName,
       hadName: Boolean(result.channelName),
     }).pipe(Effect.when(shouldLogHydration))
+
     return result
   },
 )

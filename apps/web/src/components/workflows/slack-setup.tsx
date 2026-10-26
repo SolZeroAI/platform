@@ -28,6 +28,11 @@ import { formatSlackRegistrationMatch } from "./save-utils"
 import { getErrorMessage, requestJson } from "./run-utils"
 import { formatJson } from "./header-utils"
 
+type SlackCredentialPayload = {
+  signingSecret?: string
+  botToken?: string
+}
+
 export function WorkflowSlackAppSetupModal({
   workflowId,
   workflowName,
@@ -51,10 +56,12 @@ export function WorkflowSlackAppSetupModal({
   const loadSetup = useCallback(async () => {
     setLoading(true)
     setLoadError("")
+
     try {
       const data = await requestJson<{ slackApp: WorkflowSlackAppSetup }>(
         `/api/workflows/${encodeURIComponent(workflowId)}/slack-app`,
       )
+
       setSetup(data.slackApp)
     } catch (errorValue) {
       setLoadError(getErrorMessage(errorValue))
@@ -70,19 +77,24 @@ export function WorkflowSlackAppSetupModal({
   const saveCredentials = async () => {
     setCredentialsError("")
     setCredentialsSaved(false)
-    const payload: { signingSecret?: string; botToken?: string } = {}
+    const payload: SlackCredentialPayload = {}
+
     if (signingSecret.trim()) {
       payload.signingSecret = signingSecret.trim()
     }
+
     if (botToken.trim()) {
       payload.botToken = botToken.trim()
     }
+
     if (!payload.signingSecret && !payload.botToken) {
       setCredentialsError("Enter a signing secret or bot token before saving.")
+
       return
     }
 
     setSavingCredentials(true)
+
     try {
       const data = await requestJson<{ slackApp: WorkflowSlackAppSetup }>(
         `/api/workflows/${encodeURIComponent(workflowId)}/slack-app/credentials`,
@@ -92,6 +104,7 @@ export function WorkflowSlackAppSetupModal({
           body: JSON.stringify(payload),
         },
       )
+
       setSetup(data.slackApp)
       setSigningSecret("")
       setBotToken("")
@@ -125,6 +138,7 @@ export function WorkflowSlackAppSetupModal({
           type="button"
           onClick={() => void loadSetup()}
           disabled={loading}
+          // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
           shape="circle"
           variant="ghost"
           aria-label="Refresh Slack app setup"
@@ -312,6 +326,7 @@ export function WorkflowSlackStatusTile({
 export function WorkflowSlackInlineHelp({ label, helpText }: { label: string; helpText: string }) {
   const tooltipId = useId()
   const buttonRef = useRef<HTMLButtonElement>(null)
+
   const [tooltipAnchor, setTooltipAnchor] = useState<{
     left: number
     top: number
@@ -345,6 +360,7 @@ export function WorkflowSlackInlineHelp({ label, helpText }: { label: string; he
     const dismiss = () => setTooltipAnchor(null)
     window.addEventListener("resize", dismiss)
     window.addEventListener("scroll", dismiss, true)
+
     return () => {
       window.removeEventListener("resize", dismiss)
       window.removeEventListener("scroll", dismiss, true)
@@ -421,6 +437,7 @@ export function WorkflowSlackManifestValidationNotice({
   }
 
   const messages = validation.valid ? validation.warnings : validation.errors
+
   return (
     <div
       className={`rounded-lg border p-3 text-sm ${
@@ -454,6 +471,7 @@ export function WorkflowSlackCopyButton({
   title?: string
 }) {
   const [copied, setCopied] = useState(false)
+
   return (
     <Button
       size="sm"
@@ -463,10 +481,13 @@ export function WorkflowSlackCopyButton({
         if (disabled) {
           return
         }
+
         const success = await copyToClipboard(value)
+
         if (!success) {
           return
         }
+
         setCopied(true)
         window.setTimeout(() => setCopied(false), 1200)
       }}
@@ -491,6 +512,7 @@ export function WorkflowSlackSecretInput({
   helpText?: string
 }) {
   const inputId = useId()
+
   return (
     <div className="block">
       <div className="flex items-center gap-1.5">

@@ -14,6 +14,7 @@ test(
     const providerId = uniqueName("e2e-provider")
     const original = await api<{ settings: ProviderSettingsPayload }>(browser, "/providers")
     let sessionId: string | undefined
+
     try {
       const configured = await api<{
         catalog: { providers: Array<{ providerId: string; hasApiKey: boolean }> }
@@ -31,12 +32,14 @@ test(
           },
         ],
       })
+
       expect(
         configured.catalog.providers.find((item) => item.providerId === providerId)?.hasApiKey,
       ).toBe(true)
       await app.open("/settings?category=providers")
       await expect(screen.getByText(providerId, { exact: true }).first()).toBeVisible()
       const marker = uniqueName("byok-output")
+
       const result = await api<{
         sessionId: string
         status: string
@@ -48,6 +51,7 @@ test(
         model: `${providerId}/${model}`,
         content: `Reply with only ${marker}. Do not call external tools.`,
       })
+
       sessionId = result.sessionId
       expect(result.status, result.error).toBe("completed")
       expect(result.output).toContain(marker)

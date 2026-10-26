@@ -10,6 +10,7 @@ const appStylesheetHref = import.meta.env.DEV ? `${appCss}?direct` : appCss
 export const Route = createRootRoute({
   head: () => {
     const brand = getS0Brand()
+
     return {
       meta: [
         { charSet: "utf-8" },

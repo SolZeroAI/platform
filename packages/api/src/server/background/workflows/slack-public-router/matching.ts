@@ -34,6 +34,7 @@ export function computeRegistrationMatchDetails(
   const surfaceOk = input.registration.surface === input.payload.surface
   const surfaceSpecificOk = surfaceRegistrationMatches(input)
   const channelOk = matchesChannelPattern(input.payload, input.registration.channel_name_pattern)
+
   return {
     registration: input.registration,
     surfaceOk,
@@ -51,11 +52,18 @@ export function computeRegistrationMatchDetails(
   }
 }
 
+function toRecord<Fields extends object>(fields: Fields): Record<string, unknown> {
+  let record: Record<string, unknown> = {}
+  Object.assign(record, fields)
+
+  return record
+}
+
 export function registrationFilteredLogFields(
   details: RegistrationMatchDetails,
   payload: NormalizedSlackPayload,
 ): Record<string, unknown> {
-  return {
+  return toRecord({
     nodeId: details.registration.node_id,
     surfaceRegistration: details.registration.surface,
     surfacePayload: payload.surface,
@@ -77,7 +85,7 @@ export function registrationFilteredLogFields(
     actionIdCount: details.actionIdCount,
     actionIdPayload: payload.actionId,
     actionIdsOk: details.actionIdsOk,
-  }
+  })
 }
 
 function testChannelPattern(channelName: string, pattern: string): boolean {
@@ -149,6 +157,7 @@ function keywordRulesMatch(keywordRules: string[], payload: NormalizedSlackPaylo
 function eventRegistrationMatches(input: MatchRegistrationInput): boolean {
   const eventTypes = parseSlackRegistrationStringArray(input.registration.event_types_json)
   const keywordRules = parseSlackRegistrationStringArray(input.registration.keyword_rules_json)
+
   return (
     eventTypeMatches(eventTypes, input.payload) && keywordRulesMatch(keywordRules, input.payload)
   )
@@ -160,6 +169,7 @@ function commandNodeMatches(input: MatchRegistrationInput): boolean {
 
 function commandNameMatches(input: MatchRegistrationInput): boolean {
   const expectedCommand = input.registration.command_name
+
   return (
     !expectedCommand ||
     (Boolean(input.payload.command) && expectedCommand === input.payload.command)
@@ -179,6 +189,7 @@ function actionIdsMatch(actionIds: string[], payload: NormalizedSlackPayload): b
 
 function interactionRegistrationMatches(input: MatchRegistrationInput): boolean {
   const actionIds = parseSlackRegistrationStringArray(input.registration.action_ids_json)
+
   return actionIdsMatch(actionIds, input.payload)
 }
 
@@ -205,6 +216,7 @@ export function matchesRegistration(input: MatchRegistrationInput): boolean {
 export function eventPayloadRequiresSlackUser(payload: NormalizedSlackPayload): boolean {
   const channelType = payload.channelType
   const isDirectMessage = channelType === "im" || channelType === "mpim"
+
   return Match.value(payload.eventType).pipe(
     Match.when("app_mention", () => isDirectMessage),
     Match.when("message", () => isDirectMessage),

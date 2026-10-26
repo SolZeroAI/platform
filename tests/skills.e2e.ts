@@ -15,12 +15,15 @@ test(
   { session: "admin" },
   async ({ app, browser, screen, agent }) => {
     const name = uniqueName("e2e-skill")
+
     const added = await api<{ skills: Skill[] }>(browser, "/admin/skills", "POST", {
       skillMd: `---\nname: ${name}\ndescription: Disposable end-to-end skill\n---\nOnly use in the e2e deployment.`,
       defaultEnabled: true,
     })
+
     const skill = added.skills.find((item) => item.name === name)!
     expect(skill).toBeDefined()
+
     try {
       await app.open("/admin/integrations?integrationTab=skills")
       await expect(screen.getByText(name, { exact: true })).toBeVisible()

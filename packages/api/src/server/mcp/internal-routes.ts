@@ -43,6 +43,7 @@ const shouldDispatchMcpRequestEffect = Effect.fn("mcp.routes.shouldDispatch")(fu
   workerRouteEnabled: boolean
 }) {
   const pathname = new URL(input.request.url).pathname
+
   return yield* Match.value(pathname).pipe(
     Match.when(isS0McpPath, () => Effect.succeed(input.workerRouteEnabled)),
     Match.when(isMcpcfProxyMcpPath, () =>

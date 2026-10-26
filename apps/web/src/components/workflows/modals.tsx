@@ -225,7 +225,9 @@ export function getEndpointLabel(
 ): string {
   const fallbackHandle =
     direction === "source" ? getNormalizedSourceHandle(handle) : getNormalizedTargetHandle(handle)
+
   const node = nodes.find((item) => item.id === nodeId)
+
   if (!node) {
     return `${nodeId ?? "Unknown node"}.${fallbackHandle}`
   }
@@ -233,6 +235,7 @@ export function getEndpointLabel(
   const definition = getWorkflowNodeDefinitionForNode(node)
   const ports = direction === "source" ? definition.outputs : definition.inputs
   const port = getPortById(ports, fallbackHandle)
+
   return `${node.id}.${port?.id ?? fallbackHandle}`
 }
 
@@ -253,12 +256,14 @@ export function ReplaceInputConnectionModal({
     replacement.connection.targetHandle,
     "target",
   )
+
   const currentOutput = getEndpointLabel(
     nodes,
     replacement.existingEdge.source,
     replacement.existingEdge.sourceHandle,
     "source",
   )
+
   const nextOutput = getEndpointLabel(
     nodes,
     replacement.connection.source,
@@ -316,12 +321,14 @@ export function OverwriteManualInputConnectionModal({
     overwrite.connection.targetHandle,
     "target",
   )
+
   const nextOutput = getEndpointLabel(
     nodes,
     overwrite.connection.source,
     overwrite.connection.sourceHandle,
     "source",
   )
+
   const manualValue = getManualInputValue(overwrite.targetNode, overwrite.targetHandle)
 
   return (
@@ -458,18 +465,21 @@ export function SlackTestModal({
   const [inputText, setInputText] = useState(() =>
     formatJson({ trigger: defaultSlackTestTrigger(node.id) }),
   )
+
   const [modalError, setModalError] = useState("")
 
   const reuseRecentInput = () => {
     if (!recentTrigger) {
       return
     }
+
     setInputText(formatJson({ trigger: recentTrigger }))
     setModalError("")
   }
 
   const submit = async () => {
     setModalError("")
+
     try {
       await onRun(parseSlackTestTriggerInput(inputText, node.id))
     } catch (errorValue) {
@@ -561,6 +571,7 @@ export function WebhookTestModal({
     if (!recentPayload) {
       return
     }
+
     setBodyText(formatJson(recentPayload.body))
     setHeadersText(formatJson(recentPayload.headers))
     setQueryText(formatJson(recentPayload.query))
@@ -569,6 +580,7 @@ export function WebhookTestModal({
 
   const submit = async () => {
     setModalError("")
+
     try {
       await onRun({
         body: parseJsonInput(bodyText, "Body"),

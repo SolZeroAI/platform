@@ -35,6 +35,7 @@ function DialogContent({ size, className, ...props }: DialogProps) {
   if (size === "near-full") {
     return <KumoDialog className={cn(NEAR_FULL_DIALOG_CLASS_NAME, className)} {...props} />
   }
+
   return <KumoDialog size={size} className={className} {...props} />
 }
 

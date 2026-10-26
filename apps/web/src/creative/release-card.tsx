@@ -26,9 +26,11 @@ export type ReleaseWorkType = typeof ReleaseWorkTypeSchema.Type
 export const ReleaseTitleSchema = Schema.Trim.pipe(
   Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(64)),
 )
+
 export const ReleaseDescriptionSchema = Schema.Trim.pipe(
   Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(180)),
 )
+
 export const ReleaseBulletSchema = Schema.Trim.pipe(
   Schema.check(Schema.isNonEmpty(), Schema.isMaxLength(120)),
 )
@@ -92,7 +94,9 @@ function clampHighlights(
   const normalized = highlights
     .filter((item) => item.title.trim() && item.description.trim())
     .slice(0, count)
+
   if (normalized.length > 0) return normalized
+
   return [
     {
       title: "Release update",
@@ -102,13 +106,26 @@ function clampHighlights(
 }
 
 function overflowTitles(input: ReleaseCardInput, capacity: number): readonly string[] {
-  return [
+  const titles = [
     ...input.highlights.slice(capacity).map((highlight) => highlight.title),
     ...(input.also ?? []),
   ]
-    .map((title) => title.trim())
-    .filter((title, index, titles) => title && titles.indexOf(title) === index)
-    .slice(0, 5)
+
+  const unique: string[] = []
+
+  for (const title of titles) {
+    const trimmed = title.trim()
+
+    if (trimmed && !unique.includes(trimmed)) {
+      unique.push(trimmed)
+    }
+
+    if (unique.length === 5) {
+      break
+    }
+  }
+
+  return unique
 }
 
 const workTypePresentation: Record<
@@ -133,6 +150,7 @@ function WorkTypeBadge({
   readonly inverse?: boolean
 }): ReactElement {
   const presentation = workTypePresentation[type]
+
   return (
     <span
       style={{
@@ -163,6 +181,7 @@ function BulletList({
   const bullets = (
     highlight.bullets?.filter((bullet) => bullet.trim()) ?? [highlight.description]
   ).slice(0, 2)
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {bullets.map((bullet, index) => (
@@ -207,6 +226,7 @@ function OverflowFooter({
   readonly inverse?: boolean
 }): ReactElement | null {
   if (items.length === 0) return null
+
   return (
     <div
       style={{
@@ -245,6 +265,7 @@ function OverflowFooter({
 function DarkColumnsCard({ input }: { readonly input: ReleaseCardInput }): ReactElement {
   const highlights = clampHighlights(input.highlights, 4)
   const also = overflowTitles(input, 4)
+
   return (
     <div
       style={{
@@ -348,6 +369,7 @@ function DarkColumnsCard({ input }: { readonly input: ReleaseCardInput }): React
 function LightFeaturesCard({ input }: { readonly input: ReleaseCardInput }): ReactElement {
   const highlights = clampHighlights(input.highlights, 3)
   const also = overflowTitles(input, 3)
+
   return (
     <div
       style={{

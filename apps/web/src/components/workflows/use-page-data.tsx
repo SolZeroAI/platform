@@ -61,8 +61,10 @@ export function useWorkflowPageData(input: any) {
       const sequence = workflowFetchSequenceRef.current + 1
       workflowFetchSequenceRef.current = sequence
       setLoading(true)
+
       try {
         const params = workflowListQueryParams(workflowListState)
+
         const data = await requestJson<{
           workflows: WorkflowSummary[]
           total: number
@@ -70,9 +72,11 @@ export function useWorkflowPageData(input: any) {
           offset: number
           hasMore: boolean
         }>(`/api/workflows?${params.toString()}`, { signal })
+
         if (workflowFetchSequenceRef.current !== sequence) {
           return
         }
+
         setWorkflows(data.workflows)
         setWorkflowTotal(data.total)
         workflowsLoadedRef.current = true
@@ -80,6 +84,7 @@ export function useWorkflowPageData(input: any) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         showErrorToast(getErrorMessage(errorValue))
       } finally {
         if (workflowFetchSequenceRef.current === sequence) {
@@ -104,13 +109,17 @@ export function useWorkflowPageData(input: any) {
           signal: options.signal,
         },
       )
+
       if (options.signal?.aborted || workflowDetailFetchSequenceRef.current !== options.sequence) {
         return false
       }
+
       const manifest = data.workflow.manifest
+
       if (!manifest) {
         throw new Error("Workflow response did not include a manifest")
       }
+
       const builderManifest = migrateWorkflowManifestForBuilder(manifest)
       setWorkflowName(builderManifest.name)
       setNodes(builderManifest.nodes.map(toCanvasNode))
@@ -119,6 +128,7 @@ export function useWorkflowPageData(input: any) {
       setSelectedEdgeId(null)
       setWorkflowHeaderDraftsByNode({})
       setWorkflows((current) => upsertWorkflowSummary(current, data.workflow))
+
       return true
     },
     [setEdges, setNodes],
@@ -134,6 +144,7 @@ export function useWorkflowPageData(input: any) {
       const state = options.state ?? runTableState
       const params = workflowRunQueryParams(state)
       setRunTableLoading(true)
+
       try {
         const data = await requestJson<{
           runs: WorkflowRun[]
@@ -146,9 +157,11 @@ export function useWorkflowPageData(input: any) {
         }>(`/api/workflows/${workflowId}/runs?${params.toString()}`, {
           signal: options.signal,
         })
+
         if (options.signal?.aborted || runFetchSequenceRef.current !== sequence) {
           return
         }
+
         setRuns(data.runs)
         setRunTableTotal(data.total)
         setRunTotal(data.totalRuns)
@@ -162,6 +175,7 @@ export function useWorkflowPageData(input: any) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         showErrorToast(getErrorMessage(errorValue))
       } finally {
         if (runFetchSequenceRef.current === sequence) {
@@ -176,6 +190,7 @@ export function useWorkflowPageData(input: any) {
     const data = await requestJson<{ events: WorkflowRunEvent[] }>(
       `/api/workflows/${workflowId}/runs/${runId}/events`,
     )
+
     setEvents(data.events)
   }, [])
 
@@ -186,6 +201,7 @@ export function useWorkflowPageData(input: any) {
       }
 
       setSubmittingApprovalNodeId(nodeId)
+
       try {
         await requestJson(`/api/workflows/${selectedWorkflowId}/runs/${runId}/approval`, {
           method: "POST",
@@ -204,9 +220,11 @@ export function useWorkflowPageData(input: any) {
 
   useEffect(() => {
     const controller = new AbortController()
+
     const timeoutId = setTimeout(() => {
       void loadWorkflows(controller.signal)
     }, 200)
+
     return () => {
       clearTimeout(timeoutId)
       controller.abort()
@@ -216,15 +234,19 @@ export function useWorkflowPageData(input: any) {
   useEffect(() => {
     if (!selectedWorkflowId) {
       setWorkflowDetailLoadStateValue(null)
+
       return
     }
+
     const currentDetailLoadState = workflowDetailLoadStateRef.current
+
     if (
       currentDetailLoadState?.workflowId === selectedWorkflowId &&
       currentDetailLoadState.phase === "ready"
     ) {
       return
     }
+
     const sequence = workflowDetailFetchSequenceRef.current + 1
     workflowDetailFetchSequenceRef.current = sequence
     const controller = new AbortController()
@@ -234,19 +256,23 @@ export function useWorkflowPageData(input: any) {
         if (!applied || workflowDetailFetchSequenceRef.current !== sequence) {
           return
         }
+
         setWorkflowDetailLoadStateValue({ workflowId: selectedWorkflowId, phase: "ready" })
       })
       .catch((errorValue) => {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         if (workflowDetailFetchSequenceRef.current !== sequence) {
           return
         }
+
         const message = getErrorMessage(errorValue)
         setWorkflowDetailLoadStateValue({ workflowId: selectedWorkflowId, phase: "error", message })
         showErrorToast(message)
       })
+
     return () => {
       controller.abort()
     }
@@ -255,12 +281,16 @@ export function useWorkflowPageData(input: any) {
   useEffect(() => {
     if (!selectedWorkflowId) {
       setRunTableLoading(false)
+
       return
     }
+
     const controller = new AbortController()
+
     const timeoutId = setTimeout(() => {
       void loadRuns(selectedWorkflowId, { signal: controller.signal })
     }, 200)
+
     return () => {
       clearTimeout(timeoutId)
       controller.abort()
@@ -270,8 +300,10 @@ export function useWorkflowPageData(input: any) {
   useEffect(() => {
     if (!selectedWorkflowId || !selectedRunId) {
       setEvents([])
+
       return
     }
+
     void loadEvents(selectedWorkflowId, selectedRunId)
   }, [loadEvents, selectedRunId, selectedWorkflowId])
 
@@ -279,11 +311,14 @@ export function useWorkflowPageData(input: any) {
     if (!selectedWorkflowId) {
       return
     }
+
     const search =
       runSelectionPinned && selectedRunId ? `?runId=${encodeURIComponent(selectedRunId)}` : ""
+
     const source = new EventSource(`/api/workflows/${selectedWorkflowId}/events/stream${search}`)
 
     source.addEventListener("snapshot", (event) => {
+      // SAFETY: The workflow snapshot listener receives a MessageEvent whose data is the WorkflowRunSnapshot JSON string.
       const snapshot = JSON.parse((event as MessageEvent<string>).data) as WorkflowRunSnapshot
       const snapshotRunsById = new Map(snapshot.runs.map((run) => [run.id, run]))
       setRuns((current) => current.map((run) => snapshotRunsById.get(run.id) ?? run))
@@ -296,8 +331,10 @@ export function useWorkflowPageData(input: any) {
         ) {
           return current
         }
+
         return nextRunId
       })
+
       if (nextRunId === snapshot.runId) {
         setEvents(snapshot.events)
       }

@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({ deps: { search }, location, parentMatchPromise }) => {
     const parentMatch = await parentMatchPromise
+    // SAFETY: The admin route is a child of the authenticated shell, whose loader returns AuthenticatedShellRouteData.
     const parentLoaderData = parentMatch.loaderData as AuthenticatedShellRouteData
     requireAdminSession(parentLoaderData.authSession)
 

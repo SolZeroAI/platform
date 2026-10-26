@@ -25,11 +25,13 @@ const handleConfiguredGitHubAppWebhookRequest = Effect.fn(
     try: () => request.arrayBuffer(),
     catch: (cause) => new GitHubAppError({ message: "Failed to read GitHub webhook body", cause }),
   })
+
   const validSignature = yield* verifyGitHubWebhookSignature({
     secret,
     signatureHeader: request.headers.get("x-hub-signature-256"),
     body,
   })
+
   return yield* Match.value(validSignature).pipe(
     Match.when(false, () =>
       Effect.succeed(json({ error: "Invalid GitHub webhook signature" }, 401)),

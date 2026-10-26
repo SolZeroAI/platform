@@ -48,6 +48,7 @@ export function getWorkflowSaveChangeSummary(
   }
 
   const changes: WorkflowSaveChangeSummary[] = []
+
   if (previousManifest.name !== nextManifest.name) {
     changes.push(
       createWorkflowSaveChange("Rename workflow", [
@@ -72,8 +73,10 @@ export function getWorkflowSaveChangeSummary(
   const nextNodes = new Map(nextManifest.nodes.map((node) => [node.id, node]))
   const addedNodes = nextManifest.nodes.filter((node) => !previousNodes.has(node.id))
   const removedNodes = previousManifest.nodes.filter((node) => !nextNodes.has(node.id))
+
   const changedNodes = nextManifest.nodes.filter((node) => {
     const previousNode = previousNodes.get(node.id)
+
     return previousNode ? formatJson(previousNode) !== formatJson(node) : false
   })
 
@@ -81,8 +84,10 @@ export function getWorkflowSaveChangeSummary(
   const nextEdges = new Map(nextManifest.edges.map((edge) => [edge.id, edge]))
   const addedEdges = nextManifest.edges.filter((edge) => !previousEdges.has(edge.id))
   const removedEdges = previousManifest.edges.filter((edge) => !nextEdges.has(edge.id))
+
   const changedEdges = nextManifest.edges.filter((edge) => {
     const previousEdge = previousEdges.get(edge.id)
+
     return previousEdge ? formatJson(previousEdge) !== formatJson(edge) : false
   })
 
@@ -102,6 +107,7 @@ export function getWorkflowSaveChangeSummary(
       )
     }
   }
+
   if (removedNodes.length > 0) {
     for (const node of removedNodes) {
       changes.push(
@@ -118,9 +124,11 @@ export function getWorkflowSaveChangeSummary(
       )
     }
   }
+
   if (changedNodes.length > 0) {
     for (const node of changedNodes) {
       const previousNode = previousNodes.get(node.id)
+
       if (previousNode) {
         changes.push(
           createWorkflowSaveChange(
@@ -132,6 +140,7 @@ export function getWorkflowSaveChangeSummary(
       }
     }
   }
+
   if (addedEdges.length > 0) {
     for (const edge of addedEdges) {
       changes.push(
@@ -139,6 +148,7 @@ export function getWorkflowSaveChangeSummary(
       )
     }
   }
+
   if (removedEdges.length > 0) {
     for (const edge of removedEdges) {
       changes.push(
@@ -148,9 +158,11 @@ export function getWorkflowSaveChangeSummary(
       )
     }
   }
+
   if (changedEdges.length > 0) {
     for (const edge of changedEdges) {
       const previousEdge = previousEdges.get(edge.id)
+
       if (previousEdge) {
         changes.push(
           createWorkflowSaveChange(
@@ -187,7 +199,11 @@ export function createWorkflowSaveChange(
   return {
     title,
     details: capWorkflowSaveChangeDetails(
-      details.map(normalizeWorkflowSaveChangeDetail).filter((detail) => detail.label),
+      details.flatMap((detail) => {
+        const normalized = normalizeWorkflowSaveChangeDetail(detail)
+
+        return normalized.label ? [normalized] : []
+      }),
     ),
     subject,
     badge,
@@ -207,7 +223,17 @@ export function createWorkflowSaveChangeDetail(
   revertAction?: WorkflowSaveRevertAction,
   diff?: WorkflowSaveChangeDetailDiff,
 ): WorkflowSaveChangeDetailSummary {
-  return { label, ...(revertAction ? { revertAction } : {}), ...(diff ? { diff } : {}) }
+  const detail: WorkflowSaveChangeDetailSummary = { label }
+
+  if (revertAction) {
+    detail.revertAction = revertAction
+  }
+
+  if (diff) {
+    detail.diff = diff
+  }
+
+  return detail
 }
 
 export function createWorkflowSaveChangeJsonDiff(
@@ -264,6 +290,7 @@ export function capWorkflowSaveChangeDetails(
   if (details.length <= WORKFLOW_SAVE_CHANGE_DETAIL_LIMIT) {
     return details
   }
+
   const visibleDetails = details.slice(0, WORKFLOW_SAVE_CHANGE_DETAIL_LIMIT)
   const hiddenDetails = details.slice(WORKFLOW_SAVE_CHANGE_DETAIL_LIMIT)
   const hiddenRevertableDetails = hiddenDetails.filter((detail) => detail.revertAction)
@@ -315,6 +342,7 @@ export function applyWorkflowSaveRevertAction(
         position: { ...action.previousPosition },
       }))
   }
+
   return manifest
 }
 
@@ -324,11 +352,14 @@ export function updateWorkflowManifestNode(
   updater: (node: WorkflowManifestNode) => WorkflowManifestNode,
 ): WorkflowManifest {
   let updated = false
+
   const nodes = manifest.nodes.map((node) => {
     if (node.id !== nodeId) {
       return node
     }
+
     updated = true
+
     return updater(node)
   })
 
@@ -340,11 +371,13 @@ export function restoreWorkflowNodeInputValues(
   previousInputValues: Record<string, string>,
 ): WorkflowNodeOptions {
   const nextOptions = { ...options }
+
   if (Object.keys(previousInputValues).length > 0) {
     nextOptions.inputValues = cloneWorkflowJsonValue(previousInputValues)
   } else {
     delete nextOptions.inputValues
   }
+
   return nextOptions
 }
 
@@ -353,19 +386,25 @@ export function restoreWorkflowNodeOptionKeys(
   previousOptions: WorkflowNodeOptions,
   optionKeys: Array<keyof WorkflowNodeOptions>,
 ): WorkflowNodeOptions {
-  return optionKeys.reduce((nextOptions, key) => {
+  if (optionKeys.length === 0) {
+    return options
+  }
+
+  const nextOptions: WorkflowNodeOptions = { ...options }
+
+  for (const key of optionKeys) {
     if (Object.prototype.hasOwnProperty.call(previousOptions, key)) {
-      return {
-        ...nextOptions,
-        [key]: cloneWorkflowJsonValue(previousOptions[key]),
-      }
+      Object.assign(nextOptions, { [key]: cloneWorkflowJsonValue(previousOptions[key]) })
+    } else {
+      delete nextOptions[key]
     }
-    const { [key]: _omitted, ...rest } = nextOptions
-    return rest
-  }, options)
+  }
+
+  return nextOptions
 }
 
 export function cloneWorkflowJsonValue<T>(value: T): T {
+  // SAFETY: JSON.parse of JSON.stringify(value) returns the same JSON structure as the workflow value T.
   return value && typeof value === "object" ? (JSON.parse(JSON.stringify(value)) as T) : value
 }
 
@@ -393,6 +432,7 @@ export function getWorkflowNodeChangeDetails(
       ),
     )
   }
+
   if (previousNode.type !== nextNode.type) {
     details.push(
       createWorkflowSaveChangeDetail(
@@ -416,6 +456,7 @@ export function getWorkflowNodeChangeDetails(
     previousNode.options,
     nextNode.options,
   )
+
   if (inputValueChange) {
     details.push(
       createWorkflowSaveChangeDetail(
@@ -438,6 +479,7 @@ export function getWorkflowNodeChangeDetails(
   const optionKeys = getRecordChangeKeys(previousNode.options, nextNode.options).filter(
     (key) => key !== "inputValues",
   )
+
   for (const optionKey of optionKeys) {
     details.push(
       createWorkflowSaveChangeDetail(
@@ -486,11 +528,13 @@ export function getWorkflowInputValueChangeSummary(
 ): string | null {
   const previousInputValues = asJsonRecord(previousOptions.inputValues) ?? {}
   const nextInputValues = asJsonRecord(nextOptions.inputValues) ?? {}
+
   if (formatJson(previousInputValues) === formatJson(nextInputValues)) {
     return null
   }
 
   const inputValueKeys = getRecordChangeKeys(previousInputValues, nextInputValues)
+
   return inputValueKeys.length > 0
     ? `Input values changed: ${formatCompactPlainList(inputValueKeys)}`
     : "Input values changed"
@@ -504,12 +548,14 @@ export function getWorkflowNodeOptionDetails(
     .filter((key) => key !== "inputValues")
     .sort()
     .map(formatWorkflowOptionKey)
+
   const inputValues = asJsonRecord(options.inputValues)
   const details: string[] = []
 
   if (optionKeys.length > 0) {
     details.push(`${label}: ${formatCompactPlainList(optionKeys)}`)
   }
+
   if (inputValues && Object.keys(inputValues).length > 0) {
     details.push(`Input values: ${formatCompactPlainList(Object.keys(inputValues).sort())}`)
   }
@@ -550,6 +596,7 @@ export function formatWorkflowConnectionEndpoint(
   handle: string,
 ): string {
   const node = manifest.nodes.find((item) => item.id === nodeId)
+
   return `${node ? formatWorkflowNodeLabel(node) : nodeId}.${handle}`
 }
 
@@ -562,6 +609,7 @@ export function getRecordChangeKeys<T extends object>(
   nextRecord: T,
 ): Array<keyof T & string> {
   const keys = new Set([...ownStringKeys(previousRecord), ...ownStringKeys(nextRecord)])
+
   return Array.from(keys)
     .filter((key) => formatJson(previousRecord[key]) !== formatJson(nextRecord[key]))
     .sort()
@@ -575,6 +623,7 @@ export function getWorkflowNodeSaveChangeSubject(
   node: WorkflowManifestNode,
 ): WorkflowSaveChangeSubject {
   const definition = getWorkflowNodeDefinitionForNode(node)
+
   return {
     kind: "node",
     label: formatWorkflowNodeLabel(node),
@@ -608,9 +657,11 @@ export function formatWorkflowPosition(position: WorkflowManifestNode["position"
 export function formatCompactPlainList(labels: string[], visibleCount = 4): string {
   const visibleLabels = labels.slice(0, visibleCount)
   const hiddenCount = labels.length - visibleLabels.length
+
   if (hiddenCount <= 0) {
     return visibleLabels.join(", ")
   }
+
   return `${visibleLabels.join(", ")} and ${hiddenCount} more`
 }
 
@@ -628,15 +679,19 @@ export function formatSlackRegistrationMatch(
   if (registration.surface === "command") {
     return registration.commandName ?? "slash command"
   }
+
   if (registration.surface === "interaction") {
     return formatUnknownStringList(registration.actionIds, "all actions")
   }
 
   const eventTypes = formatUnknownStringList(registration.eventTypes, "all events")
+
   const channelPattern = registration.channelNamePattern
     ? `channel ${registration.channelNamePattern}`
     : "any channel"
+
   const keywords = formatUnknownStringList(registration.keywordRules, "")
+
   return keywords
     ? `${eventTypes}; ${channelPattern}; ${keywords}`
     : `${eventTypes}; ${channelPattern}`
@@ -646,7 +701,9 @@ export function formatUnknownStringList(value: unknown, fallback: string): strin
   if (!Array.isArray(value)) {
     return fallback
   }
+
   const items = value.filter((item): item is string => typeof item === "string" && item.length > 0)
+
   return items.length > 0 ? items.join(", ") : fallback
 }
 
@@ -663,14 +720,18 @@ export function getWorkflowRuntimeVersionChangePreview(
   const previousVersion = previousManifest
     ? readWorkflowManifestVersion(previousManifest)
     : readWorkflowManifestVersion(nextManifest)
+
   const nextVersion = readWorkflowManifestVersion(nextManifest)
+
   return previousVersion < nextVersion
     ? { fromVersion: previousVersion, toVersion: nextVersion }
     : null
 }
 
 export function readWorkflowManifestVersion(manifest: WorkflowManifest): number {
+  // SAFETY: Workflow manifests always carry a numeric version, which is read before the integer check.
   const candidate = (manifest as { version?: unknown }).version
+
   return typeof candidate === "number" && Number.isInteger(candidate) ? candidate : 0
 }
 

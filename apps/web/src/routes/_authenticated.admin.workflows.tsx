@@ -5,6 +5,7 @@ import { canonicalAdminSearchForView, isCanonicalAdminSearch } from "@/lib/admin
 export const Route = createFileRoute("/_authenticated/admin/workflows")({
   beforeLoad: ({ search }) => {
     const canonicalSearch = canonicalAdminSearchForView("workflows", search)
+
     if (isCanonicalAdminSearch(search, canonicalSearch)) {
       return
     }
@@ -19,5 +20,6 @@ export const Route = createFileRoute("/_authenticated/admin/workflows")({
 
 function AdminWorkflowsRoutePage() {
   const search = Route.useSearch()
+
   return <AdminPage search={search} view="workflows" />
 }

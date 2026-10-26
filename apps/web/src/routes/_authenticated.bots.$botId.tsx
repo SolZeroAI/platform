@@ -7,5 +7,6 @@ export const Route = createFileRoute("/_authenticated/bots/$botId")({
 
 function BotDetailRoute() {
   const { botId } = Route.useParams()
+
   return <BotDetailPage botId={botId} />
 }

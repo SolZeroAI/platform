@@ -39,11 +39,13 @@ export function useHomeScrollAnimation({
 }: HomeScrollAnimationRefs) {
   const snapControllerRef = useRef<HomeScrollSnapController | null>(null)
   const pendingSnapRef = useRef<SnapView | null>(null)
+
   const { contextSafe } = useGSAP(
     () => {
       if (!enabled || typeof window === "undefined") {
         return
       }
+
       registerGsap()
 
       const scroller = containerRef.current
@@ -51,11 +53,13 @@ export function useHomeScrollAnimation({
       const table = tableRef.current
       const floatingHeader = floatingHeaderRef.current
       const scrollCue = scrollCueRef.current
+
       if (!scroller || !hero || !table || !floatingHeader || !scrollCue) {
         return
       }
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
       const snapController = createHomeScrollSnapController({
         scroller,
         hero,
@@ -63,7 +67,9 @@ export function useHomeScrollAnimation({
         input: inputRef.current,
         reducedMotion,
       })
+
       snapControllerRef.current = snapController
+
       if (pendingSnapRef.current === "table") {
         pendingSnapRef.current = null
         snapController.snapToTableReliably()
@@ -79,6 +85,7 @@ export function useHomeScrollAnimation({
 
       const destroySnapController = () => {
         snapController.destroy()
+
         if (snapControllerRef.current === snapController) {
           snapControllerRef.current = null
         }
@@ -142,8 +149,10 @@ export function useHomeScrollAnimation({
   const scrollToPreviousSessions = useCallback(() => {
     if (snapControllerRef.current) {
       snapControllerRef.current.snapToTableReliably()
+
       return
     }
+
     pendingSnapRef.current = "table"
   }, [])
 
@@ -152,8 +161,10 @@ export function useHomeScrollAnimation({
     scrollToNewAgent: contextSafe(() => {
       if (snapControllerRef.current) {
         snapControllerRef.current.snapTo("hero", { focusInput: true })
+
         return
       }
+
       pendingSnapRef.current = "hero"
     }),
   }
@@ -163,6 +174,7 @@ function registerGsap() {
   if (gsapRegistered) {
     return
   }
+
   gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, useGSAP)
   gsapRegistered = true
 }
@@ -204,6 +216,7 @@ function createHomeScrollSnapController({
     for (const timer of reliableSnapTimers) {
       window.clearTimeout(timer)
     }
+
     reliableSnapTimers = []
   }
 
@@ -221,9 +234,11 @@ function createHomeScrollSnapController({
 
     if (reducedMotion) {
       scroller.scrollTo({ top: targetY, behavior: "auto" })
+
       if (options.focusInput) {
         input?.focus()
       }
+
       return
     }
 
@@ -239,6 +254,7 @@ function createHomeScrollSnapController({
         isSnapping = false
         snapTween = null
         currentView = view
+
         if (options.focusInput) {
           input?.focus()
         }
@@ -252,6 +268,7 @@ function createHomeScrollSnapController({
 
   const settle = () => {
     settleTimer = undefined
+
     if (isSnapping) {
       return
     }
@@ -260,21 +277,25 @@ function createHomeScrollSnapController({
     const tableY = getTargetScrollTop(scroller, table)
     const top = scroller.scrollTop
     const distance = tableY - heroY
+
     if (distance <= 0) {
       return
     }
 
     if (top <= heroY + 2) {
       currentView = "hero"
+
       return
     }
 
     if (top >= tableY) {
       currentView = "table"
+
       return
     }
 
     const threshold = distance * SNAP_THRESHOLD_RATIO
+
     const targetView =
       currentView === "hero"
         ? top >= heroY + threshold
@@ -291,6 +312,7 @@ function createHomeScrollSnapController({
     if (isSnapping || Date.now() < suppressSettleUntil) {
       return
     }
+
     clearSettleTimer()
     settleTimer = window.setTimeout(settle, SNAP_SETTLE_DELAY_MS)
   }
@@ -307,23 +329,29 @@ function createHomeScrollSnapController({
     const scheduleAttempt = (delayMs: number) => {
       if (delayMs === 0) {
         attemptSnap()
+
         return
       }
+
       reliableSnapTimers.push(window.setTimeout(attemptSnap, delayMs))
     }
 
     const runWhenLayoutReady = (attempt: () => void) => {
       const scrollerHeight = scroller.clientHeight
+
       if (scrollerHeight > 0 && table.offsetHeight > 0) {
         attempt()
+
         return
       }
 
       requestAnimationFrame(() => {
         if (scroller.clientHeight > 0 && table.offsetHeight > 0) {
           attempt()
+
           return
         }
+
         requestAnimationFrame(attempt)
       })
     }
@@ -342,6 +370,7 @@ function createHomeScrollSnapController({
     ) {
       return
     }
+
     if (isSnapping) {
       stopSnap()
     }
@@ -374,6 +403,7 @@ function inferCurrentView(
 ): SnapView {
   const heroY = getTargetScrollTop(scroller, hero)
   const tableY = getTargetScrollTop(scroller, table)
+
   return Math.abs(scroller.scrollTop - heroY) <= Math.abs(scroller.scrollTop - tableY)
     ? "hero"
     : "table"
@@ -384,5 +414,6 @@ function getTargetScrollTop(scroller: HTMLDivElement, target: HTMLElement): numb
   const targetRect = target.getBoundingClientRect()
   const targetY = scroller.scrollTop + targetRect.top - scrollerRect.top
   const maxScroll = scroller.scrollHeight - scroller.clientHeight
+
   return Math.max(0, Math.min(maxScroll, targetY))
 }

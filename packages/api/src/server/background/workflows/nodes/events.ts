@@ -1,5 +1,6 @@
 import { generateId } from "../../auth/crypto"
 import { createWorkflowStoreFromD1 } from "../../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env inside workflow node event persistence, which runs outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { toError } from "../../../lib/effect-errors"
 import type { WorkflowNodeExecutionInput } from "./common"
@@ -35,6 +36,7 @@ function logNodeRunEventError(
     nodeType: input.node.type,
     eventType: event.eventType,
   })
+
   return normalizedError
 }
 

@@ -74,6 +74,7 @@ export function SignInPage({
   const [pending, setPending] = useState(false)
   const [ready, setReady] = useState(false)
   useEffect(() => setReady(true), [])
+
   const signInProviders = [...authProviderConfig.providers]
     .filter((provider) => provider.capabilities.signIn)
     .sort((left, right) =>
@@ -83,6 +84,7 @@ export function SignInPage({
           ? 1
           : left.displayName.localeCompare(right.displayName),
     )
+
   const credentialProvider = signInProviders.find((provider) => provider.kind === "credential")
   const externalProviders = signInProviders.filter((provider) => provider.kind !== "credential")
 
@@ -92,9 +94,11 @@ export function SignInPage({
     const email = String(form.get("email") ?? "").trim()
     const password = String(form.get("password") ?? "")
     setPending(true)
+
     try {
       const callbackURL = getCurrentAuthCallback()
       const result = await authClient.signIn.email({ email, password, callbackURL })
+
       if (result.error) showErrorToast(result.error.message ?? "Sign-in failed")
     } catch (errorValue) {
       showErrorToast(errorValue instanceof Error ? errorValue.message : "Sign-in failed")
@@ -105,11 +109,14 @@ export function SignInPage({
 
   const handleExternalSignIn = async (provider: PublicAuthProvider) => {
     setPending(true)
+
     try {
       const callbackURL = getCurrentAuthCallback()
+
       const result = await (provider.kind === "social"
         ? signInWithSocial(provider.id, callbackURL)
         : signInWithOAuth(provider.id, callbackURL))
+
       if (result.error) {
         showErrorToast(result.error.message ?? "Sign-in failed")
         setPending(false)
@@ -257,5 +264,6 @@ function getCurrentAuthCallback(): string {
   if (typeof window === "undefined") return "/"
 
   const callback = `${window.location.pathname}${window.location.search}${window.location.hash}`
+
   return callback || "/"
 }

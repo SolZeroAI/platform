@@ -32,6 +32,7 @@ function applySubagentClaim(host: SubagentStateHost, claim: ClaimedSubagentDispa
     Match.when(true, () => host.setState({ ...host.state, subagentDispatch: claim.state })),
     Match.orElse(() => undefined),
   )
+
   return claim.order
 }
 

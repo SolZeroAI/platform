@@ -25,6 +25,7 @@ export function isDefaultSessionCustomMcpServer(
   server: OpenCodeMcpServers[string] | null | undefined,
 ): boolean {
   const defaultServer = getDefaultSessionCustomMcpServers()[name]
+
   if (!defaultServer || !server || defaultServer.type !== "remote" || server.type !== "remote") {
     return false
   }
@@ -43,11 +44,13 @@ function hashCustomMcpServerName(name: string): string {
     (acc, code) => (acc * 31 + code) >>> 0,
     0,
   )
+
   return hash.toString(36)
 }
 
 function isAsciiLowercaseAlphanumeric(character: string): boolean {
   const code = character.charCodeAt(0)
+
   return (code >= 48 && code <= 57) || (code >= 97 && code <= 122)
 }
 
@@ -66,9 +69,11 @@ function slugCustomMcpServerName(name: string): string {
       characters.push("_")
       separatorPending = false
     }
+
     if (characters.length < 40) {
       characters.push(character)
     }
+
     if (characters.length === 40) {
       break
     }
@@ -95,11 +100,13 @@ export function parseCustomMcpServerId(id: string): {
 
   const body = id.slice(CUSTOM_MCP_SERVER_ID_PREFIX.length)
   const separatorIndex = body.lastIndexOf(CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR)
+
   if (separatorIndex <= 0) {
     return null
   }
 
   const hashStart = separatorIndex + CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR.length
+
   if (hashStart >= body.length) {
     return null
   }
@@ -115,15 +122,18 @@ export function parseCustomMcpToolKey(toolKey: string): {
   mcpToolName: string
 } | null {
   const expectedPrefix = `${CUSTOM_MCP_TOOL_KEY_PREFIX}${CUSTOM_MCP_SERVER_ID_PREFIX}`
+
   if (!toolKey.startsWith(expectedPrefix)) {
     return null
   }
 
   const body = toolKey.slice(CUSTOM_MCP_TOOL_KEY_PREFIX.length)
   const separatorIndex = body.indexOf(CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR)
+
   if (separatorIndex > CUSTOM_MCP_SERVER_ID_PREFIX.length) {
     const hashAndTool = body.slice(separatorIndex + CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR.length)
     const toolSeparatorIndex = hashAndTool.indexOf("_")
+
     if (toolSeparatorIndex > 0 && toolSeparatorIndex < hashAndTool.length - 1) {
       return {
         serverName: body.slice(CUSTOM_MCP_SERVER_ID_PREFIX.length, separatorIndex),
@@ -133,13 +143,17 @@ export function parseCustomMcpToolKey(toolKey: string): {
   }
 
   const legacySegments = body.slice(CUSTOM_MCP_SERVER_ID_PREFIX.length).split("_").filter(Boolean)
+
   const legacyHashIndex = legacySegments.findIndex((segment, index) => {
     if (index <= 0 || index >= legacySegments.length - 1) {
       return false
     }
+
     const serverName = legacySegments.slice(0, index).join("_")
+
     return hashCustomMcpServerName(serverName) === segment
   })
+
   const fallbackLegacyHashIndex = legacySegments.findIndex(
     (segment, index) =>
       index > 0 &&
@@ -149,6 +163,7 @@ export function parseCustomMcpToolKey(toolKey: string): {
       /[0-9]/.test(segment) &&
       /^[a-z0-9]+$/.test(segment),
   )
+
   const hashIndex = legacyHashIndex === -1 ? fallbackLegacyHashIndex : legacyHashIndex
 
   if (hashIndex === -1) {
@@ -173,6 +188,7 @@ export interface McpcfServerDefinition {
 }
 
 export type McpcfServerId = string
+
 export type McpcfServerSlug = string
 
 export const AI_SEARCH_SESSION_TOOL_KIND = "ai_search"
@@ -290,12 +306,15 @@ export interface BuildSessionToolRuntimePlanInput {
 
 export function normalizeAiSearchSourceId(value: string): string {
   const sourceId = value.trim()
+
   if (!sourceId) {
     throw new Error("AI Search source id is required")
   }
+
   if (sourceId.length > 64 || !AI_SEARCH_SOURCE_ID_PATTERN.test(sourceId)) {
     throw new Error(`Invalid AI Search source id '${value}'`)
   }
+
   return sourceId
 }
 
@@ -313,17 +332,21 @@ export function getSelectedAiSearchSourceIds(
 
 export function normalizeMcpcfServerId(value: string): McpcfServerId {
   const serverId = value.trim()
+
   if (!serverId) {
     throw new Error("MCP Context Forge server id is required")
   }
+
   return serverId
 }
 
 export function normalizeMcpcfServerSlug(value: string): McpcfServerSlug {
   const slug = value.trim().toLowerCase()
+
   if (!MCPCF_SERVER_SLUG_PATTERN.test(slug)) {
     throw new Error(`Invalid MCP Context Forge server slug '${value}'`)
   }
+
   return slug
 }
 
@@ -331,6 +354,7 @@ function hashMcpcfServerId(serverId: McpcfServerId): string {
   const hash = Array.from({ length: serverId.length }, (_, index) =>
     serverId.charCodeAt(index),
   ).reduce((acc, code) => (acc * 31 + code) >>> 0, 0)
+
   return hash.toString(36).padStart(7, "0")
 }
 
@@ -355,16 +379,20 @@ function getSelectedMcpcfServers(input: {
   mcpcfServers?: readonly McpcfServerDefinition[] | null
 }): McpcfServerDefinition[] {
   const selectedServerIds = getSelectedMcpcfServerIds(input.tools)
+
   if (selectedServerIds.length === 0) {
     return []
   }
 
   const serversById = new Map((input.mcpcfServers ?? []).map((server) => [server.id, server]))
+
   return selectedServerIds.map((serverId) => {
     const server = serversById.get(serverId)
+
     if (!server) {
       throw new Error(`MCP Context Forge server '${serverId}' is not available`)
     }
+
     return server
   })
 }
@@ -375,6 +403,7 @@ function getRemoteCustomMcpServerRuntimePlan(
   return Object.entries(customMcpServers)
     .filter((entry): entry is [string, OpenCodeRemoteMcpServer] => {
       const [, server] = entry
+
       return server.enabled !== false && server.type === "remote"
     })
     .map(([name, server]) => ({
@@ -393,12 +422,15 @@ export function buildSessionToolRuntimePlan(
   const repoTool = getGitHubRepoTool(selectedTools)
   const aiSearchTools = selectedTools.filter(isAiSearchSessionTool)
   const workflowBuilderEnabled = selectedTools.some((tool) => tool.kind === "workflow_builder")
+
   const mcpcfServers = getSelectedMcpcfServers({
     tools: selectedTools,
     mcpcfServers: input.mcpcfServers,
   })
+
   const reservedMcpcfServers = [...(input.mcpcfServers ?? [])]
   const remoteCustomMcpServers = getRemoteCustomMcpServerRuntimePlan(customMcpServers)
+
   const customMcpServerNames = remoteCustomMcpServers
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right))
@@ -446,12 +478,14 @@ export function parseMcpcfProxyToolName(value: string): {
   }
 
   const separatorIndex = value.indexOf(MCPCF_PROXY_TOOL_SEPARATOR)
+
   if (separatorIndex <= MCPCF_PROXY_TOOL_PREFIX.length) {
     return null
   }
 
   const serverAlias = value.slice(MCPCF_PROXY_TOOL_PREFIX.length, separatorIndex)
   const upstreamToolName = value.slice(separatorIndex + MCPCF_PROXY_TOOL_SEPARATOR.length)
+
   if (!upstreamToolName || !MCPCF_PROXY_SERVER_ALIAS_PATTERN.test(serverAlias)) {
     return null
   }
@@ -473,6 +507,7 @@ export function getGitHubRepoTool(
 }
 
 type SessionToolRecord = Record<string, unknown>
+
 interface SessionToolDefinition {
   normalize: (rawTool: SessionToolRecord) => SessionToolSpec
   getToolId: (tool: SessionToolSpec) => string
@@ -491,9 +526,11 @@ function requireSessionToolString(
   toolKind: string,
 ): string {
   const value = rawTool[field]
+
   if (typeof value !== "string") {
     throw new Error(`${toolKind} tools require a string ${field}`)
   }
+
   return value
 }
 
@@ -503,6 +540,7 @@ const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
       const repoOwner = requireSessionToolString(rawTool, "repoOwner", "GitHub repo")
         .trim()
         .toLowerCase()
+
       const repoName = requireSessionToolString(rawTool, "repoName", "GitHub repo")
         .trim()
         .toLowerCase()
@@ -521,6 +559,7 @@ const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
       if (tool.kind !== "github_repo") {
         throw new Error("Expected a GitHub repo session tool")
       }
+
       return `${tool.repoOwner}/${tool.repoName}`
     },
   },
@@ -535,6 +574,7 @@ const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
       if (tool.kind !== AI_SEARCH_SESSION_TOOL_KIND) {
         throw new Error("Expected an AI Search session tool")
       }
+
       return tool.sourceId
     },
   },
@@ -549,6 +589,7 @@ const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
       if (tool.kind !== MCPCF_SESSION_TOOL_KIND) {
         throw new Error("Expected an MCP Context Forge session tool")
       }
+
       return tool.serverId
     },
   },
@@ -558,6 +599,7 @@ const SESSION_TOOL_REGISTRY: SessionToolRegistry = {
       if (tool.kind !== "workflow_builder") {
         throw new Error("Expected a workflow builder session tool")
       }
+
       return tool.kind
     },
   },
@@ -568,7 +610,9 @@ function getStoredSessionToolKind(rawTool: unknown): string | null {
     return null
   }
 
+  // SAFETY: the guard established a non-array object, and stored session tools carry kind as their discriminant.
   const kind = (rawTool as SessionToolRecord).kind
+
   return typeof kind === "string" ? kind : null
 }
 
@@ -592,12 +636,15 @@ function normalizeSessionTool(rawTool: unknown): SessionToolSpec {
     throw new Error("Session tools must be objects")
   }
 
+  // SAFETY: the guard established a non-array object, and session tool records are open field bags keyed by kind.
   const toolRecord = rawTool as SessionToolRecord
+
   if (typeof toolRecord.kind !== "string" || !toolRecord.kind) {
     throw new Error("Session tools require a string kind")
   }
 
   const definition = getSessionToolDefinition(toolRecord.kind)
+
   if (!definition) {
     throw new Error(`Unknown session tool kind '${toolRecord.kind}'`)
   }
@@ -608,9 +655,11 @@ function normalizeSessionTool(rawTool: unknown): SessionToolSpec {
 export function getSessionToolId(tool: SessionToolSpec): string {
   const normalizedTool = normalizeSessionTool(tool)
   const definition = getSessionToolDefinition(normalizedTool.kind)
+
   if (!definition) {
     throw new Error(`Unknown session tool kind '${normalizedTool.kind}'`)
   }
+
   return definition.getToolId(normalizedTool)
 }
 
@@ -620,6 +669,7 @@ export function normalizeSessionTools(
   let githubRepo: GitHubRepoSessionTool | null = null
   const aiSearchSources = new Map<string, AiSearchSessionTool>()
   const mcpcfServers = new Map<McpcfServerId, McpcfSessionTool>()
+
   let workflowBuilder: WorkflowBuilderSessionTool | null = null
 
   ;(tools ?? []).forEach((rawTool) => {
@@ -636,21 +686,25 @@ export function normalizeSessionTools(
       }
 
       githubRepo = nextTool
+
       return
     }
 
     if (normalizedTool.kind === AI_SEARCH_SESSION_TOOL_KIND) {
       aiSearchSources.set(normalizedTool.sourceId, normalizedTool)
+
       return
     }
 
     if (normalizedTool.kind === "workflow_builder") {
       workflowBuilder = normalizedTool
+
       return
     }
 
     if (normalizedTool.kind === MCPCF_SESSION_TOOL_KIND) {
       mcpcfServers.set(normalizedTool.serverId, normalizedTool)
+
       return
     }
   })
@@ -706,6 +760,7 @@ export function decodeSessionToolQueryValue(value: string): SessionToolSpec {
   }
 
   const separatorIndex = value.indexOf(":")
+
   if (separatorIndex === -1) {
     throw new Error(`Invalid session tool query value '${value}'`)
   }
@@ -715,9 +770,11 @@ export function decodeSessionToolQueryValue(value: string): SessionToolSpec {
 
   if (kind === "github_repo") {
     const [repoOwner, repoName, ...rest] = payload.split("/")
+
     if (!repoOwner || !repoName || rest.length > 0) {
       throw new Error(`Invalid GitHub repo tool '${value}'`)
     }
+
     return {
       kind,
       repoOwner,
@@ -757,6 +814,7 @@ export function appendSessionToolsToSearchParams(
   normalizeSessionTools(tools).forEach((tool) => {
     searchParams.append(paramName, encodeSessionToolQueryValue(tool))
   })
+
   return searchParams
 }
 
@@ -781,6 +839,7 @@ export function resolveStoredSessionTools(
   }
 
   let parsed: unknown
+
   // oxlint-disable-next-line effect/avoid-try-catch -- Stored JSON decoding is a pure compatibility boundary that returns degradation metadata instead of an Effect error channel.
   try {
     parsed = parseJson(value)
@@ -840,8 +899,10 @@ export function applyStoredSessionToolAvailability(
     (next, tool) => {
       const toolId = getSessionToolId(tool)
       const unavailable = unavailableByTool.get(sessionToolAvailabilityKey(tool.kind, toolId))
+
       if (!unavailable) {
         next.tools.push(tool)
+
         return next
       }
 
@@ -850,6 +911,7 @@ export function applyStoredSessionToolAvailability(
         toolId,
         reason: unavailable.reason,
       })
+
       return next
     },
     {

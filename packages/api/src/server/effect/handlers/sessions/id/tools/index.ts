@@ -3,6 +3,7 @@ import type { IdParams, UpdateSessionToolsPayload } from "@solzero/api"
 import type { OpenCodeMcpServers, SessionToolSpec, SubagentMode } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- tools/index.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the tools handler updates the session index.
 import { makeControlPlaneFromEnv } from "../../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
@@ -25,6 +26,7 @@ const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
   sessionId: string,
   response: Response,
 ) {
+  // SAFETY: the internal tools route returns the stored session tooling JSON, including repo coordinates and updatedAt.
   const data = yield* Effect.tryPromise(
     () =>
       response.json() as Promise<{
@@ -37,7 +39,9 @@ const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
         updatedAt: number
       }>,
   )
+
   const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
+  // SAFETY: customMcpServers on the tools response is the stored OpenCode MCP server map.
   yield* store.updateTooling({
     id: sessionId,
     repoOwner: data.repoOwner,
@@ -48,6 +52,7 @@ const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
     subagents: data.subagents,
     updatedAt: data.updatedAt,
   })
+
   return json(data)
 })
 
@@ -70,6 +75,7 @@ export function tools({
         catch: (cause) =>
           new ControlPlaneFailure({ payload: { error: describeError(cause) }, status: 400 }),
       })
+
       yield* validateRequestedAiSearchSessionTools(env, resolved.requestedTools)
       yield* validateRequestedMcpcfSessionTools(env, resolved.requestedTools, {
         userId: access.userId,
@@ -77,6 +83,7 @@ export function tools({
 
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       const response = yield* internalRequests.fetch(stub, "http://internal/internal/tools", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

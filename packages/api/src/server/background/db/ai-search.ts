@@ -16,6 +16,7 @@ import { S0_CONFIG_KEYS, S0ConfigStore } from "./s0-config"
 export const DEFAULT_AI_SEARCH_MAX_RESULTS = 5
 
 export type AiSearchSourceRecordSource = "kv"
+
 export type AiSearchDataSourceType = "built-in" | "r2" | "website"
 
 export interface AiSearchBuiltInDataSourceRecord {
@@ -102,21 +103,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringField(record: Record<string, unknown>, key: string, fallback = ""): string {
   const value = record[key]
+
   return typeof value === "string" ? value : fallback
 }
 
 function nullableStringField(record: Record<string, unknown>, key: string): string | null {
   const value = record[key]
+
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
 }
 
 function numberField(record: Record<string, unknown>, key: string, fallback: number): number {
   const value = record[key]
+
   return typeof value === "number" && Number.isFinite(value) ? value : fallback
 }
 
 function booleanField(record: Record<string, unknown>, key: string, fallback: boolean): boolean {
   const value = record[key]
+
   return typeof value === "boolean" ? value : fallback
 }
 
@@ -134,11 +139,13 @@ function normalizeMaxResults(value: number | null | undefined): number {
   if (value === null || value === undefined) {
     return DEFAULT_AI_SEARCH_MAX_RESULTS
   }
+
   if (!Number.isInteger(value) || value < 1 || value > 20) {
     throw new AiSearchConfigurationError({
       message: "AI Search max results must be an integer between 1 and 20",
     })
   }
+
   return value
 }
 
@@ -147,9 +154,11 @@ function normalizeDomain(value: string): string {
     .trim()
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "")
+
   if (!trimmed) {
     throw new AiSearchConfigurationError({ message: "Website domain is required" })
   }
+
   return trimmed
 }
 
@@ -187,7 +196,9 @@ function readAiSearchDataSourceRecord(value: unknown): AiSearchDataSourceRecord 
   if (!isRecord(value)) {
     return null
   }
+
   const type = stringField(value, "type")
+
   return Match.value(type).pipe(
     Match.when("built-in", () => ({ type: "built-in" }) satisfies AiSearchBuiltInDataSourceRecord),
     Match.when(
@@ -222,11 +233,14 @@ export function readAiSearchSourceRecord(value: unknown): Option.Option<AiSearch
     Option.filter(isRecord),
     Option.flatMap((record) => {
       const dataSource = readAiSearchDataSourceRecord(record.dataSource)
+
       if (!dataSource) {
         return Option.none<AiSearchSourceRecord>()
       }
+
       const id = normalizeAiSearchSourceId(stringField(record, "id"))
       const now = Date.now()
+
       return Option.some({
         id,
         label: stringField(record, "label", id),
@@ -251,6 +265,7 @@ function buildAiSearchSourceRecord(
   const dataSource = normalizeDataSource(update.dataSource)
   validateDataSource(dataSource)
   const now = Date.now()
+
   return {
     id,
     label: update.label.trim() || id,
@@ -268,72 +283,112 @@ function buildAiSearchSourceRecord(
 
 function ensureUniqueToolNames(sources: readonly AiSearchSourceRecord[]) {
   const seen = new Map<string, string>()
+
   for (const source of sources) {
     const toolNames = getAiSearchMcpToolNames(source)
     const existing = seen.get(toolNames.search)
+
     if (existing && existing !== source.id) {
       throw new AiSearchConfigurationError({
         message: `AI Search source IDs '${existing}' and '${source.id}' generate the same MCP tool names`,
       })
     }
+
     seen.set(toolNames.search, source.id)
   }
 }
 
 type AiSearchNamespace = NonNullable<Env["AI_SEARCH"]>
+
 type AiSearchCreateInput = Parameters<AiSearchNamespace["create"]>[0]
+
 type AiSearchInstance = ReturnType<AiSearchNamespace["get"]>
+
 type AiSearchUpdateInput = Parameters<AiSearchInstance["update"]>[0]
 
-function sourceParamsFor(dataSource: AiSearchDataSourceRecord) {
-  switch (dataSource.type) {
-    case "built-in":
-      return undefined
-    case "r2":
-      return {
-        ...(dataSource.prefix ? { prefix: dataSource.prefix } : {}),
-        ...(dataSource.r2Jurisdiction ? { r2_jurisdiction: dataSource.r2Jurisdiction } : {}),
-      }
-    case "website":
-      return {
-        ...(dataSource.includePaths.length > 0 ? { include_items: dataSource.includePaths } : {}),
-        ...(dataSource.excludePaths.length > 0 ? { exclude_items: dataSource.excludePaths } : {}),
-        web_crawler: {
-          parse_type: "sitemap",
-          parse_options: {
-            include_images: dataSource.includeImages,
-            use_browser_rendering: dataSource.useBrowserRendering,
-            ...(dataSource.specificSitemaps.length > 0
-              ? { specific_sitemaps: dataSource.specificSitemaps }
-              : {}),
-          },
-        },
-      }
+interface R2SourceParams {
+  prefix?: string
+  r2_jurisdiction?: string
+}
+
+interface WebsiteSourceParams {
+  include_items?: string[]
+  exclude_items?: string[]
+  web_crawler: {
+    parse_type: "sitemap"
+    parse_options: {
+      include_images: boolean
+      use_browser_rendering: boolean
+      specific_sitemaps?: string[]
+    }
   }
+}
+
+function sourceParamsFor(dataSource: AiSearchDataSourceRecord) {
+  if (dataSource.type === "built-in") return undefined
+
+  if (dataSource.type === "r2") {
+    const params: R2SourceParams = {}
+
+    if (dataSource.prefix) params.prefix = dataSource.prefix
+
+    if (dataSource.r2Jurisdiction) params.r2_jurisdiction = dataSource.r2Jurisdiction
+
+    return params
+  }
+
+  const params: WebsiteSourceParams = {
+    web_crawler: {
+      parse_type: "sitemap",
+      parse_options: {
+        include_images: dataSource.includeImages,
+        use_browser_rendering: dataSource.useBrowserRendering,
+      },
+    },
+  }
+
+  if (dataSource.includePaths.length > 0) params.include_items = [...dataSource.includePaths]
+
+  if (dataSource.excludePaths.length > 0) params.exclude_items = [...dataSource.excludePaths]
+
+  if (dataSource.specificSitemaps.length > 0) {
+    params.web_crawler.parse_options.specific_sitemaps = [...dataSource.specificSitemaps]
+  }
+
+  return params
 }
 
 function createInputFor(
   source: AiSearchSourceRecord,
   tokenId?: string | null,
 ): AiSearchCreateInput {
-  const base = {
-    id: source.id,
-    enable: source.enabled,
-    max_num_results: source.maxResults,
-    ...(tokenId?.trim() ? { token_id: tokenId.trim() } : {}),
-  }
+  const trimmedToken = tokenId?.trim()
+
+  const base = trimmedToken
+    ? {
+        id: source.id,
+        enable: source.enabled,
+        max_num_results: source.maxResults,
+        token_id: trimmedToken,
+      }
+    : {
+        id: source.id,
+        enable: source.enabled,
+        max_num_results: source.maxResults,
+      }
+
   switch (source.dataSource.type) {
     case "built-in":
-      return base as AiSearchCreateInput
+      return /* SAFETY: base has the AiSearchCreateInput shape established by the check or writer around this read. */ base as AiSearchCreateInput
     case "r2":
-      return {
+      return /* SAFETY: { ...base, type: "r2", source: source.dataSource.bucketName, source_params: sourceParamsFor(source.dataSource), } has the AiSearchCreateInput shape established by the check or writer around this read. */ {
         ...base,
         type: "r2",
         source: source.dataSource.bucketName,
         source_params: sourceParamsFor(source.dataSource),
       } as AiSearchCreateInput
     case "website":
-      return {
+      return /* SAFETY: { ...base, type: "web-crawler", source: source.dataSource.domain, source_params: sourceParamsFor(source.dataSource), } has the AiSearchCreateInput shape established by the check or writer around this read. */ {
         ...base,
         type: "web-crawler",
         source: source.dataSource.domain,
@@ -344,19 +399,39 @@ function createInputFor(
 
 function updateInputFor(source: AiSearchSourceRecord): AiSearchUpdateInput {
   const sourceParams = sourceParamsFor(source.dataSource)
-  return {
+
+  const update = {
     enable: source.enabled,
     max_num_results: source.maxResults,
-    ...(source.dataSource.type === "r2" ? { source: source.dataSource.bucketName } : {}),
-    ...(source.dataSource.type === "website" ? { source: source.dataSource.domain } : {}),
-    ...(sourceParams ? { source_params: sourceParams } : {}),
-  } as AiSearchUpdateInput
+  }
+
+  const withSource = sourceFields(update, source)
+  const withParams = sourceParams ? { ...withSource, source_params: sourceParams } : withSource
+
+  // SAFETY: Cloudflare AI Search update accepts this enable, source, and source_params bag. Absent fields stay omitted.
+  return withParams as AiSearchUpdateInput
+}
+
+function sourceFields(
+  update: { enable: boolean; max_num_results: number },
+  source: AiSearchSourceRecord,
+) {
+  if (source.dataSource.type === "r2") {
+    return { ...update, source: source.dataSource.bucketName }
+  }
+
+  if (source.dataSource.type === "website") {
+    return { ...update, source: source.dataSource.domain }
+  }
+
+  return update
 }
 
 function normalizeInstanceListItem(item: unknown): AiSearchInstanceListItem | null {
   if (!isRecord(item)) {
     return null
   }
+
   return {
     id: stringField(item, "id"),
     type: nullableStringField(item, "type"),
@@ -396,6 +471,7 @@ export class AiSearchRegistryStore {
   ) {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
     const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
+
     return Option.flatMap(value, (resolved) =>
       sourcePresenceOption(resolved, {
         recordSource: "kv" as const,
@@ -408,6 +484,7 @@ export class AiSearchRegistryStore {
   listSourcesWithPresence = Effect.fn("db.aiSearch.listSourcesWithPresence")(
     function* (this: AiSearchRegistryStore) {
       const kvKeys = yield* this.s0Config.listKeys(S0_CONFIG_KEYS.aiSearch.sourcePrefix)
+
       const kvSourceOptions = yield* Effect.forEach(
         kvKeys,
         (key) =>
@@ -424,26 +501,31 @@ export class AiSearchRegistryStore {
           ),
         { concurrency: "unbounded" },
       )
+
       const kvSources = kvSourceOptions.flatMap((source) =>
         Option.match(source, {
           onNone: () => [],
           onSome: (value) => [value],
         }),
       )
+
       const sources = kvSources
       ensureUniqueToolNames(sources.map((source) => source.source))
+
       return sources.sort((left, right) => left.source.label.localeCompare(right.source.label))
     },
   )
 
   listSources = Effect.fn("db.aiSearch.listSources")(function* (this: AiSearchRegistryStore) {
     const sources = yield* this.listSourcesWithPresence()
+
     return sources.map((source) => source.source)
   })
 
   listAvailableSources = Effect.fn("db.aiSearch.listAvailableSources")(
     function* (this: AiSearchRegistryStore) {
       const sources = yield* this.listSources()
+
       return sources.filter((source) => source.enabled)
     },
   )
@@ -453,13 +535,17 @@ export class AiSearchRegistryStore {
     sourceIds: readonly string[],
   ) {
     const uniqueIds = [...new Set(sourceIds.map(normalizeAiSearchSourceId))]
+
     if (uniqueIds.length === 0) {
       return []
     }
+
     const available = yield* this.listAvailableSources()
     const byId = new Map(available.map((source) => [source.id, source]))
+
     return uniqueIds.flatMap((sourceId) => {
       const source = byId.get(sourceId)
+
       return source ? [source] : []
     })
   })
@@ -469,15 +555,19 @@ export class AiSearchRegistryStore {
     tools: readonly SessionToolSpec[] | null | undefined,
   ) {
     const selectedSourceIds = getSelectedAiSearchSourceIds(tools)
+
     if (selectedSourceIds.length === 0) {
       return []
     }
+
     const sources = yield* this.listAvailableSourcesByIds(selectedSourceIds)
     const availableIds = new Set(sources.map((source) => source.id))
     const missingIds = selectedSourceIds.filter((sourceId) => !availableIds.has(sourceId))
+
     if (missingIds.length > 0) {
       return yield* Effect.fail(new AiSearchSourceUnavailableError({ sourceIds: missingIds }))
     }
+
     return sources
   })
 
@@ -487,6 +577,7 @@ export class AiSearchRegistryStore {
   ) {
     const sourceId = normalizeAiSearchSourceId(update.id)
     const existing = yield* this.getSourceWithPresence(sourceId)
+
     if (Option.isSome(existing)) {
       return yield* Effect.fail(
         new AiSearchConfigurationError({
@@ -494,9 +585,11 @@ export class AiSearchRegistryStore {
         }),
       )
     }
+
     const record = buildAiSearchSourceRecord(update, Option.none())
     yield* this.createCloudflareInstance(record)
     yield* this.putSourceRecord(record)
+
     return record
   })
 
@@ -507,6 +600,7 @@ export class AiSearchRegistryStore {
   ) {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
     const existingPresence = yield* this.getSourceWithPresence(normalizedSourceId)
+
     const existing = yield* Option.match(existingPresence, {
       onNone: () =>
         Effect.fail(
@@ -516,11 +610,13 @@ export class AiSearchRegistryStore {
         ),
       onSome: (resolved) => Effect.succeed(resolved),
     })
+
     if (update.id !== normalizedSourceId) {
       return yield* Effect.fail(
         new AiSearchConfigurationError({ message: "AI Search source id cannot be changed" }),
       )
     }
+
     if (update.dataSource.type !== existing.source.dataSource.type) {
       return yield* Effect.fail(
         new AiSearchConfigurationError({
@@ -528,9 +624,11 @@ export class AiSearchRegistryStore {
         }),
       )
     }
+
     const record = buildAiSearchSourceRecord(update, Option.some(existing.source))
     yield* this.updateCloudflareInstance(record)
     yield* this.putSourceRecord(record)
+
     return record
   })
 
@@ -540,6 +638,7 @@ export class AiSearchRegistryStore {
   ) {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
     const existingPresence = yield* this.getSourceWithPresence(normalizedSourceId)
+
     const existing = yield* Option.match(existingPresence, {
       onNone: () =>
         Effect.fail(
@@ -549,6 +648,7 @@ export class AiSearchRegistryStore {
         ),
       onSome: (resolved) => Effect.succeed(resolved),
     })
+
     yield* this.deleteCloudflareInstance(existing.source.id)
     yield* this.s0Config.delete(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
   })
@@ -558,12 +658,16 @@ export class AiSearchRegistryStore {
       if (!isRecordEnv(this.env)) {
         return []
       }
+
       const aiSearch = this.env.AI_SEARCH
+
       const response = yield* Effect.tryPromise({
         try: () => aiSearch.list({ per_page: 100 }),
         catch: toError,
       }).pipe(Effect.catch(() => Effect.succeed({ result: [] })))
+
       const result = isRecord(response) && Array.isArray(response.result) ? response.result : []
+
       return result
         .map(normalizeInstanceListItem)
         .filter((item): item is AiSearchInstanceListItem => item !== null)
@@ -581,6 +685,7 @@ export class AiSearchRegistryStore {
         }),
       )
     }
+
     const aiSearch = this.env.AI_SEARCH
     yield* Effect.tryPromise({
       try: () => aiSearch.create(createInputFor(source, this.env.CF_AI_SEARCH_SERVICE_TOKEN_ID)),
@@ -602,6 +707,7 @@ export class AiSearchRegistryStore {
         }),
       )
     }
+
     const aiSearch = this.env.AI_SEARCH
     yield* Effect.tryPromise({
       try: () => aiSearch.get(source.id).update(updateInputFor(source)),
@@ -623,6 +729,7 @@ export class AiSearchRegistryStore {
         }),
       )
     }
+
     const aiSearch = this.env.AI_SEARCH
     yield* Effect.tryPromise({
       try: () => aiSearch.delete(sourceId),
@@ -648,6 +755,7 @@ export class AiSearchRegistryStore {
 
 export function getAiSearchMcpToolNames(source: Pick<AiSearchSourceRecord, "id">) {
   const suffix = source.id.replace(/-/g, "_")
+
   return {
     search: `search_${suffix}`,
     aiSearch: `ask_${suffix}`,

@@ -10,6 +10,7 @@ import {
   sessionKindForAgentRuntime,
   type AgentRuntime,
   type OpenCodeMcpServers,
+  type SessionKind,
   parseSessionToolsFromSearchParams,
   type ProviderSettingsResponse,
   type SessionToolSpec,
@@ -26,6 +27,20 @@ import { stashSessionPromptError } from "@/lib/session-prompt"
 import { HomeContentWithSidebar } from "./content"
 import { getDefaultVisibleModel } from "./model-selection"
 import { getErrorMessage } from "./session-kind"
+
+type SessionCreateRequestBody = {
+  agentRuntime: AgentRuntime
+  sessionKind: SessionKind
+  repoOwner?: string
+  repoName?: string
+  tools: SessionToolSpec[]
+  customMcpServers: OpenCodeMcpServers
+  secretKeys: string[]
+  isolateStepLimit: number
+  subagents?: SubagentMode
+  model: string
+  reasoningEffort?: string
+}
 
 export interface Repo {
   id: number
@@ -67,12 +82,14 @@ export function HomePage({
   const { data: session, status } = useAuthSession()
   const isAdmin = session?.isAdmin === true
   const navigate = useNavigate({ from: "/" })
+
   const {
     catalog: providerCatalog,
     settings: providerSettings,
     error: providerError,
     loading: providerLoading,
   } = useProviderSettings({ initialData: initialProviderSettings })
+
   const [repos, setRepos] = useState<Repo[]>([])
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [repoLoadError, setRepoLoadError] = useState("")
@@ -82,12 +99,15 @@ export function HomePage({
   const [repoPagination, setRepoPagination] = useState<RepoPagination | null>(null)
   const [selectedTools, setSelectedTools] = useState<SessionToolSpec[]>([])
   const [selectedSecretKeys, setSelectedSecretKeys] = useState<string[]>([])
+
   const [selectedCustomMcpServers, setSelectedCustomMcpServers] = useState<OpenCodeMcpServers>(() =>
     getDefaultSessionCustomMcpServers(),
   )
+
   const [selectedIsolateStepLimit, setSelectedIsolateStepLimit] = useState(
     DEFAULT_ISOLATE_STEP_LIMIT,
   )
+
   const [selectedSubagents, setSelectedSubagents] = useState<SubagentMode>(DEFAULT_SUBAGENT_MODE)
   const [selectedAgentRuntime, setSelectedAgentRuntime] = useState<AgentRuntime>("isolate")
   const [selectedModel, setSelectedModel] = useState(() => getDefaultVisibleModel(providerCatalog))
@@ -101,6 +121,7 @@ export function HomePage({
   const previousReasoningModelRef = useRef<string | null>(null)
   const sessionCreationPromise = useRef<Promise<string | null> | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+
   const pendingConfigRef = useRef<{
     toolsKey: string
     customMcpKey: string
@@ -110,10 +131,12 @@ export function HomePage({
     model: string
     agentRuntime: AgentRuntime
   } | null>(null)
+
   const rawModelOptions = useMemo(
     () => providerCatalog?.modelOptions ?? [],
     [providerCatalog?.modelOptions],
   )
+
   const modelOptions = useMemo(
     () =>
       rawModelOptions
@@ -130,20 +153,27 @@ export function HomePage({
         .filter((group) => group.models.length > 0),
     [rawModelOptions, selectedAgentRuntime],
   )
+
   const providerDefaultModelConfigured = Boolean(providerCatalog?.defaultModel)
   const allModels = useMemo(() => modelOptions.flatMap((group) => group.models), [modelOptions])
+
   const defaultIsolateStepLimit =
     providerSettings?.defaultIsolateStepLimit ?? DEFAULT_ISOLATE_STEP_LIMIT
+
   const selectedToolsKey = useMemo(() => stringifySessionTools(selectedTools), [selectedTools])
+
   const selectedCustomMcpKey = useMemo(
     () => stringifyOpenCodeMcpServers(selectedCustomMcpServers),
     [selectedCustomMcpServers],
   )
+
   const selectedSecretKeysKey = useMemo(
     () => JSON.stringify([...selectedSecretKeys].sort()),
     [selectedSecretKeys],
   )
+
   const selectedRepoTool = useMemo(() => getGitHubRepoTool(selectedTools), [selectedTools])
+
   const selectedModelOption = useMemo(
     () => allModels.find((model) => model.id === selectedModel) ?? null,
     [allModels, selectedModel],
@@ -152,43 +182,57 @@ export function HomePage({
   const fetchRepos = useCallback(
     async (options: { query?: RepoQueryState } = {}) => {
       const activeQuery = options.query ?? repoQuery
+
       const params = new URLSearchParams({
         page: String(activeQuery.page),
         perPage: String(activeQuery.perPage),
       })
+
       const trimmedQuery = activeQuery.q.trim()
+
       if (trimmedQuery) {
         params.set("q", trimmedQuery)
       }
+
       if (activeQuery.owner !== "all") {
         params.set("owner", activeQuery.owner)
       }
+
       if (activeQuery.visibility !== "all") {
         params.set("visibility", activeQuery.visibility)
       }
+
       if (activeQuery.sort !== "best-match") {
         params.set("sort", activeQuery.sort)
         params.set("order", activeQuery.order)
       }
+
       setLoadingRepos(true)
       setRepoLoadError("")
       setNeedsGitHubLink(false)
+
       try {
         const res = await fetch(`/api/repos?${params.toString()}`)
+
+        // SAFETY: /api/repos returns the repository list, pagination, and GitHub install URL for the current query.
         const data = (await res.json().catch(() => ({}))) as {
           repos?: Repo[]
           pagination?: RepoPagination
           error?: string
           githubAppInstallUrl?: string | null
         }
+
         if (!res.ok) {
           if (res.status === 403) {
             setNeedsGitHubLink(true)
             setRepos([])
+
             return
           }
+
           throw new Error(data.error ?? `Request failed with status ${res.status}`)
         }
+
         const repoList = Array.isArray(data.repos) ? data.repos : []
         setRepos(repoList)
         setRepoPagination(data.pagination ?? null)
@@ -207,8 +251,10 @@ export function HomePage({
       const timeoutId = setTimeout(() => {
         void fetchRepos({ query: repoQuery })
       }, 250)
+
       return () => clearTimeout(timeoutId)
     }
+
     return undefined
   }, [session?.user.id, repoQuery, fetchRepos])
 
@@ -225,6 +271,7 @@ export function HomePage({
       const queryTools = parseSessionToolsFromSearchParams(
         new URLSearchParams(window.location.search),
       )
+
       if (queryTools.length > 0) {
         setSelectedTools((current) => normalizeSessionTools([...current, ...queryTools]))
       }
@@ -245,8 +292,10 @@ export function HomePage({
       const defaultIsVisible = Boolean(defaultModel && visibleModelIds.has(defaultModel))
 
       const fallbackModel = defaultIsVisible ? defaultModel : ""
+
       if (!currentIsVisible) {
         selectedModelSourceRef.current = "default"
+
         return fallbackModel
       }
 
@@ -265,6 +314,7 @@ export function HomePage({
 
     if (!selectedModelOption?.reasoning) {
       setReasoningEffort(undefined)
+
       return
     }
 
@@ -295,6 +345,7 @@ export function HomePage({
       model: selectedModel,
       agentRuntime: selectedAgentRuntime,
     }
+
     if (
       pendingConfigRef.current?.toolsKey === currentConfig.toolsKey &&
       pendingConfigRef.current?.customMcpKey === currentConfig.customMcpKey &&
@@ -311,6 +362,7 @@ export function HomePage({
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
+
     setPendingSessionId(null)
     setIsCreatingSession(false)
     sessionCreationPromise.current = null
@@ -330,6 +382,7 @@ export function HomePage({
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
+
     setPendingSessionId(null)
     setIsCreatingSession(false)
     sessionCreationPromise.current = null
@@ -340,14 +393,17 @@ export function HomePage({
     if (pendingSessionId) {
       return pendingSessionId
     }
+
     if (sessionCreationPromise.current) {
       return sessionCreationPromise.current
     }
+
     if (!selectedModel) {
       return null
     }
 
     setIsCreatingSession(true)
+
     const currentConfig = {
       toolsKey: selectedToolsKey,
       customMcpKey: selectedCustomMcpKey,
@@ -357,6 +413,7 @@ export function HomePage({
       model: selectedModel,
       agentRuntime: selectedAgentRuntime,
     }
+
     pendingConfigRef.current = currentConfig
 
     const abortController = new AbortController()
@@ -367,28 +424,25 @@ export function HomePage({
         const res = await fetch("/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            agentRuntime: selectedAgentRuntime,
-            sessionKind: sessionKindForAgentRuntime(selectedAgentRuntime),
-            ...(selectedRepoTool
-              ? {
-                  repoOwner: selectedRepoTool.repoOwner,
-                  repoName: selectedRepoTool.repoName,
-                }
-              : {}),
-            tools: selectedTools,
-            customMcpServers: selectedCustomMcpServers,
-            secretKeys: selectedSecretKeys,
-            isolateStepLimit: selectedIsolateStepLimit,
-            ...(selectedAgentRuntime === "isolate" ? { subagents: selectedSubagents } : {}),
-            model: selectedModel,
-            reasoningEffort,
-          }),
+          body: JSON.stringify(
+            buildSessionCreateRequestBody({
+              agentRuntime: selectedAgentRuntime,
+              customMcpServers: selectedCustomMcpServers,
+              isolateStepLimit: selectedIsolateStepLimit,
+              model: selectedModel,
+              reasoningEffort,
+              secretKeys: selectedSecretKeys,
+              selectedRepoTool,
+              subagents: selectedSubagents,
+              tools: selectedTools,
+            }),
+          ),
           signal: abortController.signal,
         })
 
         if (res.ok) {
           const data = await res.json()
+
           if (
             pendingConfigRef.current?.toolsKey === currentConfig.toolsKey &&
             pendingConfigRef.current?.customMcpKey === currentConfig.customMcpKey &&
@@ -399,16 +453,22 @@ export function HomePage({
             pendingConfigRef.current?.agentRuntime === currentConfig.agentRuntime
           ) {
             setPendingSessionId(data.sessionId)
+
+            // SAFETY: POST /api/sessions includes sessionId as a string when the response is ok.
             return data.sessionId as string
           }
+
           return null
         }
+
         return null
       } catch (errorValue) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return null
         }
+
         console.error("Failed to create agent for warming:", errorValue)
+
         return null
       } finally {
         if (abortControllerRef.current === abortController) {
@@ -420,6 +480,7 @@ export function HomePage({
     })()
 
     sessionCreationPromise.current = promise
+
     return promise
   }, [
     pendingSessionId,
@@ -450,6 +511,7 @@ export function HomePage({
   const handlePromptChange = (value: string) => {
     const wasEmpty = prompt.length === 0
     setPrompt(value)
+
     if (wasEmpty && value.length > 0 && !pendingSessionId && !isCreatingSession) {
       createSessionForWarming()
     }
@@ -457,15 +519,20 @@ export function HomePage({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!prompt.trim()) {
       return
     }
+
     if (modelOptions.length === 0) {
       setError("An admin needs to set up an AI Provider before agents can run.")
+
       return
     }
+
     if (!selectedModel) {
       setError("Choose a model before starting an agent.")
+
       return
     }
 
@@ -473,6 +540,7 @@ export function HomePage({
 
     try {
       let sessionId = pendingSessionId
+
       if (!sessionId) {
         setCreating(true)
         sessionId = await createSessionForWarming()
@@ -482,6 +550,7 @@ export function HomePage({
       if (!sessionId) {
         setError("Failed to create agent")
         setCreating(false)
+
         return
       }
 
@@ -496,12 +565,15 @@ export function HomePage({
               reasoningEffort,
             }),
           })
+
           if (!res.ok) {
             const data = await res.json().catch(() => ({}))
+
             const message =
               data && typeof data === "object" && "error" in data && typeof data.error === "string"
                 ? data.error
                 : "Failed to send prompt"
+
             stashSessionPromptError(sessionId, message)
           }
         } catch {
@@ -574,4 +646,38 @@ export function HomePage({
       />
     </SidebarLayout>
   )
+}
+
+function buildSessionCreateRequestBody(input: {
+  agentRuntime: AgentRuntime
+  customMcpServers: OpenCodeMcpServers
+  isolateStepLimit: number
+  model: string
+  reasoningEffort: string | undefined
+  secretKeys: string[]
+  selectedRepoTool: ReturnType<typeof getGitHubRepoTool>
+  subagents: SubagentMode
+  tools: SessionToolSpec[]
+}): SessionCreateRequestBody {
+  const body: SessionCreateRequestBody = {
+    agentRuntime: input.agentRuntime,
+    sessionKind: sessionKindForAgentRuntime(input.agentRuntime),
+    tools: input.tools,
+    customMcpServers: input.customMcpServers,
+    secretKeys: input.secretKeys,
+    isolateStepLimit: input.isolateStepLimit,
+    model: input.model,
+    reasoningEffort: input.reasoningEffort,
+  }
+
+  if (input.selectedRepoTool) {
+    body.repoOwner = input.selectedRepoTool.repoOwner
+    body.repoName = input.selectedRepoTool.repoName
+  }
+
+  if (input.agentRuntime === "isolate") {
+    body.subagents = input.subagents
+  }
+
+  return body
 }

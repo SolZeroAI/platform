@@ -86,16 +86,21 @@ export function McpcfAdminPanel({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportDotenv, setExportDotenv] = useState<string | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+
   const [stickySelectPortalContainer, setStickySelectPortalContainer] =
     useState<HTMLElement | null>(null)
+
   const configLocked = config?.locked ?? false
   const configLockEnvVar = configLocked ? (config?.envVarName ?? null) : null
   const adminApiTokenLocked = config?.adminApiTokenLocked ?? false
+
   const adminApiTokenLockEnvVar = adminApiTokenLocked
     ? (config?.adminApiTokenEnvVarName ?? null)
     : null
+
   const registryLocked = data?.registryLocked ?? false
   const registryLockEnvVar = registryLocked ? (data?.registryEnvVarName ?? null) : null
+
   const adminApiTokenDisplayValue = adminApiTokenLocked
     ? "Configured from environment"
     : adminApiToken
@@ -104,6 +109,7 @@ export function McpcfAdminPanel({
     if (!config) {
       return
     }
+
     setEnabled(config.enabled)
     setBaseUrl(config.baseUrl)
     setUserOauthProviderId(config.userOauthProviderId)
@@ -147,10 +153,12 @@ export function McpcfAdminPanel({
       userOauthProviderId,
     ],
   )
+
   const isDirty = useMemo(() => {
     if (!savedFormState || configLocked) {
       return false
     }
+
     return serializeMcpcfConfigPayload(currentPayload) !== savedFormState
   }, [configLocked, currentPayload, savedFormState])
 
@@ -162,6 +170,7 @@ export function McpcfAdminPanel({
 
   const submit = useCallback(async (): Promise<boolean> => {
     const saved = await onSave(currentPayload)
+
     if (saved) {
       setSavedFormState(
         serializeMcpcfConfigPayload(
@@ -178,6 +187,7 @@ export function McpcfAdminPanel({
       )
       setAdminApiToken("")
     }
+
     return saved
   }, [
     authTypeAllowlist,
@@ -196,8 +206,10 @@ export function McpcfAdminPanel({
     }
 
     setSavingBeforeNavigation(true)
+
     try {
       const saved = await submit()
+
       if (saved) {
         navigationBlocker.proceed()
       }
@@ -209,9 +221,11 @@ export function McpcfAdminPanel({
   const handleExportConfig = useCallback(async () => {
     setActionsMenuOpen(false)
     const dotenv = await onExport()
+
     if (dotenv === null) {
       return
     }
+
     setExportDotenv(dotenv)
     setExportDialogOpen(true)
   }, [onExport])
@@ -223,6 +237,7 @@ export function McpcfAdminPanel({
 
   const handleConfirmResetConfig = useCallback(async () => {
     const reset = await onReset()
+
     if (reset) {
       setResetConfirmOpen(false)
       setExportDialogOpen(false)
@@ -269,6 +284,7 @@ export function McpcfAdminPanel({
     ],
     [],
   )
+
   const selectedTocValue = sectionOptions.some((section) => section.value === selectedTocSection)
     ? selectedTocSection
     : DEFAULT_TOC_SECTION
@@ -278,10 +294,11 @@ export function McpcfAdminPanel({
     let animationFrame = 0
 
     const isVisibleSection = (value: string): value is TocSectionValue =>
-      sectionValues.includes(value as TocSectionValue)
+      sectionValues.some((section) => section === value)
 
     const updateFromHash = () => {
       const nextSection = window.location.hash
+
       if (isVisibleSection(nextSection)) {
         setSelectedTocSection(nextSection)
       }
@@ -295,19 +312,25 @@ export function McpcfAdminPanel({
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = 0
         const pendingSection = getPendingAdminSectionHash()
+
         if (pendingSection) {
           if (isVisibleSection(pendingSection)) {
             setSelectedTocSection(pendingSection)
           }
+
           return
         }
+
         let activeSection = sectionValues[0] ?? DEFAULT_TOC_SECTION
+
         for (const sectionValue of sectionValues) {
           const section = document.getElementById(sectionValue.slice(1))
+
           if (section && section.getBoundingClientRect().top <= 128) {
             activeSection = sectionValue
           }
         }
+
         setSelectedTocSection(activeSection)
       })
     }
@@ -317,10 +340,12 @@ export function McpcfAdminPanel({
     window.addEventListener("hashchange", updateFromHash)
     window.addEventListener("resize", updateFromScroll)
     window.addEventListener("scroll", updateFromScroll, true)
+
     return () => {
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame)
       }
+
       window.removeEventListener("hashchange", updateFromHash)
       window.removeEventListener("resize", updateFromScroll)
       window.removeEventListener("scroll", updateFromScroll, true)
@@ -340,10 +365,12 @@ export function McpcfAdminPanel({
   // TableOfContents.Group spreads props onto its <li>, so clicks from nested
   // items bubble here too. Only navigate when the group link itself was hit.
   const tocGroupClickHandler = (value: TocSectionValue) => (event: MouseEvent) => {
-    const target = event.target as HTMLElement
-    if (!target.closest('a[data-kumo-part="group-link"]')) {
+    const target = event.target
+
+    if (!(target instanceof Element) || !target.closest('a[data-kumo-part="group-link"]')) {
       return
     }
+
     event.preventDefault()
     navigateToSection(value)
   }
@@ -365,6 +392,7 @@ export function McpcfAdminPanel({
             container={stickySelectPortalContainer ?? undefined}
             onValueChange={(value) => {
               const nextValue = String(value ?? "")
+
               if (isTocSectionValue(nextValue)) {
                 navigateToSection(nextValue)
               }
@@ -395,6 +423,7 @@ export function McpcfAdminPanel({
                     <DropdownMenu.Trigger>
                       <Button
                         type="button"
+                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                         shape="circle"
                         variant="ghost"
                         disabled={busy !== null || loading}
@@ -618,6 +647,7 @@ export function McpcfAdminPanel({
             if (busy === "mcpcf-reset") {
               return
             }
+
             setResetConfirmOpen(open)
           }}
           onCancel={() => setResetConfirmOpen(false)}
@@ -647,15 +677,22 @@ function buildMcpcfConfigPayload(input: {
   serverBlacklist: string
   userOauthProviderId: string
 }): AdminMcpcfConfigPayload {
-  return {
+  const payload: AdminMcpcfConfigPayload = {
     enabled: input.enabled,
     baseUrl: input.baseUrl,
     userOauthProviderId: input.userOauthProviderId,
     expectedIssuer: input.expectedIssuer.trim() || null,
     authTypeAllowlist: splitList(input.authTypeAllowlist),
     serverBlacklist: splitList(input.serverBlacklist),
-    ...(input.adminApiToken.trim() ? { adminApiToken: input.adminApiToken.trim() } : {}),
   }
+
+  const adminApiToken = input.adminApiToken.trim()
+
+  if (adminApiToken) {
+    Object.assign(payload, { adminApiToken })
+  }
+
+  return payload
 }
 
 function serializeMcpcfConfigPayload(payload: AdminMcpcfConfigPayload): string {
@@ -675,11 +712,12 @@ function getInitialTocSection(): TocSectionValue {
   if (typeof window === "undefined") {
     return DEFAULT_TOC_SECTION
   }
+
   return isTocSectionValue(window.location.hash) ? window.location.hash : DEFAULT_TOC_SECTION
 }
 
 function isTocSectionValue(value: string): value is TocSectionValue {
-  return TOC_SECTION_VALUES.includes(value as TocSectionValue)
+  return TOC_SECTION_VALUES.some((section) => section === value)
 }
 
 function McpcfServerRow({ server }: { server: AdminMcpcfServer }) {
@@ -725,10 +763,12 @@ export function McpcfRefreshDialog({
     { id: "applying", label: "Applying changes" },
     { id: "complete", label: "Complete" },
   ] as const
+
   const activeIndex =
     state.phase === "failed"
       ? phases.findIndex((phase) => phase.id === "applying")
       : phases.findIndex((phase) => phase.id === state.phase)
+
   const progress =
     state.phase === "failed"
       ? 100
@@ -759,6 +799,7 @@ export function McpcfRefreshDialog({
             type="button"
             onClick={onClose}
             disabled={!canClose}
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="circle"
             variant="ghost"
             title="Close"
@@ -780,6 +821,7 @@ export function McpcfRefreshDialog({
               {phases.map((phase, index) => {
                 const isComplete = state.phase === "complete" || index < activeIndex
                 const isActive = phase.id === state.phase
+
                 return (
                   <div
                     key={phase.id}
@@ -916,6 +958,7 @@ function IdentityCell({
 
 function StatusBadge({ status, label }: { status: string; label?: string }) {
   const normalized = status.toLowerCase()
+
   const variant: BadgeVariant =
     normalized === "completed" || normalized === "active" || normalized === "ready"
       ? "success"
@@ -924,6 +967,7 @@ function StatusBadge({ status, label }: { status: string; label?: string }) {
         : normalized === "archived"
           ? "secondary"
           : "warning"
+
   return <Badge variant={variant}>{label ?? status}</Badge>
 }
 

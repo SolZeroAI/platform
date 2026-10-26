@@ -91,6 +91,7 @@ export function SafeMarkdown({ content, className = "" }: SafeMarkdownProps) {
           code: ({ className, children, ...props }: ComponentPropsWithoutRef<"code">) => {
             // Check if this is a code block (has language class) or inline code
             const isCodeBlock = className?.includes("language-")
+
             if (isCodeBlock) {
               return (
                 <code className={className} {...props}>
@@ -98,6 +99,7 @@ export function SafeMarkdown({ content, className = "" }: SafeMarkdownProps) {
                 </code>
               )
             }
+
             return (
               <code className="bg-kumo-base text-kumo-default px-1.5 py-0.5 text-sm" {...props}>
                 {children}

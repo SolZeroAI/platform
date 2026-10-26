@@ -15,6 +15,7 @@ export type McpTokenSettingsTarget =
 
 const MCP_UPSTREAM_TOKEN_SETTINGS_ERROR_PATTERN =
   /^Configure your token for (.+?) in MCP settings\.$/
+
 const CONTEXTFORGE_TOKEN_SETTINGS_ERROR_PATTERN =
   /^Configure your ContextForge API token in Accounts\.$/
 
@@ -22,6 +23,7 @@ export function getMcpTokenSettingsTarget(error: string): McpTokenSettingsTarget
   const normalizedError = error.trim()
   const upstreamMatch = MCP_UPSTREAM_TOKEN_SETTINGS_ERROR_PATTERN.exec(normalizedError)
   const serverLabel = upstreamMatch?.[1]?.trim()
+
   if (serverLabel) {
     return { type: "server", serverLabel }
   }
@@ -35,6 +37,7 @@ export function getMcpTokenSettingsTarget(error: string): McpTokenSettingsTarget
 
 export function buildMcpSettingsSearchForServer(serverLabel: string): McpSettingsSearch {
   const normalizedServerLabel = serverLabel.trim()
+
   return {
     category: "agents",
     tab: "mcps",

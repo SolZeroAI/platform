@@ -1,4 +1,5 @@
 import { Badge } from "@cloudflare/kumo/components/badge"
+import * as Match from "effect/Match"
 import { Bot, ChevronRight, ExternalLink } from "lucide-react"
 import { useState } from "react"
 import type { WorkflowRunEvent } from "./types"
@@ -29,10 +30,13 @@ function childRunId(event: WorkflowRunEvent): string | null {
 function latestProgress(events: readonly WorkflowRunEvent[]): Record<string, unknown> | null {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const progress = events[index]?.data.progress
+
     if (progress && typeof progress === "object") {
+      // SAFETY: progress was checked to be a non-null object, so its string keys are the latest progress fields.
       return progress as Record<string, unknown>
     }
   }
+
   return null
 }
 
@@ -42,36 +46,43 @@ export function groupWorkflowSubagentEvents(
 ): WorkflowRunEventRow[] {
   const rows: WorkflowRunEventRow[] = []
   const groups = new Map<string, Extract<WorkflowRunEventRow, { type: "subagent" }>>()
+
   for (const event of events) {
     const runId = childRunId(event)
+
     if (!runId) {
       rows.push({ type: "event", event })
       continue
     }
+
     const existing = groups.get(runId)
+
     if (existing) {
       existing.events.push(event)
       continue
     }
+
     const group: Extract<WorkflowRunEventRow, { type: "subagent" }> = {
       type: "subagent",
       childRunId: runId,
       events: [event],
     }
+
     groups.set(runId, group)
     rows.push(group)
   }
+
   return rows
 }
 
 function statusFor(event: WorkflowRunEvent): string {
   return (
     stringValue(event.data.status) ??
-    (event.eventType === "subagent_completed"
-      ? "completed"
-      : event.eventType === "subagent_failed"
-        ? "error"
-        : event.eventType.replace("subagent_", ""))
+    Match.value(event.eventType).pipe(
+      Match.when("subagent_completed", () => "completed"),
+      Match.when("subagent_failed", () => "error"),
+      Match.orElse((eventType) => eventType.replace("subagent_", "")),
+    )
   )
 }
 
@@ -105,20 +116,27 @@ export function WorkflowSubagentRunDisclosure({
   const progress = latestProgress(ordered)
   const progressMessage = progress ? stringValue(progress.message) : null
   const progressFraction = progress ? numberValue(progress.fraction) : null
+
   const activityToolNames = ordered.flatMap((event) => {
     const singular = stringValue(event.data.toolName)
+
     return [...(singular ? [singular] : []), ...stringArray(event.data.toolNames)]
   })
+
   const toolNames = [...new Set(activityToolNames)].sort((left, right) => left.localeCompare(right))
+
   const observedToolCallIds = new Set(
     ordered.flatMap((event) => {
       const callId = stringValue(event.data.toolCallId)
+
       return callId ? [callId] : []
     }),
   )
+
   const reportedToolCount = numberValue(latest.data.toolCallCount)
   const toolCallCount = reportedToolCount ?? observedToolCallIds.size
   const durationMs = numberValue(latest.data.durationMs)
+
   const duration =
     durationMs === null
       ? formatDuration(started.createdAt, latest.createdAt)

@@ -58,9 +58,11 @@ export class BackgroundSessionsClient {
     hasMore: boolean
   }> {
     const response = await this.request(`/sessions?limit=${limit}&offset=${offset}`)
+
     if (!response.ok) {
       throw new Error(`Failed to list sessions: ${response.status}`)
     }
+
     return response.json()
   }
 
@@ -76,9 +78,11 @@ export class BackgroundSessionsClient {
       },
       body: JSON.stringify(input),
     })
+
     if (!response.ok) {
       throw new Error(`Failed to create session: ${response.status}`)
     }
+
     return response.json()
   }
 
@@ -98,9 +102,11 @@ export class BackgroundSessionsClient {
       },
       body: JSON.stringify(user),
     })
+
     if (!response.ok) {
       throw new Error(`Failed to create ws token: ${response.status}`)
     }
+
     return response.json()
   }
 
@@ -115,9 +121,11 @@ export class BackgroundSessionsClient {
       },
       body: JSON.stringify(input),
     })
+
     if (!response.ok) {
       throw new Error(`Failed to enqueue prompt: ${response.status}`)
     }
+
     return response.json()
   }
 
@@ -139,17 +147,21 @@ export class BackgroundSessionsClient {
       },
       body: JSON.stringify(input),
     })
+
     if (!response.ok) {
       throw new Error(`Failed to update session tools: ${response.status}`)
     }
+
     return response.json()
   }
 
   async getSandboxActivity(sessionId: string, limit = 100): Promise<RuntimeActivityResponse> {
     const response = await this.request(`/sessions/${sessionId}/sandbox/activity?limit=${limit}`)
+
     if (!response.ok) {
       throw new Error(`Failed to fetch sandbox activity: ${response.status}`)
     }
+
     return response.json()
   }
 
@@ -175,6 +187,7 @@ export class BackgroundSessionsClient {
 
     ws.addEventListener("message", (raw) => {
       let parsed: unknown
+
       try {
         parsed = JSON.parse(String(raw.data))
       } catch {
@@ -182,6 +195,7 @@ export class BackgroundSessionsClient {
       }
 
       onRawMessage?.(parsed)
+
       if (
         parsed &&
         typeof parsed === "object" &&
@@ -189,6 +203,7 @@ export class BackgroundSessionsClient {
         parsed.type === "sandbox_event" &&
         "event" in parsed
       ) {
+        // SAFETY: parsed was checked to be a sandbox_event message that contains event.
         onEvent((parsed as { event: TimelineEvent }).event)
       }
     })
@@ -203,8 +218,10 @@ function normalizeAuth(auth: BackgroundClientAuth): BackgroundClientAuth {
   }
 
   const apiKey = auth.apiKey.trim()
+
   if (!apiKey) {
     throw new Error("BackgroundSessionsClient API key must not be empty")
   }
+
   return { kind: "api-key", apiKey }
 }

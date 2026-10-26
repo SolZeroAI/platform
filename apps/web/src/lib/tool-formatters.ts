@@ -1,20 +1,25 @@
 import { parseMcpcfProxyToolName, parseCustomMcpToolKey, type SandboxEvent } from "@solzero/shared"
+
 export type { SandboxEvent } from "@solzero/shared"
 
 function basename(filePath: string | undefined): string {
   if (!filePath) return "unknown"
   const parts = filePath.split("/")
+
   return parts[parts.length - 1] || filePath
 }
 
 function truncate(str: string | undefined, maxLen: number): string {
   if (!str) return ""
+
   if (str.length <= maxLen) return str
+
   return str.slice(0, maxLen) + "..."
 }
 
 function countLines(str: string | undefined): number {
   if (!str) return 0
+
   return str.split("\n").length
 }
 
@@ -24,6 +29,7 @@ function formatToolWords(value: string, casing: "title" | "sentence"): string {
     .filter(Boolean)
     .map((word) => {
       const upper = word.toUpperCase()
+
       if (
         upper === "UTC" ||
         upper === "URL" ||
@@ -32,9 +38,11 @@ function formatToolWords(value: string, casing: "title" | "sentence"): string {
       ) {
         return upper
       }
+
       if (casing === "title") {
         return `${word.slice(0, 1).toUpperCase()}${word.slice(1).toLowerCase()}`
       }
+
       return word.toLowerCase()
     })
     .join(" ")
@@ -50,6 +58,7 @@ function stripToolKeyPrefix(toolKey: string): string {
 
 function formatMcpServerLabel(serverKey: string): string {
   const normalized = serverKey.replace(/_mcp$/i, "")
+
   return `${formatToolWords(normalized, "title")} MCP`
 }
 
@@ -61,13 +70,17 @@ function tokenizeIdentifier(value: string): string[] {
 }
 
 function stripLongestSharedTokenPrefix(serverKey: string, toolTokens: string[]): string[] {
-  const serverTokenSets = [serverKey, serverKey.replace(/_mcp$/i, "")]
-    .map(tokenizeIdentifier)
-    .filter((tokens) => tokens.length > 0)
+  const serverTokenSets = [serverKey, serverKey.replace(/_mcp$/i, "")].flatMap((value) => {
+    const tokens = tokenizeIdentifier(value)
+
+    return tokens.length > 0 ? [tokens] : []
+  })
 
   let bestSlice = toolTokens
+
   for (const serverTokens of serverTokenSets) {
     let sharedLength = 0
+
     while (
       sharedLength < serverTokens.length &&
       sharedLength < toolTokens.length &&
@@ -78,6 +91,7 @@ function stripLongestSharedTokenPrefix(serverKey: string, toolTokens: string[]):
 
     if (sharedLength > 0 && toolTokens.length > sharedLength) {
       const candidate = toolTokens.slice(sharedLength)
+
       if (candidate.length < bestSlice.length) {
         bestSlice = candidate
       }
@@ -89,6 +103,7 @@ function stripLongestSharedTokenPrefix(serverKey: string, toolTokens: string[]):
 
 function stripRepeatedPrimaryVendorToken(serverKey: string, toolTokens: string[]): string[] {
   const primaryToken = tokenizeIdentifier(serverKey)[0]
+
   if (primaryToken && toolTokens.length > 1 && toolTokens[0]!.toLowerCase() === primaryToken) {
     return toolTokens.slice(1)
   }
@@ -98,6 +113,7 @@ function stripRepeatedPrimaryVendorToken(serverKey: string, toolTokens: string[]
 
 function stripSharedMcpServerPrefix(serverKey: string, upstreamToolName: string): string {
   const toolTokens = upstreamToolName.split(/[-_\s]+/).filter(Boolean)
+
   if (toolTokens.length === 0) {
     return upstreamToolName
   }
@@ -118,6 +134,7 @@ function formatMcpToolLabel(serverKey: string | null, upstreamToolName: string):
   const trimmedToolName = serverKey
     ? stripSharedMcpServerPrefix(serverKey, upstreamToolName)
     : upstreamToolName
+
   return formatToolWords(trimmedToolName, "sentence")
 }
 
@@ -126,6 +143,7 @@ export function getToolMcpServerRegistrationNames(tool: string): string[] {
   const body = stripToolKeyPrefix(tool)
 
   const customMcpTool = parseCustomMcpToolKey(tool)
+
   if (customMcpTool?.serverName) {
     names.add(customMcpTool.serverName)
   }
@@ -135,21 +153,25 @@ export function getToolMcpServerRegistrationNames(tool: string): string[] {
   }
 
   const wrappedIndex = body.indexOf("_mcpcf_", MCPCF_SERVER_PREFIX.length)
+
   if (wrappedIndex > 0) {
     names.add(body.slice(0, wrappedIndex))
   }
 
   const separatorIndex = body.indexOf(MCPCF_PROXY_SEPARATOR)
+
   if (separatorIndex > 0) {
     names.add(body.slice(0, separatorIndex))
   }
 
   const hyphenatedUpstreamIndex = body.search(/_[a-z0-9]+-[a-z0-9]/)
+
   if (hyphenatedUpstreamIndex > 0) {
     names.add(body.slice(0, hyphenatedUpstreamIndex))
   }
 
   const simpleMatch = body.match(/^(mcpcf_[^_]+)_/)
+
   if (simpleMatch?.[1]) {
     names.add(simpleMatch[1])
   }
@@ -159,6 +181,7 @@ export function getToolMcpServerRegistrationNames(tool: string): string[] {
 
 export function toolMatchesMcpDiscoveryServer(tool: string, serverName: string): boolean {
   const normalizedServer = serverName.trim().toLowerCase()
+
   if (!normalizedServer) {
     return false
   }
@@ -177,12 +200,14 @@ function parseMcpcfRelaxedProxyToolName(value: string): {
   }
 
   const separatorIndex = value.indexOf(MCPCF_PROXY_SEPARATOR)
+
   if (separatorIndex <= MCPCF_SERVER_PREFIX.length) {
     return null
   }
 
   const serverKey = value.slice(MCPCF_SERVER_PREFIX.length, separatorIndex)
   const upstreamToolName = value.slice(separatorIndex + MCPCF_PROXY_SEPARATOR.length)
+
   if (
     !serverKey ||
     !upstreamToolName ||
@@ -204,9 +229,11 @@ function parseMcpcfUnderscoreIsolateToolKey(body: string): {
   }
 
   const hyphenatedUpstreamIndex = body.search(/_[a-z0-9]+-[a-z0-9]/)
+
   if (hyphenatedUpstreamIndex > 0) {
     const serverRegistration = body.slice(0, hyphenatedUpstreamIndex)
     const upstreamToolName = body.slice(hyphenatedUpstreamIndex + 1)
+
     if (
       serverRegistration.startsWith(MCPCF_SERVER_PREFIX) &&
       upstreamToolName &&
@@ -220,6 +247,7 @@ function parseMcpcfUnderscoreIsolateToolKey(body: string): {
   }
 
   const simpleMatch = body.match(/^mcpcf_([^_]+)_(.+)$/)
+
   if (!simpleMatch) {
     return null
   }
@@ -236,6 +264,7 @@ function parseMcpcfToolKey(toolName: string): {
   serverLabel: string
 } | null {
   const candidates = new Set<string>([toolName, stripToolKeyPrefix(toolName)])
+
   for (
     let index = toolName.indexOf("mcpcf_");
     index >= 0;
@@ -245,8 +274,10 @@ function parseMcpcfToolKey(toolName: string): {
   }
 
   const wrappedIndex = stripToolKeyPrefix(toolName).indexOf("_mcpcf_", MCPCF_SERVER_PREFIX.length)
+
   const wrappedCandidate =
     wrappedIndex > 0 ? stripToolKeyPrefix(toolName).slice(wrappedIndex + 1) : null
+
   if (wrappedCandidate) {
     candidates.add(wrappedCandidate)
   }
@@ -257,6 +288,7 @@ function parseMcpcfToolKey(toolName: string): {
 
   for (const candidate of orderedCandidates) {
     const parsed = parseMcpcfProxyToolName(candidate)
+
     if (parsed) {
       return {
         serverKey: parsed.serverAlias,
@@ -266,6 +298,7 @@ function parseMcpcfToolKey(toolName: string): {
     }
 
     const relaxed = parseMcpcfRelaxedProxyToolName(candidate)
+
     if (relaxed) {
       return {
         ...relaxed,
@@ -275,6 +308,7 @@ function parseMcpcfToolKey(toolName: string): {
   }
 
   const underscoreParsed = parseMcpcfUnderscoreIsolateToolKey(stripToolKeyPrefix(toolName))
+
   if (underscoreParsed) {
     return {
       ...underscoreParsed,
@@ -309,6 +343,7 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
 
   if (mcpcfTool) {
     const toolDisplayName = formatMcpToolLabel(mcpcfTool.serverKey, mcpcfTool.upstreamToolName)
+
     return {
       toolName: mcpcfTool.serverLabel,
       summary: toolDisplayName,
@@ -333,6 +368,7 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     const serverDisplayName = customMcpTool.serverName
       ? `${formatToolWords(customMcpTool.serverName, "title")} MCP`
       : "Custom MCP"
+
     const toolDisplayName = formatMcpToolLabel(customMcpTool.serverName, customMcpTool.mcpToolName)
 
     return {
@@ -359,8 +395,10 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
 
   switch (toolName) {
     case "Read": {
+      // SAFETY: Read stores the path in filePath or file_path when the tool call includes one.
       const filePath = (args?.filePath ?? args?.file_path) as string | undefined
       const lineCount = countLines(output)
+
       return {
         toolName: "Read",
         summary: filePath
@@ -372,7 +410,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Edit": {
+      // SAFETY: Edit stores the path in filePath or file_path when the tool call includes one.
       const filePath = (args?.filePath ?? args?.file_path) as string | undefined
+
       return {
         toolName: "Edit",
         summary: filePath ? basename(filePath) : "file",
@@ -382,7 +422,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Write": {
+      // SAFETY: Write stores the path in filePath or file_path when the tool call includes one.
       const filePath = (args?.filePath ?? args?.file_path) as string | undefined
+
       return {
         toolName: "Write",
         summary: filePath ? basename(filePath) : "file",
@@ -392,7 +434,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Bash": {
+      // SAFETY: Bash stores the shell command in command when the tool call includes one.
       const command = args?.command as string | undefined
+
       return {
         toolName: "Bash",
         summary: truncate(command, 50),
@@ -402,8 +446,10 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Grep": {
+      // SAFETY: Grep stores the search pattern in pattern when the tool call includes one.
       const pattern = args?.pattern as string | undefined
       const matchCount = output ? countLines(output) : 0
+
       return {
         toolName: "Grep",
         summary: pattern
@@ -415,8 +461,10 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Glob": {
+      // SAFETY: Glob stores the path pattern in pattern when the tool call includes one.
       const pattern = args?.pattern as string | undefined
       const fileCount = output ? countLines(output) : 0
+
       return {
         toolName: "Glob",
         summary: pattern
@@ -428,8 +476,11 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "Task": {
+      // SAFETY: Task stores the short label in description when the tool call includes one.
       const description = args?.description as string | undefined
+      // SAFETY: Task stores the task text in prompt when the tool call includes one.
       const prompt = args?.prompt as string | undefined
+
       return {
         toolName: "Task",
         summary: description ? truncate(description, 40) : prompt ? truncate(prompt, 40) : "task",
@@ -439,7 +490,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "WebFetch": {
+      // SAFETY: WebFetch stores the fetched address in url when the tool call includes one.
       const url = args?.url as string | undefined
+
       return {
         toolName: "WebFetch",
         summary: url ? truncate(url, 40) : "url",
@@ -449,7 +502,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "WebSearch": {
+      // SAFETY: WebSearch stores the search text in query when the tool call includes one.
       const query = args?.query as string | undefined
+
       return {
         toolName: "WebSearch",
         summary: query ? `"${truncate(query, 40)}"` : "search",
@@ -459,7 +514,9 @@ export function formatToolCall(event: SandboxEvent): FormattedToolCall {
     }
 
     case "TodoWrite": {
+      // SAFETY: TodoWrite stores the todo list in todos when the tool call includes one.
       const todos = args?.todos as unknown[] | undefined
+
       return {
         toolName: "TodoWrite",
         summary: todos ? `${todos.length} item${todos.length === 1 ? "" : "s"}` : "todos",
@@ -482,16 +539,20 @@ function allEventsShareTool(events: SandboxEvent[]): boolean {
   if (events.length <= 1) {
     return true
   }
+
   const firstTool = events[0].tool
+
   return events.every((event) => event.tool === firstTool)
 }
 
-export function formatToolGroup(events: SandboxEvent[]): {
+export type FormattedToolGroup = {
   toolName: string
   count: number
   summary: string
   icon: string | null
-} {
+}
+
+export function formatToolGroup(events: SandboxEvent[]): FormattedToolGroup {
   if (events.length === 0) {
     return { toolName: "Unknown", count: 0, summary: "", icon: "tool" }
   }

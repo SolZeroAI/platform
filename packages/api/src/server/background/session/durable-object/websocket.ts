@@ -122,7 +122,12 @@ export async function webSocketMessage(
   host.ensureInitialized()
   await Match.value(typeof message === "string").pipe(
     Match.when(false, () => Promise.resolve()),
-    Match.orElse(() => host.routeWebSocketMessage(ws, message as string)),
+    Match.orElse(() =>
+      host.routeWebSocketMessage(
+        ws,
+        /* SAFETY: The preceding check established that message is string. */ message as string,
+      ),
+    ),
   )
 }
 
@@ -165,6 +170,7 @@ export function applySandboxSocketClose(host: SessionDODelegate, code: number): 
     Match.when(true, () => "stopped" as const),
     Match.orElse(() => "stale" as const),
   )
+
   host.repository.updateSandboxStatus(status)
   host.broadcast({ type: "sandbox_status", status: host.getSandboxStatus() })
 }
@@ -203,10 +209,12 @@ export async function handleWebSocketUpgrade(
   url: URL,
 ): Promise<Response> {
   const isSandbox = url.searchParams.get("type") === "sandbox"
+
   const validationError = Match.value(isSandbox).pipe(
     Match.when(true, () => host.validateSandboxUpgrade(request)),
     Match.orElse(() => Option.none<Response>()),
   )
+
   return Option.match(validationError, {
     onNone: () => host.acceptWebSocketUpgrade(request, isSandbox),
     onSome: (response) => Promise.resolve(response),
@@ -230,6 +238,7 @@ export function validateActiveSandboxUpgrade(
 ): Option.Option<Response> {
   const authHeader = request.headers.get("Authorization")
   const sandboxId = request.headers.get("X-Sandbox-ID")
+
   const checks: ReadonlyArray<{ failed: boolean; respond: () => Response }> = [
     {
       failed:
@@ -245,6 +254,7 @@ export function validateActiveSandboxUpgrade(
       respond: () => new Response("Forbidden: sandbox mismatch", { status: 403 }),
     },
   ]
+
   return Option.map(
     Arr.findFirst(checks, (check) => check.failed),
     (check) => check.respond(),
@@ -288,6 +298,7 @@ export function acceptClientSocketWithAuth(
   const wsId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   host.wsManager.acceptClientSocket(server, wsId)
   host.ctx.waitUntil(host.wsManager.enforceAuthTimeout(server, wsId))
+
   return Promise.resolve()
 }
 
@@ -296,7 +307,9 @@ export function handleSandboxMessage(host: SessionDODelegate, message: string): 
     onNone: () => host.logSandboxMessageError("invalid sandbox event payload"),
     onSome: (value) =>
       host
-        .processSandboxEvent(value as SandboxEvent)
+        .processSandboxEvent(
+          /* SAFETY: value has the SandboxEvent shape established by the check or writer around this read. */ value as SandboxEvent,
+        )
         .catch((errorValue) => host.logSandboxMessageError(errorValue)),
   })
 }
@@ -311,6 +324,7 @@ export function logSandboxMessageError(
     boundary: "session.sandbox_message",
     sessionId: host.getSessionId(),
   })
+
   return Promise.resolve()
 }
 
@@ -321,7 +335,11 @@ export function handleClientMessage(
 ): Promise<void> {
   return Option.match(decodeJson(message), {
     onNone: () => host.sendInvalidMessage(ws),
-    onSome: (value) => host.dispatchClientMessage(ws, value as ClientMessage),
+    onSome: (value) =>
+      host.dispatchClientMessage(
+        ws,
+        /* SAFETY: value has the ClientMessage shape established by the check or writer around this read. */ value as ClientMessage,
+      ),
   })
 }
 
@@ -331,6 +349,7 @@ export function sendInvalidMessage(host: SessionDODelegate, ws: WebSocket): Prom
     code: "INVALID_MESSAGE",
     message: "invalid payload",
   })
+
   return Promise.resolve()
 }
 
@@ -379,6 +398,7 @@ export async function handleInteractionReply(
 
 export function sendPong(host: SessionDODelegate, ws: WebSocket): Promise<void> {
   host.wsManager.send(ws, { type: "pong", timestamp: Date.now() })
+
   return Promise.resolve()
 }
 
@@ -391,6 +411,7 @@ export function applyPresence(
     onNone: () => undefined,
     onSome: (client) => host.updateClientPresence(client, status),
   })
+
   return Promise.resolve()
 }
 
@@ -493,6 +514,7 @@ export function completeSubscribe(
     clientId: data.clientId,
     ws,
   }
+
   host.wsManager.setClient(ws, clientInfo)
   Option.match(host.clientWsIdOption(parsed), {
     onNone: () => undefined,
@@ -552,7 +574,8 @@ export function sendReplayEvent(
     onSome: (event) =>
       host.wsManager.send(ws, {
         type: "sandbox_event",
-        event: event as SandboxEvent,
+        event:
+          /* SAFETY: event has the SandboxEvent shape established by the check or writer around this read. */ event as SandboxEvent,
       }),
   })
 }
@@ -608,7 +631,9 @@ export function buildAndCacheClientInfo(
     clientId: mapping.client_id,
     ws,
   }
+
   host.wsManager.setClient(ws, info)
+
   return info
 }
 

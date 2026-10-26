@@ -36,6 +36,7 @@ import {
   typeNameText,
 } from "./ast.ts"
 import { isS0AllowedDynamicImportBoundary } from "./s0-boundaries.ts"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeRule is a lint-rule factory, not an Effect service.
 import { makeRule } from "./make-rule.ts"
 import { messages } from "./messages.ts"
 import type { S0RuleName } from "./rule-names.ts"
@@ -52,7 +53,9 @@ function shouldIgnoreFileLineCount(filename: string) {
 }
 
 function programEndLine(node: NodeLike) {
+  // SAFETY: oxlint nodes expose a loc range, and this rule reads only the end line for the file-length check.
   const loc = node.loc as { end?: { line?: number } } | undefined
+
   return loc?.end?.line ?? 0
 }
 
@@ -66,7 +69,7 @@ export const rules: Record<S0RuleName, Rule> = {
       schema: [],
     },
     createOnce(context) {
-      return {
+      const visitor = {
         Program(node: NodeLike) {
           if (
             TEST_FILE_PATTERN.test(context.filename) &&
@@ -75,7 +78,11 @@ export const rules: Record<S0RuleName, Rule> = {
             context.report({ node, message: messages["no-colocated-tests"] })
           }
         },
-      } as unknown as Visitor
+      }
+
+      // SAFETY: oxlint calls only the Program hook this rule registers.
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- oxlint's Visitor type is a dependency type this partial visitor does not satisfy.
+      return visitor as unknown as Visitor
     },
   }),
   "max-file-lines": defineRule({
@@ -87,9 +94,10 @@ export const rules: Record<S0RuleName, Rule> = {
       schema: [],
     },
     createOnce(context) {
-      return {
+      const visitor = {
         Program(node: NodeLike) {
           const lineCount = programEndLine(node)
+
           if (lineCount > MAX_AUTHORED_FILE_LINES && !shouldIgnoreFileLineCount(context.filename)) {
             context.report({
               node,
@@ -97,7 +105,11 @@ export const rules: Record<S0RuleName, Rule> = {
             })
           }
         },
-      } as unknown as Visitor
+      }
+
+      // SAFETY: oxlint calls only the Program hook this rule registers.
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- oxlint's Visitor type is a dependency type this partial visitor does not satisfy.
+      return visitor as unknown as Visitor
     },
   }),
   "no-if-statement": makeRule("no-if-statement", ({ report, shouldRun }) => ({
@@ -119,9 +131,11 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isPipeCall(node)) {
         return
       }
+
       const nested = callArguments(node)
         .map((argument) => findDescendant(argument, isPipeCall))
         .find(isNode)
+
       if (nested) {
         report(nested)
       }
@@ -132,12 +146,14 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun()) {
         return
       }
+
       if (
         isEffectCall(node, "flatMap") &&
         callArguments(node).some((argument) => hasEffectCall(argument, "flatMap"))
       ) {
         report(node)
       }
+
       if (
         isEffectCall(node, "flatten") &&
         callArguments(node).some((argument) => hasEffectCall(argument, "map"))
@@ -154,7 +170,9 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isEffectCall(node)) {
         return
       }
+
       const firstArgument = callArguments(node)[0]
+
       if (isEffectCall(firstArgument) && firstNestedEffectCall(firstArgument)) {
         report(node)
       }
@@ -179,7 +197,9 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isEffectCall(node)) {
         return
       }
+
       const firstArgument = callArguments(node)[0]
+
       if (isEffectCall(firstArgument) && firstNestedEffectCall(firstArgument)) {
         report(node)
       }
@@ -215,10 +235,12 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isIife(node)) {
         return
       }
+
       const nested = findDescendant(
         functionBody(nodeChild(node, "callee")),
         (candidate) => candidate !== node && isIife(candidate),
       )
+
       if (nested) {
         report(nested)
       }
@@ -229,10 +251,13 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun()) {
         return
       }
+
       for (const property of nodeChildren(node, "properties")) {
         const value = nodeChild(property, "value")
+
         if (value && isBranchCall(value)) {
           report(value)
+
           return
         }
       }
@@ -250,11 +275,15 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isNodeType(functionBody(node), "BlockStatement")) {
         return
       }
+
       const call = parentCall(node)
+
       if (isSchemaFilterCall(call)) {
         return
       }
+
       const returned = returnStatements(functionBody(node))[0]
+
       if (returned) {
         report(returned)
       }
@@ -303,6 +332,7 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isEffectCall(node, "gen")) {
         return
       }
+
       const nested = callArguments(node)
         .map((argument) =>
           findDescendant(
@@ -311,6 +341,7 @@ export const rules: Record<S0RuleName, Rule> = {
           ),
         )
         .find(isNode)
+
       if (nested) {
         report(nested)
       }
@@ -324,8 +355,10 @@ export const rules: Record<S0RuleName, Rule> = {
       ) {
         return
       }
+
       const args = callArguments(node)
       const callback = args.at(-1)
+
       if (hasCallbackReturning(callback, isEffectVoid)) {
         report(node)
       }
@@ -336,18 +369,21 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun()) {
         return
       }
+
       if (
         isMatchValuePipe(node) &&
         callArguments(node).some((argument) => hasSequencingCall(argument))
       ) {
         report(node)
       }
+
       if (
         (isCallTo(node, "Match", "when") || isCallTo(node, "Match", "orElse")) &&
         callArguments(node).some((argument) => hasSequencingCall(argument))
       ) {
         report(node)
       }
+
       if (
         isCallTo(node, "Option", "match") &&
         callArguments(node).some((argument) => hasSequencingCall(argument))
@@ -361,7 +397,9 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isEffectCall(node, "sync")) {
         return
       }
+
       const firstArgument = callArguments(node)[0]
+
       if (
         hasCallbackReturning(
           firstArgument,
@@ -379,6 +417,7 @@ export const rules: Record<S0RuleName, Rule> = {
         if (!shouldRun() || (!isEffectCall(node, "as") && !isEffectCall(node, "zipRight"))) {
           return
         }
+
         if (hasSideEffectCall(callArguments(node)[0])) {
           report(node)
         }
@@ -390,7 +429,9 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isEffectCall(node, "orElse")) {
         return
       }
+
       const firstArgument = callArguments(node)[0]
+
       if (
         hasEffectCall(firstArgument, "flatMap") ||
         hasEffectCall(firstArgument, "zipRight") ||
@@ -406,11 +447,15 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun() || !isNodeType(functionBody(node), "BlockStatement")) {
         return
       }
+
       const call = parentCall(node)
+
       if (isSchemaFilterCall(call)) {
         return
       }
+
       const returned = returnStatements(functionBody(node))[0]
+
       if (returned) {
         report(returned)
       }
@@ -421,7 +466,9 @@ export const rules: Record<S0RuleName, Rule> = {
       if (!shouldRun()) {
         return
       }
+
       const typeName = typeNameText(nodeChild(node, "typeName"))
+
       if (typeName === "Effect.Effect" || typeName === "Layer.Layer") {
         report(node)
       }
@@ -434,6 +481,7 @@ export const rules: Record<S0RuleName, Rule> = {
         if (isS0AllowedDynamicImportBoundary(context.filename)) {
           return
         }
+
         report(node)
       },
     }),
@@ -448,10 +496,12 @@ export const rules: Record<S0RuleName, Rule> = {
   })),
   "avoid-untagged-errors": makeRule("avoid-untagged-errors", ({ report, shouldRun }) => {
     const reported = new Set<NodeLike>()
+
     const reportBareErrors = (node: NodeLike | undefined) => {
       if (!shouldRun()) {
         return
       }
+
       for (const errorNode of bareErrorConstructors(node)) {
         if (!reported.has(errorNode)) {
           reported.add(errorNode)
@@ -467,10 +517,12 @@ export const rules: Record<S0RuleName, Rule> = {
         }
 
         const method = effectCallMethod(node)
+
         if (method === "fail" || method === "mapError") {
           for (const argument of callArguments(node)) {
             reportBareErrors(argument)
           }
+
           return
         }
 
@@ -482,6 +534,7 @@ export const rules: Record<S0RuleName, Rule> = {
           if (argument.type !== "ObjectExpression") {
             continue
           }
+
           for (const property of nodeChildren(argument, "properties")) {
             if (propertyKeyName(property) === "catch") {
               reportBareErrors(propertyValue(property))
@@ -493,6 +546,7 @@ export const rules: Record<S0RuleName, Rule> = {
         if (!shouldRun() || !isInsideEffectHandler(node)) {
           return
         }
+
         reportBareErrors(nodeChild(node, "argument"))
       },
     }
@@ -504,6 +558,7 @@ export const rules: Record<S0RuleName, Rule> = {
         if (!shouldRun()) {
           return
         }
+
         if (isConsoleAccess(node)) {
           report(
             node,

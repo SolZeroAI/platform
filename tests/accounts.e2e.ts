@@ -7,22 +7,28 @@ test(
   { session: "admin" },
   async ({ app, browser, screen }) => {
     const label = uniqueName("e2e-key")
+
     const created = await api<{ key: string; keyId: string }>(browser, "/auth/api-keys", "POST", {
       label,
     })
+
     try {
       await app.open("/settings?category=api-access")
       await expect(screen.getByText(label, { exact: true })).toBeVisible()
+
       const authorized = await fetch("http://localhost:3100/sessions", {
         headers: { "x-api-key": created.key },
       })
+
       expect(authorized.status).toBe(200)
     } finally {
       await api(browser, `/auth/api-keys/${created.keyId}`, "DELETE")
     }
+
     const revoked = await fetch("http://localhost:3100/sessions", {
       headers: { "x-api-key": created.key },
     })
+
     expect(revoked.status).toBe(401)
     await browser.reload()
     await expect(screen.getByText(label, { exact: true })).not.toBeVisible()
@@ -38,9 +44,11 @@ test(
     const accounts = linkedAuthAccounts(listed.payload)
     const credential = accounts.find((account) => account.providerId === "credential")
     expect(credential, "isolated admin keeps a credential account").toBeDefined()
+
     if (!credential) {
       return
     }
+
     expect(credential.id.length).toBeGreaterThan(0)
     expect(credential.accountId.length).toBeGreaterThan(0)
     expect(
@@ -50,10 +58,12 @@ test(
 
     const foreignId =
       credential.accountId === credential.id ? uniqueName("foreign") : credential.accountId
+
     const profile = await authRequest(
       browser,
       `/api/auth/account-info?accountId=${encodeURIComponent(credential.id)}`,
     )
+
     expect(profile.status).toBe(400)
     expect(authErrorCode(profile.payload)).toBe("PROVIDER_NOT_CONFIGURED")
 
@@ -61,29 +71,34 @@ test(
       browser,
       `/api/auth/account-info?accountId=${encodeURIComponent(foreignId)}`,
     )
+
     expect(missingProfile.status).toBe(400)
     expect(authErrorCode(missingProfile.payload)).toBe("ACCOUNT_NOT_FOUND")
 
     const token = await authRequest(browser, "/api/auth/get-access-token", "POST", {
       accountId: credential.id,
     })
+
     expect(token.status).toBe(400)
     expect(authErrorCode(token.payload)).toBe("PROVIDER_NOT_SUPPORTED")
 
     const missingToken = await authRequest(browser, "/api/auth/get-access-token", "POST", {
       accountId: foreignId,
     })
+
     expect(missingToken.status).toBe(400)
     expect(authErrorCode(missingToken.payload)).toBe("ACCOUNT_NOT_FOUND")
 
     const legacySelector = await authRequest(browser, "/api/auth/get-access-token", "POST", {
       providerId: "credential",
     })
+
     expect(legacySelector.status).toBeGreaterThanOrEqual(400)
 
     const unlink = await authRequest(browser, "/api/auth/unlink-account", "POST", {
       accountId: credential.id,
     })
+
     expect(unlink.status).toBe(400)
     expect(authErrorCode(unlink.payload)).toBe("FAILED_TO_UNLINK_LAST_ACCOUNT")
   },

@@ -10,6 +10,7 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dockerfilePath = resolve(repoRoot, "packages/agent-container/Dockerfile")
+
 type RuntimeName = keyof typeof AGENT_CONTAINER_ENTRYPOINTS
 
 export async function bundleAgentContainer(
@@ -36,20 +37,25 @@ export async function bundleAgentContainer(
       },
     ),
   )
+
   const codexPatch = await readFile(
     resolve(repoRoot, "patches/@ai-sdk+harness-codex@1.0.43.patch"),
     "utf8",
   )
+
   await writeFile(resolve(contextDir, "harness-codex.patch"), codexPatch)
   const dockerfile = await readFile(dockerfilePath, "utf8")
   await writeFile(resolve(contextDir, "Dockerfile"), dockerfile)
   let wroteJavaScript = false
+
   for (const file of bundle.files) {
     const name = file.path === "index.mjs" ? "index.mjs" : file.path
+
     if (name.endsWith(".js")) wroteJavaScript = true
     const content = typeof file.content === "string" ? file.content : Buffer.from(file.content)
     await writeFile(resolve(contextDir, name), content)
   }
+
   if (!wroteJavaScript) {
     await writeFile(resolve(contextDir, "container-chunks.js"), "export {}\n")
   }

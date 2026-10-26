@@ -57,10 +57,12 @@ export function createAgentContainerApplication(
   return Effect.gen(function* () {
     const { appName, stageMetadata } = options
     const localContexts = yield* Config.String("S0_E2E_CONTAINER_CONTEXTS").pipe(Config.option)
+
     const forbiddenContext = Option.filter(
       localContexts,
       () => !appName.startsWith("s0-e2e") || stageMetadata.name !== "dev",
     )
+
     yield* Option.match(forbiddenContext, {
       onNone: () => Effect.void,
       onSome: () =>
@@ -70,6 +72,7 @@ export function createAgentContainerApplication(
           ),
         ),
     })
+
     const imageSource = Option.match(localContexts, {
       onNone: () => ({ image: AGENT_CONTAINER_IMAGES[options.runtime] }),
       onSome: (contexts) => ({
@@ -77,6 +80,7 @@ export function createAgentContainerApplication(
         dockerfile: resolve(contexts, options.runtime, "Dockerfile"),
       }),
     })
+
     return yield* Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {
       ...imageSource,
       instanceType: "standard",
@@ -131,6 +135,7 @@ export function createDynamicWorkflowResource(options: CreateDynamicWorkflowReso
 
 function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
   const { appName, stageMetadata, migrationsDir, databaseEngine, appDbMode, databaseUrl } = options
+
   return Match.value(databaseEngine).pipe(
     Match.when("d1", () =>
       Effect.gen(function* () {
@@ -138,6 +143,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
           name: `${appName}-db-${stageMetadata.name}`,
           migrations: migrationsDir,
         })
+
         return { db, appHyperdrive: undefined, planetscale: undefined }
       }),
     ),
@@ -153,6 +159,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
           ),
           Match.orElse(() => Effect.succeed(undefined)),
         )
+
         const appHyperdrive = yield* createAppPostgresHyperdrive({
           appName,
           stageName: stageMetadata.name,
@@ -164,6 +171,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
             Match.orElse((resource) => resource.logicalDatabase.name),
           ),
         })
+
         return { db: undefined, appHyperdrive, planetscale }
       }),
     ),
@@ -177,9 +185,11 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
     const sessionNamespace = Cloudflare.DurableObject("session", {
       className: "SessionDO",
     })
+
     const isolateSessionNamespace = Cloudflare.DurableObject("iso-session", {
       className: "IsolateSessionAgent",
     })
+
     const workflowAlarmNamespace = Cloudflare.DurableObject("workflow-alarm", {
       className: "WorkflowAlarmDO",
     })
@@ -189,12 +199,15 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
     const repoCache = yield* Cloudflare.KV.Namespace("repo-cache", {
       title: `${appName}-repo-cache-${stageMetadata.name}`,
     })
+
     const s0Config = yield* Cloudflare.KV.Namespace("s0-config", {
       title: `${appName}-s0-config-${stageMetadata.name}`,
     })
+
     const userWorkflowKv = yield* Cloudflare.KV.Namespace("user-workflow-kv", {
       title: `${appName}-user-workflow-kv-${stageMetadata.name}`,
     })
+
     const workflowSessionResponseCache = yield* Cloudflare.KV.Namespace("wf-sess-resp-cache", {
       title: `${appName}-wf-sess-resp-cache-${stageMetadata.name}`,
     })
@@ -202,12 +215,15 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
     const workflowBucket = yield* Cloudflare.R2.Bucket("workflow-artifacts", {
       name: `${appName}-workflow-artifacts-${stageMetadata.name}`,
     })
+
     const skillsBucket = yield* Cloudflare.R2.Bucket("skills", {
       name: `${appName}-skills-${stageMetadata.name}`,
     })
+
     const aiSearchContentBucket = yield* Cloudflare.R2.Bucket("ai-search-content", {
       name: `${appName}-ai-search-content-${stageMetadata.name}`,
     })
+
     const aiSearchNamespaces = yield* Match.value(dev).pipe(
       Match.when(true, () =>
         Effect.succeed({
@@ -256,5 +272,7 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
 }
 
 export type AgentContainerNamespaces = ReturnType<typeof createAgentContainerNamespaces>
+
 export type AgentContainerApplications = ReturnType<typeof createAgentContainerApplications>
+
 export type AgentResources = Success<ReturnType<typeof createAgentResources>>

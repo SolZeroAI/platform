@@ -43,6 +43,7 @@ export interface AiSearchAiSearchResponse {
 export type Env = ApiEnv
 
 export type SessionStatus = "created" | "active" | "completed" | "archived"
+
 export type SandboxStatus =
   | "pending"
   | "spawning"
@@ -54,7 +55,9 @@ export type SandboxStatus =
   | "failed"
 
 export type MessageStatus = "pending" | "processing" | "completed" | "failed"
+
 export type MessageSource = "web" | "slack" | "extension" | "github"
+
 export type PromptExecutionMode = "sync" | "stream"
 
 export interface Attachment {

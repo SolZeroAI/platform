@@ -27,6 +27,7 @@ export function claimSubagentDispatch(
     ),
     (): SubagentDispatchState => ({ messageId, count: 0, runIds: [] }),
   )
+
   const existingIndex = active.runIds.indexOf(runId)
 
   return Match.value(existingIndex >= 0).pipe(
@@ -60,13 +61,17 @@ export function resolveSubagentMessageId(
     Option.filter((dispatch) => dispatch.runIds.includes(runId)),
     Option.map((dispatch) => dispatch.messageId),
   )
+
   const activeMessage = Option.fromNullishOr(activeMessageId).pipe(
     Option.filter((messageId) => runId.startsWith(`${messageId}:`)),
   )
+
   const separator = runId.indexOf(":")
+
   const encodedMessage = Option.liftPredicate(separator, (index) => index > 0).pipe(
     Option.map((index) => runId.slice(0, index)),
   )
+
   return Option.orElse(claimedMessage, () => Option.orElse(activeMessage, () => encodedMessage))
 }
 
@@ -76,6 +81,7 @@ function createSubagentDispatch(
   runId: string,
 ): ClaimedSubagentDispatch {
   const runIds = [...active.runIds, runId]
+
   return {
     state: { messageId, count: runIds.length, runIds },
     order: runIds.length,

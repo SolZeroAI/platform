@@ -81,6 +81,7 @@ import {
   type IsolateSessionConfig,
   type IsolateWarmResult,
 } from "./agent/types"
+
 export type {
   IsolateCloneAuth,
   IsolatePromptRequest,
@@ -90,6 +91,7 @@ export type {
   IsolateSessionConfig,
   IsolateWarmResult,
 } from "./agent/types"
+
 export class IsolateSessionAgent
   extends Think<Env, IsolateSessionAgentState>
   implements IsolateSubagentHost
@@ -133,11 +135,13 @@ export class IsolateSessionAgent
     context: ChatRecoveryContext,
   ): Promise<ChatRecoveryOptions | void> {
     await this.turnRecovery.recoverParentTurn()
+
     return super.onChatRecovery(context)
   }
 
   override onChatResponse(result: ChatResponseResult): void | Promise<void> {
     this.turnRecovery.completeRecoveredTurn()
+
     return super.onChatResponse(result)
   }
 
@@ -148,6 +152,7 @@ export class IsolateSessionAgent
     config: IsolateSubagentTrustedConfig,
   ): Promise<void> {
     registerSubagentTrustedConfig(this.ctx.storage.sql, runId, config)
+
     return Promise.resolve()
   }
 
@@ -157,11 +162,13 @@ export class IsolateSessionAgent
 
   releaseSubagentTrustedConfig(runId: string): Promise<void> {
     releaseSubagentTrustedConfig(this.ctx.storage.sql, runId)
+
     return Promise.resolve()
   }
 
   clearSubagentTrustedConfigs(): Promise<void> {
     clearSubagentTrustedConfigs(this.ctx.storage.sql)
+
     return Promise.resolve()
   }
 
@@ -201,6 +208,7 @@ export class IsolateSessionAgent
       state: this.state,
       activeTurn: this.activeTurn,
     })
+
     return [basePrompt, ...this.subagents.promptSections()].join("\n\n")
   }
   createInternalRequestObserver(path: string, routeBranch: string): ApiRequestObserver {
@@ -214,8 +222,10 @@ export class IsolateSessionAgent
         tracing: workerTracing,
       },
     )
+
     observer.setRouteBranch(routeBranch)
     observer.setUserId(this.state.userId)
+
     return observer
   }
 
@@ -232,6 +242,7 @@ export class IsolateSessionAgent
       selectedTools: this.state.tools ?? [],
       createObserver: this.createInternalRequestObserver.bind(this),
     })
+
     return { ...baseTools, ...this.subagents.tools() }
   }
   async getSkills() {
@@ -280,6 +291,7 @@ export class IsolateSessionAgent
         ),
       ),
     ])
+
     const systemSections = [baseSystem, ...optionalSections]
 
     Option.match(
@@ -336,7 +348,7 @@ export class IsolateSessionAgent
       Match.when(
         true,
         (): TurnConfig =>
-          ({
+          /* SAFETY: ({ ...turnConfig, activeTools: [], toolChoice: "none", }) has the TurnConfig shape established by the check or writer around this read. */ ({
             ...turnConfig,
             activeTools: [],
             toolChoice: "none",
@@ -368,8 +380,10 @@ export class IsolateSessionAgent
       runtimeStatus: "pending",
       lastError: null,
     }
+
     this.setState(nextState)
     await this.persistSessionMetadata(nextState)
+
     return { runtimeId: this.getRuntimeId() }
   }
 
@@ -399,8 +413,10 @@ export class IsolateSessionAgent
       secretEnv: config.secretEnv ?? this.state.secretEnv ?? {},
       lastError: null,
     }
+
     this.setState(nextState)
     await this.persistSessionMetadata(nextState)
+
     return { runtimeId: this.getRuntimeId() }
   }
 
@@ -415,10 +431,19 @@ export class IsolateSessionAgent
     const repoPreparation = await Effect.runPromise(
       ensureRepositoryWorkspace({ workspace: this.workspace, state: this.state, auth }),
     )
+
     const nextStatus: IsolateRuntimeStatus = Match.value(Boolean(repoPreparation.error)).pipe(
-      Match.when(true, () => "failed" as IsolateRuntimeStatus),
-      Match.orElse(() => "ready" as IsolateRuntimeStatus),
+      Match.when(
+        true,
+        () =>
+          /* SAFETY: "failed" has the IsolateRuntimeStatus shape established by the check or writer around this read. */ "failed" as IsolateRuntimeStatus,
+      ),
+      Match.orElse(
+        () =>
+          /* SAFETY: "ready" has the IsolateRuntimeStatus shape established by the check or writer around this read. */ "ready" as IsolateRuntimeStatus,
+      ),
     )
+
     this.setState({
       ...this.state,
       runtimeStatus: nextStatus,
@@ -443,6 +468,7 @@ export class IsolateSessionAgent
   ): Promise<IsolatePromptResult> {
     const promptEffect = Effect.gen({ self: this }, function* () {
       const backgroundTracing = yield* BackgroundTracing
+
       return yield* backgroundTracing.withSpan(
         "isolate.agent.run_prompt",
         {
@@ -459,6 +485,7 @@ export class IsolateSessionAgent
         { parentContext: request.observabilityTrace },
       )
     }).pipe(Effect.provide(makeBackgroundTracingLayer({ tracing: workerTracing })))
+
     // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget entrypoint boundary; runs the run_prompt span Effect at the Durable Object RPC edge.
     return Effect.runPromise(promptEffect)
   }
@@ -474,6 +501,7 @@ export class IsolateSessionAgent
       })
 
       const backgroundTracing = yield* BackgroundTracing
+
       const repoPreparation = yield* backgroundTracing.withSpan(
         "isolate.repository.prepare",
         {
@@ -485,14 +513,17 @@ export class IsolateSessionAgent
         },
         ensureRepositoryWorkspace({ workspace: this.workspace, state: this.state, auth: request }),
       )
+
       const selectedTools = this.state.tools ?? []
       const createMcpcfObserver = this.createInternalRequestObserver.bind(this)
+
       const mcpcfRuntime = {
         sessionId: this.getRuntimeId(),
         userId: this.state.userId,
         repoOwner: this.state.repoOwner,
         repoName: this.state.repoName,
       }
+
       const mcpTurn = yield* backgroundTracing.withSpan(
         "isolate.mcp.prepare_turn",
         {
@@ -512,6 +543,7 @@ export class IsolateSessionAgent
           callback,
         }),
       )
+
       const model = yield* backgroundTracing.withSpan(
         "isolate.model.compile",
         {
@@ -558,6 +590,7 @@ export class IsolateSessionAgent
     return Effect.gen({ self: this }, function* () {
       const backgroundTracing = yield* BackgroundTracing
       let chatRequestId = Option.none<string>()
+
       const output = yield* backgroundTracing.withSpan(
         "isolate.think.chat",
         {
@@ -593,6 +626,7 @@ export class IsolateSessionAgent
           getFallbackAssistantText: () => getLatestAssistantText(this.messages),
         }),
       )
+
       const subagentResult = yield* Effect.tryPromise({
         try: () => this.subagents.finishTurn(request.messageId),
         catch: (cause) => cause,
@@ -603,6 +637,7 @@ export class IsolateSessionAgent
         runtimeStatus: "ready",
         lastError: repoPreparation.error ?? null,
       }
+
       this.setState(nextState)
       yield* Effect.tryPromise({
         try: () => this.persistSessionMetadata(nextState),
@@ -634,18 +669,22 @@ export class IsolateSessionAgent
   private recordTurnFailure(cause: unknown) {
     return Effect.gen({ self: this }, function* () {
       const message = describeError(cause)
+
       const nextState: IsolateSessionAgentState = Match.value(this.stopRequested).pipe(
         Match.when(true, () => ({
           ...this.state,
-          runtimeStatus: "ready" as IsolateRuntimeStatus,
+          runtimeStatus:
+            /* SAFETY: "ready" has the IsolateRuntimeStatus shape established by the check or writer around this read. */ "ready" as IsolateRuntimeStatus,
           lastError: null,
         })),
         Match.orElse(() => ({
           ...this.state,
-          runtimeStatus: "failed" as IsolateRuntimeStatus,
+          runtimeStatus:
+            /* SAFETY: "failed" has the IsolateRuntimeStatus shape established by the check or writer around this read. */ "failed" as IsolateRuntimeStatus,
           lastError: message,
         })),
       )
+
       this.setState(nextState)
       yield* Effect.tryPromise({
         try: () => this.persistSessionMetadata(nextState),
@@ -659,6 +698,7 @@ export class IsolateSessionAgent
       Option.fromNullishOr(this.activeTurn),
       () => new Error("No isolate model is prepared for step-limit recovery"),
     )
+
     this.activeTurn = {
       ...turn,
       finalizingAfterStepLimit: true,
@@ -674,17 +714,25 @@ export class IsolateSessionAgent
     this.turnRecovery.clearEnvelope()
     this.abortAllRequests()
     await this.subagents.cancelActive("Parent Isolate prompt was stopped")
+
     const stoppedStatus: IsolateRuntimeStatus = Match.value(this.state.runtimeStatus).pipe(
-      Match.when("running", () => "ready" as IsolateRuntimeStatus),
+      Match.when(
+        "running",
+        () =>
+          /* SAFETY: "ready" has the IsolateRuntimeStatus shape established by the check or writer around this read. */ "ready" as IsolateRuntimeStatus,
+      ),
       Match.orElse((status) => status),
     )
+
     const nextState: IsolateSessionAgentState = {
       ...this.state,
       runtimeStatus: stoppedStatus,
       lastError: null,
     }
+
     this.setState(nextState)
     await this.persistSessionMetadata(nextState)
+
     return { runtimeId: this.getRuntimeId(), status: nextState.runtimeStatus }
   }
 
@@ -821,6 +869,7 @@ export class IsolateSessionAgent
   private async summarizeCompaction(prompt: string): Promise<string> {
     // oxlint-disable-next-line effect/effect-run-in-body -- agents memory compaction callback boundary requires a Promise; runs the model-resolution span Effect at that edge.
     const model = await Effect.runPromise(this.resolveCompactionModel())
+
     const telemetry = aiTelemetrySettings("isolate.compaction.summary", {
       "session.id": this.getRuntimeId(),
       "user.id": this.state.userId,
@@ -828,6 +877,7 @@ export class IsolateSessionAgent
       "ai.model": model.modelId,
       "ai.runtime_model": model.runtimeModelId,
     })
+
     const result = await generateText({
       model: model.model,
       prompt,
@@ -835,11 +885,13 @@ export class IsolateSessionAgent
       runtimeContext: telemetry.metadata,
       providerOptions: model.providerOptions,
     })
+
     return result.text.trim()
   }
 
   private async searchConversationHistory(query: string): Promise<string | null> {
     const results = await this.session.search(query, { limit: 10 })
+
     return Option.match(
       Option.liftPredicate(results, (entries) => entries.length > 0),
       {

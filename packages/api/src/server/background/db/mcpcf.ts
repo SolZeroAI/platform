@@ -82,7 +82,9 @@ export interface McpcfRefreshResult {
 }
 
 export type McpcfConfigSource = "default" | "deployment" | "kv"
+
 export type McpcfSecretSource = "deployment" | "kv" | "none"
+
 export type McpcfRegistrySource = "kv" | "none"
 
 export interface McpcfConfigPresence {
@@ -148,6 +150,7 @@ function normalizeAuthTypeAllowlist(values: readonly string[] | null | undefined
 
 function normalizeBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "")
+
   return Match.value(trimmed).pipe(
     Match.when("", () => ""),
     Match.orElse((resolved) => new URL(resolved).toString().replace(/\/+$/, "")),
@@ -176,21 +179,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringField(record: Record<string, unknown>, key: string, fallback = ""): string {
   const value = record[key]
+
   return typeof value === "string" ? value : fallback
 }
 
 function nullableStringField(record: Record<string, unknown>, key: string): string | null {
   const value = record[key]
+
   return typeof value === "string" && value.trim().length > 0 ? value : null
 }
 
 function numberField(record: Record<string, unknown>, key: string, fallback: number): number {
   const value = record[key]
+
   return typeof value === "number" && Number.isFinite(value) ? value : fallback
 }
 
 function booleanField(record: Record<string, unknown>, key: string, fallback: boolean): boolean {
   const value = record[key]
+
   return typeof value === "boolean" ? value : fallback
 }
 
@@ -205,6 +212,7 @@ function readMcpcfConfigRecord(value: unknown): Option.Option<McpcfConfigRecord>
     Option.filter(isRecord),
     Option.map((record) => {
       const now = Date.now()
+
       return {
         id: stringField(record, "id", MCPCF_CONFIG_ID),
         enabled: booleanField(record, "enabled", false),
@@ -236,11 +244,13 @@ function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord>
     Option.filter(isRecord),
     Option.map((record) => {
       const rawMetadata = isRecord(record.rawMetadata) ? record.rawMetadata : {}
+
       const tools = Array.isArray(record.tools)
         ? record.tools
             .map((item) => normalizeMcpcfToolPreview(item))
             .filter((item): item is McpcfToolPreview => item !== null)
         : []
+
       return {
         id: stringField(record, "id"),
         slug: stringField(record, "slug"),
@@ -249,7 +259,11 @@ function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord>
         authType: nullableStringField(record, "authType"),
         toolCount: numberField(record, "toolCount", tools.length),
         tools,
-        sourceStatus: stringField(record, "sourceStatus", "active") as McpcfSourceStatus,
+        sourceStatus: /* SAFETY: sourceStatus is stored only as McpcfSourceStatus. */ stringField(
+          record,
+          "sourceStatus",
+          "active",
+        ) as McpcfSourceStatus,
         filterReason: nullableStringField(record, "filterReason"),
         enabled: booleanField(record, "enabled", true),
         rawMetadata,
@@ -264,6 +278,15 @@ function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord>
 }
 /* oxlint-enable s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null */
 
+function trimmedServerIds(serverIds: readonly string[]): string[] {
+  return serverIds.flatMap((serverId) =>
+    Match.value(serverId.trim()).pipe(
+      Match.when("", () => []),
+      Match.orElse((trimmed) => [trimmed]),
+    ),
+  )
+}
+
 function makeDiffItem(
   server: Pick<McpcfServerRecord, "id" | "slug" | "label">,
   reason?: string | null,
@@ -272,6 +295,7 @@ function makeDiffItem(
     onNone: () => ({}),
     onSome: (resolved) => ({ reason: resolved }),
   })
+
   return { id: server.id, slug: server.slug, label: server.label, ...reasonPart }
 }
 
@@ -284,10 +308,13 @@ function classifyServer(input: {
   const authType = Option.getOrNull(
     Option.map(Option.fromNullishOr(input.server.authType), (value) => value.toLowerCase()),
   )
+
   const filteredByAuth =
     input.allowlist.size > 0 && (authType === null || !input.allowlist.has(authType))
+
   const blacklisted =
     input.blacklistIds.has(input.server.id) || input.blacklistSlugs.has(input.server.slug)
+
   return Match.value({ filteredByAuth, blacklisted }).pipe(
     Match.when({ filteredByAuth: true }, () => ({
       sourceStatus: "filtered" as const,
@@ -307,6 +334,7 @@ function uniqueSlugForServer(
   claimedSlugs: Map<string, string>,
 ): string {
   const existingOwner = claimedSlugs.get(slug)
+
   const resolved = Match.value(!existingOwner || existingOwner === serverId).pipe(
     Match.when(true, () => slug),
     Match.orElse(() =>
@@ -320,7 +348,9 @@ function uniqueSlugForServer(
       ),
     ),
   )
+
   claimedSlugs.set(resolved, serverId)
+
   return resolved
 }
 
@@ -386,6 +416,7 @@ export class McpcfRegistryStore {
 
   getConfig = Effect.fn("db.mcpcf.getConfig")(function* (this: McpcfRegistryStore) {
     const presence = yield* this.getConfigWithPresence()
+
     return Match.value(presence.configured).pipe(
       Match.when(true, () => Option.some(presence.config)),
       Match.orElse(() => Option.none<McpcfConfigRecord>()),
@@ -395,20 +426,25 @@ export class McpcfRegistryStore {
   getConfigWithPresence = Effect.fn("db.mcpcf.getConfigWithPresence")(
     function* (this: McpcfRegistryStore) {
       const now = Date.now()
+
       const deploymentValue = getS0DeploymentConfig<S0McpcfConfig>(
         this.env,
         S0_CONFIG_BINDINGS.mcpcf,
       )
+
       const store = this
+
       return yield* Option.match(deploymentValue, {
         onNone: () =>
           Effect.gen(function* () {
             const value = yield* store.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
             const configured = Option.isSome(value)
+
             const source = Match.value(configured).pipe(
               Match.when(true, () => "kv" as const),
               Match.orElse(() => "default" as const),
             )
+
             return {
               configured,
               source,
@@ -432,6 +468,7 @@ export class McpcfRegistryStore {
   getConfigOrDefault = Effect.fn("db.mcpcf.getConfigOrDefault")(
     function* (this: McpcfRegistryStore) {
       const presence = yield* this.getConfigWithPresence()
+
       return presence.config
     },
   )
@@ -442,20 +479,25 @@ export class McpcfRegistryStore {
         this.env,
         S0_CONFIG_BINDINGS.mcpcf,
       )
+
       const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
         Option.fromNullishOr(config.adminApiToken),
       )
+
       const store = this
+
       return yield* Option.match(deploymentTokenReference, {
         onNone: () =>
           Effect.gen(function* () {
             const configured = yield* store.s0Config.encryptedSecretConfigured(
               S0_CONFIG_KEYS.mcpcf.adminApiToken,
             )
+
             const source = Match.value(configured).pipe(
               Match.when(true, () => "kv" as const),
               Match.orElse(() => "none" as const),
             )
+
             return {
               configured,
               source,
@@ -487,26 +529,32 @@ export class McpcfRegistryStore {
         this.env,
         S0_CONFIG_BINDINGS.mcpcf,
       )
+
       const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
         Option.fromNullishOr(config.adminApiToken),
       )
+
       const store = this
+
       return yield* Option.match(deploymentTokenReference, {
         onNone: () =>
           Effect.gen(function* () {
             const configured = yield* store.s0Config.encryptedSecretConfigured(
               S0_CONFIG_KEYS.mcpcf.adminApiToken,
             )
+
             const adminApiToken = yield* Match.value(configured).pipe(
               Match.when(false, () => Effect.succeed(Option.none<string>())),
               Match.orElse(() =>
                 store.s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken),
               ),
             )
+
             const source = Match.value(configured).pipe(
               Match.when(true, () => "kv" as const),
               Match.orElse(() => "none" as const),
             )
+
             return {
               configured: Option.isSome(adminApiToken),
               source,
@@ -537,11 +585,13 @@ export class McpcfRegistryStore {
     update: McpcfConfigUpdate,
   ) {
     const existingPresence = yield* this.getConfigWithPresence()
+
     const failLockedConfig = Effect.fail(
       new McpcfConfigurationError({
         message: `MCP Context Forge config is managed by ${existingPresence.envVarName ?? "deployment configuration"}; remove it from the active stage config to edit it in Admin`,
       }),
     )
+
     const configLocked = Effect.succeed(existingPresence.locked)
     yield* Effect.when(failLockedConfig, configLocked)
 
@@ -549,15 +599,19 @@ export class McpcfRegistryStore {
       Match.when(true, () => Option.some(existingPresence.config)),
       Match.orElse(() => Option.none<McpcfConfigRecord>()),
     )
+
     const now = Date.now()
+
     const adminApiTokenSecretKey = Option.getOrElse(
       Option.map(existing, (record) => record.adminApiTokenSecretKey),
       () => MCPCF_ADMIN_API_TOKEN_SECRET_KEY,
     )
+
     const createdAt = Option.getOrElse(
       Option.map(existing, (record) => record.createdAt),
       () => now,
     )
+
     const record = {
       id: MCPCF_CONFIG_ID,
       enabled: update.enabled,
@@ -570,15 +624,19 @@ export class McpcfRegistryStore {
       createdAt,
       updatedAt: now,
     } satisfies McpcfConfigRecord
+
     yield* this.s0Config.putJson(S0_CONFIG_KEYS.mcpcf.config, record)
+
     return record
   })
 
   listServers = Effect.fn("db.mcpcf.listServers")(function* (this: McpcfRegistryStore) {
     const serverIds = yield* this.getServerIndex()
+
     const serverOptions = yield* Effect.forEach(serverIds, (serverId) => this.getServer(serverId), {
       concurrency: "unbounded",
     })
+
     return serverOptions
       .flatMap((server) =>
         Option.match(server, {
@@ -592,6 +650,7 @@ export class McpcfRegistryStore {
   listAvailableServers = Effect.fn("db.mcpcf.listAvailableServers")(
     function* (this: McpcfRegistryStore) {
       const servers = yield* this.listServers()
+
       return servers.filter((server) => server.enabled && server.sourceStatus === "active")
     },
   )
@@ -601,6 +660,7 @@ export class McpcfRegistryStore {
     serverId: string,
   ) {
     const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.server(serverId))
+
     return Option.flatMap(value, readMcpcfServerRecord)
   })
 
@@ -608,9 +668,14 @@ export class McpcfRegistryStore {
     this: McpcfRegistryStore,
     serverIds: readonly string[],
   ) {
-    const uniqueIds = [...new Set(serverIds.map((serverId) => serverId.trim()).filter(Boolean))]
+    const uniqueIds = [...new Set(trimmedServerIds(serverIds))]
+
     return yield* Match.value(uniqueIds.length === 0).pipe(
-      Match.when(true, () => Effect.succeed([] as McpcfServerRecord[])),
+      Match.when(true, () =>
+        Effect.succeed(
+          /* SAFETY: This branch has no server rows, so the array is empty. */ [] as McpcfServerRecord[],
+        ),
+      ),
       Match.orElse(() => this.queryServersByIds(uniqueIds)),
     )
   })
@@ -622,6 +687,7 @@ export class McpcfRegistryStore {
     const serverOptions = yield* Effect.forEach(uniqueIds, (serverId) => this.getServer(serverId), {
       concurrency: "unbounded",
     })
+
     return serverOptions.flatMap((server) =>
       Option.match(server, {
         onNone: () => [],
@@ -635,6 +701,7 @@ export class McpcfRegistryStore {
     serverIds: readonly string[],
   ) {
     const servers = yield* this.listServersByIds(serverIds)
+
     return servers.filter((server) => server.enabled && server.sourceStatus === "active")
   })
 
@@ -643,8 +710,13 @@ export class McpcfRegistryStore {
     tools: readonly SessionToolSpec[] | null | undefined,
   ) {
     const selectedServerIds = getSelectedMcpcfServerIds(tools)
+
     return yield* Match.value(selectedServerIds.length === 0).pipe(
-      Match.when(true, () => Effect.succeed([] as McpcfServerRecord[])),
+      Match.when(true, () =>
+        Effect.succeed(
+          /* SAFETY: This branch has no server rows, so the array is empty. */ [] as McpcfServerRecord[],
+        ),
+      ),
       Match.orElse(() => this.resolveSelectedServers(selectedServerIds)),
     )
   })
@@ -656,6 +728,7 @@ export class McpcfRegistryStore {
     const servers = yield* this.listAvailableServersByIds(selectedServerIds)
     const availableIds = new Set(servers.map((server) => server.id))
     const missingIds = selectedServerIds.filter((serverId) => !availableIds.has(serverId))
+
     return yield* Match.value(servers.length !== selectedServerIds.length).pipe(
       Match.when(true, () =>
         Effect.fail(new McpcfServerUnavailableError({ serverIds: missingIds })),
@@ -673,15 +746,18 @@ export class McpcfRegistryStore {
     },
   ) {
     const config = yield* this.getConfigOrDefault()
+
     const failMissingBaseUrl = Effect.fail(
       new McpcfConfigurationError({ message: "MCP Context Forge base URL is required" }),
     )
+
     const baseUrlMissing = Effect.succeed(config.baseUrl.length === 0)
     yield* Effect.when(failMissingBaseUrl, baseUrlMissing)
 
     const now = input.now ?? Date.now()
     const client = input.client ?? defaultMcpcfRefreshClient
     const existingServers = yield* this.listServers()
+
     const ctx: McpcfRefreshContext = {
       now,
       client,
@@ -705,9 +781,11 @@ export class McpcfRegistryStore {
     }
 
     const discoveredRaw = yield* client.fetchServers({ config, adminApiToken: input.adminApiToken })
+
     const discovered = discoveredRaw
       .map(normalizeMcpcfSourceServer)
       .filter((server): server is NormalizedMcpcfSourceServer => server !== null)
+
     const nextServerIds = [
       ...new Set([
         ...existingServers.map((server) => server.id),
@@ -722,6 +800,7 @@ export class McpcfRegistryStore {
     const missingServers = existingServers.filter(
       (existing) => !ctx.seenIds.has(existing.id) && existing.sourceStatus !== "missing",
     )
+
     yield* Effect.forEach(
       missingServers,
       (existing) =>
@@ -749,6 +828,7 @@ export class McpcfRegistryStore {
     ctx.seenIds.add(server.id)
     server.slug = uniqueSlugForServer(server.slug, server.id, ctx.claimedSlugs)
     const existing = ctx.existingById.get(server.id)
+
     const classification = classifyServer({
       server,
       allowlist: ctx.allowlist,
@@ -758,7 +838,11 @@ export class McpcfRegistryStore {
 
     const tools = yield* Match.value(classification.sourceStatus === "active").pipe(
       Match.when(true, () => this.fetchServerToolsSafe(ctx, server)),
-      Match.orElse(() => Effect.succeed([] as McpcfToolPreview[])),
+      Match.orElse(() =>
+        Effect.succeed(
+          /* SAFETY: This branch has no tool previews, so the array is empty. */ [] as McpcfToolPreview[],
+        ),
+      ),
     )
 
     const next: McpcfServerNext = {
@@ -772,15 +856,19 @@ export class McpcfRegistryStore {
       filterReason: classification.filterReason,
       rawMetadata: server.rawMetadata,
     }
+
     const changed = serverChanged(existing, next)
+
     const enabledValue = Match.value(existing?.enabled === false).pipe(
       Match.when(true, () => false),
       Match.orElse(() => true),
     )
+
     const verifiedAt = Match.value(next.sourceStatus === "active").pipe(
       Match.when(true, () => ctx.now),
       Match.orElse(() => existing?.verifiedAt ?? null),
     )
+
     const firstSeenAt = existing?.firstSeenAt ?? ctx.now
 
     yield* this.putServerRecord({
@@ -837,12 +925,16 @@ export class McpcfRegistryStore {
     error: unknown,
   ) {
     ctx.result.failures.push({ ...makeDiffItem(server), error: describeError(error) })
-    return Effect.succeed([] as McpcfToolPreview[])
+
+    return Effect.succeed(
+      /* SAFETY: This branch has no tool previews, so the array is empty. */ [] as McpcfToolPreview[],
+    )
   }
 
   private getServerIndex = Effect.fn("db.mcpcf.getServerIndex")(
     function* (this: McpcfRegistryStore) {
       const presence = yield* this.getServerIndexWithPresence()
+
       return presence.serverIds
     },
   )
@@ -850,14 +942,18 @@ export class McpcfRegistryStore {
   getServerIndexWithPresence = Effect.fn("db.mcpcf.getServerIndexWithPresence")(
     function* (this: McpcfRegistryStore) {
       const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
+
       const serverIds = Option.match(value, {
-        onNone: () => [] as string[],
+        onNone: () =>
+          /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
         onSome: readStringArray,
       })
+
       const source = Match.value(Option.isSome(value)).pipe(
         Match.when(true, () => "kv" as const),
         Match.orElse(() => "none" as const),
       )
+
       return {
         serverIds,
         source,
@@ -871,9 +967,10 @@ export class McpcfRegistryStore {
     this: McpcfRegistryStore,
     serverIds: readonly string[],
   ) {
-    const normalized = [
-      ...new Set(serverIds.map((serverId) => serverId.trim()).filter(Boolean)),
-    ].sort((left, right) => left.localeCompare(right))
+    const normalized = [...new Set(trimmedServerIds(serverIds))].sort((left, right) =>
+      left.localeCompare(right),
+    )
+
     yield* this.s0Config.putJson(S0_CONFIG_KEYS.mcpcf.serverIndex, normalized)
   })
 
@@ -907,6 +1004,7 @@ export interface McpcfRegistryStorePromise {
 
 export function createMcpcfRegistryStoreFromEnv(env: McpcfRegistryEnv): McpcfRegistryStorePromise {
   const registry = new McpcfRegistryStore(env)
+
   return {
     getConfigOrDefault: () => runMcpcfRegistryEffect(registry.getConfigOrDefault()),
     listAvailableServersByIds: (serverIds) =>

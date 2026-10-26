@@ -7,5 +7,6 @@ export const Route = createFileRoute("/_authenticated/bots")({
 
 function BotsRoute() {
   const detail = useMatch({ from: "/_authenticated/bots/$botId", shouldThrow: false })
+
   return detail ? <Outlet /> : <BotsPage />
 }

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import * as Alchemy from "alchemy"
 import dotenv from "dotenv"
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
 import {
   APP_DB_MODE_ENV,
@@ -37,19 +38,24 @@ export function loadS0ConfigFile(
   profile?: string,
 ): S0ResolvedConfig {
   const configPath = resolve(repoRoot, s0ConfigPathForStage(stage, profile))
+
   if (!existsSync(configPath)) {
     throw new Error(
       `Missing s0 configuration file for stage '${stage}': ${configPath}. Preview stages use the pre config for the selected profile.`,
     )
   }
+
   const errors: ParseError[] = []
   const parsed = parse(readFileSync(configPath, "utf8"), errors, { allowTrailingComma: true })
+
   if (errors.length > 0) {
     const details = errors
       .map((error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`)
       .join(", ")
+
     throw new Error(`Invalid JSONC in ${configPath}: ${details}`)
   }
+
   // oxlint-disable-next-line effect/avoid-process-env -- Existing public brand environment overrides remain supported when the stage JSONC omits brand.
   return resolveS0Config(parsed, process.env)
 }
@@ -63,39 +69,55 @@ function stageVarsTag(stage: string): string {
 }
 
 function generatedSecretLogicalId(environmentVariable: string): string {
-  const stableIds: Readonly<Record<string, string>> = {
+  const stableIds = {
     S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: "admin-password",
     BETTER_AUTH_SECRET: "better-auth-secret",
     MCPCF_PROXY_SIGNING_SECRET: "mcpcf-proxy-signing-secret",
     TOKEN_ENCRYPTION_KEY: "token-encryption-key",
     REPO_SECRETS_ENCRYPTION_KEY: "repository-secrets-encryption-key",
   }
-  return (
-    stableIds[environmentVariable] ??
-    `generated-${environmentVariable.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`
+
+  const stableId = Match.value(environmentVariable).pipe(
+    Match.when(
+      "S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD",
+      () => stableIds.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD,
+    ),
+    Match.when("BETTER_AUTH_SECRET", () => stableIds.BETTER_AUTH_SECRET),
+    Match.when("MCPCF_PROXY_SIGNING_SECRET", () => stableIds.MCPCF_PROXY_SIGNING_SECRET),
+    Match.when("TOKEN_ENCRYPTION_KEY", () => stableIds.TOKEN_ENCRYPTION_KEY),
+    Match.when("REPO_SECRETS_ENCRYPTION_KEY", () => stableIds.REPO_SECRETS_ENCRYPTION_KEY),
+    Match.orElse(() => undefined),
   )
+
+  return stableId ?? `generated-${environmentVariable.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`
 }
 
 function uniqueSecretReferences(
   references: readonly SecretReference[],
 ): readonly SecretReference[] {
   const byEnvironmentVariable = new Map<string, SecretReference>()
+
   for (const reference of references) {
     const existing = byEnvironmentVariable.get(reference.env)
+
     if (existing && Boolean(existing.generateIfMissing) !== Boolean(reference.generateIfMissing)) {
       throw new Error(
         `Secret reference ${reference.env} has conflicting generateIfMissing declarations in the stage config file`,
       )
     }
+
     byEnvironmentVariable.set(reference.env, reference)
   }
+
   return [...byEnvironmentVariable.values()]
 }
 
 function resolveSecretReference(reference: SecretReference) {
   return Effect.gen(function* () {
     const configured = yield* configSecretWithDefault(reference.env, "")
+
     if (configured.trim().length > 0) return configured
+
     if (!reference.generateIfMissing) {
       return yield* Effect.die(
         new Error(
@@ -103,6 +125,7 @@ function resolveSecretReference(reference: SecretReference) {
         ),
       )
     }
+
     return yield* Alchemy.makeRandom(generatedSecretLogicalId(reference.env), { bytes: 32 })
   })
 }
@@ -110,9 +133,11 @@ function resolveSecretReference(reference: SecretReference) {
 function resolveConfigSecrets(config: S0ResolvedConfig) {
   return Effect.gen(function* () {
     const entries: [string, ApiSecretInput][] = []
+
     for (const reference of uniqueSecretReferences(s0ActiveSecretReferences(config))) {
       entries.push([reference.env, yield* resolveSecretReference(reference)])
     }
+
     return Object.fromEntries(entries)
   })
 }
@@ -120,6 +145,7 @@ function resolveConfigSecrets(config: S0ResolvedConfig) {
 function deploymentConfigDigest(config: S0ResolvedConfig): string {
   const { adminPassword: _omittedCredentialRef, ...authForDigest } = config.auth
   const digestConfig = { ...config, auth: authForDigest }
+
   // SHA-256 here is a config content digest so a deploy can detect change. It is not a password hash.
   return createHash("sha256").update(canonicalS0ConfigJson(digestConfig)).digest("hex") // lgtm[js/insufficient-password-hash]
 }
@@ -133,12 +159,14 @@ export function s0StackRuntime() {
     const configProfile = process.env.S0_CONFIG_PROFILE
     const configFile = s0ConfigPathForStage(stage, configProfile)
     const s0Config = loadS0ConfigFile(REPO_ROOT, stage, configProfile)
+
     const apiEnv = getApiInfraEnv(
       s0Config,
       configFile,
       deploymentConfigDigest(s0Config),
       yield* resolveConfigSecrets(s0Config),
     )
+
     const stageMetadata = yield* resolveDeployedWorkersDevOrigin({
       appName: s0Config.deployment.appName,
       stageMetadata: yield* getStageMetadataFromConfig(
@@ -147,6 +175,7 @@ export function s0StackRuntime() {
         s0Config.application,
       ).pipe(Effect.orDie),
     })
+
     // oxlint-disable-next-line effect/avoid-process-env -- DATABASE is the alchemy.new engine select. Missing or empty stays d1.
     const databaseEngine = databaseEngineFromProcessEnv()
     // oxlint-disable-next-line effect/avoid-process-env -- APP_DB_MODE is a local-vs-remote operator switch for the PlanetScale flavor only.

@@ -61,6 +61,7 @@ import {
   type LocalSpanContext,
 } from "../../observability/tracing"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the session Durable Object env when decrypting stored secrets.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import {
   decodeJson,
@@ -123,6 +124,7 @@ export function getSessionState(host: SessionDODelegate): SessionState {
   const session = Option.getOrNull(host.repository.getSession())
   host.reconcileSandboxStatusIfSandbox(session)
   const runtime = Option.getOrNull(host.repository.getRuntimeLifecycle())
+
   return {
     id: session?.session_name || session?.id || host.ctx.id.toString(),
     sessionKind: session?.session_kind ?? "isolate",
@@ -174,6 +176,7 @@ export function getSession(host: SessionDODelegate) {
 
 export function getSessionId(host: SessionDODelegate): string {
   const session = host.getSession()
+
   return session?.session_name || session?.id || host.ctx.id.toString()
 }
 
@@ -183,6 +186,7 @@ export function getSessionKind(host: SessionDODelegate): SessionKind {
 
 export function getAgentRuntime(host: SessionDODelegate): AgentRuntime {
   const session = host.getSession()
+
   return resolveAgentRuntime({
     agentRuntime: session?.agent_runtime,
     sessionKind: session?.session_kind,
@@ -198,6 +202,7 @@ export function getSessionOwner(host: SessionDODelegate) {
 export function buildIsolateSessionConfig(host: SessionDODelegate): Promise<IsolateSessionConfig> {
   const session = host.getSession()
   const owner = host.getSessionOwner()
+
   return Option.match(Option.all([Option.fromNullishOr(session), Option.fromNullishOr(owner)]), {
     onNone: () => Promise.reject(new Error("Isolate session is not initialized")),
     onSome: ([resolvedSession, resolvedOwner]) =>
@@ -237,6 +242,7 @@ export function resolveSecretEnv(
   secretKeysJson: string | null | undefined,
 ): Promise<Record<string, string>> {
   const secretKeys = parseStoredSecretKeys(secretKeysJson)
+
   return Option.match(
     Option.liftPredicate(secretKeys, (keys) => keys.length > 0),
     {
@@ -255,16 +261,21 @@ export async function decryptSecretEnv(
     Option.fromNullishOr(host.env.REPO_SECRETS_ENCRYPTION_KEY),
     () => new Error("Secret storage is not configured"),
   )
+
   const allSecrets = await createGlobalSecretsStoreFromD1(
     makeControlPlaneFromEnv(host.env),
     encryptionKey,
   ).getDecryptedSecrets({
     userId,
   })
+
   return Object.fromEntries(
-    secretKeys
-      .filter((key) => Object.prototype.hasOwnProperty.call(allSecrets, key))
-      .map((key) => [key, allSecrets[key]]),
+    secretKeys.flatMap((key) =>
+      Match.value(Object.prototype.hasOwnProperty.call(allSecrets, key)).pipe(
+        Match.when(true, () => [[key, allSecrets[key]] as const]),
+        Match.orElse(() => []),
+      ),
+    ),
   )
 }
 
@@ -323,6 +334,7 @@ export function resolveCloneCredentialsEffect(
 ) {
   return Effect.gen({ self: this }, function* () {
     const githubToken = yield* getGitHubAppUserAccessTokenForUserId(host.env, owner.user_id)
+
     const token = Option.getOrThrowWith(
       Option.flatMap(Option.fromNullishOr(githubToken), (resolved) =>
         Option.map(Option.liftPredicate(resolved.accessToken, isNonEmptyString), (accessToken) => ({
@@ -332,12 +344,14 @@ export function resolveCloneCredentialsEffect(
       ),
       () => new Error("GitHub App is not authorized for this session owner"),
     )
+
     const credentials = yield* resolveGitHubCloneCredentials({
       env: host.env,
       session,
       owner,
       token,
     })
+
     return credentials
   })
 }
@@ -383,6 +397,7 @@ export function finalizeWarmFailure(
       )
       host.maybeBroadcastSandboxError(result.lastError)
     })
+
     return result
   })
 }
@@ -413,12 +428,14 @@ export function finalizeWarmSuccess(
     host.repository.updateSandboxSpawnError(null, null)
     host.broadcast({ type: "sandbox_status", status: "ready" })
     yield* promiseEffect(() => host.scheduleInactivityCheck())
+
     return result
   })
 }
 
 export function isIsolateRuntimeReady(host: SessionDODelegate): boolean {
   const runtime = Option.getOrNull(host.repository.getRuntimeLifecycle())
+
   return (
     isNonEmptyString(runtime?.runtimeId) &&
     (runtime?.status === "ready" || runtime?.status === "running")
@@ -462,6 +479,7 @@ export function registerIsolateStream(
     writer: stream.writable.getWriter(),
     text: "",
   })
+
   return stream.readable
 }
 
@@ -478,6 +496,7 @@ export function closeStream(
   stream: IsolateStreamState,
 ): Promise<void> {
   host.isolateStreamState.delete(messageId)
+
   return stream.writer.close()
 }
 

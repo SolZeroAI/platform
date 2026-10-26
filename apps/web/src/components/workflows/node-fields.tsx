@@ -1,4 +1,5 @@
 import { Input, InputArea } from "@cloudflare/kumo/components/input"
+import * as Match from "effect/Match"
 import { InputGroup } from "@cloudflare/kumo/components/input-group"
 import { Label } from "@cloudflare/kumo/components/label"
 import { Select } from "@cloudflare/kumo/components/select"
@@ -92,6 +93,7 @@ export function TemplateTextarea({
   helpText?: string
 }) {
   const invalid = Boolean(errorText)
+
   const templateDescription =
     !helpText && templateOptions.length > 0 ? (
       <WorkflowTemplateReferenceDescription options={templateOptions} />
@@ -239,6 +241,7 @@ export function JsonObjectFieldsEditor({
     if (syncedFieldsKeyRef.current === fieldsKey) {
       return
     }
+
     syncedFieldsKeyRef.current = fieldsKey
     setDrafts(fields)
   }, [fields, fieldsKey])
@@ -251,10 +254,13 @@ export function JsonObjectFieldsEditor({
 
   const commitDraft = (index: number) => {
     const previousField = fields[index]
+
     if (!previousField) {
       return
     }
+
     const nextField = drafts[index]?.trim() ?? ""
+
     if (!onRename(previousField, nextField)) {
       setDrafts(fields)
     }
@@ -278,6 +284,7 @@ export function JsonObjectFieldsEditor({
           const draft = drafts[index] ?? field
           const duplicate = fields.some((item, itemIndex) => itemIndex !== index && item === draft)
           const invalid = !validateWorkflowJsonObjectFieldName(draft) || duplicate
+
           return (
             <div key={field} className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
@@ -368,14 +375,19 @@ export function LabeledNodeIdInput({
 
   const commitDraft = () => {
     const nextValue = draft.trim()
+
     if (nextValue === value) {
       setDraft(value)
+
       return
     }
+
     if (getNodeIdValidationError(nextValue, value, existingIds)) {
       setDraft(value)
+
       return
     }
+
     if (!onCommit(nextValue)) {
       setDraft(value)
     }
@@ -403,6 +415,7 @@ export function LabeledNodeIdInput({
               event.preventDefault()
               commitDraft()
             }
+
             if (event.key === "Escape") {
               event.preventDefault()
               setDraft(value)
@@ -412,6 +425,7 @@ export function LabeledNodeIdInput({
         />
         <InputGroup.Addon align="end">
           <InputGroup.Button
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="square"
             icon={<Copy className="h-4 w-4" aria-hidden />}
             aria-label="Copy node ID"
@@ -430,15 +444,19 @@ export function getNodeIdValidationError(
   existingIds: string[],
 ): string | null {
   const trimmedValue = value.trim()
+
   if (!trimmedValue) {
     return "Node ID is required."
   }
+
   if (!/^[A-Za-z0-9_.-]+$/.test(trimmedValue)) {
     return "Use letters, numbers, underscores, periods, or dashes."
   }
+
   if (trimmedValue !== currentValue && existingIds.includes(trimmedValue)) {
     return "Node ID must be unique."
   }
+
   return null
 }
 
@@ -464,6 +482,7 @@ export function LabeledSelect({
         labelTooltip={helpText}
         size="sm"
         value={value}
+        // SAFETY: The select change value is a string or null, and null is stored as an empty string.
         onValueChange={(next) => onChange((next as string | null) ?? "")}
         disabled={disabled}
         className={`w-full text-sm! ${recessedInputClassName(false)}`}
@@ -500,15 +519,19 @@ export function WorkflowModelThinkingField({
   const [dialogOpen, setDialogOpen] = useState(false)
   const allModels = useMemo(() => modelOptions.flatMap((group) => group.models), [modelOptions])
   const hasOptions = modelOptions.some((group) => group.models.length > 0)
+
   const selectedModel = useMemo(
     () => allModels.find((model) => model.id === modelValue) ?? null,
     [allModels, modelValue],
   )
+
   const selectedReasoning = reasoningEffort || selectedModel?.reasoning?.default
+
   const reasoningLabel =
     selectedModel?.reasoning && selectedReasoning
       ? `${formatReasoningEffortLabel(selectedReasoning)} thinking`
       : "Provider default"
+
   const displayValue = selectedModel
     ? `${selectedModel.name} - ${reasoningLabel}`
     : modelValue || "Select model"
@@ -565,12 +588,12 @@ export function SecretsDialogControls({
   helpText?: string
 }) {
   const [secretsDialogOpen, setSecretsDialogOpen] = useState(false)
-  const secretsSummary =
-    selectedSecretKeys.length === 0
-      ? "No secrets attached"
-      : selectedSecretKeys.length === 1
-        ? selectedSecretKeys[0]
-        : `${selectedSecretKeys.length} secrets attached`
+
+  const secretsSummary = Match.value(selectedSecretKeys.length).pipe(
+    Match.when(0, () => "No secrets attached"),
+    Match.when(1, () => selectedSecretKeys[0]),
+    Match.orElse((count) => `${count} secrets attached`),
+  )
 
   return (
     <div className="mt-3">

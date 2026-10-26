@@ -72,15 +72,17 @@ export function readParentTurnEnvelope(
   sql: ParentTurnEnvelopeSql,
 ): Option.Option<IsolateParentTurnEnvelope> {
   ensureParentTurnEnvelopeTable(sql)
-  const rows = sql
-    .exec(
-      `SELECT message_id, requested_model, reasoning_effort, repo_warning,
+
+  const rows =
+    /* SAFETY: sql .exec( `SELECT message_id, requested_model, reasoning_effort, repo_warning, github_access_token, finalizing_after_step_limit FROM ${PARENT_TURN_ENVELOPE_TABLE} WHERE singleton = 1 LIMIT 1`, ) .toArray() contains only ParentTurnEnvelopeRow[] values established by the surrounding filter or writer. */ sql
+      .exec(
+        `SELECT message_id, requested_model, reasoning_effort, repo_warning,
               github_access_token, finalizing_after_step_limit
        FROM ${PARENT_TURN_ENVELOPE_TABLE}
        WHERE singleton = 1
        LIMIT 1`,
-    )
-    .toArray() as ParentTurnEnvelopeRow[]
+      )
+      .toArray() as ParentTurnEnvelopeRow[]
 
   return Option.fromNullishOr(rows[0]).pipe(
     Option.map((row) => ({

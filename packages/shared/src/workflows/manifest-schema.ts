@@ -161,9 +161,11 @@ export type WorkflowManifestDraft = typeof WorkflowManifestDraftSchema.Type
 const decodeOptions = Schema.decodeUnknownOption(WorkflowNodeOptionsSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeDraft = Schema.decodeUnknownOption(WorkflowManifestDraftSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeManifest = Schema.decodeUnknownOption(WorkflowManifestSchema, {
   onExcessProperty: "ignore",
 })

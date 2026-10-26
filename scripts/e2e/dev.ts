@@ -18,19 +18,25 @@ import {
 } from "./lifecycle"
 
 await recoverRuns()
+
 const run = createRun()
+
 try {
   if (process.env.E2E_CONTAINER_RUNTIME === "1") {
     const docker = spawnSync("docker", ["info"], { stdio: "ignore" })
+
     if (docker.status !== 0) {
       throw new Error(
         "Core harness flows require a running Docker daemon. Start Docker before running e2e.",
       )
     }
+
     const contexts = resolve(stackDirectory(run), "containers")
-    for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS) as Array<
-      keyof typeof AGENT_CONTAINER_ENTRYPOINTS
-    >) {
+
+    for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS).filter(
+      (key): key is keyof typeof AGENT_CONTAINER_ENTRYPOINTS =>
+        Object.hasOwn(AGENT_CONTAINER_ENTRYPOINTS, key),
+    )) {
       const context = resolve(contexts, runtime)
       await mkdir(context, { recursive: true })
       await bundleAgentContainer(runtime, context)
@@ -40,6 +46,7 @@ try {
         `\nLABEL dev.solzero.e2e.run="${run.runId}"\n`,
       )
     }
+
     appEnvironment.S0_E2E_CONTAINER_CONTEXTS = contexts
   }
 
@@ -48,6 +55,7 @@ try {
   let stopping = false
   let childActive = true
   const recorderFailure = Promise.withResolvers<never>()
+
   const processRecorder = setInterval(() => {
     if (child.pid) {
       try {
@@ -63,14 +71,18 @@ try {
       }
     }
   }, 500)
+
   function stop(signal: "SIGINT" | "SIGTERM") {
     if (stopping || !childActive) return
     stopping = true
     const owned = JSON.parse(readFileSync(resolve(stackDirectory(run), "../manifest.json"), "utf8"))
+
     if (owned.cliLaunchId) cancelLaunch(owned.cliLaunchId, signal)
   }
+
   process.on("SIGINT", () => stop("SIGINT"))
   process.on("SIGTERM", () => stop("SIGTERM"))
+
   const exitCode = await Promise.race([
     recorderFailure.promise,
     new Promise<number | null>((accept, reject) => {
@@ -86,6 +98,7 @@ try {
       })
     }),
   ])
+
   process.exitCode = stopping ? 0 : (exitCode ?? 1)
 } finally {
   await stopRunProcesses(run)

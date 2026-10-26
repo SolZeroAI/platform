@@ -11,39 +11,51 @@ for (const runtime of ["opencode", "codex"] as const) {
     async ({ app, browser, screen }) => {
       requireFixture("E2E_CONTAINER_RUNTIME")
       const title = uniqueName(`e2e-${runtime}-tool`)
+
       const shellOutput = (result: string) => {
         if (runtime === "opencode") return result
+        // SAFETY: codex shell tool results are JSON objects with exitCode and output.
         const command = JSON.parse(result) as { exitCode: number; output: string }
         expect(command.exitCode).toBe(0)
+
         return command.output
       }
+
       const marker = uniqueName("E2E_TOOL_OUTPUT")
       const file = `/workspace/repo/${uniqueName("s0-e2e-tool")}.txt`
       const otherMarker = uniqueName("E2E_PARALLEL_OUTPUT")
       const otherFile = `/workspace/repo/${uniqueName("s0-e2e-tool")}.txt`
       const model = process.env[`E2E_${runtime.toUpperCase()}_MODEL`] ?? process.env.E2E_APP_MODEL
+
+      const firstBody = {
+        title,
+        agentRuntime: runtime,
+        reasoningEffort: "low",
+        content: `Execute these two shell commands in order, one tool call per command. First command: printf '%s' '${marker}' > '${file}' && cat '${file}'. Second command: printf '%s' '${otherMarker}' > '${otherFile}' && cat '${otherFile}'. These files are inside your allowed workspace. Report both tool outputs. Do not combine the commands into one tool call. Do not use the network or delegate.`,
+      }
+
+      if (model) Object.assign(firstBody, { model })
+
       const first = await api<{
         sessionId: string
         messageId: string
         status: string
         output: string
         error?: string
-      }>(browser, "/sessions/run", "POST", {
-        title,
-        agentRuntime: runtime,
-        reasoningEffort: "low",
-        ...(model ? { model } : {}),
-        content: `Execute these two shell commands in order, one tool call per command. First command: printf '%s' '${marker}' > '${file}' && cat '${file}'. Second command: printf '%s' '${otherMarker}' > '${otherFile}' && cat '${otherFile}'. These files are inside your allowed workspace. Report both tool outputs. Do not combine the commands into one tool call. Do not use the network or delegate.`,
-      })
+      }>(browser, "/sessions/run", "POST", firstBody)
+
       try {
         if (runtime === "codex") await verifyExplicitNativeLimit(first.sessionId)
+
         if (first.status === "failed") {
           await app.open(`/session/${first.sessionId}`)
           await expect(screen.getByText("Execution failed", { exact: true }).last()).toBeVisible()
           await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         }
+
         expect(first.status, first.error).toBe("completed")
         expect(first.output.length).toBeGreaterThan(0)
+
         const events = await api<{
           events: Array<{
             type: string
@@ -56,17 +68,20 @@ for (const runtime of ["opencode", "codex"] as const) {
             }
           }>
         }>(browser, `/sessions/${first.sessionId}/events?limit=500`)
+
         const call = events.events.find(
           (event) =>
             event.type === "tool_call" &&
             JSON.stringify(event.data.args ?? {}).includes(file.split("/").at(-1)!),
         )
+
         const otherCall = events.events.find(
           (event) =>
             event.type === "tool_call" &&
             JSON.stringify(event.data.args ?? {}).includes(otherFile.split("/").at(-1)!) &&
             event.data.callId !== call?.data.callId,
         )
+
         expect(call?.data.callId).toBeDefined()
         expect(otherCall?.data.callId).toBeDefined()
         expect(otherCall!.data.callId).not.toBe(call!.data.callId)
@@ -76,6 +91,7 @@ for (const runtime of ["opencode", "codex"] as const) {
         expect(firstArgs).not.toContain(otherFile.split("/").at(-1)!)
         expect(otherArgs).toContain(otherMarker)
         expect(otherArgs).not.toContain(file.split("/").at(-1)!)
+
         for (const [callId, expected] of [
           [call!.data.callId, marker],
           [otherCall!.data.callId, otherMarker],
@@ -86,40 +102,51 @@ for (const runtime of ["opencode", "codex"] as const) {
               event.data.messageId === first.messageId &&
               event.data.callId === callId,
           )
+
           expect(result?.data.success).toBe(true)
           expect(shellOutput(result!.data.result!)).toBe(expected)
         }
+
+        const secondBody = {
+          sessionId: first.sessionId,
+          agentRuntime: runtime,
+          content: `Call your shell tool once with this exact command: cat '${file}' '${otherFile}'. Do not write files or insert separators. Reply with the tool output. Do not use the network.`,
+        }
+
+        if (model) Object.assign(secondBody, { model })
+
         const second = await api<{
           messageId: string
           status: string
           output: string
           error?: string
-        }>(browser, "/sessions/run", "POST", {
-          sessionId: first.sessionId,
-          agentRuntime: runtime,
-          ...(model ? { model } : {}),
-          content: `Call your shell tool once with this exact command: cat '${file}' '${otherFile}'. Do not write files or insert separators. Reply with the tool output. Do not use the network.`,
-        })
+        }>(browser, "/sessions/run", "POST", secondBody)
+
         const state = await api<{ reasoningEffort: string }>(
           browser,
           `/sessions/${first.sessionId}`,
         )
+
         expect(state.reasoningEffort).toBe("low")
+
         if (second.status === "failed") {
           await app.open(`/session/${first.sessionId}`)
           await expect(screen.getByText("Execution failed", { exact: true }).last()).toBeVisible()
           await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         }
+
         expect(second.status, second.error).toBe("completed")
         expect(second.output.length).toBeGreaterThan(0)
         await app.open(`/session/${first.sessionId}`)
         await browser.reload()
         await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         await expect(screen.getByText(title, { exact: true }).first()).toBeVisible()
+
         const messages = await api<{ messages: Array<{ content: string; status: string }> }>(
           browser,
           `/sessions/${first.sessionId}/messages`,
         )
+
         const persisted = await api<{
           events: Array<{
             type: string
@@ -133,6 +160,7 @@ for (const runtime of ["opencode", "codex"] as const) {
             }
           }>
         }>(browser, `/sessions/${first.sessionId}/events?limit=500`)
+
         const readCall = persisted.events.find(
           (event) =>
             event.type === "tool_call" &&
@@ -140,7 +168,9 @@ for (const runtime of ["opencode", "codex"] as const) {
             JSON.stringify(event.data.args ?? {}).includes(file.split("/").at(-1)!) &&
             JSON.stringify(event.data.args ?? {}).includes(otherFile.split("/").at(-1)!),
         )
+
         expect(readCall?.data.callId).toBeDefined()
+
         // Codex command item IDs are scoped to their message and can repeat on follow-up.
         const readResult = persisted.events.find(
           (event) =>
@@ -148,8 +178,10 @@ for (const runtime of ["opencode", "codex"] as const) {
             event.data.messageId === second.messageId &&
             event.data.callId === readCall!.data.callId,
         )
+
         expect(readResult?.data.success).toBe(true)
         expect(shellOutput(readResult!.data.result!)).toBe(marker + otherMarker)
+
         for (const [messageId, output] of [
           [first.messageId, first.output],
           [second.messageId, second.output],
@@ -157,8 +189,10 @@ for (const runtime of ["opencode", "codex"] as const) {
           const text = persisted.events
             .filter((event) => event.type === "token" && event.data.messageId === messageId)
             .at(-1)?.data.content
+
           expect(text).toBe(output)
         }
+
         expect(
           messages.messages.filter((message) => message.status === "completed").length,
         ).toBeGreaterThanOrEqual(2)

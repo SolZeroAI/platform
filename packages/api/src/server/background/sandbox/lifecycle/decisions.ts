@@ -13,18 +13,22 @@ export function evaluateSpawnDecision(input: SpawnDecisionInput): SpawnDecision 
   if (input.isSpawning) {
     return { action: "skip", reason: "spawn_in_progress" }
   }
+
   if (input.hasSandboxSocket) {
     return { action: "skip", reason: "sandbox_socket_active" }
   }
+
   if (input.status === "spawning" || input.status === "connecting") {
     return { action: "spawn", reason: "orphaned_sandbox_start" }
   }
+
   if (
     input.hasSandboxId &&
     (input.status === "ready" || input.status === "running" || input.status === "stopped")
   ) {
     return { action: "skip", reason: "sandbox_ready" }
   }
+
   return { action: "spawn", reason: "spawn_required" }
 }
 
@@ -41,15 +45,18 @@ export function evaluateWarmDecision(input: WarmDecisionInput): WarmDecision {
   if (input.hasSandboxSocket) {
     return { action: "skip", reason: "sandbox_connected" }
   }
+
   if (input.isSpawning) {
     return { action: "skip", reason: "spawn_in_progress" }
   }
+
   if (
     input.hasSandboxId &&
     (input.status === "ready" || input.status === "running" || input.status === "stopped")
   ) {
     return { action: "skip", reason: "sandbox_ready" }
   }
+
   return { action: "warm", reason: "warm_requested" }
 }
 
@@ -65,6 +72,7 @@ export function evaluateInactivityTimeout(input: InactivityDecisionInput): Inact
   if (!input.lastActivity) {
     return { action: "none" }
   }
+
   return input.now - input.lastActivity > input.timeoutMs
     ? { action: "timeout" }
     : { action: "none" }
@@ -110,6 +118,7 @@ export function reconcileInactiveSandboxStatus(
   }
 
   const lastActivity = input.lastActivity ?? input.createdAt
+
   if (!lastActivity) {
     return input.status
   }

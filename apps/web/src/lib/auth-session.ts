@@ -9,7 +9,11 @@ function isAuthSessionContext(value: unknown): value is AuthSessionContext {
   if (!value || typeof value !== "object" || !("user" in value)) {
     return false
   }
+
+  // SAFETY: value was checked to contain user before that field is read.
   const user = (value as { user?: unknown }).user
+
+  // SAFETY: user was checked to be an object before id is read.
   return (
     Boolean(user) && typeof user === "object" && typeof (user as { id?: unknown }).id === "string"
   )
@@ -17,6 +21,7 @@ function isAuthSessionContext(value: unknown): value is AuthSessionContext {
 
 export async function getAuthSessionContext(request: Request): Promise<AuthSessionContext | null> {
   const cookie = request.headers.get("cookie")
+
   const response = await fetch(`${getControlPlaneUrl().replace(/\/+$/, "")}/auth/session`, {
     headers: await getControlPlaneHeaders(cookie ? { Cookie: cookie } : undefined),
   })
@@ -31,9 +36,11 @@ export async function getAuthSessionContext(request: Request): Promise<AuthSessi
   }
 
   const data = await response.json()
+
   if (!isAuthSessionContext(data)) {
     throw new Error("Failed to load auth session")
   }
+
   return {
     ...data,
     isAdmin: data.isAdmin === true,

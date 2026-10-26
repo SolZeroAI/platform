@@ -1,4 +1,5 @@
 import { Button } from "@cloudflare/kumo/components/button"
+import * as Match from "effect/Match"
 import {
   DEFAULT_ISOLATE_STEP_LIMIT,
   DEFAULT_SUBAGENT_MODE,
@@ -190,6 +191,7 @@ export function SessionContent({
 }) {
   const isArchived = sessionState?.status === "archived"
   const hasResolvedModel = Boolean(selectedModel || sessionState?.model)
+
   const canSubmitPrompt =
     !isArchived &&
     !isReplaying &&
@@ -198,25 +200,32 @@ export function SessionContent({
     !isSubmittingPrompt &&
     modelOptions.length > 0 &&
     hasResolvedModel
+
   const selectedReasoningLabel = getSelectedReasoningLabel(selectedModelOption, reasoningEffort)
+
   const selectedToolsButtonLabel =
     sessionToolCount === 0 ? "Tools" : `tool${sessionToolCount === 1 ? "" : "s"}`
+
   const selectedToolsAccessibleLabel =
     sessionToolCount === 0 ? "Tools" : `Tools: ${sessionToolCount} ${selectedToolsButtonLabel}`
+
   const toolbarTooltipHidden = toolsDialogOpen || modelDialogOpen
   const replayToggleLabel = isReplayPaused ? "Resume replay" : "Pause replay"
   const currentError = authError || connectionError
   const runtimeError = sessionState?.runtimeError ?? null
   const [statusSidebarOpen, setStatusSidebarOpen] = useState(false)
+
   const [animatedCompletionMessageId, setAnimatedCompletionMessageId] = useState<string | null>(
     null,
   )
+
   const previousTurnBusyRef = useRef(isProcessing || homeBootThinking)
 
   useEffect(() => {
     if (!currentError) {
       return
     }
+
     showErrorToast(currentError, {
       actions: [
         {
@@ -232,6 +241,7 @@ export function SessionContent({
     if (!runtimeError) {
       return
     }
+
     showActionableErrorToast(runtimeError)
   }, [runtimeError])
 
@@ -239,6 +249,7 @@ export function SessionContent({
     if (!promptError) {
       return
     }
+
     showActionableErrorToast(promptError)
     setPromptError(null)
   }, [promptError, setPromptError])
@@ -262,6 +273,7 @@ export function SessionContent({
         },
       )
     : null
+
   const sessionTitle = sessionState?.title || repoLabel || "Chat agent"
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -274,16 +286,20 @@ export function SessionContent({
 
   const adjustPromptInputHeight = useCallback(() => {
     const el = inputRef.current
+
     if (!el) {
       return
     }
+
     const computed = getComputedStyle(el)
     const lineHeightRaw = computed.lineHeight
     const fontSize = parseFloat(computed.fontSize)
+
     const lineHeight =
       lineHeightRaw === "normal" || !Number.isFinite(parseFloat(lineHeightRaw))
         ? fontSize * 1.25
         : parseFloat(lineHeightRaw)
+
     const padding = parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom)
     const minHeight = padding + lineHeight * 2
     const maxHeight = padding + lineHeight * 3
@@ -301,6 +317,7 @@ export function SessionContent({
 
   const updateBottomState = useCallback(() => {
     const el = scrollContainerRef.current
+
     if (!el) {
       return
     }
@@ -311,12 +328,14 @@ export function SessionContent({
     isNearBottomRef.current = isNearBottom
     setShowScrollToBottom((current) => {
       const next = !isNearBottom
+
       return current === next ? current : next
     })
   }, [])
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollContainerRef.current
+
     if (!el) {
       return
     }
@@ -337,9 +356,11 @@ export function SessionContent({
   useEffect(() => {
     const sentinel = topSentinelRef.current
     const container = scrollContainerRef.current
+
     if (!sentinel || !container) {
       return
     }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (
@@ -355,7 +376,9 @@ export function SessionContent({
       },
       { root: container, threshold: 0.1 },
     )
+
     observer.observe(sentinel)
+
     return () => observer.disconnect()
   }, [isReplaying, loadOlderEvents])
 
@@ -365,6 +388,7 @@ export function SessionContent({
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current
+
     if (!el) {
       return
     }
@@ -373,6 +397,7 @@ export function SessionContent({
       el.scrollTop += el.scrollHeight - prevScrollHeightRef.current
       isPrependingRef.current = false
       updateBottomState()
+
       return
     }
 
@@ -383,18 +408,22 @@ export function SessionContent({
   }, [events, isProcessing, updateBottomState])
 
   const groupedEvents = useMemo(() => {
-    const timelineEvents = collapseTimelineEvents(events as SandboxEvent[])
+    const timelineEvents = collapseTimelineEvents(events)
+
     const { discoveryErrorsByCallId, hiddenDiscoveryErrorKeys } =
       buildToolCallDiscoveryErrorMap(timelineEvents)
+
     const interactionResponsesById = new Map<
       string,
       Extract<SandboxEvent, { type: "interaction_response" }>
     >()
+
     for (const event of timelineEvents) {
       if (event.type === "interaction_response") {
         interactionResponsesById.set(event.interactionId, event)
       }
     }
+
     const latestAssistantTimelineKey =
       [...timelineEvents].reverse().map(getAssistantTimelineKey).find(Boolean) ?? null
 
@@ -429,8 +458,10 @@ export function SessionContent({
 
   useEffect(() => {
     const turnBusy = isProcessing || homeBootThinking
+
     if (previousTurnBusyRef.current && !turnBusy && groupedEvents.latestCompletedMessageId) {
       setAnimatedCompletionMessageId(groupedEvents.latestCompletedMessageId)
+
       const timeoutId = window.setTimeout(() => {
         setAnimatedCompletionMessageId((current) =>
           current === groupedEvents.latestCompletedMessageId ? null : current,
@@ -438,6 +469,7 @@ export function SessionContent({
       }, 900)
 
       previousTurnBusyRef.current = turnBusy
+
       return () => window.clearTimeout(timeoutId)
     }
 
@@ -574,78 +606,83 @@ export function SessionContent({
                 </div>
               )}
               {groupedEvents.groups.map((group) =>
-                group.type === "tool_group" ? (
-                  <ToolCallGroup
-                    key={group.id}
-                    events={group.events}
-                    groupId={group.id}
-                    discoveryErrorsByCallId={groupedEvents.discoveryErrorsByCallId}
-                    isStreamingFocus={group.id === groupedEvents.streamingExpandedGroupId}
-                    isProcessing={isProcessing}
-                  />
-                ) : group.type === "subagent_group" ? (
-                  <SubagentGroup
-                    key={group.id}
-                    runs={group.runs}
-                    groupId={group.id}
-                    isStreamingFocus={group.id === groupedEvents.streamingExpandedGroupId}
-                    isProcessing={isProcessing}
-                  />
-                ) : (
-                  <EventItem
-                    key={group.id}
-                    event={group.event}
-                    isFinalAssistantResponse={groupedEvents.finalAssistantTimelineKeys.has(
-                      getAssistantTimelineKey(group.event) ?? "",
-                    )}
-                    isActiveAssistantResponse={
-                      getAssistantTimelineKey(group.event) ===
-                      groupedEvents.activeAssistantTimelineKey
-                    }
-                    isLatestAssistantMessage={
-                      getAssistantTimelineKey(group.event) ===
-                      groupedEvents.latestAssistantTimelineKey
-                    }
-                    executionDurationMs={
-                      group.event.type === "execution_complete" && group.event.messageId
-                        ? (groupedEvents.executionDurationMsByMessageId.get(
-                            group.event.messageId,
-                          ) ?? null)
-                        : null
-                    }
-                    currentParticipantId={currentParticipantId}
-                    sessionId={sessionId}
-                    sessionModel={sessionState?.model}
-                    collapseOktaReconnectErrors={collapseOktaReconnectErrors}
-                    autoExpandMcpDiscoveryError={
-                      getMcpDiscoveryErrorTimelineKey(group.event) ===
-                      groupedEvents.autoExpandedMcpDiscoveryErrorKey
-                    }
-                    isStreamingFocusMcpDiscoveryError={
-                      group.event.type === "mcp_discovery_error" &&
-                      group.id === groupedEvents.streamingExpandedGroupId
-                    }
-                    isStreamingFocusReasoning={
-                      group.event.type === "reasoning" &&
-                      group.id === groupedEvents.streamingExpandedGroupId
-                    }
-                    isStreamingFocusInteraction={
-                      group.event.type === "interaction_request" &&
-                      group.id === groupedEvents.streamingExpandedGroupId
-                    }
-                    isProcessing={isProcessing}
-                    interactionResponse={
-                      group.event.type === "interaction_request"
-                        ? (groupedEvents.interactionResponsesById.get(group.event.interactionId) ??
-                          null)
-                        : null
-                    }
-                    onInteractionReply={replyToInteraction}
-                    animateExecutionComplete={
-                      group.event.type === "execution_complete" &&
-                      group.event.messageId === animatedCompletionMessageId
-                    }
-                  />
+                Match.value(group).pipe(
+                  Match.when({ type: "tool_group" }, (group) => (
+                    <ToolCallGroup
+                      key={group.id}
+                      events={group.events}
+                      groupId={group.id}
+                      discoveryErrorsByCallId={groupedEvents.discoveryErrorsByCallId}
+                      isStreamingFocus={group.id === groupedEvents.streamingExpandedGroupId}
+                      isProcessing={isProcessing}
+                    />
+                  )),
+                  Match.when({ type: "subagent_group" }, (group) => (
+                    <SubagentGroup
+                      key={group.id}
+                      runs={group.runs}
+                      groupId={group.id}
+                      isStreamingFocus={group.id === groupedEvents.streamingExpandedGroupId}
+                      isProcessing={isProcessing}
+                    />
+                  )),
+                  Match.orElse((group) => (
+                    <EventItem
+                      key={group.id}
+                      event={group.event}
+                      isFinalAssistantResponse={groupedEvents.finalAssistantTimelineKeys.has(
+                        getAssistantTimelineKey(group.event) ?? "",
+                      )}
+                      isActiveAssistantResponse={
+                        getAssistantTimelineKey(group.event) ===
+                        groupedEvents.activeAssistantTimelineKey
+                      }
+                      isLatestAssistantMessage={
+                        getAssistantTimelineKey(group.event) ===
+                        groupedEvents.latestAssistantTimelineKey
+                      }
+                      executionDurationMs={
+                        group.event.type === "execution_complete" && group.event.messageId
+                          ? (groupedEvents.executionDurationMsByMessageId.get(
+                              group.event.messageId,
+                            ) ?? null)
+                          : null
+                      }
+                      currentParticipantId={currentParticipantId}
+                      sessionId={sessionId}
+                      sessionModel={sessionState?.model}
+                      collapseOktaReconnectErrors={collapseOktaReconnectErrors}
+                      autoExpandMcpDiscoveryError={
+                        getMcpDiscoveryErrorTimelineKey(group.event) ===
+                        groupedEvents.autoExpandedMcpDiscoveryErrorKey
+                      }
+                      isStreamingFocusMcpDiscoveryError={
+                        group.event.type === "mcp_discovery_error" &&
+                        group.id === groupedEvents.streamingExpandedGroupId
+                      }
+                      isStreamingFocusReasoning={
+                        group.event.type === "reasoning" &&
+                        group.id === groupedEvents.streamingExpandedGroupId
+                      }
+                      isStreamingFocusInteraction={
+                        group.event.type === "interaction_request" &&
+                        group.id === groupedEvents.streamingExpandedGroupId
+                      }
+                      isProcessing={isProcessing}
+                      interactionResponse={
+                        group.event.type === "interaction_request"
+                          ? (groupedEvents.interactionResponsesById.get(
+                              group.event.interactionId,
+                            ) ?? null)
+                          : null
+                      }
+                      onInteractionReply={replyToInteraction}
+                      animateExecutionComplete={
+                        group.event.type === "execution_complete" &&
+                        group.event.messageId === animatedCompletionMessageId
+                      }
+                    />
+                  )),
                 ),
               )}
               {streamedAssistantText && !connected && (
@@ -759,6 +796,7 @@ export function SessionContent({
                   type="button"
                   onClick={(event) => {
                     event.currentTarget.blur()
+
                     if (!isArchived && !isSavingTools && !isReplaying) {
                       setToolsDialogOpen(true)
                     }
@@ -825,6 +863,7 @@ export function SessionContent({
                 <Button
                   type="submit"
                   disabled={!canSubmitPrompt}
+                  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                   shape="circle"
                   variant="secondary"
                   aria-label="Send"

@@ -93,6 +93,7 @@ export class SessionRepository {
         )
         .toArray(),
     )
+
     return Option.map(Option.fromNullishOr(result[0]), (row) => row.created_at)
   }
 
@@ -100,6 +101,7 @@ export class SessionRepository {
     input: RuntimeActivityCreateInput & { sandboxId?: string | null },
   ): RuntimeActivityRow {
     const runtimeId = input.runtimeId ?? input.sandboxId ?? null
+
     const row: RuntimeActivityRow = {
       id: input.id ?? generateId(),
       runtimeId,
@@ -112,12 +114,15 @@ export class SessionRepository {
       dataJson: stringifyJson(input.data ?? {}),
       createdAt: input.createdAt ?? Date.now(),
     }
+
     const previousCreatedAt = this.getLatestRuntimeActivityCreatedAt()
+
     const keepAliveColumn = Match.value(row.keepAlive).pipe(
       Match.when(true, () => 1),
       Match.when(false, () => 0),
       Match.orElse(() => null),
     )
+
     this.sql.exec(
       `INSERT INTO sandbox_activity (id, sandbox_id, type, summary, status_from, status_to, keep_alive, reason, data, created_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
@@ -133,11 +138,13 @@ export class SessionRepository {
       row.createdAt,
     )
     this.onRuntimeActivityCreated?.(row, Option.getOrNull(previousCreatedAt))
+
     return row
   }
 
   private runtimeStatusChangeSummary(to: SandboxStatus | string): string {
     const label = this.getRuntimeActivityLabel()
+
     return Match.value(to.toLowerCase()).pipe(
       Match.when("ready", () => `${label} started`),
       Match.when("stopped", () => `${label} stopped`),
@@ -185,6 +192,7 @@ export class SessionRepository {
 
   getSession(): Option.Option<SessionRow> {
     const result = decodeSessionRows(this.sql.exec("SELECT * FROM session LIMIT 1").toArray())
+
     return Option.map(Option.fromNullishOr(result[0]), normalizeSessionRow)
   }
 
@@ -214,6 +222,7 @@ export class SessionRepository {
     const secretKeysJson = stringifyJson(
       Array.from(new Set((input.secretKeys ?? []).filter((key) => key.length > 0))),
     )
+
     this.sql.exec(
       `INSERT OR REPLACE INTO session (id, session_name, session_kind, agent_runtime, title, repo_owner, repo_name, github_installation_id, github_repo_id, repo_default_branch, branch_name, tools_json, custom_mcp_json, secret_keys_json, isolate_step_limit, subagents, model, reasoning_effort, status, created_at, updated_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)`,
@@ -253,11 +262,13 @@ export class SessionRepository {
   }): void {
     const currentSession = Option.getOrNull(this.getSession())
     const currentStepLimit = currentSession?.isolate_step_limit ?? DEFAULT_ISOLATE_STEP_LIMIT
+
     const subagents = resolveSessionSubagentMode(
       currentSession?.session_kind,
       input.subagents,
       currentSession?.subagents,
     )
+
     this.sql.exec(
       `UPDATE session
        SET repo_owner = ?1,
@@ -305,6 +316,7 @@ export class SessionRepository {
 
   getSandbox(): Option.Option<SandboxRow> {
     const result = decodeSandboxRows(this.sql.exec("SELECT * FROM sandbox LIMIT 1").toArray())
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -480,6 +492,7 @@ export class SessionRepository {
     const result = decodeParticipantRows(
       this.sql.exec("SELECT * FROM participants WHERE user_id = ?1 LIMIT 1", userId).toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -487,6 +500,7 @@ export class SessionRepository {
     const result = decodeParticipantRows(
       this.sql.exec("SELECT * FROM participants WHERE id = ?1 LIMIT 1", participantId).toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -508,6 +522,7 @@ export class SessionRepository {
         )
         .toArray(),
     )
+
     return Option.orElse(Option.fromNullishOr(result[0]), () =>
       Option.fromNullishOr(
         decodeParticipantRows(
@@ -525,13 +540,7 @@ export class SessionRepository {
     )
   }
 
-  getWsTokenDiagnostics(now: number): {
-    participantCount: number
-    activeTokenCount: number
-    storedTokenCount: number
-    latestTokenCreatedAt: number | null
-    latestTokenAgeMs: number | null
-  } {
+  getWsTokenDiagnostics(now: number) {
     const row = decodeParticipantTokenStats(
       this.sql
         .exec(
@@ -548,6 +557,7 @@ export class SessionRepository {
     const latestTokenCreatedAt = Option.getOrNull(
       Option.map(Option.fromNullishOr(row?.latest_token_created_at), (value) => Number(value)),
     )
+
     return {
       participantCount: Number(row?.participant_count ?? 0),
       activeTokenCount: Number(row?.active_token_count ?? 0),
@@ -653,6 +663,7 @@ export class SessionRepository {
     const result = this.sql.exec(
       "SELECT COUNT(*) as count FROM messages WHERE status IN ('pending', 'processing')",
     )
+
     return Number(decodeSqlChangeCount(result.one() ?? {}).count ?? 0)
   }
 
@@ -660,6 +671,7 @@ export class SessionRepository {
     const result = decodeMessageRows(
       this.sql.exec("SELECT * FROM messages WHERE status = 'processing' LIMIT 1").toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -667,6 +679,7 @@ export class SessionRepository {
     const result = decodeMessageRows(
       this.sql.exec("SELECT * FROM messages WHERE id = ?1 LIMIT 1", messageId).toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -688,6 +701,7 @@ export class SessionRepository {
         .exec("SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1")
         .toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -726,6 +740,7 @@ export class SessionRepository {
 
   getMessageCount(): number {
     const result = this.sql.exec("SELECT COUNT(*) as count FROM messages")
+
     return Number(decodeSqlChangeCount(result.one() ?? {}).count ?? 0)
   }
 
@@ -761,6 +776,7 @@ export class SessionRepository {
         )
         .toArray(),
     )
+
     return Option.fromNullishOr(result[0])
   }
 
@@ -779,6 +795,7 @@ export class SessionRepository {
       input.createdAt,
       existing.id,
     )
+
     return {
       ...existing,
       url: input.url,
@@ -795,6 +812,7 @@ export class SessionRepository {
     createdAt: number
   }): ArtifactRow {
     this.createArtifact(input)
+
     return {
       id: input.id,
       type: input.type,
@@ -843,6 +861,7 @@ export class SessionRepository {
     const rows = decodeWsClientIdRows(
       this.sql.exec("SELECT ws_id FROM ws_client_mapping WHERE ws_id = ?1 LIMIT 1", wsId).toArray(),
     )
+
     return rows.length > 0
   }
 
@@ -864,6 +883,7 @@ export class SessionRepository {
         )
         .toArray(),
     )
+
     return Option.fromNullishOr(rows[0])
   }
 }

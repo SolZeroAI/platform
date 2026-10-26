@@ -7,7 +7,9 @@ import * as Effect from "effect/Effect"
 import * as Exit from "effect/Exit"
 import * as Logger from "effect/Logger"
 import * as Match from "effect/Match"
+import * as Data from "effect/Data"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
 import * as R from "effect/Record"
 import { HttpServerError, type HttpServerResponse } from "effect/http"
 import {
@@ -47,8 +49,10 @@ export function createNoopTracing(): CloudflareTracing {
     setAttribute() {}
     end() {}
   }
+
   const enterNoopSpan: CloudflareTracing["enterSpan"] = (_name, callback, ...args) =>
     callback(new NoopSpan(), ...args)
+
   return {
     Span: NoopSpan,
     enterSpan: enterNoopSpan,
@@ -56,7 +60,7 @@ export function createNoopTracing(): CloudflareTracing {
   }
 }
 
-export interface RequestObservabilityShape {
+export interface RequestObservabilityContext {
   readonly requestId: string
   readonly requestIdSrc: "x-request-id" | "cf-ray" | "generated"
   readonly method: string
@@ -102,7 +106,7 @@ export class EffectRequestLogger extends Context.Service<
 >()("s0/api/EffectRequestLogger") {}
 
 export interface RequestObservabilityService {
-  readonly context: RequestObservabilityShape
+  readonly context: RequestObservabilityContext
   readonly log: RequestLogger
   readonly effectLog: EffectRequestLoggerService
   readonly tracing: CloudflareTracing
@@ -124,13 +128,14 @@ export function makeRequestObservability(
   request: Request,
   env: ApiEnv,
   routeBranch = "unknown",
-): RequestObservabilityShape {
+): RequestObservabilityContext {
   const url = new URL(request.url)
   const cfRay = request.headers.get("cf-ray")
   const requestIdHeader = request.headers.get("x-request-id")
   const requestId = requestIdHeader ?? cfRay ?? crypto.randomUUID()
   const stageMetadata = getStageMetadataSync(env)
-  const requestIdSrc: RequestObservabilityShape["requestIdSrc"] = Option.match(
+
+  const requestIdSrc: RequestObservabilityContext["requestIdSrc"] = Option.match(
     Option.liftPredicate(requestIdHeader, Boolean),
     {
       onSome: () => "x-request-id" as const,
@@ -141,6 +146,7 @@ export function makeRequestObservability(
         }),
     },
   )
+
   return {
     requestId,
     requestIdSrc,
@@ -163,14 +169,14 @@ export function makeRequestObservability(
 }
 
 export function setRequestUserId(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
   userId: string | null | undefined,
 ): void {
   observability.userId = userId?.trim() || null
 }
 
 export function setRequestUserIdentity(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
   identity: {
     readonly userId: string
     readonly oktaUserId?: string | null
@@ -205,7 +211,7 @@ function optionalAnnotation<T>(key: string, value: T | null | undefined): Record
 }
 
 export function requestLogAnnotations(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
 ): RequestLogAnnotations {
   return {
     requestId: observability.requestId,
@@ -225,8 +231,9 @@ export function requestLogAnnotations(
 }
 
 export function requestSpanAttributes(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
 ): Record<string, string | number | boolean> {
+  // SAFETY: compact drops null and undefined. The remaining span attributes are strings, numbers, or booleans.
   return compact({
     "cf.ray": observability.cfRay,
     "http.request.method": observability.method,
@@ -246,10 +253,11 @@ export function requestSpanAttributes(
 }
 
 export function routeSpanAttributes(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
   group: string,
   endpoint: string,
 ): Record<string, string | number | boolean> {
+  // SAFETY: compact drops null and undefined. The remaining route span attributes are strings, numbers, or booleans.
   return compact({
     ...requestSpanAttributes(observability),
     "http.route.group": group,
@@ -270,9 +278,10 @@ export type ApiSurfaceName =
   | "workflow_public"
 
 export function apiSurfaceSpanAttributes(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
   surface: ApiSurfaceName,
 ): Record<string, string | number | boolean> {
+  // SAFETY: compact drops null and undefined. The remaining API surface attributes are strings, numbers, or booleans.
   return compact({
     ...requestSpanAttributes(observability),
     "api.surface": surface,
@@ -309,11 +318,13 @@ export function withApiSurfaceSpan<A>(
       spanAttributeInput(compact(options.attributes?.(result) ?? {})),
     )
     const resultValue: unknown = result
+
     const response = Option.getOrUndefined(
       Option.orElse(Option.fromNullishOr(options.response?.(result)), () =>
         Option.liftPredicate(resultValue, (value): value is Response => value instanceof Response),
       ),
     )
+
     Option.match(Option.fromNullishOr(response), {
       onNone: () => undefined,
       onSome: (resolved) =>
@@ -322,6 +333,7 @@ export function withApiSurfaceSpan<A>(
           requestResponseAttributes(observability.context, resolved),
         ),
     })
+
     return result
   }
 
@@ -338,6 +350,7 @@ export function observeEffectHttpApi<A extends HttpServerResponse.HttpServerResp
 ) {
   return Effect.gen(function* () {
     const observability = yield* RequestObservability
+
     return yield* withObservedSpan(
       "api.effect_http_api",
       apiSurfaceSpanAttributes(observability.context, "effect_http_api"),
@@ -367,9 +380,12 @@ export function observeRoute<A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ) {
   const spanName = `http.${group}.${endpoint}`
+
+  // SAFETY: Effect.gen yields RequestObservability, which the request layer provides, so the public channel stays R.
   return Effect.gen(function* () {
     const observability = yield* RequestObservability
     const attributes = routeSpanAttributes(observability.context, group, endpoint)
+
     return yield* withObservedSpan(
       spanName,
       attributes,
@@ -392,6 +408,7 @@ function annotateCauseFailure(
 ) {
   const errorAttributes = causeFailureAttributes(cause)
   observability.annotateRequestSpan(errorAttributes)
+
   return Effect.annotateCurrentSpan(errorAttributes)
 }
 
@@ -459,10 +476,12 @@ export function annotateCurrentUserIdentity(identity: {
     const observability = yield* RequestObservability
     const effectLog = yield* EffectRequestLogger
     setRequestUserIdentity(observability.context, identity)
+
     const attributes = compact({
       "user.id": identity.userId,
       "user.okta_id": identity.oktaUserId,
     })
+
     yield* effectLog.set({
       "user.id": observability.context.userId,
       "user.okta_id": observability.context.oktaUserId,
@@ -508,6 +527,7 @@ export function makeEffectLoggerLayer(options: {
   readonly commitSha?: string
 }) {
   const stageMetadata = getStageMetadataSync(options.stageMetadataInput)
+
   return observabilityLayer({
     consoleOutputEnabled: stageMetadata.infra.apiObservabilityConsoleOutputEnabled,
     logFormat: stageMetadata.infra.apiObservabilityLogFormat,
@@ -516,7 +536,7 @@ export function makeEffectLoggerLayer(options: {
 
 export interface ApiRequestObserver {
   readonly observability: RequestObservabilityService
-  readonly context: RequestObservabilityShape
+  readonly context: RequestObservabilityContext
   readonly log: RequestLogger
   setRouteBranch(branch: string): void
   setUserId(userId: string | null): void
@@ -524,9 +544,12 @@ export interface ApiRequestObserver {
   run(handler: (observer: ApiRequestObserver) => Promise<Response>): Promise<Response>
 }
 
-type RequestOutcome =
-  | { readonly _tag: "success"; readonly response: Response }
-  | { readonly _tag: "failure"; readonly error: unknown }
+type RequestOutcome = Data.TaggedEnum<{
+  success: { readonly response: Response }
+  failure: { readonly error: unknown }
+}>
+
+const RequestOutcome = Data.taggedEnum<RequestOutcome>()
 
 function raise(error: unknown): never {
   throw error
@@ -557,6 +580,7 @@ export function createApiRequestObserver(
     const promise = runRequestEffect(env, effect)
     pendingTelemetryRuns.push(promise)
     ctx.waitUntil(promise)
+
     return promise
   }
 
@@ -569,6 +593,7 @@ export function createApiRequestObserver(
   const logCore = createRequestLogCore(context, annotateRequestSpan)
   const effectLog = createEffectRequestLogger(logCore)
   const log = createRequestLogger(scheduleRequestEffect, logCore, effectLog)
+
   const observability: RequestObservabilityService = {
     context,
     log,
@@ -577,6 +602,7 @@ export function createApiRequestObserver(
     activateCloudflareSpan(span) {
       const previousSpan = activeSpan
       activeSpan = Option.some(span)
+
       return () => {
         activeSpan = previousSpan
       }
@@ -589,6 +615,7 @@ export function createApiRequestObserver(
     ) {
       function enterSpan(span: CloudflareSpan): Promise<A> {
         const deactivateCloudflareSpan = observability.activateCloudflareSpan(span)
+
         return runCloudflareSpan(span, attributes, handler).finally(() => {
           deactivateCloudflareSpan()
         })
@@ -622,8 +649,8 @@ export function createApiRequestObserver(
     async run(handler) {
       const settled: RequestOutcome = await withRequestControlPlane(env, () =>
         handler(observer).then(
-          (response): RequestOutcome => ({ _tag: "success", response }),
-          (error): RequestOutcome => ({ _tag: "failure", error }),
+          (response) => RequestOutcome.success({ response }),
+          (error) => RequestOutcome.failure({ error }),
         ),
       )
 
@@ -633,6 +660,7 @@ export function createApiRequestObserver(
         Match.when(true, () => telemetryFlush),
         Match.orElse(() => Promise.resolve()),
       )
+
       return Match.value(settled).pipe(
         Match.when({ _tag: "success" }, ({ response }) => response),
         Match.orElse(({ error }) => raise(error)),
@@ -673,10 +701,11 @@ interface RequestLogCore {
 }
 
 function createRequestLogCore(
-  context: RequestObservabilityShape,
+  context: RequestObservabilityContext,
   annotateRequestSpan: (fields: Record<string, unknown>) => void,
 ): RequestLogCore {
-  const fields: Record<string, unknown> = { ...requestLogAnnotations(context) }
+  const fields: Record<string, unknown> = {}
+  Object.assign(fields, requestLogAnnotations(context))
 
   const eventFields = (event: string, nextFields: Record<string, unknown> = {}) =>
     compact({
@@ -715,6 +744,7 @@ function annotateLogEvent(
   annotateRequestSpan: (fields: Record<string, unknown>) => void,
 ) {
   annotateRequestSpan(annotations)
+
   return annotations
 }
 
@@ -728,17 +758,20 @@ function logWithAnnotations(input: {
     onNone: () => input.event,
     onSome: (resolved) => getErrorLogValue(resolved),
   })
+
   const effect = Match.value(input.level).pipe(
     Match.when("error", () => Effect.logError(value)),
     Match.when("warn", () => Effect.logWarning(value)),
     Match.when("debug", () => Effect.logDebug(value)),
     Match.orElse(() => Effect.logInfo(value)),
   )
+
   return effect.pipe(Effect.annotateLogs(input.annotations))
 }
 
 function setCoreFields(core: RequestLogCore, fields: Record<string, unknown>) {
   core.set(fields)
+
   return Effect.void
 }
 
@@ -749,6 +782,7 @@ function createEffectRequestLogger(core: RequestLogCore): EffectRequestLoggerSer
     },
     emit(nextFields) {
       const event = String(nextFields.event ?? "request.log")
+
       return core.log("info", event, nextFields)
     },
     info(event, nextFields = {}) {
@@ -811,9 +845,10 @@ export function resolveCloudflareTracing(ctx: ExecutionContext): CloudflareTraci
 }
 
 function requestResponseAttributes(
-  observability: RequestObservabilityShape,
+  observability: RequestObservabilityContext,
   response: Response,
 ): Record<string, string | number | boolean> {
+  // SAFETY: compact drops null and undefined. The remaining response attributes are strings, numbers, or booleans.
   return compact({
     "http.response.status_code": response.status,
     "http.response.streamed": response.body !== null,
@@ -825,9 +860,10 @@ function requestResponseAttributes(
 function httpServerResponseAttributes(
   response: HttpServerResponse.HttpServerResponse,
 ): Record<string, string | number | boolean> {
+  // SAFETY: compact drops null and undefined. The remaining HTTP server response attributes are strings, numbers, or booleans.
   return compact({
     "http.response.status_code": response.status,
-    "http.response.streamed": response.body._tag === "Stream",
+    "http.response.streamed": P.isTagged(response.body, "Stream"),
     error: response.status >= 500 || undefined,
   }) as Record<string, string | number | boolean>
 }
@@ -836,6 +872,7 @@ function httpServerFailureAttributes(
   cause: Cause.Cause<unknown>,
 ): Record<string, string | number | boolean> {
   const error = Cause.squash(cause)
+
   return Match.value(error).pipe(
     Match.when(Match.instanceOf(HttpServerError.HttpServerError), (serverError) =>
       Match.value(serverError.reason).pipe(
@@ -863,7 +900,7 @@ export function compact(fields: Record<string, unknown>) {
 
 interface RequestLogAnnotations {
   readonly requestId: string
-  readonly requestIdSrc: RequestObservabilityShape["requestIdSrc"]
+  readonly requestIdSrc: RequestObservabilityContext["requestIdSrc"]
   readonly method: string
   readonly path: string
   readonly routeBranch: string

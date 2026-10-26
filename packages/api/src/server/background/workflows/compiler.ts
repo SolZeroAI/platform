@@ -19,6 +19,7 @@ function isActionConnectingEdge(
 ): boolean {
   const source = nodeById.get(edge.source)
   const target = nodeById.get(edge.target)
+
   return Boolean(
     source &&
     target &&
@@ -49,7 +50,9 @@ function topologicalActionNodes(manifest: WorkflowManifest): WorkflowManifestNod
     const target = nodeById.get(targetId)
     Match.value(Boolean(target && isWorkflowActionNodeType(target.type))).pipe(
       Match.when(true, () => {
-        queue.push(target as WorkflowManifestNode)
+        queue.push(
+          /* SAFETY: target has the WorkflowManifestNode shape established by the check or writer around this read. */ target as WorkflowManifestNode,
+        )
       }),
       Match.orElse(() => undefined),
     )
@@ -91,10 +94,16 @@ function topologicalActionNodes(manifest: WorkflowManifest): WorkflowManifestNod
 
 function buildJavascriptHandler(node: WorkflowManifestNode, javascriptIndex: number): string {
   const functionName = `javascriptNode${javascriptIndex}`
+
   const code = Match.value(
     typeof node.options.code === "string" && node.options.code.trim().length > 0,
   ).pipe(
-    Match.when(true, () => node.options.code as string),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: The preceding check established that node.options.code is string. */ node.options
+          .code as string,
+    ),
     Match.orElse(() => "return inputs.payload ?? null"),
   )
 
@@ -106,9 +115,11 @@ ${code}
 
 function createInlineActionHandlers(manifest: WorkflowManifest): string {
   const javascriptNodes = Arr.filter(manifest.nodes, (node) => node.type === "javascript")
+
   const javascriptHandlers = Arr.map(javascriptNodes, (node, javascriptIndex) =>
     buildJavascriptHandler(node, javascriptIndex),
   )
+
   const javascriptCases = Arr.map(
     javascriptNodes,
     (node, javascriptIndex) =>

@@ -48,6 +48,7 @@ export function getPositiveInteger(value: unknown): Option.Option<number> {
       }),
     ),
   )
+
   return Match.value(Number.isInteger(numberValue) && numberValue > 0).pipe(
     Match.when(true, () => Option.some(numberValue)),
     Match.orElse(() => Option.none<number>()),
@@ -84,6 +85,7 @@ function getPathValue(value: unknown, path: string): unknown {
 
 function getTemplatePathValue(context: Record<string, unknown>, path: string): unknown {
   const value = getPathValue(context, path)
+
   return Match.value(value === undefined).pipe(
     Match.when(true, () =>
       raise(
@@ -102,7 +104,11 @@ export function renderTemplate(template: string, context: Record<string, unknown
 
 function stringifyJsonTemplateValue(value: unknown): string {
   // oxlint-disable-next-line effect/avoid-direct-json -- Intentionally relies on `JSON.stringify` returning `undefined` for non-serializable values so the explicit `"null"` fallback applies; the sanctioned `stringifyJson` helper throws instead, changing behavior.
-  const json = JSON.stringify(value ?? null) as string | undefined
+  const json =
+    /* SAFETY: JSON.stringify returns undefined for functions and symbols, so this value includes undefined. */ JSON.stringify(
+      value ?? null,
+    ) as string | undefined
+
   return Match.value(json).pipe(
     Match.when(Match.undefined, () => "null"),
     Match.orElse((resolved) => resolved),
@@ -111,6 +117,7 @@ function stringifyJsonTemplateValue(value: unknown): string {
 
 function escapeJsonStringTemplateValue(value: unknown): string {
   const json = stringifyJson(stringifyTemplateValue(value))
+
   return json.slice(1, -1)
 }
 
@@ -130,6 +137,7 @@ function isInsideJsonString(template: string, index: number): boolean {
         ),
       ),
   )
+
   return state.inString
 }
 
@@ -145,14 +153,15 @@ export function renderJsonTemplate(template: string, context: Record<string, unk
 }
 
 export function createNodeContext(input: WorkflowNodeExecutionInput): Record<string, unknown> {
-  return {
-    workflowId: input.workflowId,
-    runId: input.runId,
-    nodeId: input.node.id,
-    userId: input.userId,
-    oktaUserId: input.oktaUserId,
-    inputs: input.inputs,
-  }
+  let context: Record<string, unknown> = {}
+  context.workflowId = input.workflowId
+  context.runId = input.runId
+  context.nodeId = input.node.id
+  context.userId = input.userId
+  context.oktaUserId = input.oktaUserId
+  context.inputs = input.inputs
+
+  return context
 }
 
 export function getActionUserId(input: { userId: string }): string {

@@ -16,8 +16,10 @@ export function createApiKey({ payload }: { payload: CreateApiKeyPayload }) {
         "Missing acting user context",
         401,
       )
+
       const store = new UserApiKeyStore(db)
       const created = yield* store.create(userId, payload.label ?? null)
+
       return json(created, 201)
     }),
   )
@@ -31,8 +33,10 @@ export function listApiKeys() {
         "Missing acting user context",
         401,
       )
+
       const store = new UserApiKeyStore(db)
       const keys = yield* store.listByUserId(userId)
+
       return json({ keys })
     }),
   )

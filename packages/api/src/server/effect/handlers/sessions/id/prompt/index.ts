@@ -32,24 +32,29 @@ const validatePromptModel = Effect.fn("sessions.prompt.validateModel")(function*
   const providerCatalog = yield* Effect.tryPromise(() =>
     buildRuntimeProviderCatalog(env, actorUserId),
   )
+
   const visibleModelIds = new Set(
     providerCatalog.modelOptions.flatMap((group) => group.models.map((item) => item.id)),
   )
+
   const requestedModel = normalizeModelId(model)
   yield* failUnless(
     visibleModelIds.has(requestedModel),
     `Model '${requestedModel}' is not configured for this user`,
     400,
   )
+
   const selectedModel = providerCatalog.modelOptions
     .flatMap((group) => group.models)
     .find((item) => item.id === requestedModel)
+
   const { providerId } = splitModelId(requestedModel)
   yield* failUnless(
     isAgentRuntimeCompatibleWithProvider(agentRuntime, providerId, selectedModel?.providerApi),
     `Model '${requestedModel}' is not compatible with ${agentRuntime} runtime`,
     400,
   )
+
   return Option.some(requestedModel)
 })
 
@@ -84,6 +89,7 @@ export function prompt({ params, payload }: { params: IdParams; payload: PromptP
       })
 
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, "http://internal/internal/prompt-async", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

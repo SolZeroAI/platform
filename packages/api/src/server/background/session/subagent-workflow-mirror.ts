@@ -13,6 +13,7 @@ import {
 } from "@solzero/shared"
 import { decodeJsonRecord, parseJson } from "../../lib/json"
 import { createWorkflowStoreFromD1, type WorkflowStorePromise } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the session Durable Object env at the workflow-mirror composition edge.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { parseSubagentChunkActivity } from "../isolate/agent/delegation"
 import type { Env } from "../types"
@@ -55,6 +56,7 @@ function compactRun(
       (value): value is SandboxEvent =>
         value !== null && typeof value === "object" && "type" in value,
     )
+
   return Option.fromNullishOr(
     summarizeSubagentRuns(events).find((run) => run.runId === event.runId),
   )
@@ -86,20 +88,26 @@ function terminalData(
 }
 
 function compactProgress(progress: SubagentProgress): SubagentProgress {
-  return {
-    ...progress,
-    ...(progress.message ? { message: sanitizeSubagentCompactProgress(progress.message) } : {}),
-    ...(progress.phase ? { phase: sanitizeSubagentCompactLabel(progress.phase) } : {}),
-    ...(progress.milestone ? { milestone: sanitizeSubagentCompactLabel(progress.milestone) } : {}),
-  }
+  const compact: SubagentProgress = { ...progress }
+
+  if (progress.message) compact.message = sanitizeSubagentCompactProgress(progress.message)
+
+  if (progress.phase) compact.phase = sanitizeSubagentCompactLabel(progress.phase)
+
+  if (progress.milestone) compact.milestone = sanitizeSubagentCompactLabel(progress.milestone)
+
+  return compact
 }
 
 function describeChunk(body: string): Option.Option<WorkflowMirrorDescriptor> {
   const activity = parseSubagentChunkActivity(body)
+
   if (!activity || (!activity.toolName && !activity.progress)) {
     return Option.none()
   }
+
   const progress = activity.progress && compactProgress(activity.progress)
+
   return someDescriptor(
     progress
       ? {
@@ -202,6 +210,7 @@ async function authorizedWorkflowContext(input: {
       }),
     ),
   )
+
   return await Option.match(candidate, {
     onNone: () => Promise.resolve(Option.none<WorkflowCallbackContext>()),
     onSome: ({ context, participant }) =>
@@ -215,6 +224,7 @@ async function authorizeStoredWorkflowRun(
   participantUserId: string,
 ): Promise<Option.Option<WorkflowCallbackContext>> {
   const run = Option.fromNullishOr(await workflowStore.getRun(context.workflowId, context.runId))
+
   return Option.match(run, {
     onNone: () => Option.none<WorkflowCallbackContext>(),
     onSome: (storedRun) =>
@@ -230,11 +240,13 @@ export async function mirrorSubagentWorkflowEvent(input: {
   event: SubagentSessionEvent
 }): Promise<void> {
   const workflowStore = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
+
   const workflow = await authorizedWorkflowContext({
     repository: input.repository,
     workflowStore,
     messageId: input.event.messageId,
   })
+
   const descriptor = describeEvent(input.repository, input.event)
   await Option.all({ workflow, descriptor }).pipe(
     Option.match({

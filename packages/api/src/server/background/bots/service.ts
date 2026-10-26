@@ -90,6 +90,7 @@ export class BotRoutineService {
 
   private schedule(routine: BotRoutineSummary) {
     const now = Date.now()
+
     const decision = evaluateRoutineTick({
       kind: routine.kind,
       until: routine.until,
@@ -98,10 +99,12 @@ export class BotRoutineService {
       now,
       nextCronDate: this.adapters.nextCronDate,
     })
+
     const nextRunAt = Match.value(decision).pipe(
       Match.when({ action: "run" }, (run) => Option.some(run.nextRunAt)),
       Match.orElse(() => Option.none()),
     )
+
     return Option.match(nextRunAt, {
       onSome: (scheduledAt) =>
         this.adapters.scheduleRoutineAlarm({

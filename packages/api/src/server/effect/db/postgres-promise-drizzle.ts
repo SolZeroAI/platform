@@ -6,6 +6,7 @@ import type { AppDbMode } from "@solzero/shared"
 import {
   appDbModeFromEnv,
   hyperdriveConnectionString,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- postgres-promise-drizzle.ts builds makePostgresControlPlane from the Hyperdrive client at the composition edge because this module is the registered postgres factory.
   makePostgresControlPlane,
   pgRelations,
   registerPostgresControlPlaneFactory,
@@ -25,8 +26,10 @@ export function makePgPromiseDrizzle(connectionString: string, maxConnections: n
     prepare: false,
     fetch_types: false,
   })
+
   const db = drizzle({ client, relations: pgRelations })
   serializePostgresDates(client)
+
   return db
 }
 

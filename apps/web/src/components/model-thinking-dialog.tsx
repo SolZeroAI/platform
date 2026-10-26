@@ -54,41 +54,55 @@ export function ModelThinkingDialog({
   const modelListScrollRef = useRef<HTMLDivElement | null>(null)
   const selectedModelCardRef = useRef<HTMLButtonElement | null>(null)
   const modelScrollAnimationFrameRef = useRef<number | null>(null)
+
   const modelScrollScheduleRef = useRef<{ frame: number | null; timeout: number | null }>({
     frame: null,
     timeout: null,
   })
+
   const previousSelectedModelRef = useRef<string | null>(null)
   const reasoningConfig = selectedModelOption?.reasoning
   const selectedReasoning = reasoningEffort ?? reasoningConfig?.default
+
   const selectedReasoningLabel =
     reasoningConfig && selectedReasoning ? formatReasoningEffortLabel(selectedReasoning) : "Default"
+
   const allModels = useMemo(() => modelOptions.flatMap((group) => group.models), [modelOptions])
+
   const providerOptions = useMemo(() => {
     const seenProviderIds = new Set<string>()
+
     return modelOptions.flatMap((group) => {
       if (seenProviderIds.has(group.providerId) || group.models.length === 0) {
         return []
       }
+
       seenProviderIds.add(group.providerId)
+
       return [{ id: group.providerId, name: group.category }]
     })
   }, [modelOptions])
+
   const filteredModels = useMemo(() => {
     const search = modelSearch.trim().toLowerCase()
+
     return allModels.filter((model) => {
       if (providerFilter !== ALL_PROVIDERS_FILTER && model.providerId !== providerFilter) {
         return false
       }
+
       if (!search) {
         return true
       }
+
       return getModelSearchText(model).includes(search)
     })
   }, [allModels, modelSearch, providerFilter])
+
   const modelSummary = selectedModelOption
     ? `${selectedModelOption.name} - ${selectedModelOption.providerName}`
     : selectedModel || "No model selected"
+
   const thinkingSummary = reasoningConfig
     ? `${selectedReasoningLabel} thinking`
     : "Provider default"
@@ -105,11 +119,13 @@ export function ModelThinkingDialog({
 
     if (openRow !== "models") {
       cancelScrollAnimation(modelScrollAnimationFrameRef)
+
       return
     }
 
     const selectedModelChanged =
       previousSelectedModel !== null && previousSelectedModel !== selectedModel
+
     const animateScroll = selectedModelChanged && !prefersReducedMotion()
 
     cancelScrollAnimation(modelScrollAnimationFrameRef)
@@ -117,21 +133,25 @@ export function ModelThinkingDialog({
     const scrollSelectedModelToCenter = (animated: boolean) => {
       const scrollContainer = modelListScrollRef.current
       const selectedCard = selectedModelCardRef.current
+
       if (!scrollContainer || !selectedCard || scrollContainer.clientHeight === 0) {
         return
       }
 
       const containerRect = scrollContainer.getBoundingClientRect()
       const selectedRect = selectedCard.getBoundingClientRect()
+
       const targetTop =
         scrollContainer.scrollTop +
         selectedRect.top -
         containerRect.top -
         (scrollContainer.clientHeight - selectedRect.height) / 2
+
       const boundedTargetTop = getBoundedScrollTop(scrollContainer, targetTop)
 
       if (animated) {
         animateScrollTop(scrollContainer, boundedTargetTop, modelScrollAnimationFrameRef)
+
         return
       }
 
@@ -162,6 +182,7 @@ export function ModelThinkingDialog({
     if (providerFilter === ALL_PROVIDERS_FILTER) {
       return
     }
+
     if (!providerOptions.some((provider) => provider.id === providerFilter)) {
       setProviderFilter(ALL_PROVIDERS_FILTER)
     }
@@ -182,6 +203,7 @@ export function ModelThinkingDialog({
           <Button
             type="button"
             onClick={onClose}
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="circle"
             variant="ghost"
             aria-label={showThinking ? "Close model and thinking dialog" : "Close model dialog"}
@@ -400,10 +422,12 @@ function DefaultModelActionCard({
   onNavigate: () => void
 }) {
   const Icon = kind === "personal" ? UserRound : ShieldCheck
+
   const className =
     kind === "personal"
       ? "border-sky-500/35 bg-sky-500/10 text-kumo-default hover:border-sky-400/60 hover:bg-sky-500/15"
       : "border-emerald-500/35 bg-emerald-500/10 text-kumo-default hover:border-emerald-400/60 hover:bg-emerald-500/15"
+
   const iconClassName = kind === "personal" ? "text-sky-400" : "text-emerald-400"
 
   return (
@@ -536,6 +560,7 @@ function prefersReducedMotion(): boolean {
 
 function getBoundedScrollTop(scrollContainer: HTMLElement, targetTop: number): number {
   const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight)
+
   return Math.min(maxScrollTop, Math.max(0, targetTop))
 }
 
@@ -549,6 +574,7 @@ function animateScrollTop(
 
   if (Math.abs(distance) < 1) {
     scrollContainer.scrollTop = targetTop
+
     return
   }
 
@@ -562,6 +588,7 @@ function animateScrollTop(
 
     if (progress < 1) {
       animationFrameRef.current = window.requestAnimationFrame(step)
+
       return
     }
 
@@ -608,9 +635,11 @@ function formatProviderFilterValue(
   providers: ReadonlyArray<{ id: string; name: string }>,
 ): string {
   const selected = String(value ?? ALL_PROVIDERS_FILTER)
+
   if (selected === ALL_PROVIDERS_FILTER) {
     return "All providers"
   }
+
   return providers.find((provider) => provider.id === selected)?.name ?? "All providers"
 }
 

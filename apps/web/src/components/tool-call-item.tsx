@@ -32,6 +32,7 @@ import { formatToolCall } from "@/lib/tool-formatters"
 const TOOL_CALL_ACTION_BUTTON_PROPS = {
   type: "button" as const,
   size: "sm" as const,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
   shape: "square" as const,
   variant: "secondary" as const,
 }
@@ -64,6 +65,7 @@ function formatToolErrorText(
     if (parts.length > 0) {
       parts.push("", "---", "")
     }
+
     parts.push(executionError)
   }
 
@@ -201,8 +203,10 @@ export function ToolCallBanner({ event, discoveryError }: ToolCallBannerProps) {
   const errorText = formatToolErrorText(event.error, discoveryError)
   const hasError = Boolean(errorText)
   const title = formatted.mcpLabels ? formatted.mcpLabels.server : formatted.toolName
+
   const detailDescription = (detail: "arguments" | "output" | "error") =>
     formatted.mcpLabels ? `${formatted.mcpLabels.tool} ${detail}` : detail
+
   const description = formatted.mcpLabels
     ? `Tool: ${formatted.mcpLabels.tool}`
     : formatted.summary ||

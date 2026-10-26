@@ -7,6 +7,7 @@ import {
   type WorkflowSlackAppStorePromise,
 } from "../db/workflow-slack-apps"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the Slack webhook composition edge, which has no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import type { Env } from "../types"
 import { WorkflowLifecycle } from "./lifecycle"
@@ -42,28 +43,41 @@ import {
   type SlackWorkflowActorResolution,
 } from "./slack-public-router/normalization"
 import * as Arr from "effect/Array"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+
+type SlackActorResolutionEnum = Data.TaggedEnum<{
+  workflow_owner: {}
+  slack_user: { readonly userId: string; readonly oktaUserId: string | null }
+  setup_required: { readonly slackUserId: string; readonly setupUrl: string }
+  missing_slack_user: {}
+}>
+
+const SlackActorResolution = Data.taggedEnum<SlackActorResolutionEnum>()
 
 const resolveLinkedSlackActor = Effect.fn("workflows.slack.resolveLinkedActor")(function* (
   env: Env,
   slackUserId: string,
 ) {
   const linkedUserId = yield* getLinkedUserIdByProviderAccountId(env, "slack", slackUserId)
+
   return yield* Option.match(Option.fromNullishOr(linkedUserId), {
     onNone: () =>
-      Effect.succeed({
-        _tag: "setup_required",
-        slackUserId,
-        setupUrl: buildSetupUrl(env, slackUserId),
-      } satisfies SlackWorkflowActorResolution),
+      Effect.succeed(
+        SlackActorResolution.setup_required({
+          slackUserId,
+          setupUrl: buildSetupUrl(env, slackUserId),
+        }),
+      ),
     onSome: (userId) =>
-      Effect.succeed({
-        _tag: "slack_user",
-        userId,
-        oktaUserId: null,
-      } satisfies SlackWorkflowActorResolution),
+      Effect.succeed(
+        SlackActorResolution.slack_user({
+          userId,
+          oktaUserId: null,
+        }),
+      ),
   })
 })
 
@@ -72,13 +86,10 @@ const resolveSlackWorkflowActor = Effect.fn("workflows.slack.resolveActor")(func
   payload: NormalizedSlackPayload
 }) {
   return yield* Match.value(payloadRequiresSlackUser(input.payload)).pipe(
-    Match.when(false, () =>
-      Effect.succeed({ _tag: "workflow_owner" } satisfies SlackWorkflowActorResolution),
-    ),
+    Match.when(false, () => Effect.succeed(SlackActorResolution.workflow_owner())),
     Match.orElse(() =>
       Option.match(Option.fromNullishOr(input.payload.userId), {
-        onNone: () =>
-          Effect.succeed({ _tag: "missing_slack_user" } satisfies SlackWorkflowActorResolution),
+        onNone: () => Effect.succeed(SlackActorResolution.missing_slack_user()),
         onSome: (slackUserId) => resolveLinkedSlackActor(input.env, slackUserId),
       }),
     ),
@@ -114,6 +125,7 @@ const startWorkflowForRegistration = Effect.fn("workflows.slack.startWorkflowFor
   }) {
     const identity = resolveRunIdentity({ workflow: input.workflow, actor: input.actor })
     input.setUserIdentity?.(identity)
+
     return yield* new WorkflowLifecycle(input.env)
       .startWorkflowRun({
         workflow: input.workflow,
@@ -173,6 +185,7 @@ const startWorkflowForRegistration = Effect.fn("workflows.slack.startWorkflowFor
                 }),
               catch: toError,
             })
+
             return {
               workflowId: input.workflow.id,
               nodeId: input.nodeId,
@@ -206,6 +219,7 @@ const markCooldownDelivery = Effect.fn("workflows.slack.markCooldownDelivery")(f
       }),
     catch: toError,
   })
+
   return Option.some({
     workflowId: params.input.registration.workflow_id,
     nodeId: params.input.registration.node_id,
@@ -226,6 +240,7 @@ const checkRecentDelivery = Effect.fn("workflows.slack.checkRecentDelivery")(fun
       }),
     catch: toError,
   })
+
   return yield* Option.match(Option.fromNullishOr(recent), {
     onNone: () => Effect.succeed(Option.none<SlackRunResult>()),
     onSome: () => markCooldownDelivery(params),
@@ -254,6 +269,7 @@ const markInactiveWorkflow = Effect.fn("workflows.slack.markInactiveWorkflow")(f
       }),
     catch: toError,
   })
+
   return {
     workflowId: params.input.registration.workflow_id,
     nodeId: params.input.registration.node_id,
@@ -268,6 +284,7 @@ const runWorkflowForDelivery = Effect.fn("workflows.slack.runWorkflowForDelivery
     try: () => params.workflowStore.getWorkflow(params.input.registration.workflow_id),
     catch: toError,
   })
+
   return yield* Option.match(
     Option.filter(Option.fromNullishOr(workflow), (resolved) => resolved.status === "active"),
     {
@@ -291,6 +308,7 @@ const processCreatedDelivery = Effect.fn("workflows.slack.processCreatedDelivery
   params: ProcessDeliveryParams,
 ) {
   const cooldownResult = yield* checkCooldown(params)
+
   return yield* Option.match(cooldownResult, {
     onNone: () => runWorkflowForDelivery(params),
     onSome: (result) => Effect.succeed(result),
@@ -303,6 +321,7 @@ const processSlackRegistration = Effect.fn("workflows.slack.processRegistration"
   const slackStore = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
   const workflowStore = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
   const now = Date.now()
+
   const delivery = yield* Effect.tryPromise({
     try: () =>
       slackStore.createDeliveryIfAbsent({
@@ -318,7 +337,9 @@ const processSlackRegistration = Effect.fn("workflows.slack.processRegistration"
       }),
     catch: toError,
   })
+
   const params: ProcessDeliveryParams = { input, slackStore, workflowStore, delivery, now }
+
   return yield* Match.value(delivery.created).pipe(
     Match.when(false, () => Effect.succeed(duplicateDeliveryResult(params))),
     Match.orElse(() => processCreatedDelivery(params)),
@@ -382,6 +403,7 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
   setUserIdentity?: (identity: { userId: string; oktaUserId: string | null }) => void
 }) {
   const slackStore = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
+
   const registrations = yield* Effect.tryPromise({
     try: () =>
       slackStore.listEnabledRegistrationsForApp({
@@ -390,12 +412,14 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
       }),
     catch: toError,
   })
+
   yield* log("slack.registrations.listed", {
     appId: input.appId,
     surface: input.payload.surface,
     count: registrations.length,
     nodeIds: registrations.map((r) => r.node_id),
   })
+
   const registrationDetails = Arr.map(registrations, (registration) =>
     computeRegistrationMatchDetails({
       payload: input.payload,
@@ -403,10 +427,12 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
       commandId: input.commandId,
     }),
   )
+
   const matchingRegistrations = Arr.map(
     Arr.filter(registrationDetails, (details) => details.matched),
     (details) => details.registration,
   )
+
   yield* Effect.forEach(
     Arr.filter(registrationDetails, (details) => !details.matched),
     (details) =>
@@ -418,12 +444,17 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
     nodeIds: matchingRegistrations.map((r) => r.node_id),
   })
   const shouldResolveActor = Effect.succeed(matchingRegistrations.length > 0)
+
   const actorOption = yield* resolveSlackWorkflowActor({
     env: input.env,
     payload: input.payload,
   }).pipe(Effect.when(shouldResolveActor))
+
   return yield* Option.match(actorOption, {
-    onNone: () => Effect.succeed([] as SlackRunResult[]),
+    onNone: () =>
+      Effect.succeed(
+        /* SAFETY: This branch has no SlackRunResult[] elements, so the array is empty. */ [] as SlackRunResult[],
+      ),
     onSome: (actor) =>
       Match.value(actor).pipe(
         Match.tag("setup_required", (setup) =>
@@ -460,6 +491,7 @@ function buildSlackResponse(
   brandName: string,
 ): Response {
   const setupRequired = Arr.findFirst(runs, (run) => run.status === "setup_required")
+
   const matchedText = Option.match(setupRequired, {
     onSome: (run) =>
       `Link your Slack account to ${brandName} before using this workflow: ${run.setupUrl}`,
@@ -469,6 +501,7 @@ function buildSlackResponse(
         Match.orElse(() => `No ${brandName} workflow matched this request.`),
       ),
   })
+
   const setupFields = Option.match(setupRequired, {
     onNone: () => ({}),
     onSome: (run) => ({
@@ -477,6 +510,7 @@ function buildSlackResponse(
       slackUserId: run.slackUserId,
     }),
   })
+
   return Match.value(surface === "command" || surface === "interaction").pipe(
     Match.when(true, () =>
       json({
@@ -504,6 +538,7 @@ const runSlackWorkflowsForPayload = Effect.fn("workflows.slack.runWorkflowsForPa
     channelName: hydrated.channelName,
     hasMatchingPatternExpectations: true,
   })
+
   const runs = yield* startSlackWorkflowRuns({
     env: ctx.env,
     appId: ctx.route.appId,
@@ -511,11 +546,13 @@ const runSlackWorkflowsForPayload = Effect.fn("workflows.slack.runWorkflowsForPa
     commandId: ctx.route.commandId,
     setUserIdentity: ctx.options.setUserIdentity,
   })
+
   yield* log("slack.response", {
     appId: ctx.route.appId,
     runCount: runs.length,
     statuses: runs.map((r) => r.status),
   })
+
   return buildSlackResponse(ctx.route.surface, runs, ctx.env.S0_BRAND_NAME)
 })
 
@@ -538,6 +575,7 @@ const normalizeSlackRequest = Effect.fn("workflows.slack.normalizeRequest")(func
     Match.when("command", () => normalizeSlackCommand(body, ctx.route.commandId)),
     Match.orElse(() => normalizeSlackInteraction(body)),
   )
+
   return yield* Option.match(Option.fromNullishOr(normalized.response), {
     onSome: (response) => Effect.succeed(response),
     onNone: () => dispatchSlackPayload(ctx, normalized.payload),
@@ -552,11 +590,13 @@ const verifySlackRequest = Effect.fn("workflows.slack.verifyRequest")(function* 
     try: () => ctx.request.text(),
     catch: toError,
   })
+
   const signatureError = yield* verifySlackSignature({
     request: ctx.request,
     body,
     signingSecret,
   })
+
   return yield* Option.match(Option.fromNullishOr(signatureError), {
     onNone: () => normalizeSlackRequest(ctx, body),
     onSome: (error) => Effect.succeed(error),
@@ -572,6 +612,7 @@ const loadSlackSecrets = Effect.fn("workflows.slack.loadSecrets")(function* (
 ) {
   const secrets = yield* getWorkflowSlackAppSecrets({ env, app })
   const ctx: SlackAppContext = { request, env, options, route, secrets }
+
   return yield* Option.match(Option.fromNullishOr(secrets.signingSecret), {
     onNone: () =>
       Effect.succeed(json({ error: "Workflow Slack app signing secret is not configured" }, 500)),
@@ -590,6 +631,7 @@ const loadSlackApp = Effect.fn("workflows.slack.loadApp")(function* (
       createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(env)).getAppById(route.appId),
     catch: toError,
   })
+
   return yield* Option.match(Option.fromNullishOr(app), {
     onNone: () => Effect.succeed(json({ error: "Workflow Slack app not found" }, 404)),
     onSome: (resolved) => loadSlackSecrets(request, env, options, route, resolved),
@@ -602,8 +644,12 @@ const routeSlackRequest = Effect.fn("workflows.slack.routeRequest")(function* (
   options: SlackRequestOptions,
 ) {
   const url = new URL(request.url)
+
   return yield* Option.match(readRouteMatch(url.pathname), {
-    onNone: () => Effect.succeed(null as Response | null),
+    onNone: () =>
+      Effect.succeed(
+        /* SAFETY: This branch has no Response, so the result is null. */ null as Response | null,
+      ),
     onSome: (route) => loadSlackApp(request, env, options, route),
   })
 })
@@ -614,7 +660,11 @@ const handleWorkflowSlackAppRequestEffect = Effect.fn("workflows.slack.handleReq
   options: SlackRequestOptions = {},
 ) {
   return yield* Match.value(request.method === "POST").pipe(
-    Match.when(false, () => Effect.succeed(null as Response | null)),
+    Match.when(false, () =>
+      Effect.succeed(
+        /* SAFETY: This branch has no Response, so the result is null. */ null as Response | null,
+      ),
+    ),
     Match.orElse(() => routeSlackRequest(request, env, options)),
   )
 })

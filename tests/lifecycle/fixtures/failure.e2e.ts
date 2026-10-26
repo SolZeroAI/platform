@@ -10,6 +10,7 @@ test(
       title: "Owned failure cleanup regression",
       agentRuntime: "isolate",
     })
+
     expect(session.sessionId).toBeTruthy()
     expect(false, "Intentional negative lifecycle probe").toBe(true)
   },

@@ -170,7 +170,9 @@ export function WorkflowsPageFrame(input: any) {
     workflowValidationDialogOpen,
     workflows,
   } = input
+
   const workflowHeaderTitleValue = selectedWorkflowId ? workflowTitleDraft : workflowName
+
   const workflowHeaderTitleCanSave =
     workflowTitleDirty && !workflowTitleInvalid && !savingWorkflowTitle
 
@@ -199,6 +201,7 @@ export function WorkflowsPageFrame(input: any) {
               className="-ml-2 flex min-w-0 items-center gap-2"
               onSubmit={(event) => {
                 event.preventDefault()
+
                 if (workflowHeaderTitleCanSave) {
                   void saveWorkflowTitle()
                 }
@@ -209,8 +212,10 @@ export function WorkflowsPageFrame(input: any) {
                 onChange={(event) => {
                   if (selectedWorkflowId) {
                     setWorkflowTitleDraft(event.target.value)
+
                     return
                   }
+
                   setWorkflowName(event.target.value)
                 }}
                 className={`min-w-0 rounded-lg bg-kumo-tint px-2 py-1 text-lg font-medium text-kumo-default outline-none ring-1 transition-[background-color,box-shadow] focus:bg-kumo-elevated ${

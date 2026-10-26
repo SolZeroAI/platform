@@ -55,11 +55,14 @@ test(
   { session: "admin" },
   async ({ app, agent, screen, browser }) => {
     const name = uniqueName("e2e-workflow")
+
     const { workflow } = await api<{ workflow: { id: string } }>(browser, "/workflows", "POST", {
       name,
       manifest: { ...manifest, name },
     })
+
     const path = `/workflows/${workflow.id}`
+
     try {
       await app.open(path)
       await expect(screen.getByLabel("Workflow name")).toHaveValue(name)
@@ -68,11 +71,13 @@ test(
       await agent.act("Save the changed workflow name")
       await browser.reload()
       await expect(screen.getByLabel("Workflow name")).toHaveValue(renamed)
+
       const exported = await fetch(`http://localhost:3100${path}/export`, {
         headers: {
           Cookie: (await browser.cookies()).map(({ name: n, value }) => `${n}=${value}`).join("; "),
         },
       })
+
       expect(exported.status).toBe(200)
       expect(await exported.text()).toContain(renamed)
       await api(browser, `${path}/disable`, "POST")
@@ -96,28 +101,35 @@ test(
   async ({ app, browser, screen }) => {
     const name = uniqueName("e2e-run")
     const marker = uniqueName("artifact")
+
     const { workflow } = await api<{ workflow: { id: string } }>(browser, "/workflows", "POST", {
       name,
       manifest: { ...manifest, name },
     })
+
     const path = `/workflows/${workflow.id}`
+
     try {
       const { run } = await api<{ run: { id: string } }>(browser, `${path}/runs`, "POST", {
         trigger: { kind: "manual", payload: { marker } },
       })
+
       await expect
         .poll(
           async () => {
             const detail = await api<{ run: { status: string } }>(browser, `${path}/runs/${run.id}`)
+
             return detail.run.status
           },
           { timeout: 120_000 },
         )
         .toBe("completed")
+
       const artifact = await api<{ artifact: { text: string } }>(
         browser,
         `${path}/runs/${run.id}/artifacts/save`,
       )
+
       expect(artifact.artifact.text).toContain(marker)
       const events = await api<{ events: object[] }>(browser, `${path}/runs/${run.id}/events`)
       expect(events.events.length).toBeGreaterThan(0)
@@ -139,6 +151,7 @@ test(
     const cookies = (await browser.cookies())
       .map(({ name, value }) => `${name}=${value}`)
       .join("; ")
+
     const response = await fetch("http://localhost:3100/workflows", {
       method: "POST",
       headers: { Cookie: cookies, "Content-Type": "application/json" },
@@ -147,6 +160,7 @@ test(
         manifest: { version: 999, nodes: [], edges: [] },
       }),
     })
+
     expect(response.status).toBe(400)
   },
 )

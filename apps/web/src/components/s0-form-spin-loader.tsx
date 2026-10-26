@@ -45,14 +45,18 @@ export function S0FormSpinLoader({
         gsap.registerPlugin(MorphSVGPlugin)
 
         const mm = gsap.matchMedia()
+
         const context = gsap.context(() => {
           const outer = containerRef.current?.querySelector<SVGPathElement>(
             "[data-s0-form-spin-outer]",
           )
+
           const star = containerRef.current?.querySelector<SVGPathElement>(
             "[data-s0-form-spin-star]",
           )
+
           const spin = containerRef.current
+
           if (!outer || !star || !spin) {
             return
           }
@@ -78,6 +82,7 @@ export function S0FormSpinLoader({
                   ease: "power2.inOut",
                   morphSVG: {
                     map: "complexity",
+                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- GSAP MorphSVGPlugin requires the option name shape.
                     shape: SOLZERO_MORPH_OVAL_PATH,
                     type: "rotational",
                   },
@@ -101,6 +106,7 @@ export function S0FormSpinLoader({
                   ease: "power2.inOut",
                   morphSVG: {
                     map: "complexity",
+                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- GSAP MorphSVGPlugin requires the option name shape.
                     shape: SOLZERO_MORPH_STAR_PATH,
                     type: "rotational",
                   },

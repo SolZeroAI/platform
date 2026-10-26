@@ -111,6 +111,7 @@ async function emitIsolateToolCall(input: {
     onNone: () => ({ value: input.args }),
     onSome: (record) => record,
   })
+
   await input.processEvent({
     type: "tool_call",
     tool: input.toolName,
@@ -136,10 +137,12 @@ async function emitIsolateToolResult(input: {
     // oxlint-disable-next-line effect/avoid-direct-json -- AI-SDK tool-result rendering boundary: 2-space pretty-printed JSON is the established displayed/persisted tool output; the compact Schema JSON helper would change it.
     Match.orElse((value) => JSON.stringify(value, null, 2)),
   )
+
   const errorText = Match.value(input.error).pipe(
     Match.when(Match.undefined, () => undefined),
     Match.orElse((value) => toErrorMessage(value)),
   )
+
   await input.processEvent({
     type: "tool_result",
     callId: input.toolCallId,
@@ -181,6 +184,7 @@ export function runIsolatePromptWithEvents(input: {
       onNone: (): Record<string, never> => ({}),
       onSome: (content) => ({ content }),
     })
+
     return input.processEvent({
       type: "step_limit_warning",
       stepLimit: normalizeIsolateStepLimit(chunk.stepLimit, DEFAULT_ISOLATE_STEP_LIMIT),
@@ -202,17 +206,21 @@ export function runIsolatePromptWithEvents(input: {
       onNone: () => undefined,
       onSome: () => input.onTerminalMcpDiscoveryError?.(input.prompt.messageId),
     })
+
     const discoveryReason = Option.getOrUndefined(
       Option.liftPredicate(chunk.discoveryReason, isMcpDiscoveryErrorReason),
     )
+
     const terminalField = Option.match(Option.liftPredicate(chunk.terminal, Boolean), {
       onNone: (): Record<string, never> => ({}),
       onSome: () => ({ terminal: true as const }),
     })
+
     const discoveryReasonField = Option.match(Option.fromNullishOr(discoveryReason), {
       onNone: (): Record<string, never> => ({}),
       onSome: (reason) => ({ discoveryReason: reason }),
     })
+
     return input.processEvent({
       type: "mcp_discovery_error",
       serverName: chunk.serverName,
@@ -227,6 +235,7 @@ export function runIsolatePromptWithEvents(input: {
 
   function emitTextDelta(chunk: { type: "text-delta"; delta: string }): Promise<void> {
     textState.value += chunk.delta
+
     return input.processEvent({
       type: "token",
       content: textState.value,
@@ -238,6 +247,7 @@ export function runIsolatePromptWithEvents(input: {
 
   function emitToolCallNow(toolCallId: string, toolName: string, args: unknown): Promise<void> {
     emittedToolCalls.add(toolCallId)
+
     return emitIsolateToolCall({
       processEvent: input.processEvent,
       messageId: input.prompt.messageId,
@@ -257,6 +267,7 @@ export function runIsolatePromptWithEvents(input: {
 
   function emitToolResultErrorNow(toolCallId: string, error: unknown): Promise<void> {
     emittedToolResults.add(toolCallId)
+
     return emitIsolateToolResult({
       processEvent: input.processEvent,
       messageId: input.prompt.messageId,
@@ -275,6 +286,7 @@ export function runIsolatePromptWithEvents(input: {
 
   function emitToolResultOutputNow(toolCallId: string, result: unknown): Promise<void> {
     emittedToolResults.add(toolCallId)
+
     return emitIsolateToolResult({
       processEvent: input.processEvent,
       messageId: input.prompt.messageId,
@@ -328,10 +340,15 @@ export function runIsolatePromptWithEvents(input: {
 
   function handleParsedRecord(parsedEvent: Record<string, unknown>): Promise<void> {
     const sandboxId = input.getSandboxId()
+
     return Match.value(parsedEvent).pipe(
       Match.when(isStepLimitWarningChunk, (chunk) => emitStepLimitEvent(chunk, sandboxId)),
       Match.when(isMcpDiscoveryErrorChunk, (chunk) => emitMcpDiscoveryEvent(chunk)),
-      Match.orElse((chunk) => emitUiChunkEvent(chunk as UIMessageChunk)),
+      Match.orElse((chunk) =>
+        emitUiChunkEvent(
+          /* SAFETY: chunk has the UIMessageChunk shape established by the check or writer around this read. */ chunk as UIMessageChunk,
+        ),
+      ),
     )
   }
 
@@ -359,11 +376,13 @@ export function runIsolatePromptWithEvents(input: {
 
   function recordStreamStart(event: ChatStartEvent): Promise<void> {
     streamRequestIdRef.value = Option.some(event.requestId)
+
     return Promise.resolve()
   }
 
   function recordCallbackError(error: string): Promise<void> {
     callbackErrorRef.value = Option.some(error)
+
     return Promise.resolve()
   }
 
@@ -372,9 +391,11 @@ export function runIsolatePromptWithEvents(input: {
       onNone: () => "",
       onSome: (requestId) => ` requestId=${requestId}`,
     })
+
     callbackErrorRef.value = Option.some(
       `Isolate stream interrupted before completion; recovery continuation owns the final response.${requestIdSuffix}`,
     )
+
     return Promise.resolve()
   }
 
@@ -388,6 +409,7 @@ export function runIsolatePromptWithEvents(input: {
 
   return Effect.gen(function* () {
     const backgroundTracing = yield* BackgroundTracing
+
     const cloneAuth = yield* backgroundTracing.withSpan(
       "isolate.clone_auth.resolve",
       {
@@ -401,6 +423,7 @@ export function runIsolatePromptWithEvents(input: {
     )
 
     const observabilityTrace = yield* backgroundTracing.currentContext
+
     const result = yield* backgroundTracing.withSpan(
       "isolate.runtime.run_prompt",
       {
@@ -435,6 +458,7 @@ export function runIsolatePromptWithEvents(input: {
       result.output,
       (output) => textState.value.length === 0 && output.trim().length > 0,
     )
+
     yield* Option.match(fallbackOutput, {
       onNone: () => Effect.void,
       onSome: (output) =>

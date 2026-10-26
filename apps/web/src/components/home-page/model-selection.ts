@@ -4,6 +4,7 @@ export function getDefaultVisibleModel(
   catalog: Pick<RuntimeProviderCatalog, "defaultModel" | "modelOptions"> | null,
 ): string {
   const defaultModel = catalog?.defaultModel
+
   if (!defaultModel) {
     return ""
   }

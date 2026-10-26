@@ -13,7 +13,12 @@ import {
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const imagesPath = resolve(repoRoot, "packages/agent-container/src/images.ts")
 const registry = "ghcr.io/solzeroai"
+
 type RuntimeName = keyof typeof AGENT_CONTAINER_ENTRYPOINTS
+
+function isRuntimeName(value: string): value is RuntimeName {
+  return Object.hasOwn(AGENT_CONTAINER_ENTRYPOINTS, value)
+}
 
 function run(command: string, args: string[], env?: NodeJS.ProcessEnv): string {
   const result = spawnSync(command, args, {
@@ -22,27 +27,33 @@ function run(command: string, args: string[], env?: NodeJS.ProcessEnv): string {
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   })
+
   if (result.status !== 0) {
     throw new Error(
       `${command} ${args.join(" ")} failed (${result.status ?? "signal"})\n${result.stderr || result.stdout}`,
     )
   }
+
   return result.stdout
 }
 
 function ghToken(): string {
   const fromEnv = process.env.GH_TOKEN || process.env.GITHUB_TOKEN
+
   if (fromEnv) return fromEnv
+
   return run("gh", ["auth", "token"]).trim()
 }
 
 function githubLogin(): string {
   if (process.env.GITHUB_ACTOR) return process.env.GITHUB_ACTOR
+
   return run("gh", ["api", "user", "--jq", ".login"]).trim()
 }
 
 function loginRegistry(): void {
   const token = ghToken()
+
   const result = spawnSync(
     "docker",
     ["login", "ghcr.io", "--username", githubLogin(), "--password-stdin"],
@@ -51,6 +62,7 @@ function loginRegistry(): void {
       encoding: "utf8",
     },
   )
+
   if (result.status !== 0) {
     throw new Error(`docker login ghcr.io failed\n${result.stderr || result.stdout}`)
   }
@@ -77,18 +89,24 @@ async function publishImage(runtime: RuntimeName, contextDir: string): Promise<s
     ],
     { SOURCE_DATE_EPOCH: "0" },
   )
+
+  // SAFETY: docker buildx --metadata-file writes containerimage.digest as an optional string field.
   const metadata = JSON.parse(await readFile(metadataPath, "utf8")) as {
     "containerimage.digest"?: string
   }
+
   const digest = metadata["containerimage.digest"]
+
   if (!digest?.startsWith("sha256:")) {
     throw new Error(`Docker did not report a digest for ${imageName}`)
   }
+
   return digest
 }
 
 function makePackagePublic(imageName: string): void {
   const token = ghToken()
+
   const result = spawnSync(
     "gh",
     [
@@ -107,14 +125,18 @@ function makePackagePublic(imageName: string): void {
       env: { ...process.env, GH_TOKEN: token },
     },
   )
+
   if (result.status === 0) return
   const details = result.stderr || result.stdout
+
   if (details.includes("404")) {
     console.error(
       `GitHub cannot change org package visibility through the API. Make ghcr.io/solzeroai/${imageName} public at https://github.com/orgs/SolZeroAI/packages/container/${imageName}/settings`,
     )
+
     return
   }
+
   throw new Error(`Unable to make ghcr.io/solzeroai/${imageName} public\n${details}`)
 }
 
@@ -124,23 +146,30 @@ function referenceFor(runtime: RuntimeName, digest: string): string {
 
 async function writeDigests(digests: Record<RuntimeName, string>): Promise<void> {
   let source = await readFile(imagesPath, "utf8")
-  for (const runtime of Object.keys(AGENT_CONTAINER_IMAGES) as RuntimeName[]) {
+
+  for (const runtime of Object.keys(AGENT_CONTAINER_IMAGES).filter(isRuntimeName)) {
     const current = AGENT_CONTAINER_IMAGES[runtime]
     const next = referenceFor(runtime, digests[runtime])
+
     if (!source.includes(current)) {
       throw new Error(`images.ts is missing the ${runtime} reference ${current}`)
     }
+
     source = source.replace(current, next)
   }
+
   await writeFile(imagesPath, source)
 }
 
 async function main(): Promise<void> {
   const write = process.argv.includes("--write")
   loginRegistry()
+  // SAFETY: the loop assigns a digest for every RuntimeName before digests is read.
   const digests = {} as Record<RuntimeName, string>
-  for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS) as RuntimeName[]) {
+
+  for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS).filter(isRuntimeName)) {
     const contextDir = await mkdtemp(resolve(tmpdir(), `s0-${runtime}-image-`))
+
     try {
       await bundleAgentContainer(runtime, contextDir)
       const digest = await publishImage(runtime, contextDir)
@@ -152,13 +181,18 @@ async function main(): Promise<void> {
     }
   }
 
-  const mismatches = (Object.keys(digests) as RuntimeName[]).filter(
-    (runtime) => AGENT_CONTAINER_IMAGES[runtime] !== referenceFor(runtime, digests[runtime]),
-  )
+  const mismatches = Object.keys(digests)
+    .filter(isRuntimeName)
+    .filter(
+      (runtime) => AGENT_CONTAINER_IMAGES[runtime] !== referenceFor(runtime, digests[runtime]),
+    )
+
   if (write) {
     await writeDigests(digests)
+
     return
   }
+
   if (mismatches.length > 0) {
     throw new Error(
       `Image digests differ from packages/agent-container/src/images.ts: ${mismatches.join(", ")}. Run with --write and commit the digest.`,

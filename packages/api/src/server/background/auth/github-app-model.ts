@@ -58,7 +58,9 @@ export interface GitHubUserProfile {
 }
 
 export type GitHubRepositoryVisibilityFilter = "all" | "private" | "public"
+
 export type GitHubRepositorySearchSort = "best-match" | "updated"
+
 export type GitHubRepositorySearchOrder = "asc" | "desc"
 
 export interface GitHubRepositoryOwner {
@@ -176,6 +178,7 @@ function encodeDerLength(length: number): Uint8Array {
   }
 
   const bytes = bigEndianBytes(length)
+
   return new Uint8Array([0x80 | bytes.length, ...bytes])
 }
 
@@ -184,13 +187,16 @@ function concatBytes(parts: Uint8Array[]): Uint8Array {
   const output = new Uint8Array(length)
   parts.reduce((offset, part) => {
     output.set(part, offset)
+
     return offset + part.length
   }, 0)
+
   return output
 }
 
 function derSequence(...children: Uint8Array[]): Uint8Array {
   const body = concatBytes(children)
+
   return concatBytes([new Uint8Array([0x30]), encodeDerLength(body.length), body])
 }
 
@@ -227,21 +233,26 @@ function pemBody(pem: string): string {
 
 function wrapPem(label: string, base64: string): string {
   const lines = base64.match(/.{1,64}/g) ?? []
+
   return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`].join("\n")
 }
 
 function convertPkcs1ToPkcs8Pem(pkcs1Pem: string): string {
   const pkcs1 = base64ToBytes(pemBody(pkcs1Pem))
+
   const rsaEncryptionOid = derObjectIdentifier([
     0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
   ])
+
   const algorithmIdentifier = derSequence(rsaEncryptionOid, derNull())
   const privateKeyInfo = derSequence(derInteger(0), algorithmIdentifier, derOctetString(pkcs1))
+
   return wrapPem("PRIVATE KEY", bytesToBase64(privateKeyInfo))
 }
 
 export function normalizePrivateKeyForJose(value: string): string {
   const privateKey = value.replace(/\\n/g, "\n").trim()
+
   return privateKey.includes("BEGIN RSA PRIVATE KEY")
     ? convertPkcs1ToPkcs8Pem(privateKey)
     : privateKey
@@ -314,6 +325,7 @@ export function normalizePerPage(value: number | undefined): number {
   if (!Number.isInteger(value) || !value || value <= 0) {
     return 20
   }
+
   return Math.min(value, 100)
 }
 
@@ -325,18 +337,27 @@ function toRepositoryOwnerEntry(
   installation: GitHubInstallation,
 ): readonly [string, GitHubRepositoryOwner] | null {
   const login = installation.account?.login.toLowerCase()
+
   if (!isActiveInstallation(installation) || !login) {
     return null
   }
+
   return [login, { login, type: installation.account?.type || "User" }] as const
 }
 
 export function toRepositoryOwners(installations: GitHubInstallation[]): GitHubRepositoryOwner[] {
   const owners = new Map<string, GitHubRepositoryOwner>(
-    installations
-      .map(toRepositoryOwnerEntry)
-      .filter((entry): entry is readonly [string, GitHubRepositoryOwner] => entry !== null),
+    installations.flatMap((installation) => {
+      const entry = toRepositoryOwnerEntry(installation)
+
+      if (entry === null) {
+        return []
+      }
+
+      return [entry]
+    }),
   )
+
   return [...owners.values()].sort((left, right) => left.login.localeCompare(right.login))
 }
 
@@ -345,16 +366,19 @@ export function filterInstallationsByOwner(
   owner: string | null | undefined,
 ): GitHubInstallation[] {
   const ownerKey = owner?.trim().toLowerCase()
+
   return installations.filter((installation) => {
     if (!isActiveInstallation(installation)) {
       return false
     }
+
     return !ownerKey || installation.account?.login.toLowerCase() === ownerKey
   })
 }
 
 export function repositoryOwnerQualifier(owner: string, owners: GitHubRepositoryOwner[]): string {
   const ownerType = owners.find((candidate) => candidate.login === owner)?.type.toLowerCase()
+
   return `${ownerType === "organization" ? "org" : "user"}:${owner}`
 }
 
@@ -405,19 +429,27 @@ export function applySearchItems(
     if (current.done) {
       return current
     }
+
     if (current.authorized.size > context.targetCount) {
-      return { ...current, done: true }
+      current.done = true
+
+      return current
     }
+
     if (context.options.visibility === "private" && repo.private !== true) {
       return current
     }
+
     if (context.options.visibility === "public" && repo.private === true) {
       return current
     }
+
     const installedRepo = installedRepositories.get(repo.id)
+
     if (installedRepo) {
       current.authorized.set(repo.id, installedRepo)
     }
+
     return current
   }, acc)
 }
@@ -460,6 +492,7 @@ export function hexToBytes(hex: string): Uint8Array | null {
   if (!/^[0-9a-f]+$/i.test(hex) || hex.length % 2 !== 0) {
     return null
   }
+
   return Uint8Array.from(hex.match(/.{2}/g) ?? [], (pair) => Number.parseInt(pair, 16))
 }
 
@@ -471,12 +504,10 @@ export function formatGitHubApiError(prefix: string, response: Response, body: s
   return `${prefix}: ${response.status} ${body}`
 }
 
-export function createGitHubAbortState(timeoutMs: number): {
-  controller: AbortController
-  timer: ReturnType<typeof setTimeout>
-} {
+export function createGitHubAbortState(timeoutMs: number) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+
   return { controller, timer }
 }
 
@@ -493,19 +524,29 @@ export function buildRepositorySearchParams(
     per_page: "100",
     page: String(searchPage),
   })
+
   if (options.sort === "updated") {
     params.set("sort", "updated")
     params.set("order", options.order === "asc" ? "asc" : "desc")
   }
+
   return params
 }
 
-export function buildPullRequestBody(input: GitHubCreatePullRequestInput): Record<string, unknown> {
-  return {
+export function buildPullRequestBody(input: GitHubCreatePullRequestInput) {
+  const body = {
     title: input.title,
     body: input.body ?? "",
     head: input.head,
     base: input.base,
-    ...(input.draft ? { draft: true } : {}),
+  }
+
+  if (!input.draft) {
+    return body
+  }
+
+  return {
+    ...body,
+    draft: true,
   }
 }

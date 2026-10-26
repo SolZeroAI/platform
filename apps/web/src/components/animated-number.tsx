@@ -27,6 +27,7 @@ function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
     () => {
       const strip = stripRef.current
       const column = columnRef.current
+
       if (!strip || !column) return
 
       // yPercent is relative to the strip's own height (10 digits), so each
@@ -35,10 +36,13 @@ function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
 
       if (isFirstRun.current) {
         isFirstRun.current = false
+
         if (!animateOnMount) {
           gsap.set(strip, { yPercent: targetY })
+
           return
         }
+
         // New column appearing after the number already mounted: slide it in
         // while rolling from 0 to the target digit.
         gsap.fromTo(
@@ -51,6 +55,7 @@ function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
           { yPercent: 0 },
           { yPercent: targetY, duration: ROLL_DURATION, ease: ROLL_EASE },
         )
+
         return
       }
 
@@ -105,6 +110,7 @@ export function AnimatedNumber({ value, className }: AnimatedNumberProps) {
           // Key by place value (distance from the units digit) so adding a
           // higher-order digit doesn't reshuffle the existing columns.
           const placeValue = digits.length - 1 - index
+
           return <RollingDigit key={placeValue} digit={digit} animateOnMount={animateOnMount} />
         })}
       </span>

@@ -24,16 +24,19 @@ const count = Schema.Number.check(
   Schema.isGreaterThanOrEqualTo(0),
   Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER),
 )
+
 const tableSchema = Schema.Struct({
   name: Schema.String,
   columns: Schema.Array(Schema.String),
   rowid: Schema.Boolean,
   rows: count,
 })
+
 export const durableMigrationInventorySchema = Schema.Struct({
   version: Schema.Literal(1),
   tables: Schema.Array(tableSchema),
 })
+
 export const durableMigrationRequestSchema = Schema.Union([
   Schema.Struct({ operation: Schema.Literal("inventory") }),
   Schema.Struct({ operation: Schema.Literal("progress") }),

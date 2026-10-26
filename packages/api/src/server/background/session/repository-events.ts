@@ -42,6 +42,7 @@ export class SessionEventRepository {
       input.createdAt,
     )
     const result = this.eventSql.exec("SELECT changes() AS count").one()
+
     return Number(decodeSqlChangeCount(result ?? {}).count ?? 0) > 0
   }
 
@@ -123,11 +124,7 @@ export class SessionEventRepository {
     )
   }
 
-  getEventsHistoryPage(
-    cursorTimestamp: number,
-    cursorId: string,
-    limit: number,
-  ): { events: EventRow[]; hasMore: boolean } {
+  getEventsHistoryPage(cursorTimestamp: number, cursorId: string, limit: number) {
     const rows = decodeEventRows(
       this.eventSql
         .exec(
@@ -144,10 +141,13 @@ export class SessionEventRepository {
     )
 
     const hasMore = rows.length > limit
+
     if (hasMore) {
       rows.pop()
     }
+
     rows.reverse()
+
     return { events: rows, hasMore }
   }
 }

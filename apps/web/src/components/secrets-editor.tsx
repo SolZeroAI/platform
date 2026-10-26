@@ -26,6 +26,7 @@ function createRow(partial?: Partial<SecretRow>): SecretRow {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2)
+
   return {
     id,
     key: "",
@@ -38,14 +39,30 @@ function createRow(partial?: Partial<SecretRow>): SecretRow {
 }
 
 function normalizeTags(tags: readonly string[]): string[] {
-  return Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean))).sort()
+  return Array.from(
+    new Set(
+      tags.flatMap((tag) => {
+        const trimmed = tag.trim()
+
+        return trimmed ? [trimmed] : []
+      }),
+    ),
+  ).sort()
 }
 
-function readSecretsResponse(raw: unknown): { rows: SecretRow[]; tags: string[] } {
+type SecretsEditorData = {
+  rows: SecretRow[]
+  tags: string[]
+}
+
+function readSecretsResponse(raw: unknown): SecretsEditorData {
   if (!raw || typeof raw !== "object" || !("secrets" in raw)) {
     return { rows: [], tags: [] }
   }
+
+  // SAFETY: raw was checked to contain secrets before that field is read.
   const secrets = (raw as { secrets?: unknown }).secrets
+
   if (!Array.isArray(secrets)) {
     console.warn("[secrets-editor] Expected secrets to be an array", {
       receivedType: typeof secrets,
@@ -53,9 +70,12 @@ function readSecretsResponse(raw: unknown): { rows: SecretRow[]; tags: string[] 
     showWarningToast("Unexpected secrets response", {
       description: `Expected secrets to be a list but received ${typeof secrets}.`,
     })
+
     return { rows: [], tags: [] }
   }
+
   const rows: SecretRow[] = []
+
   for (const secret of secrets) {
     if (!secret || typeof secret !== "object") {
       console.warn("[secrets-editor] Ignoring malformed secrets entry", {
@@ -66,8 +86,12 @@ function readSecretsResponse(raw: unknown): { rows: SecretRow[]; tags: string[] 
       })
       continue
     }
+
+    // SAFETY: secret was checked to be a non-null object before key is read.
     const key = (secret as { key?: unknown }).key
+    // SAFETY: secret was checked to be a non-null object before tags is read.
     const tags = (secret as { tags?: unknown }).tags
+
     if (typeof key !== "string" || !Array.isArray(tags)) {
       console.warn("[secrets-editor] Ignoring malformed secrets entry", {
         keyType: typeof key,
@@ -78,6 +102,7 @@ function readSecretsResponse(raw: unknown): { rows: SecretRow[]; tags: string[] 
       })
       continue
     }
+
     rows.push(
       createRow({
         key,
@@ -86,10 +111,14 @@ function readSecretsResponse(raw: unknown): { rows: SecretRow[]; tags: string[] 
       }),
     )
   }
+
+  // SAFETY: raw was checked to be an object before the response tags field is read.
   const responseTags = (raw as { tags?: unknown }).tags
+
   const tags = Array.isArray(responseTags)
     ? normalizeTags(responseTags.filter((tag): tag is string => typeof tag === "string"))
     : normalizeTags(rows.flatMap((row) => row.tags))
+
   return { rows, tags }
 }
 
@@ -117,6 +146,7 @@ export function SecretsEditor({
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeySearch(keySearch), SECRETS_SEARCH_DEBOUNCE_MS)
+
     return () => clearTimeout(timer)
   }, [keySearch])
 
@@ -124,29 +154,40 @@ export function SecretsEditor({
     setLoading(true)
     setError("")
     setSuccess("")
+
     try {
       const params = new URLSearchParams()
       const trimmedQ = q.trim()
+
       if (trimmedQ) {
         params.set("q", trimmedQ)
       }
+
       if (tags.length > 0) {
         params.set("tags", tags.join(","))
       }
+
       const response = await fetch(
         params.size > 0 ? `/api/secrets?${params.toString()}` : "/api/secrets",
       )
+
+      // SAFETY: The secrets list body is checked as unknown before rows are parsed or the error field is read.
       const data = (await response.json()) as unknown
+
       if (!response.ok) {
+        // SAFETY: data was checked to be an object that contains error before that field is read.
         const message =
           data && typeof data === "object" && "error" in data
             ? String((data as { error?: unknown }).error)
             : "Failed to load secrets"
+
         setError(message)
         setRows([])
         setAllTags([])
+
         return
       }
+
       const parsed = readSecretsResponse(data)
       setRows(parsed.rows)
       setAllTags(parsed.tags)
@@ -176,12 +217,14 @@ export function SecretsEditor({
   const handleAddSecret = () => {
     const row = createRow()
     setRows((current) => [...current, row])
+
     return row
   }
 
   const handleDeleteRow = async (row: SecretRow) => {
     if (!row.existing || !row.key) {
       removeRow(row.id)
+
       return
     }
 
@@ -193,11 +236,16 @@ export function SecretsEditor({
       const response = await fetch(`/api/secrets/${encodeURIComponent(row.key)}`, {
         method: "DELETE",
       })
+
+      // SAFETY: The secret delete response includes an error string when response.ok is false.
       const data = (await response.json()) as { error?: string }
+
       if (!response.ok) {
         setError(data?.error || "Failed to delete secret")
+
         return
       }
+
       setSuccess(`Deleted ${row.key}`)
       await loadSecrets(debouncedKeySearch, selectedTags)
     } catch {
@@ -228,44 +276,57 @@ export function SecretsEditor({
 
     if (entries.length === 0) {
       setSuccess("No changes to save")
+
       return
     }
 
     const uniqueKeys = new Set<string>()
     let totalSize = 0
+
     for (const entry of entries) {
       const keyError = validateKey(entry.key)
+
       if (keyError) {
         setError(keyError)
+
         return
       }
+
       if (uniqueKeys.has(entry.key)) {
         setError(`Duplicate key '${entry.key}'`)
+
         return
       }
+
       uniqueKeys.add(entry.key)
 
       if (entry.value !== undefined) {
         const valueSize = getUtf8Size(entry.value)
+
         if (valueSize > MAX_VALUE_SIZE) {
           setError(`Value for '${entry.key}' exceeds ${MAX_VALUE_SIZE} bytes`)
+
           return
         }
+
         totalSize += valueSize
       }
     }
 
     if (totalSize > MAX_TOTAL_VALUE_SIZE) {
       setError(`Total secret size exceeds ${MAX_TOTAL_VALUE_SIZE} bytes`)
+
       return
     }
 
     if (uniqueKeys.size > MAX_SECRETS_PER_USER) {
       setError(`Would exceed ${MAX_SECRETS_PER_USER} secrets limit`)
+
       return
     }
 
     setSaving(true)
+
     try {
       const response = await fetch("/api/secrets", {
         method: "PUT",
@@ -274,14 +335,20 @@ export function SecretsEditor({
           secrets: entries.map(({ key, value, tags }) => ({ key, value, tags })),
         }),
       })
+
+      // SAFETY: The secret save response includes an error string when response.ok is false.
       const data = (await response.json()) as { error?: string }
+
       if (!response.ok) {
         setError(data?.error || "Failed to update secrets")
+
         return
       }
+
       if (pendingUpdate) {
         setRows(effectiveRows)
       }
+
       setSuccess("Secrets updated")
       await loadSecrets(debouncedKeySearch, selectedTags)
     } catch {

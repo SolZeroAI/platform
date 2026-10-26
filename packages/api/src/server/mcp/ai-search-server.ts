@@ -81,6 +81,7 @@ function requireAllSourcesAvailable(
     }),
     Match.orElse(() => undefined),
   )
+
   return requestedSourceIds.flatMap((sourceId) =>
     Option.match(Option.fromNullishOr(sourceById.get(sourceId)), {
       onNone: () => [],
@@ -94,6 +95,7 @@ function resolveAvailableSourcesFromRegistry(
   requestedSourceIds: readonly string[],
 ): Promise<AiSearchSourceRecord[]> {
   const registry = new AiSearchRegistryStore(env)
+
   // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request setup is Promise-based.
   return Effect.runPromise(registry.listAvailableSourcesByIds(requestedSourceIds)).then((sources) =>
     requireAllSourcesAvailable(requestedSourceIds, sources),
@@ -107,10 +109,12 @@ export async function resolveAllowedAiSearchSources(
   const sessionId = request.headers.get(AI_SEARCH_SESSION_HEADER)?.trim()
   const fromHeader = await parseAllowedAiSearchSourcesSafe(request)
   const headerSourceIds = fromHeader.pipe(Option.filter((sourceIds) => sourceIds.length > 0))
+
   const requestedSourceIds = await Option.match(headerSourceIds, {
     onNone: () => resolveAiSearchSourceIdsFromSessionId(env, sessionId),
     onSome: (sourceIds) => Promise.resolve(sourceIds),
   })
+
   return Match.value(requestedSourceIds.length === 0).pipe(
     Match.when(true, () => Promise.resolve<AiSearchSourceRecord[]>([])),
     Match.orElse(() => resolveAvailableSourcesFromRegistry(env, requestedSourceIds)),
@@ -119,11 +123,13 @@ export async function resolveAllowedAiSearchSources(
 
 function rewriteRequestPathname(request: Request, url: URL, pathname: string): Request {
   url.pathname = pathname
+
   return new Request(url.toString(), request)
 }
 
 export function normalizeAiSearchMcpRequest(request: Request): Request {
   const url = new URL(request.url)
+
   return Match.value(url.pathname === `${INTERNAL_AI_SEARCH_MCP_ROUTE}/`).pipe(
     Match.when(true, () => rewriteRequestPathname(request, url, INTERNAL_AI_SEARCH_MCP_ROUTE)),
     Match.orElse(() => request),
@@ -162,6 +168,7 @@ export function createAiSearchMcpServer(
 
 function aiSearchSourceTools(source: AiSearchSourceRecord) {
   const toolNames = getAiSearchMcpToolNames(source)
+
   return [
     defineAiSearchSourceTool(
       source,
@@ -189,6 +196,7 @@ function handleAiSearchCallTool(
     Option.fromNullishOr(tools.find(({ tool }) => tool.name === toolName)),
     () => new Error(`Tool ${toolName} not found`),
   )
+
   return runAiSearchSourceTool(
     env,
     context,
@@ -224,6 +232,7 @@ async function runAiSearchSourceTool(
   const text = await Effect.runPromise(
     runAiSearchMcpTool(env, definition.source, input.query, context, definition.mode),
   )
+
   return {
     content: [
       {

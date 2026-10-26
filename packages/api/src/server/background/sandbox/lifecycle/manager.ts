@@ -15,6 +15,7 @@ import type { GitHubCloneCredentials } from "../../auth/github-clone-auth"
 import { toError } from "../../../lib/effect-errors"
 import { parseJsonArray } from "../../../lib/json"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the sandbox manager decrypts stored secrets.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { SessionRuntimeRepository } from "../../session/repository"
 import { buildResolvedSessionMcpServers } from "../../session/runtime-mcp"
@@ -117,6 +118,7 @@ export class SandboxLifecycleManager {
   stopCurrentExecution() {
     const session = this.dependencies.repository.getSession()
     const sandbox = this.dependencies.repository.getSandbox()
+
     return Option.match(this.getSessionSandboxPair(session, sandbox), {
       onNone: () => Effect.void,
       onSome: ([resolvedSession, resolvedSandbox]) =>
@@ -170,6 +172,7 @@ export class SandboxLifecycleManager {
     sandbox: NonNullable<ReturnType<SessionRuntimeRepository["getSandbox"]>>,
   ): boolean {
     const stageMetadata = getStageMetadataSync(this.dependencies.env)
+
     const nextStatus = reconcileInactiveSandboxStatus({
       status: sandbox.status,
       lastActivity: sandbox.last_activity,
@@ -178,6 +181,7 @@ export class SandboxLifecycleManager {
       timeoutMs: stageMetadata.app.sandboxInactivityTimeoutMs,
       now: Date.now(),
     })
+
     return Match.value(nextStatus === sandbox.status).pipe(
       Match.when(true, () => false),
       Match.orElse(() => this.applyReconciledSandboxStatus(nextStatus)),
@@ -187,6 +191,7 @@ export class SandboxLifecycleManager {
   private applyReconciledSandboxStatus(nextStatus: SandboxStatus): boolean {
     this.dependencies.repository.updateSandboxStatus(nextStatus)
     this.dependencies.wsManager.clearSandboxSocket()
+
     return true
   }
 
@@ -220,6 +225,7 @@ export class SandboxLifecycleManager {
       hasSandboxSocket: this.dependencies.wsManager.getSandboxSocket() !== null,
       isSpawning: false,
     }
+
     return Match.value(mode).pipe(
       Match.when("warm", () => evaluateWarmDecision(input)),
       Match.orElse(() => evaluateSpawnDecision(input)),
@@ -230,6 +236,7 @@ export class SandboxLifecycleManager {
     return Effect.gen({ self: this }, function* () {
       const session = this.dependencies.repository.getSession()
       const sandbox = this.dependencies.repository.getSandbox()
+
       const context = Option.all({
         session: Option.fromNullishOr(session),
         sandbox: Option.fromNullishOr(sandbox),
@@ -253,14 +260,18 @@ export class SandboxLifecycleManager {
         try: () => this.dependencies.getGitHubCloneCredentials(),
         catch: toError,
       })
+
       const now = Date.now()
+
       const reusableIdentity = getReusableSandboxIdentity({
         status: sandbox.status,
         sandboxId: sandbox.sandbox_id,
         authToken: sandbox.auth_token,
       })
+
       const sandboxId =
         reusableIdentity?.sandboxId ?? `sandbox-${session.repo_owner}-${session.repo_name}-${now}`
+
       const authToken = reusableIdentity?.authToken ?? generateId()
 
       yield* this.destroyPreviousSandboxBeforeRespawn(
@@ -395,6 +406,7 @@ export class SandboxLifecycleManager {
       const ownerUserId = this.getOwnerUserId()
       const secretEnv = yield* this.resolveSecretEnv(ownerUserId, session.secret_keys_json)
       const mcpServers = yield* this.buildResolvedMcpServers(session)
+
       const config = {
         sessionId: session.session_name ?? session.id,
         agentRuntime: session.agent_runtime,
@@ -435,6 +447,7 @@ export class SandboxLifecycleManager {
       const ownerUserId = this.getOwnerUserId()
       const mcpServers = yield* this.buildResolvedMcpServers(session)
       const secretEnv = yield* this.resolveSecretEnv(ownerUserId, session.secret_keys_json)
+
       return {
         userId: ownerUserId,
         model: session.model,
@@ -478,6 +491,7 @@ export class SandboxLifecycleManager {
 
   private resolveSecretEnv(userId: string, secretKeysJson: string | null | undefined) {
     const secretKeys = parseStoredSecretKeys(secretKeysJson)
+
     return Match.value({
       hasSecretKeys: secretKeys.length > 0,
       hasUser: userId !== "anonymous",
@@ -503,9 +517,12 @@ export class SandboxLifecycleManager {
     }).pipe(
       Effect.map((allSecrets) =>
         Object.fromEntries(
-          secretKeys
-            .filter((key) => Object.prototype.hasOwnProperty.call(allSecrets, key))
-            .map((key) => [key, allSecrets[key]]),
+          secretKeys.flatMap((key) =>
+            Match.value(Object.prototype.hasOwnProperty.call(allSecrets, key)).pipe(
+              Match.when(true, () => [[key, allSecrets[key]] as const]),
+              Match.orElse(() => []),
+            ),
+          ),
         ),
       ),
     )
@@ -601,5 +618,6 @@ export function createSandboxLifecycleManager(
   dependencies: LifecycleManagerDependencies,
 ): SandboxLifecycleManager {
   const provider = new HarnessContainerProvider(dependencies.env)
+
   return new SandboxLifecycleManager(dependencies, provider)
 }

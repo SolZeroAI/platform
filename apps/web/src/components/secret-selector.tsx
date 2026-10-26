@@ -43,7 +43,9 @@ export function filterSecretsByTags<T extends SecretMetadata>(
   if (selectedTags.length === 0) {
     return [...secrets]
   }
+
   const selected = new Set(selectedTags)
+
   return secrets.filter((secret) => secret.tags.some((tag) => selected.has(tag)))
 }
 
@@ -68,11 +70,16 @@ export function SecretTagFilter({
     void (async () => {
       try {
         const response = await fetch("/api/secrets/tags")
+        // SAFETY: /api/secrets/tags returns JSON that is checked as unknown before popularTags is read.
         const data = (await response.json()) as unknown
+
         if (!response.ok || cancelled) {
           return
         }
+
+        // SAFETY: data was checked to be an object before popularTags is read.
         const popular = (data as { popularTags?: unknown }).popularTags
+
         if (Array.isArray(popular)) {
           setPopularTags(popular.filter((tag): tag is string => typeof tag === "string"))
         }
@@ -80,6 +87,7 @@ export function SecretTagFilter({
         // Popular tag suggestions are optional; search still uses the full tag list.
       }
     })()
+
     return () => {
       cancelled = true
     }
@@ -88,14 +96,18 @@ export function SecretTagFilter({
   const comboboxItems = useMemo((): string[] | SecretTagGroup[] => {
     if (isSearching) {
       const query = inputValue.trim()
+
       return tags.filter((tag) => contains(tag, query))
     }
+
     if (popularTags.length > 0) {
       return [{ value: "Popular tags", items: [...popularTags] }]
     }
+
     if (tags.length > 0) {
       return [{ value: "All tags", items: [...tags] }]
     }
+
     return []
   }, [contains, inputValue, isSearching, popularTags, tags])
 
@@ -109,6 +121,7 @@ export function SecretTagFilter({
           onChange([...value].sort())
           setInputValue("")
         }}
+        // SAFETY: The tag combobox items are the flat string list or grouped SecretTagGroup entries produced by the memo.
         items={comboboxItems as string[]}
         onInputValueChange={setInputValue}
         filter={null}
@@ -167,6 +180,7 @@ export function SecretMultiSelect({
   emptyMessage?: string
 }) {
   const selected = new Set(selectedKeys)
+
   return (
     <div className="space-y-2">
       {secrets.length === 0 ? (
@@ -183,11 +197,13 @@ export function SecretMultiSelect({
               checked={selected.has(secret.key)}
               onChange={(event) => {
                 const next = new Set(selected)
+
                 if (event.target.checked) {
                   next.add(secret.key)
                 } else {
                   next.delete(secret.key)
                 }
+
                 onChange(Array.from(next).sort())
               }}
             />

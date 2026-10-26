@@ -9,6 +9,7 @@ import type { SessionRepository } from "./repository"
 import type { EventRow, MessageRow, SessionRow } from "./types"
 
 export const OKTA_RECONNECT_RESUME_REASON = "okta_reconnect"
+
 export type ResumeReason = typeof OKTA_RECONNECT_RESUME_REASON
 
 const MAX_EVENT_TEXT_LENGTH = 8_000
@@ -48,10 +49,22 @@ export function isResumeStartedEvent(value: unknown): value is ResumeStartedEven
     Boolean(value) &&
     typeof value === "object" &&
     !Array.isArray(value) &&
-    (value as { type?: unknown }).type === "resume_started" &&
-    typeof (value as { messageId?: unknown }).messageId === "string" &&
-    typeof (value as { resumedFromMessageId?: unknown }).resumedFromMessageId === "string" &&
-    (value as { reason?: unknown }).reason === OKTA_RECONNECT_RESUME_REASON
+    /* SAFETY: value has the { type?: unknown } shape established by the check or writer around this read. */ (
+      value as { type?: unknown }
+    ).type === "resume_started" &&
+    typeof (
+      /* SAFETY: value has the { messageId?: unknown } shape established by the check or writer around this read. */ (
+        value as { messageId?: unknown }
+      ).messageId
+    ) === "string" &&
+    typeof (
+      /* SAFETY: value has the { resumedFromMessageId?: unknown } shape established by the check or writer around this read. */ (
+        value as { resumedFromMessageId?: unknown }
+      ).resumedFromMessageId
+    ) === "string" &&
+    /* SAFETY: value has the { reason?: unknown } shape established by the check or writer around this read. */ (
+      value as { reason?: unknown }
+    ).reason === OKTA_RECONNECT_RESUME_REASON
   )
 }
 
@@ -135,6 +148,7 @@ function latestAssistantText(events: readonly SandboxEvent[]): Option.Option<str
     .filter((event): event is Extract<SandboxEvent, { type: "token" }> => event.type === "token")
     .sort((left, right) => left.timestamp - right.timestamp)
     .at(-1)
+
   return Option.fromNullishOr(latestToken?.content?.trim()).pipe(Option.filter(Boolean))
 }
 
@@ -166,11 +180,13 @@ function formatToolCall(
   toolResults: Map<string, Extract<SandboxEvent, { type: "tool_result" }>>,
 ): string {
   const args = stringifyToolArgs(call.args)
+
   const header = [
     `Tool call ${index + 1}: ${call.tool}`,
     `callId: ${call.callId}`,
     `args:\n${truncateText(args, MAX_EVENT_TEXT_LENGTH)}`,
   ]
+
   return [...header, ...toolResultStatusLines(toolResults.get(call.callId))].join("\n")
 }
 
@@ -178,13 +194,16 @@ function formatToolEvidence(events: readonly SandboxEvent[]): string {
   const toolCalls = events.filter(
     (event): event is Extract<SandboxEvent, { type: "tool_call" }> => event.type === "tool_call",
   )
+
   const toolResults = new Map(
-    events
-      .filter(
-        (event): event is Extract<SandboxEvent, { type: "tool_result" }> =>
-          event.type === "tool_result",
-      )
-      .map((event) => [event.callId, event]),
+    events.flatMap((event) =>
+      Match.value(event).pipe(
+        Match.when({ type: "tool_result" }, (toolResult) => [
+          [toolResult.callId, toolResult] as const,
+        ]),
+        Match.orElse(() => []),
+      ),
+    ),
   )
 
   return Match.value(toolCalls.length === 0).pipe(
@@ -200,6 +219,7 @@ export function buildOktaReconnectResumePrompt(target: ResumeTarget): string {
     onNone: () => "No assistant text was emitted before the failure.",
     onSome: (text) => truncateText(text, MAX_EVENT_TEXT_LENGTH),
   })
+
   const toolEvidence = formatToolEvidence(target.events)
 
   return [
@@ -237,7 +257,7 @@ function getSandboxEventsForMessage(
   repository: SessionRepository,
   messageId: string,
 ): SandboxEvent[] {
-  return Arr.getSomes(
+  return /* SAFETY: Arr.getSomes( repository.events.listEventsForMessage(messageId).map(parseSandboxEventRow), ) contains only SandboxEvent[] values established by the surrounding filter or writer. */ Arr.getSomes(
     repository.events.listEventsForMessage(messageId).map(parseSandboxEventRow),
   ) as SandboxEvent[]
 }
@@ -283,6 +303,7 @@ function findExistingResumeForMessage(
     (event): event is ResumeStartedEvent =>
       isResumeStartedEvent(event) && event.resumedFromMessageId === resumedFromMessageId,
   )
+
   const message = Arr.head(
     Arr.getSomes(
       candidates.map((event) =>
@@ -292,6 +313,7 @@ function findExistingResumeForMessage(
       ),
     ),
   )
+
   return Option.map(message, (resolved) => ({ messageId: resolved.id, status: resolved.status }))
 }
 
@@ -329,6 +351,7 @@ function startResume(input: ResumePromptRequestInput, target: ResumeTarget): Res
     sandboxId: Option.getOrNull(input.repository.getSandbox())?.sandbox_id ?? input.getSessionId(),
     timestamp: now / 1000,
   }
+
   input.repository.events.createEvent({
     id: generateId(),
     type: "resume_started",
@@ -406,10 +429,12 @@ function resolveResumeResponse(input: ResumePromptRequestInput, messageId?: stri
 export async function handleResumePromptRequest(
   input: ResumePromptRequestInput,
 ): Promise<Response> {
-  const body = (await input.request.json()) as {
-    messageId?: string
-    reason?: unknown
-  }
+  const body =
+    /* SAFETY: The JSON body is the { messageId?: string reason?: unknown } shape read by this caller after the response arrives. */ (await input.request.json()) as {
+      messageId?: string
+      reason?: unknown
+    }
+
   return Match.value(isResumeReason(body.reason)).pipe(
     Match.when(false, () => Response.json({ error: "Unsupported resume reason" }, { status: 400 })),
     Match.orElse(() => resolveResumeResponse(input, body.messageId)),

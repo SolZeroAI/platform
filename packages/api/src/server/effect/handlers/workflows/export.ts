@@ -9,10 +9,12 @@ export function exportWorkflow({ params }: { params: { id: string } }) {
     Effect.fn("workflows.export")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, params.id)
       const manifest = yield* readWorkflowManifest(context.env, workflow.manifest_key)
+
       const yaml = serializeWorkflowExport({
         manifest: { ...manifest, name: workflow.name },
         sourceManifestVersion: workflow.manifest_version,
       })
+
       return new Response(yaml, {
         headers: {
           "Content-Type": "text/yaml; charset=utf-8",

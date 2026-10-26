@@ -61,7 +61,14 @@ function getBoolean(value: unknown): Option.Option<boolean> {
 
 function requireObjectRecord(value: unknown, message: string): Record<string, unknown> {
   return Match.value(isObjectRecord(value)).pipe(
-    Match.when(true, () => value as Record<string, unknown>),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: value was checked to be a non-array object before it is read as Record<string, unknown>. */ value as Record<
+          string,
+          unknown
+        >,
+    ),
     Match.orElse(() => {
       throw new Error(message)
     }),
@@ -86,16 +93,19 @@ function renderHeaders(
   label: string,
 ): Record<string, string> {
   const headers = getJsonRecord(value, label)
+
   return Object.fromEntries(
     Arr.filterMap(Object.entries(headers), ([key, headerValue]) =>
       Match.value(headerValue).pipe(
         Match.when(Match.null, () => Result.failVoid),
         Match.when(Match.undefined, () => Result.failVoid),
         Match.orElse((resolved) =>
-          Result.succeed([key, renderTemplate(stringifyTemplateValue(resolved), context)] as [
-            string,
-            string,
-          ]),
+          Result.succeed(
+            /* SAFETY: [key, renderTemplate(stringifyTemplateValue(resolved), context)] has the [ string, string, ] shape established by the check or writer around this read. */ [
+              key,
+              renderTemplate(stringifyTemplateValue(resolved), context),
+            ] as [string, string],
+          ),
         ),
       ),
     ),
@@ -112,6 +122,7 @@ function buildRedactedUrl(parsed: URL): string {
     redactedParams.set(key, "redacted")
   })
   parsed.search = redactedParams.toString()
+
   return parsed.toString()
 }
 
@@ -126,6 +137,7 @@ function sanitizeParsedUrl(url: string): string {
   const parsed = new URL(url)
   parsed.username = ""
   parsed.password = ""
+
   return redactSearchParams(parsed)
 }
 
@@ -144,6 +156,7 @@ function getHeaderNames(headers: Record<string, string>): string {
 
 function getHeaderValue(headers: Record<string, string>, name: string): Option.Option<string> {
   const lowerName = name.toLowerCase()
+
   return Arr.findFirst(Object.entries(headers), ([key]) => key.toLowerCase() === lowerName).pipe(
     Option.map(([, headerValue]) => headerValue),
   )
@@ -173,12 +186,14 @@ function hasConfiguredBody(value: unknown): boolean {
 
 function looksLikeJsonDocument(value: string): boolean {
   const trimmed = value.trim()
+
   return trimmed.startsWith("{") || trimmed.startsWith("[")
 }
 
 function renderJsonRequestBody(value: string, context: Record<string, unknown>): string {
   const rendered = renderJsonTemplate(value, context)
   parseJson(rendered)
+
   return rendered
 }
 
@@ -267,6 +282,7 @@ const failHttpFetch = Effect.fn("workflows.failHttpFetch")(function* (params: {
     message: `${params.input.node.label} HTTP request failed before response`,
     data: { request: params.requestLog, durationMs, error: message },
   })
+
   return yield* Effect.fail(toError(params.error))
 })
 
@@ -297,6 +313,7 @@ const failHttpJsonInvalid = Effect.fn("workflows.failHttpJsonInvalid")(function*
       error: describeError(params.error),
     },
   })
+
   return yield* workflowNodeFail("Response body was not valid JSON")
 })
 
@@ -322,6 +339,7 @@ const failHttpStatus = Effect.fn("workflows.failHttpStatus")(function* (params: 
     message: `HTTP request failed with status ${params.status}`,
     data: { request: params.requestLog, response: params.responseLog },
   })
+
   return yield* workflowNodeFail(`HTTP request failed with status ${params.status}`)
 })
 
@@ -333,6 +351,7 @@ const resolveJsonBody = Effect.fn("workflows.resolveHttpJsonBody")(function* (pa
   responseLog: ResponseLog
 }) {
   const parsed = tryParseResponseBody(params.text, params.responseType)
+
   return yield* Match.value(parsed).pipe(
     Match.when({ ok: false }, (failure) =>
       failHttpJsonInvalid({
@@ -353,10 +372,12 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
 ) {
   const options = input.node.options ?? {}
   const context = createNodeContext(input)
+
   const urlTemplate = yield* requireString(
     Option.orElse(getString(input.inputs.url), () => getString(options.url)),
     "Request URL is required",
   )
+
   const url = renderTemplate(urlTemplate, context)
   yield* workflowNodeFailWhen(
     !url.startsWith("http://") && !url.startsWith("https://"),
@@ -367,17 +388,21 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
     Option.orElse(getString(input.inputs.method), () => getString(options.method)),
     () => "GET",
   ).toUpperCase()
+
   yield* workflowNodeFailWhen(
     !workflowHttpMethods.has(method),
     `Unsupported request method '${method}'`,
   )
 
   const optionHeaders = renderHeaders(options.headers, context, "Request headers")
+
   const inputHeaders = Match.value("headers" in input.inputs).pipe(
     Match.when(true, () => renderHeaders(input.inputs.headers, context, "Request input headers")),
     Match.orElse(() => ({})),
   )
+
   const baseHeaders = { ...optionHeaders, ...inputHeaders }
+
   const bodyValue = Match.value(hasConfiguredBody(options.body)).pipe(
     Match.when(true, () => options.body),
     Match.orElse(() =>
@@ -387,12 +412,20 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
       ),
     ),
   )
+
   const canHaveBody = method !== "GET" && method !== "HEAD"
+
   const body = Match.value(bodyValue === null || bodyValue === undefined || !canHaveBody).pipe(
     Match.when(true, () => undefined),
     Match.orElse(() =>
       Match.value(typeof bodyValue === "string").pipe(
-        Match.when(true, () => renderRequestBodyString(bodyValue as string, context, baseHeaders)),
+        Match.when(true, () =>
+          renderRequestBodyString(
+            /* SAFETY: The preceding check established that bodyValue is string. */ bodyValue as string,
+            context,
+            baseHeaders,
+          ),
+        ),
         Match.orElse(() =>
           // oxlint-disable-next-line effect/avoid-direct-json -- Serializes a non-string request body as 2-space pretty-printed JSON sent on the wire; the sanctioned `stringifyJson` helper is compact and would change the outbound request payload bytes.
           JSON.stringify(bodyValue, null, 2),
@@ -400,10 +433,12 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
       ),
     ),
   )
+
   const needsJsonContentType =
     body !== undefined &&
     typeof bodyValue !== "string" &&
     !Object.keys(baseHeaders).some((key) => key.toLowerCase() === "content-type")
+
   const headers = Match.value(needsJsonContentType).pipe(
     Match.when(true, () => ({ ...baseHeaders, "Content-Type": "application/json" })),
     Match.orElse(() => baseHeaders),
@@ -414,10 +449,12 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
       getPositiveInteger(options.timeoutMs),
     ),
   )
+
   const responseType = Option.getOrElse(
     Option.orElse(getString(input.inputs.responseType), () => getString(options.responseType)),
     () => "auto",
   )
+
   yield* workflowNodeFailWhen(
     !workflowResponseTypes.has(responseType),
     `Unsupported response type '${responseType}'`,
@@ -425,6 +462,7 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
 
   const failOnHttpError = Option.getOrElse(getBoolean(options.failOnHttpError), () => false)
   const requestStartedAt = Date.now()
+
   const requestLog: RequestLog = {
     method,
     url: sanitizeUrlForLog(url),
@@ -435,6 +473,7 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
     responseType,
     failOnHttpError,
   }
+
   yield* Effect.logInfo("workflowHttpRequestStarted").pipe(
     Effect.annotateLogs({
       workflowId: input.workflowId,
@@ -454,6 +493,7 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
     onNone: () => undefined,
     onSome: (ms) => AbortSignal.timeout(ms),
   })
+
   const response = yield* Effect.tryPromise({
     try: () =>
       // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (user-authored workflow request) inside a workflow node executor; native fetch is required at this external API edge.
@@ -462,11 +502,14 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
   }).pipe(Effect.catch((error) => failHttpFetch({ input, requestLog, requestStartedAt, error })))
 
   const responseHeaders = headersToRecord(response.headers)
+
   const text = yield* Effect.tryPromise({
     try: () => response.text(),
     catch: toError,
   })
+
   const contentType = response.headers.get("content-type") ?? ""
+
   const responseLog: ResponseLog = {
     status: response.status,
     statusText: response.statusText,
@@ -476,12 +519,12 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
     bodyBytes: getContentLength(text),
     durationMs: Date.now() - requestStartedAt,
   }
+
   const shouldParseJson =
     responseType === "json" || (responseType === "auto" && contentType.includes("json"))
+
   const parsedBody = yield* Match.value(shouldParseJson).pipe(
-    Match.when(false, () =>
-      Effect.succeed({ jsonBody: null as unknown, responseBody: text as unknown }),
-    ),
+    Match.when(false, () => Effect.succeed({ jsonBody: null, responseBody: text })),
     Match.orElse(() => resolveJsonBody({ input, text, responseType, requestLog, responseLog })),
   )
 

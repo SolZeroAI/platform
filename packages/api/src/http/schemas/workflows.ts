@@ -5,12 +5,14 @@ import { JsonRecord, JsonValue } from "./common"
 export const WorkflowIdParams = {
   id: Schema.String,
 }
+
 export type WorkflowIdParams = { id: string }
 
 export const WorkflowRunParams = {
   id: Schema.String,
   runId: Schema.String,
 }
+
 export type WorkflowRunParams = { id: string; runId: string }
 
 export const WorkflowRunArtifactParams = {
@@ -18,11 +20,13 @@ export const WorkflowRunArtifactParams = {
   runId: Schema.String,
   nodeId: Schema.String,
 }
+
 export type WorkflowRunArtifactParams = { id: string; runId: string; nodeId: string }
 
 export const WorkflowRunsStreamQuery = {
   runId: Schema.optionalKey(Schema.String),
 }
+
 export type WorkflowRunsStreamQuery = {
   runId?: string
 }
@@ -36,6 +40,7 @@ export const WorkflowRunListQuery = {
   status: Schema.optionalKey(Schema.String),
   triggerKind: Schema.optionalKey(Schema.String),
 }
+
 export type WorkflowRunListQuery = {
   limit?: string
   offset?: string
@@ -49,6 +54,7 @@ export type WorkflowRunListQuery = {
 export const WorkflowBuilderDraftQuery = {
   sessionId: Schema.String,
 }
+
 export type WorkflowBuilderDraftQuery = {
   sessionId: string
 }
@@ -67,6 +73,7 @@ export const WorkflowListQuery = {
   sortDir: Schema.optionalKey(Schema.String),
   status: Schema.optionalKey(Schema.String),
 }
+
 export type WorkflowListQuery = {
   limit?: string
   offset?: string
@@ -90,16 +97,19 @@ export const UpsertWorkflowPayload = Schema.Struct({
   name: Schema.String,
   manifest: Schema.Unknown,
 })
+
 export type UpsertWorkflowPayload = typeof UpsertWorkflowPayload.Type
 
 export const UpdateWorkflowNamePayload = Schema.Struct({
   name: Schema.String,
 })
+
 export type UpdateWorkflowNamePayload = typeof UpdateWorkflowNamePayload.Type
 
 export const RunWorkflowPayload = Schema.Struct({
   trigger: Schema.optionalKey(Schema.Unknown),
 })
+
 export type RunWorkflowPayload = typeof RunWorkflowPayload.Type
 
 export const WorkflowApprovalPayload = Schema.Struct({
@@ -107,12 +117,14 @@ export const WorkflowApprovalPayload = Schema.Struct({
   approved: Schema.Boolean,
   comment: Schema.optionalKey(Schema.String),
 })
+
 export type WorkflowApprovalPayload = typeof WorkflowApprovalPayload.Type
 
 export const WorkflowSlackAppCredentialsPayload = Schema.Struct({
   signingSecret: Schema.optionalKey(Schema.String),
   botToken: Schema.optionalKey(Schema.String),
 })
+
 export type WorkflowSlackAppCredentialsPayload = typeof WorkflowSlackAppCredentialsPayload.Type
 
 export class WorkflowResponse extends Schema.Class<WorkflowResponse>("WorkflowResponse")({

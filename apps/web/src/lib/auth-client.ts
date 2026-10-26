@@ -10,6 +10,7 @@ export type { AppSession } from "@/lib/auth-session-state"
 export const authClient = createAuthClient()
 
 const InitialAuthSessionContext = createContext<AppSession | null | undefined>(undefined)
+
 const AuthProviderConfigContext = createContext<PublicAuthProviderRegistry>({
   defaultSignInProviderId: "",
   providers: [],
@@ -44,6 +45,7 @@ export function useAuthSession() {
   const initialSession = useContext(InitialAuthSessionContext)
   const initialSessionLoaded = initialSession !== undefined
   const { data, error, isPending, isRefetching, refetch } = authClient.useSession()
+
   const sessionData = useMemo(
     () =>
       resolveAppSession({

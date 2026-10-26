@@ -1,4 +1,5 @@
 import { Banner } from "@cloudflare/kumo/components/banner"
+import * as Match from "effect/Match"
 import { Breadcrumbs } from "@cloudflare/kumo/components/breadcrumbs"
 import { Tabs } from "@cloudflare/kumo/components/tabs"
 import { useNavigate } from "@tanstack/react-router"
@@ -81,6 +82,7 @@ export function AdminContent({
         search: (previous) => {
           const normalizedPrevious = normalizeAdminSearch(previous, view)
           const patch = typeof input === "function" ? input(normalizedPrevious) : input
+
           return compactAdminSearch({ ...normalizedPrevious, ...patch, view })
         },
       })
@@ -95,6 +97,7 @@ export function AdminContent({
     search: normalizedSearch,
     updateSearch,
   })
+
   const {
     actionBusy,
     aiSearch,
@@ -140,6 +143,7 @@ export function AdminContent({
     if (!error) {
       return
     }
+
     showErrorToast(error)
   }, [error])
 
@@ -147,6 +151,7 @@ export function AdminContent({
     if (!notice) {
       return
     }
+
     appToastManager.add({
       title: notice,
       timeout: 5000,
@@ -162,6 +167,7 @@ export function AdminContent({
 
     keepDocumentScrollPinned()
     window.addEventListener("scroll", keepDocumentScrollPinned)
+
     return () => {
       window.removeEventListener("scroll", keepDocumentScrollPinned)
     }
@@ -213,68 +219,77 @@ export function AdminContent({
                 : "w-full"
             }
           >
-            {activeView === "ai-search" ? (
-              <AdminAiSearchPanel
-                data={aiSearch}
-                loading={loading}
-                busy={actionBusy}
-                onExport={exportAiSearchConfig}
-                onSaveSource={saveAiSearchSource}
-                onDeleteSource={deleteAiSearchSource}
-              />
-            ) : activeView === "integrations" ? (
-              normalizedSearch.integrationTab === "skills" ? (
-                <AdminAgentSkillsPanel onHeaderActionsChange={setIntegrationHeaderActions} />
-              ) : normalizedSearch.integrationTab === "mcps" ? (
-                <McpcfAdminPanel
-                  data={mcpcf}
+            {Match.value(activeView).pipe(
+              Match.when("ai-search", () => (
+                <AdminAiSearchPanel
+                  data={aiSearch}
                   loading={loading}
                   busy={actionBusy}
-                  onSave={saveMcpcfConfig}
-                  onRefresh={() => void refreshMcpcf()}
-                  onReset={resetMcpcfConfig}
-                  onExport={exportMcpcfConfig}
-                  onHeaderActionsChange={setIntegrationHeaderActions}
+                  onExport={exportAiSearchConfig}
+                  onSaveSource={saveAiSearchSource}
+                  onDeleteSource={deleteAiSearchSource}
                 />
-              ) : (
-                <AdminAiProviderPanel
-                  data={aiProviders}
+              )),
+              Match.when("integrations", () =>
+                Match.value(normalizedSearch.integrationTab).pipe(
+                  Match.when("skills", () => (
+                    <AdminAgentSkillsPanel onHeaderActionsChange={setIntegrationHeaderActions} />
+                  )),
+                  Match.when("mcps", () => (
+                    <McpcfAdminPanel
+                      data={mcpcf}
+                      loading={loading}
+                      busy={actionBusy}
+                      onSave={saveMcpcfConfig}
+                      onRefresh={() => void refreshMcpcf()}
+                      onReset={resetMcpcfConfig}
+                      onExport={exportMcpcfConfig}
+                      onHeaderActionsChange={setIntegrationHeaderActions}
+                    />
+                  )),
+                  Match.orElse(() => (
+                    <AdminAiProviderPanel
+                      data={aiProviders}
+                      loading={loading}
+                      busy={actionBusy}
+                      onSave={saveLitellmConfig}
+                      onSaveCloudflareKeys={saveCloudflareAiGatewayProviderKeys}
+                      onSync={() => void syncLitellmModels()}
+                      onReset={resetLitellmConfig}
+                      onExport={exportLitellmConfig}
+                      onHeaderActionsChange={setIntegrationHeaderActions}
+                    />
+                  )),
+                ),
+              ),
+              Match.when("sessions", () => (
+                <SessionsTable
+                  sessions={sessions}
+                  total={sessionTotal}
+                  state={sessionTableState}
                   loading={loading}
                   busy={actionBusy}
-                  onSave={saveLitellmConfig}
-                  onSaveCloudflareKeys={saveCloudflareAiGatewayProviderKeys}
-                  onSync={() => void syncLitellmModels()}
-                  onReset={resetLitellmConfig}
-                  onExport={exportLitellmConfig}
-                  onHeaderActionsChange={setIntegrationHeaderActions}
+                  onStateChange={(patch) =>
+                    updateSearch((previous) => sessionSearchPatch(previous, patch))
+                  }
+                  onView={viewSession}
+                  onAction={executeSessionAction}
                 />
-              )
-            ) : activeView === "sessions" ? (
-              <SessionsTable
-                sessions={sessions}
-                total={sessionTotal}
-                state={sessionTableState}
-                loading={loading}
-                busy={actionBusy}
-                onStateChange={(patch) =>
-                  updateSearch((previous) => sessionSearchPatch(previous, patch))
-                }
-                onView={viewSession}
-                onAction={executeSessionAction}
-              />
-            ) : (
-              <WorkflowsTable
-                workflows={workflows}
-                total={workflowTotal}
-                state={workflowTableState}
-                loading={loading}
-                busy={actionBusy}
-                onStateChange={(patch) =>
-                  updateSearch((previous) => workflowSearchPatch(previous, patch))
-                }
-                onViewRuns={viewWorkflowRuns}
-                onAction={executeWorkflowAction}
-              />
+              )),
+              Match.orElse(() => (
+                <WorkflowsTable
+                  workflows={workflows}
+                  total={workflowTotal}
+                  state={workflowTableState}
+                  loading={loading}
+                  busy={actionBusy}
+                  onStateChange={(patch) =>
+                    updateSearch((previous) => workflowSearchPatch(previous, patch))
+                  }
+                  onViewRuns={viewWorkflowRuns}
+                  onAction={executeWorkflowAction}
+                />
+              )),
             )}
           </div>
         </section>

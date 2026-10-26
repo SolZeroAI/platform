@@ -26,6 +26,7 @@ export type OpenApiObjectContract = {
 
 function toContract(schema: typeof OpenApiObjectSchema.Type): OpenApiObjectContract {
   const properties = schema.properties ?? {}
+
   return {
     required: schema.required ?? [],
     hasProperty(name) {
@@ -33,6 +34,7 @@ function toContract(schema: typeof OpenApiObjectSchema.Type): OpenApiObjectContr
     },
     propertyHasDefault(name) {
       const property = properties[name]
+
       return property !== undefined && Object.hasOwn(property, "default")
     },
   }
@@ -42,12 +44,16 @@ export function resolveOpenApiSchema(document: unknown, schema: unknown): OpenAp
   const parsedDocument = Schema.decodeUnknownSync(OpenApiDocument)(document)
   const parsedSchema = Schema.decodeUnknownSync(OpenApiObjectSchema)(schema)
   const refName = parsedSchema.$ref?.split("/").pop()
+
   if (refName === undefined) {
     return toContract(parsedSchema)
   }
+
   const resolved = parsedDocument.components?.schemas?.[refName]
+
   if (resolved === undefined) {
     throw new Error(`OpenAPI schema ${refName} is missing`)
   }
+
   return toContract(resolved)
 }

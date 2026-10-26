@@ -1,4 +1,5 @@
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the public webhook composition edge.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -7,9 +8,17 @@ import type { Env } from "../types"
 import { WorkflowLifecycle } from "./lifecycle"
 import type { WorkflowTriggerPayload } from "./runner"
 import { handleWorkflowSlackAppRequest } from "./slack-public-router"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+
+type WebhookWorkflowDecision = Data.TaggedEnum<{
+  reject: { readonly response: Response }
+  accept: { readonly workflow: WorkflowRecord }
+}>
+
+const WebhookWorkflowDecision = Data.taggedEnum<WebhookWorkflowDecision>()
 
 const WEBHOOK_PATTERN = /^\/workflows\/webhooks\/(?<webhookId>[^/]+)$/
 
@@ -41,18 +50,25 @@ function appendQueryValue(
   )
 }
 
+function assignQueryEntry(
+  result: Record<string, string | string[]>,
+  entry: readonly [string, string],
+): Record<string, string | string[]> {
+  const [key, value] = entry
+  result[key] = appendQueryValue(result[key], value)
+
+  return result
+}
+
 function queryToRecord(searchParams: URLSearchParams): Record<string, string | string[]> {
-  return Array.from(searchParams.entries()).reduce<Record<string, string | string[]>>(
-    (result, [key, value]) => ({
-      ...result,
-      [key]: appendQueryValue(result[key], value),
-    }),
-    {},
-  )
+  let result: Record<string, string | string[]> = {}
+
+  return Array.from(searchParams.entries()).reduce(assignQueryEntry, result)
 }
 
 function readWebhookBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? ""
+
   return Match.value(contentType.includes("application/json")).pipe(
     Match.when(true, () =>
       Effect.tryPromise({
@@ -70,7 +86,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function recordKeyCount(value: unknown): number {
   return Match.value(isRecord(value)).pipe(
-    Match.when(true, () => Object.keys(value as Record<string, unknown>).length),
+    Match.when(
+      true,
+      () =>
+        Object.keys(
+          /* SAFETY: value was checked to be a non-array object before it is read as Record<string, unknown>. */ value as Record<
+            string,
+            unknown
+          >,
+        ).length,
+    ),
     Match.orElse(() => 0),
   )
 }
@@ -88,10 +113,6 @@ type WorkflowPublicRequestOptions = {
   log?: RequestLogger
 }
 
-type WebhookWorkflowDecision =
-  | { _tag: "reject"; response: Response }
-  | { _tag: "accept"; workflow: WorkflowRecord }
-
 function logRejectedWebhook(
   options: WorkflowPublicRequestOptions,
   webhookId: string,
@@ -102,6 +123,7 @@ function logRejectedWebhook(
     workflowFound: Boolean(workflow),
     workflowStatus: workflow?.status ?? null,
   })
+
   return null
 }
 
@@ -111,10 +133,10 @@ function rejectWebhookDecision(
   workflow: WorkflowRecord | null,
 ): WebhookWorkflowDecision {
   logRejectedWebhook(options, webhookId, workflow)
-  return {
-    _tag: "reject",
+
+  return WebhookWorkflowDecision.reject({
     response: json({ error: "Workflow webhook not found" }, 404),
-  }
+  })
 }
 
 function resolveWebhookWorkflowDecision(
@@ -126,10 +148,7 @@ function resolveWebhookWorkflowDecision(
     Option.filter(Option.fromNullishOr(workflow), (candidate) => candidate.status === "active"),
     {
       onNone: () => rejectWebhookDecision(options, webhookId, workflow),
-      onSome: (activeWorkflow) => ({
-        _tag: "accept",
-        workflow: activeWorkflow,
-      }),
+      onSome: (activeWorkflow) => WebhookWorkflowDecision.accept({ workflow: activeWorkflow }),
     },
   )
 }
@@ -159,6 +178,7 @@ const continueAfterSlackRouter = Effect.fn("workflows.handleWebhookPublicRequest
     try: () => handleWorkflowSlackAppRequest(request, env, options),
     catch: toError,
   })
+
   return yield* Option.match(Option.fromNullishOr(slackResponse), {
     onNone: () => handleWebhookPublicRequest(request, env, options),
     onSome: Effect.succeed,
@@ -172,15 +192,18 @@ const handleWebhookPublicRequest = Effect.fn("workflows.handleWebhookPublicReque
 ) {
   const url = new URL(request.url)
   const match = url.pathname.match(WEBHOOK_PATTERN)
+
   const webhookId = yield* Option.match(Option.fromNullishOr(match?.groups?.webhookId), {
     onNone: () => Effect.succeed(null),
     onSome: Effect.succeed,
   })
+
   const response = yield* Option.match(Option.fromNullishOr(webhookId), {
     onNone: () => Effect.succeed(null),
     onSome: (resolvedWebhookId) =>
       runWebhookPublicRequest(request, env, options, url, resolvedWebhookId),
   })
+
   return response
 })
 
@@ -194,11 +217,14 @@ const runWebhookPublicRequest = Effect.fn("workflows.runWebhookPublicRequest")(f
   options.setRouteBranch?.("workflow-public")
 
   const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(env))
+
   const workflow = yield* Effect.tryPromise({
     try: () => store.getWorkflowByWebhookId(webhookId),
     catch: toError,
   })
+
   const decision = resolveWebhookWorkflowDecision(options, webhookId, workflow)
+
   const response = yield* runWebhookWorkflowDecision(
     decision,
     request,
@@ -207,6 +233,7 @@ const runWebhookPublicRequest = Effect.fn("workflows.runWebhookPublicRequest")(f
     url,
     webhookId,
   )
+
   return response
 })
 
@@ -219,9 +246,11 @@ const acceptWebhookPublicRequest = Effect.fn("workflows.acceptWebhookPublicReque
   workflow: WorkflowRecord,
 ) {
   const userId = workflow.user_id
+
   const oktaUserId = yield* resolveOktaUserId(env, workflow.user_id).pipe(
     Effect.orElseSucceed(() => null),
   )
+
   options.setUserIdentity?.({ userId, oktaUserId })
   options.log?.set({
     workflowId: workflow.id,
@@ -237,6 +266,7 @@ const acceptWebhookPublicRequest = Effect.fn("workflows.acceptWebhookPublicReque
       query: queryToRecord(url.searchParams),
     },
   }
+
   const payload = trigger.payload ?? {}
   options.log?.info("workflowWebhookAccepted", {
     workflowId: workflow.id,
@@ -248,6 +278,7 @@ const acceptWebhookPublicRequest = Effect.fn("workflows.acceptWebhookPublicReque
     queryKeyCount: recordKeyCount(payload.query),
     hasOktaUserId: Boolean(oktaUserId),
   })
+
   const run = yield* new WorkflowLifecycle(env).startWorkflowRun({
     workflow,
     trigger,
@@ -255,6 +286,7 @@ const acceptWebhookPublicRequest = Effect.fn("workflows.acceptWebhookPublicReque
     oktaUserId,
     log: options.log,
   })
+
   options.log?.info("workflowWebhookRunStarted", {
     workflowId: workflow.id,
     webhookId,
@@ -263,6 +295,7 @@ const acceptWebhookPublicRequest = Effect.fn("workflows.acceptWebhookPublicReque
     workflowInstanceId: run.workflow_instance_id,
     runStatus: run.status,
   })
+
   return json(
     {
       runId: run.id,

@@ -25,6 +25,7 @@ const AGENT_DEFAULTS_TOC_ITEMS = [
 function serializeAgentDefaultsFormState(stepLimit: string): string {
   let normalizedStepLimit: string
   const parsedStepLimit = Number(stepLimit)
+
   if (Number.isFinite(parsedStepLimit)) {
     normalizedStepLimit = String(normalizeIsolateStepLimit(parsedStepLimit))
   } else {
@@ -87,6 +88,7 @@ export function AgentDefaultsSettings({
     if (!savedFormState) {
       return false
     }
+
     return serializeAgentDefaultsFormState(stepLimit) !== savedFormState
   }, [savedFormState, stepLimit])
 
@@ -99,10 +101,12 @@ export function AgentDefaultsSettings({
   const persistedStepLimit = settings
     ? String(normalizeIsolateStepLimit(settings.defaultIsolateStepLimit))
     : null
+
   useEffect(() => {
     if (persistedStepLimit === null) {
       return
     }
+
     // A background refresh can publish a new settings object without changing this saved value.
     const nextStepLimit = persistedStepLimit
     setStepLimit(nextStepLimit)
@@ -116,6 +120,7 @@ export function AgentDefaultsSettings({
     setSaveSuccess(null)
 
     const parsedStepLimit = Number(stepLimit)
+
     if (
       !Number.isFinite(parsedStepLimit) ||
       parsedStepLimit < MIN_ISOLATE_STEP_LIMIT ||
@@ -124,14 +129,18 @@ export function AgentDefaultsSettings({
       setSaveError(
         `Default step call limit must be between ${MIN_ISOLATE_STEP_LIMIT} and ${MAX_ISOLATE_STEP_LIMIT}`,
       )
+
       return false
     }
+
     if (!catalog || !settings) {
       return false
     }
+
     const sharedProvidersById = new Map(
       catalog.providers.map((provider) => [provider.providerId, provider] as const),
     )
+
     const payload: ProviderSettingsUpdatePayload = {
       defaultModel: settings.defaultModel,
       defaultIsolateStepLimit: normalizeIsolateStepLimit(parsedStepLimit),
@@ -142,21 +151,33 @@ export function AgentDefaultsSettings({
           sharedProvidersById.get(override.providerId)?.name ??
           override.providerId,
       })),
-      customProviders: settings.customProviders.map((provider) => ({
-        providerId: provider.providerId,
-        name: provider.name,
-        ...(provider.npm ? { npm: provider.npm } : {}),
-        ...(provider.options ? { options: provider.options } : {}),
-        models: provider.models,
-      })),
+      customProviders: settings.customProviders.map((provider) => {
+        const update: ProviderSettingsUpdatePayload["customProviders"][number] = {
+          providerId: provider.providerId,
+          name: provider.name,
+          models: provider.models,
+        }
+
+        if (provider.npm) {
+          update.npm = provider.npm
+        }
+
+        if (provider.options) {
+          update.options = provider.options
+        }
+
+        return update
+      }),
     }
 
     try {
       await save(payload)
       setSaveSuccess("Agent defaults updated")
+
       return true
     } catch (errorValue) {
       setSaveError(errorValue instanceof Error ? errorValue.message : String(errorValue))
+
       return false
     }
   }, [catalog, save, settings, stepLimit])
@@ -167,8 +188,10 @@ export function AgentDefaultsSettings({
     }
 
     setSavingBeforeNavigation(true)
+
     try {
       const saved = await handleSave()
+
       if (saved) {
         navigationBlocker.proceed()
       }

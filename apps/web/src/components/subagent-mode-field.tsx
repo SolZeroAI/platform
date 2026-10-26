@@ -10,6 +10,7 @@ export function SubagentModeField({
   onChange: (value: SubagentMode) => void
 }) {
   const portalContainer = useRef<HTMLDivElement>(null)
+
   return (
     <div ref={portalContainer} className="relative z-10">
       <Select

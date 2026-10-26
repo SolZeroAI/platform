@@ -20,6 +20,7 @@ export function list({ query }: { query: SessionsListQuery }) {
       const limit = parsePositiveInt(query.limit, 50, 100)
       const offset = parseNonNegativeInt(query.offset)
       const store = new SessionIndexStore(db)
+
       const result = yield* store.list({
         userId,
         status: query.status,
@@ -36,13 +37,16 @@ export function list({ query }: { query: SessionsListQuery }) {
         limit,
         offset,
       })
+
       const storedSessionTools = result.sessions.map((session) =>
         resolveStoredSessionTools(session.tools_json),
       )
+
       const resolvedSessionTools = yield* resolveSessionListToolAvailability(
         env,
         storedSessionTools,
       )
+
       return json(formatSessionListResponse(result, resolvedSessionTools))
     }),
   )
@@ -57,6 +61,7 @@ function parseBooleanQuery(value: string | undefined): boolean {
 
 function parsePositiveInt(value: string | undefined, fallback: number, max: number): number {
   const parsed = Number.parseInt(value ?? "", 10)
+
   return Match.value(Number.isFinite(parsed) && parsed > 0).pipe(
     Match.when(true, () => Math.min(parsed, max)),
     Match.orElse(() => fallback),
@@ -65,6 +70,7 @@ function parsePositiveInt(value: string | undefined, fallback: number, max: numb
 
 function parseNonNegativeInt(value: string | undefined): number {
   const parsed = Number.parseInt(value ?? "", 10)
+
   return Match.value(Number.isFinite(parsed) && parsed >= 0).pipe(
     Match.when(true, () => parsed),
     Match.orElse(() => 0),

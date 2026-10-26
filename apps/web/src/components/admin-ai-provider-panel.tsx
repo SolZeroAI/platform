@@ -91,14 +91,16 @@ function buildLitellmConfigPayload(input: {
   const adapterOverrides = Object.fromEntries(
     Object.entries(input.adapterOverrides).sort(([left], [right]) => left.localeCompare(right)),
   )
-  return {
+  const payload: AdminLitellmConfigPayload = {
     enabled: input.enabled,
     baseUrl: input.baseUrl,
     defaultModel: input.defaultModel || null,
     defaultReasoningLevel: input.defaultReasoningLevel || null,
     adapterOverrides,
-    ...(input.apiKey.trim() ? { apiKey: input.apiKey.trim() } : {}),
   }
+  const apiKey = input.apiKey.trim()
+  if (apiKey) Object.assign(payload, { apiKey })
+  return payload
 }
 
 function serializeLitellmConfigPayload(payload: AdminLitellmConfigPayload): string {
@@ -515,7 +517,7 @@ export function AdminAiProviderPanel({
     let animationFrame = 0
 
     const isVisibleSection = (value: string): value is TocSectionValue =>
-      sectionValues.includes(value as TocSectionValue)
+      sectionValues.some((section) => section === value)
 
     const updateFromHash = () => {
       const nextSection = window.location.hash
@@ -577,8 +579,8 @@ export function AdminAiProviderPanel({
   // TableOfContents.Group spreads props onto its <li>, so clicks from nested
   // items bubble here too. Only navigate when the group link itself was hit.
   const tocGroupClickHandler = (value: TocSectionValue) => (event: MouseEvent) => {
-    const target = event.target as HTMLElement
-    if (!target.closest('a[data-kumo-part="group-link"]')) {
+    const target = event.target
+    if (!(target instanceof Element) || !target.closest('a[data-kumo-part="group-link"]')) {
       return
     }
     event.preventDefault()
@@ -631,6 +633,7 @@ export function AdminAiProviderPanel({
                     <DropdownMenu.Trigger>
                       <Button
                         type="button"
+                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                         shape="circle"
                         variant="ghost"
                         disabled={busy !== null || loading}
@@ -932,7 +935,7 @@ function getInitialTocSection(): TocSectionValue {
 }
 
 function isTocSectionValue(value: string): value is TocSectionValue {
-  return TOC_SECTION_VALUES.includes(value as TocSectionValue)
+  return TOC_SECTION_VALUES.some((section) => section === value)
 }
 
 function buildLitellmDialogModelOptions(
@@ -956,22 +959,18 @@ function buildLitellmDialogModelOptions(
       model.defaultReasoningLevel && isReasoningEffort(model.defaultReasoningLevel)
         ? model.defaultReasoningLevel
         : undefined
-    const reasoning =
-      reasoningEfforts.length > 0
-        ? {
-            efforts: reasoningEfforts,
-            ...(defaultReasoningLevel ? { default: defaultReasoningLevel } : {}),
-          }
-        : undefined
-
-    group.models.push({
+    const reasoning: RuntimeProviderModelOption["reasoning"] =
+      reasoningEfforts.length > 0 ? { efforts: reasoningEfforts } : undefined
+    if (reasoning && defaultReasoningLevel) reasoning.default = defaultReasoningLevel
+    const modelOption: RuntimeProviderModelOption = {
       id: buildModelId(group.providerId, model.id),
       providerId: group.providerId,
       providerName: group.category,
       modelId: model.id,
       name: model.id,
-      ...(reasoning ? { reasoning } : {}),
-    })
+    }
+    if (reasoning) modelOption.reasoning = reasoning
+    group.models.push(modelOption)
   }
 
   return groups.filter((group) => group.models.length > 0)

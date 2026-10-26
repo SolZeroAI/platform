@@ -23,6 +23,7 @@ export const ProviderModelDefinition = Schema.Struct({
   reasoning: Schema.optionalKey(ModelReasoningConfig),
   provider: Schema.optionalKey(ModelProviderOverride),
 })
+
 export type ProviderModelDefinition = typeof ProviderModelDefinition.Type
 
 export const OpenCodePermissionAction = Schema.Literals(["allow", "ask", "deny"])
@@ -52,6 +53,7 @@ export const ProviderSettingsPayload = Schema.Struct({
   sharedOverrides: Schema.Array(SharedProviderOverridePayload),
   customProviders: Schema.Array(CustomProviderPayload),
 })
+
 export type ProviderSettingsPayload = typeof ProviderSettingsPayload.Type
 
 export const RuntimeModelOption = Schema.Struct({

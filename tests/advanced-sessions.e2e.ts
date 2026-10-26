@@ -7,18 +7,22 @@ test(
   { session: "admin" },
   async ({ app, browser, screen }) => {
     const title = uniqueName("e2e-incognito")
+
     const { sessionId } = await api<{ sessionId: string }>(browser, "/sessions", "POST", {
       title,
       incognito: true,
       agentRuntime: "isolate",
     })
+
     try {
       const hidden = await api<{ sessions: Array<{ id: string }> }>(browser, `/sessions?q=${title}`)
       expect(hidden.sessions).toEqual([])
+
       const visible = await api<{ sessions: Array<{ id: string }> }>(
         browser,
         `/sessions?q=${title}&includeIncognito=true`,
       )
+
       expect(visible.sessions.map((item) => item.id)).toContain(sessionId)
       await app.open(`/session/${sessionId}`)
       await expect(screen.getByText(title, { exact: true }).first()).toBeVisible()
@@ -38,6 +42,7 @@ test(
       remote: { type: "remote", url: "http://localhost:4319/mcp", enabled: false },
       local: { type: "local", command: ["node", "--version"], enabled: false },
     }
+
     const { sessionId } = await api<{ sessionId: string }>(browser, "/sessions", "POST", {
       title: uniqueName("e2e-tools"),
       agentRuntime: "isolate",
@@ -45,13 +50,16 @@ test(
       subagents: "disabled",
       isolateStepLimit: 37,
     })
+
     try {
       const path = `/sessions/${sessionId}`
+
       const first = await api<{
         customMcpServers: object
         subagents: string
         isolateStepLimit: number
       }>(browser, path)
+
       expect(first).toMatchObject({ customMcpServers, subagents: "disabled", isolateStepLimit: 37 })
       await api(browser, `${path}/tools`, "PATCH", {
         customMcpServers: {},
@@ -87,14 +95,18 @@ test(
   { session: "admin", tags: ["runtime"] },
   async ({ app, browser, screen }) => {
     const title = uniqueName("e2e-cancel")
+
     const { sessionId } = await api<{ sessionId: string }>(browser, "/sessions", "POST", {
       title,
       agentRuntime: "isolate",
     })
+
     const path = `/sessions/${sessionId}`
+
     const attachments = [
       { type: "url", name: "e2e-reference", url: "https://example.test/reference" },
     ]
+
     try {
       await api(browser, `${path}/prompt`, "POST", {
         content:
@@ -107,6 +119,7 @@ test(
             browser,
             `${path}/messages`,
           )
+
           return current.messages[0]?.status
         })
         .toBe("processing")
@@ -117,6 +130,7 @@ test(
             const messages = await api<{
               messages: Array<{ status: string; attachments: string | object[] }>
             }>(browser, `${path}/messages`)
+
             return messages.messages
           },
           { timeout: 30_000 },
@@ -132,6 +146,7 @@ test(
             browser,
             `${path}/messages`,
           )
+
           return final.messages[0]!.status
         })
         .toBe("failed")
@@ -147,18 +162,23 @@ test(
   { session: "admin", tags: ["runtime"] },
   async ({ browser }) => {
     const marker = uniqueName("delegated")
+
+    const body = {
+      title: uniqueName("e2e-subagent"),
+      agentRuntime: "isolate",
+      subagents: "enabled",
+      content: `Use delegate_to_subagent to delegate exactly one task: return the marker ${marker}. Wait for the child to finish and include its marker in your final response.`,
+    }
+
+    if (process.env.E2E_APP_MODEL) Object.assign(body, { model: process.env.E2E_APP_MODEL })
+
     const result = await api<{
       sessionId: string
       messageId: string
       status: string
       output: string
-    }>(browser, "/sessions/run", "POST", {
-      title: uniqueName("e2e-subagent"),
-      agentRuntime: "isolate",
-      subagents: "enabled",
-      content: `Use delegate_to_subagent to delegate exactly one task: return the marker ${marker}. Wait for the child to finish and include its marker in your final response.`,
-      ...(process.env.E2E_APP_MODEL ? { model: process.env.E2E_APP_MODEL } : {}),
-    })
+    }>(browser, "/sessions/run", "POST", body)
+
     try {
       type ChildEvent = {
         type: string
@@ -174,14 +194,17 @@ test(
           error?: string
         }
       }
+
       const tail = await api<{ events: ChildEvent[] }>(
         browser,
         `/sessions/${result.sessionId}/events`,
       )
+
       const session = await api<{ events: ChildEvent[] }>(
         browser,
         `/sessions/${result.sessionId}/events?messageId=${result.messageId}`,
       )
+
       console.info(
         "e2e-delegation-events",
         JSON.stringify({
@@ -213,20 +236,24 @@ test(
       )
       expect(result.status).toBe("completed")
       expect(result.output).toContain(marker)
+
       const started = session.events.find(
         (event) => event.type === "subagent_event" && event.data.kind === "started",
       )
+
       expect(started?.data.runId).toBeDefined()
       expect(started?.data.parentToolCallId).toBeDefined()
       expect(started!.data.parentToolCallId!.length).toBeGreaterThan(0)
       expect(started?.data.messageId).toBe(result.messageId)
       expect(started?.data.task).toContain(marker)
+
       const finished = session.events.find(
         (event) =>
           event.type === "subagent_event" &&
           event.data.runId === started!.data.runId &&
           event.data.kind === "finished",
       )
+
       expect(finished?.data.summary).toContain(marker)
       expect(
         session.events.some(
@@ -236,10 +263,12 @@ test(
             ["error", "aborted", "interrupted"].includes(event.data.kind ?? ""),
         ),
       ).toBe(false)
+
       const toolResult = session.events.find(
         (event) =>
           event.type === "tool_result" && event.data.callId === started!.data.parentToolCallId,
       )
+
       expect(toolResult?.data.result).toContain(marker)
       expect(toolResult?.data.error).toBeUndefined()
     } finally {

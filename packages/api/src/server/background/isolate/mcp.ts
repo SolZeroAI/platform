@@ -30,10 +30,15 @@ import {
 const DEFAULT_DISCOVERY_TIMEOUT_MS = 15_000
 
 type McpServerRow = ReturnType<MCPClientManager["listServers"]>[number]
+
 type McpConnection = MCPClientManager["mcpConnections"][string]
+
 type McpConnectionResult = Awaited<ReturnType<MCPClientManager["connectToServer"]>>
+
 type McpDiscoverResult = Awaited<ReturnType<MCPClientManager["discoverIfConnected"]>>
+
 type McpcfPlanServer = SessionToolRuntimePlan["mcpRegistration"]["mcpcfServers"][number]
+
 type ManagedMcpServerSource = "custom" | "mcpcf"
 
 interface JsonRpcError {
@@ -148,6 +153,7 @@ export function formatMcpcfMcpAuthError(error: unknown): string {
   const message = describeError(error)
   const reconnectMarker = "LinkedOAuthReconnectRequiredError:"
   const reconnectIndex = message.lastIndexOf(reconnectMarker)
+
   return Match.value(reconnectIndex >= 0).pipe(
     Match.when(true, () => message.slice(reconnectIndex + reconnectMarker.length).trim()),
     Match.orElse(() => message),
@@ -156,6 +162,7 @@ export function formatMcpcfMcpAuthError(error: unknown): string {
 
 function extractJsonRpcPayload(message: string): Option.Option<Record<string, unknown>> {
   const start = message.indexOf('{"jsonrpc"')
+
   return Option.liftPredicate(start, (index) => index >= 0).pipe(
     Option.flatMap((index) => asRecord(parseJsonOrText(message.slice(index)))),
     Option.filter((parsed) => "error" in parsed),
@@ -207,6 +214,7 @@ export function formatMcpcfMcpSyncError(error: unknown): string {
     /^Failed to (?:connect|discover) remote MCP server 'mcpcf(?:_[^']+)?':\s*/,
     "",
   )
+
   return Option.match(getJsonRpcError(message), {
     onNone: () => message,
     onSome: (jsonRpcError) => jsonRpcError.message ?? message,
@@ -226,15 +234,19 @@ function formatRegistrationError(
 
 function resolveMcpcfDiscoveryReason(message: string): McpDiscoveryErrorReason {
   const jsonRpcError = getJsonRpcError(message)
+
   const discoveryReason = Option.flatMap(jsonRpcError, (value) =>
     Option.fromNullishOr(value.discoveryReason),
   )
+
   const jsonRpcMessageText = Option.match(jsonRpcError, {
     onNone: () => "",
     onSome: (value) => value.message ?? "",
   })
+
   const oauthReconnect =
     isOAuthReconnectMessage(message) || isOAuthReconnectMessage(jsonRpcMessageText)
+
   return Option.match(discoveryReason, {
     onSome: (reason) => reason,
     onNone: () => fallbackDiscoveryReason(oauthReconnect),
@@ -319,6 +331,7 @@ function buildMcpcfServerRegistration(
   context: McpcfRegistrationContext,
 ): RemoteCustomMcpServerRegistration {
   const name = getMcpcfMcpServerName(server)
+
   const remoteServer: OpenCodeRemoteMcpServer = {
     type: "remote",
     url: getMcpcfIsolateMcpUrl(context.stage ?? "dev"),
@@ -375,6 +388,7 @@ export function buildIsolateMcpServerRegistrationsFromPlan(input: {
 
 function stripSessionId(transportObject: Record<string, unknown>): Record<string, unknown> {
   const { sessionId: _, ...transport } = transportObject
+
   return transport
 }
 
@@ -461,7 +475,10 @@ export function createMcpcfMcpToolExposureReader(
 ): McpcfMcpToolExposureReader {
   return {
     getServerExposure(serverName) {
-      const connection = manager.mcpConnections[serverName] as ExposureConnection | undefined
+      const connection =
+        /* SAFETY: manager.mcpConnections[serverName] has the ExposureConnection | undefined shape established by the check or writer around this read. */ manager
+          .mcpConnections[serverName] as ExposureConnection | undefined
+
       return {
         rawToolNames: rawToolNamesOf(connection),
         connectionState: connection?.connectionState ?? null,
@@ -557,6 +574,7 @@ function discoverConnectedRemoteMcpServer(
         timeoutMs: discoveryTimeout(registration),
       }),
     )
+
     yield* assertDiscoverResult(discoverResult, registration)
   })
 }
@@ -579,6 +597,7 @@ function reuseReadyRegistration(
   return Effect.gen(function* () {
     const shouldDiscover = Effect.succeed(registration.source === "mcpcf")
     yield* Effect.when(discoverConnectedRemoteMcpServer(manager, registration), shouldDiscover)
+
     return registration.name
   })
 }
@@ -590,6 +609,7 @@ function registerAndConnect(
   return Effect.gen(function* () {
     yield* attempt(() => manager.registerServer(registration.id, registration.options))
     yield* connectRegisteredRemoteMcpServer(manager, registration)
+
     return registration.name
   })
 }
@@ -600,6 +620,7 @@ function replaceAndConnect(
 ) {
   return Effect.gen(function* () {
     yield* attempt(() => manager.removeServer(registration.id))
+
     return yield* registerAndConnect(manager, registration)
   })
 }
@@ -611,6 +632,7 @@ function attemptRegistrationSync(
 ) {
   const matches = currentRow !== undefined && storedServerMatches(currentRow, registration)
   const ready = matches && isReadyConnection(manager.mcpConnections[registration.id])
+
   return Match.value({ matches, ready }).pipe(
     Match.when({ ready: true }, () => reuseReadyRegistration(manager, registration)),
     Match.when({ matches: true }, () => replaceAndConnect(manager, registration)),
@@ -647,6 +669,7 @@ function handleRegistrationSyncFailure(
   errorValue: unknown,
 ) {
   const error = formatRegistrationError(errorValue, registration)
+
   return Match.value(registration.optional).pipe(
     Match.when(false, () =>
       Effect.fail(
@@ -706,12 +729,14 @@ export function syncIsolateMcpServers(
       customMcpServers: input.customMcpServers,
       mcpcfServers: input.mcpcfServers,
     })
+
     const registrations = buildIsolateMcpServerRegistrationsFromPlan({
       plan,
       sessionId: input.sessionId,
       stage: input.stage,
       mcpcfCapability: input.mcpcfCapability,
     })
+
     const desiredById = new Map(
       registrations.map((registration) => [registration.id, registration] as const),
     )
@@ -720,6 +745,7 @@ export function syncIsolateMcpServers(
       .listServers()
       .filter(isManagedMcpServerRow)
       .filter((row) => shouldRemoveRow(row, desiredById))
+
     yield* Effect.forEach(rowsToRemove, (row) => attempt(() => manager.removeServer(row.id)), {
       discard: true,
     })
@@ -730,6 +756,7 @@ export function syncIsolateMcpServers(
         .filter(isManagedMcpServerRow)
         .map((row) => [row.id, row] as const),
     )
+
     const outcomes = yield* Effect.forEach(registrations, (registration) =>
       applyRegistrationSync(manager, registration, currentRowsById.get(registration.id)),
     )

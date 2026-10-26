@@ -125,6 +125,7 @@ export const validateWorkflowBuilderManifest = Effect.fn("mcp.workflowBuilder.va
       errorCount: validation.errors.length,
       warningCount: validation.warnings.length,
     })
+
     return validation
   },
 )
@@ -191,10 +192,12 @@ export const submitWorkflowBuilderDraft = Effect.fn("mcp.workflowBuilder.submitD
   input: { manifest: unknown },
 ) {
   const validation = validateWorkflowDraft(unwrapWorkflowManifestInput(input.manifest))
+
   const manifest = Match.value(validation.valid).pipe(
     Match.when(true, () => validatedManifest(validation)),
     Match.orElse(() => Option.none<WorkflowManifest>()),
   )
+
   return yield* Option.match(manifest, {
     onNone: () => rejectWorkflowBuilderDraft(context, validation),
     onSome: (resolvedManifest) =>
@@ -259,6 +262,7 @@ function readStoredWorkflowBuilderDraft(
   stored: StoredWorkflowBuilderDraft,
 ) {
   const validation = validateWorkflowDraft(stored.manifest)
+
   return Option.match(manifestForValidation(validation), {
     onNone: () => logInvalidWorkflowBuilderDraft(context, validation),
     onSome: (resolvedManifest) =>

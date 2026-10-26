@@ -21,7 +21,9 @@ export function persistSubagentToolEventToSession(
     Option.fromNullishOr(env.SESSION),
     () => new Error("SESSION binding is required for durable sub-agent event relay"),
   )
-  // oxlint-disable-next-line effect/avoid-any -- DurableObjectStub<unknown> carries no RPC surface; importing SessionDO here would create a session<->isolate module cycle.
+
+  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- DurableObjectStub<unknown> carries no RPC surface; importing SessionDO here would create a session<->isolate module cycle.
   const stub = namespace.get(namespace.idFromName(sessionId)) as unknown as SessionSubagentEventStub
+
   return stub.persistIsolateSubagentToolEvent(messageId, message, lifecycleTimestampMs)
 }

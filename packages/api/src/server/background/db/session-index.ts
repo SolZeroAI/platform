@@ -17,6 +17,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the session index database from the Worker env at the repository composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   controlPlaneSql,
@@ -163,14 +164,16 @@ export class SessionIndexStore {
       subagents: resolveSessionSubagentMode(row.sessionKind, row.subagents),
       model: row.model,
       reasoning_effort: row.reasoningEffort,
-      session_kind: row.sessionKind as SessionKind,
+      session_kind:
+        /* SAFETY: row.sessionKind is persisted only as SessionKind by the writer for that column. */ row.sessionKind as SessionKind,
       agent_runtime: resolveAgentRuntime({
         agentRuntime: row.agentRuntime,
         sessionKind: row.sessionKind,
       }),
       source: normalizeSessionSource(row.source),
       incognito: row.incognito === 1,
-      status: row.status as SessionStatus,
+      status:
+        /* SAFETY: row.status is persisted only as SessionStatus by the writer for that column. */ row.status as SessionStatus,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
     }
@@ -186,6 +189,7 @@ export class SessionIndexStore {
           .limit(1),
       catch: d1Error("db.sessionIndex.getById"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toRecord(row))
   })
 
@@ -241,16 +245,20 @@ export class SessionIndexStore {
     },
   ) {
     const existing = yield* this.getById(input.id)
+
     const fallbackLimit = Option.getOrElse(
       Option.map(existing, (record) => record.isolate_step_limit),
       () => DEFAULT_ISOLATE_STEP_LIMIT,
     )
+
     const existingRecord = Option.getOrNull(existing)
+
     const subagents = resolveSessionSubagentMode(
       existingRecord?.session_kind,
       input.subagents,
       existingRecord?.subagents,
     )
+
     const updated = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -268,6 +276,7 @@ export class SessionIndexStore {
           .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.updateTooling"),
     })
+
     return updated.length > 0
   })
 
@@ -286,6 +295,7 @@ export class SessionIndexStore {
           .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.updateStatus"),
     })
+
     return updated.length > 0
   })
 
@@ -298,6 +308,7 @@ export class SessionIndexStore {
           .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.sessionIndex.delete"),
     })
+
     return deleted.length > 0
   })
 
@@ -365,6 +376,7 @@ export class SessionIndexStore {
           .where(where),
       catch: d1Error("db.sessionIndex.list"),
     })
+
     const total = this.sql.asFiniteNumber(countRows[0]?.total)
 
     return {
@@ -385,6 +397,7 @@ export class SessionIndexStore {
             .limit(1),
         catch: d1Error("db.sessionIndex.getWorkflowSessionReuseSessionId"),
       })
+
       return Option.map(Option.fromNullishOr(rows[0]), (row) => row.sessionId)
     },
   )
@@ -429,9 +442,11 @@ function addLikeFilter(conditions: SQL[], value: string | undefined, columns: An
     onNone: () => undefined,
     onSome: (trimmed) => {
       const pattern = `%${trimmed}%`
+
       const condition = or(
         ...columns.map((column) => sql`lower(coalesce(${column}, '')) LIKE ${pattern}`),
       )
+
       Option.match(Option.fromNullishOr(condition), {
         onNone: () => undefined,
         onSome: (resolved) => {
@@ -472,6 +487,7 @@ function resolveSessionOrder(
   options: Pick<ListSessionIndexOptions, "sortBy" | "sortDir">,
 ): SQL {
   const columns = sessionSortColumns(schema)
+
   const column = Option.match(
     Option.fromNullishOr(options.sortBy).pipe(
       Option.filter((key): key is keyof typeof columns =>
@@ -483,6 +499,7 @@ function resolveSessionOrder(
       onSome: (key) => columns[key],
     },
   )
+
   return Match.value(options.sortDir === "asc").pipe(
     Match.when(true, () => asc(column)),
     Match.orElse(() => desc(column)),
@@ -547,6 +564,7 @@ export function createSessionIndexStoreFromD1(
       Match.orElse((d1) => makeD1Drizzle(d1)),
     ),
   )
+
   return {
     getById: (id) => runSessionIndexOption(store.getById(id)),
     getWorkflowSessionReuseSessionId: (input) =>

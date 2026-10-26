@@ -10,6 +10,7 @@ import {
   AgentSkillValidationError,
   d1Error,
 } from "../db/errors"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the skill catalog database from the Worker env at the catalog composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
@@ -23,6 +24,7 @@ import { createPullRequestSkillMarkdown, isCreatePullRequestSkillId } from "./bu
 const GLOBAL_SKILLS_PREFIX = "global/"
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const MAX_SKILL_NAME_LENGTH = 64
+
 const TEXT_RESOURCE_EXTENSIONS = new Set([
   ".bash",
   ".css",
@@ -45,7 +47,9 @@ const TEXT_RESOURCE_EXTENSIONS = new Set([
 ])
 
 export type AgentSkillScope = "global" | "user"
+
 export type AgentSkillRuntimeScope = "harness" | "isolate" | "all"
+
 export type AgentSkillOrigin = "built-in" | "admin" | "skills-sh" | "user"
 
 export interface AgentSkillRecord {
@@ -98,13 +102,16 @@ type AgentSkillRow = AppSchema["agentSkills"]["$inferSelect"]
 function rowToRecord(row: AgentSkillRow): AgentSkillRecord {
   return {
     id: row.id,
-    scope: row.scope as AgentSkillScope,
+    scope:
+      /* SAFETY: row.scope is persisted only as AgentSkillScope by the writer for that column. */ row.scope as AgentSkillScope,
     ownerUserId: row.ownerUserId,
     slug: row.slug,
     name: row.name,
     description: row.description,
-    runtimeScope: row.runtimeScope as AgentSkillRuntimeScope,
-    origin: row.origin as AgentSkillOrigin,
+    runtimeScope:
+      /* SAFETY: row.runtimeScope is persisted only as AgentSkillRuntimeScope by the writer for that column. */ row.runtimeScope as AgentSkillRuntimeScope,
+    origin:
+      /* SAFETY: row.origin is persisted only as AgentSkillOrigin by the writer for that column. */ row.origin as AgentSkillOrigin,
     sourceId: row.sourceId,
     sourceHash: row.sourceHash,
     contentHash: row.contentHash,
@@ -140,6 +147,7 @@ export class AgentSkillStore {
     const runtimeFilter = runtimeScope
       ? runtimeScopeCondition(this.schema, runtimeScope)
       : undefined
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -155,6 +163,7 @@ export class AgentSkillStore {
           .orderBy(asc(this.schema.agentSkills.name)),
       catch: d1Error("db.agentSkills.listActiveGlobal"),
     })
+
     return rows.map(rowToRecord)
   })
 
@@ -188,6 +197,7 @@ export class AgentSkillStore {
           .orderBy(asc(this.schema.agentSkills.name)),
       catch: d1Error("db.agentSkills.listEffectiveGlobal"),
     })
+
     return rows.map(
       ({ skill, preferenceEnabled }): EffectiveAgentSkill => ({
         ...rowToRecord(skill),
@@ -212,6 +222,7 @@ export class AgentSkillStore {
           .limit(1),
       catch: d1Error("db.agentSkills.getActive"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), rowToRecord)
   })
 
@@ -234,6 +245,7 @@ export class AgentSkillStore {
           .limit(1),
       catch: d1Error("db.agentSkills.getActiveGlobalBySlug"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), rowToRecord)
   })
 
@@ -262,6 +274,7 @@ export class AgentSkillStore {
           .limit(1),
       catch: d1Error("db.agentSkills.createGlobal.lookup"),
     })
+
     if (existing.length > 0) {
       return yield* Effect.fail(
         new AgentSkillConflictError({ message: `Skill '${input.name}' already exists` }),
@@ -292,6 +305,7 @@ export class AgentSkillStore {
         }),
       catch: d1Error("db.agentSkills.createGlobal.insert"),
     })
+
     return yield* this.requireActive(id)
   })
 
@@ -311,6 +325,7 @@ export class AgentSkillStore {
           ),
       catch: d1Error("db.agentSkills.setDefaultEnabled"),
     })
+
     return yield* this.requireActive(skillId)
   })
 
@@ -338,11 +353,13 @@ export class AgentSkillStore {
     enabled: boolean,
   ) {
     const skill = yield* this.requireActive(skillId)
+
     if (skill.scope !== "global" || !["harness", "all"].includes(skill.runtimeScope)) {
       return yield* Effect.fail(
         new AgentSkillNotFoundError({ message: "Global harness skill not found" }),
       )
     }
+
     const now = Date.now()
     yield* Effect.tryPromise({
       try: () =>
@@ -410,6 +427,7 @@ export class AgentSkillStore {
         ]),
       catch: d1Error("db.agentSkills.softDelete"),
     })
+
     return skill
   })
 
@@ -418,6 +436,7 @@ export class AgentSkillStore {
     skillId: string,
   ) {
     const skill = yield* this.getActive(skillId)
+
     return yield* Option.match(skill, {
       onNone: () =>
         Effect.fail(new AgentSkillNotFoundError({ message: `Skill '${skillId}' not found` })),
@@ -429,13 +448,17 @@ export class AgentSkillStore {
 export function parseAgentSkillMarkdown(rawContent: string): ParsedAgentSkillMarkdown {
   let data: Record<string, unknown> | null
   let body: string
+
   try {
     const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/u.exec(rawContent)
+
     if (!match) {
       data = null
       body = rawContent
     } else {
+      // SAFETY: YAML front matter is untrusted text parsed into an unknown value, then read as a string-keyed record when it is a non-array object.
       const value = parseYaml(match[1] ?? "") as unknown
+      // SAFETY: value was checked to be a non-array object before it is read as a string-keyed record.
       data =
         value !== null && typeof value === "object" && !Array.isArray(value)
           ? (value as Record<string, unknown>)
@@ -445,31 +468,39 @@ export function parseAgentSkillMarkdown(rawContent: string): ParsedAgentSkillMar
   } catch {
     throw new AgentSkillValidationError({ message: "SKILL.md frontmatter must be valid YAML" })
   }
+
   const name = typeof data?.name === "string" ? data.name.trim() : ""
   const description = typeof data?.description === "string" ? data.description.trim() : ""
+
   if (!name || !description) {
     throw new AgentSkillValidationError({
       message: "SKILL.md must contain valid YAML frontmatter with name and description",
     })
   }
+
   body = body.trim()
+
   if (!SKILL_NAME_PATTERN.test(name) || name.length > MAX_SKILL_NAME_LENGTH) {
     throw new AgentSkillValidationError({
       message: "Skill name must be 1-64 lowercase letters, numbers, or hyphen-separated words",
     })
   }
+
   if (!description) {
     throw new AgentSkillValidationError({ message: "Skill description is required" })
   }
+
   if (!body) {
     throw new AgentSkillValidationError({ message: "Skill instructions are required" })
   }
+
   return { name, description, body, rawContent }
 }
 
 export function validateSkillResourcePath(path: string): string {
   const normalized = path.trim()
   const parts = normalized.split("/")
+
   if (
     !normalized ||
     normalized.startsWith("/") ||
@@ -479,6 +510,7 @@ export function validateSkillResourcePath(path: string): string {
   ) {
     throw new AgentSkillValidationError({ message: `Unsafe skill resource path '${path}'` })
   }
+
   return normalized
 }
 
@@ -487,11 +519,13 @@ function validateTextSkillResourcePath(path: string): string {
   const filename = normalized.split("/").at(-1) ?? normalized
   const dotIndex = filename.lastIndexOf(".")
   const extension = dotIndex >= 0 ? filename.slice(dotIndex).toLowerCase() : ""
+
   if (!TEXT_RESOURCE_EXTENSIONS.has(extension)) {
     throw new AgentSkillValidationError({
       message: `Skill resource '${path}' is not a supported text file`,
     })
   }
+
   return normalized
 }
 
@@ -505,6 +539,7 @@ export function globalSkillMarkdownKey(slug: string): string {
 
 export async function hashSkillContent(content: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content))
+
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
@@ -521,16 +556,19 @@ export async function writeGlobalSkillMarkdown(
 async function listAllObjects(bucket: R2Bucket, prefix: string): Promise<R2Object[]> {
   const objects: R2Object[] = []
   let cursor: string | undefined
+
   do {
     const page = await bucket.list({ prefix, cursor })
     objects.push(...page.objects)
     cursor = page.truncated ? page.cursor : undefined
   } while (cursor)
+
   return objects.sort((left, right) => left.key.localeCompare(right.key))
 }
 
 export async function deleteGlobalSkillPackage(bucket: R2Bucket, slug: string): Promise<void> {
   const keys = (await listAllObjects(bucket, globalSkillPrefix(slug))).map((object) => object.key)
+
   if (keys.length > 0) {
     await bucket.delete(keys)
   }
@@ -538,6 +576,7 @@ export async function deleteGlobalSkillPackage(bucket: R2Bucket, slug: string): 
 
 async function readGlobalSkillMarkdown(bucket: R2Bucket, slug: string): Promise<string | null> {
   const object = await bucket.get(globalSkillMarkdownKey(slug))
+
   return object ? object.text() : null
 }
 
@@ -551,16 +590,21 @@ async function ensureBuiltInPackage(
   if (!isCreatePullRequestSkillId(skill.id) || skill.origin !== "built-in") {
     return skill
   }
+
   const expected = createPullRequestSkillMarkdown({ skillName: skill.name, brandName, command })
   const existing = await readGlobalSkillMarkdown(bucket, skill.slug)
   const contentHash = await hashSkillContent(expected)
+
   if (existing !== expected) {
     await writeGlobalSkillMarkdown(bucket, skill.slug, expected)
   }
+
   if (skill.contentHash !== contentHash) {
     await Effect.runPromise(store.updateContentHash(skill.id, contentHash))
+
     return { ...skill, contentHash, updatedAt: Date.now() }
   }
+
   return skill
 }
 
@@ -569,32 +613,40 @@ export async function loadRuntimeSkillPackage(
   skill: AgentSkillRecord,
 ): Promise<RuntimeSkillPackage> {
   const rawContent = await readGlobalSkillMarkdown(bucket, skill.slug)
+
   if (!rawContent) {
     throw new AgentSkillValidationError({
       message: `Skill '${skill.name}' is missing ${globalSkillMarkdownKey(skill.slug)}`,
     })
   }
+
   const parsed = parseAgentSkillMarkdown(rawContent)
+
   if (parsed.name !== skill.name) {
     throw new AgentSkillValidationError({
       message: `Skill '${skill.name}' frontmatter name does not match its catalog entry`,
     })
   }
+
   const prefix = globalSkillPrefix(skill.slug)
+
   const files = await Promise.all(
     (await listAllObjects(bucket, prefix))
       .filter((object) => object.key !== globalSkillMarkdownKey(skill.slug))
       .map(async (object): Promise<RuntimeSkillFile> => {
         const path = validateTextSkillResourcePath(object.key.slice(prefix.length))
         const body = await bucket.get(object.key)
+
         if (!body) {
           throw new AgentSkillValidationError({
             message: `Skill resource '${object.key}' disappeared while loading`,
           })
         }
+
         return { path, content: await body.text() }
       }),
   )
+
   return {
     id: skill.id,
     contentHash: await hashSkillContent(
@@ -618,11 +670,14 @@ export async function createAdminGlobalSkill(input: {
   const contentHash = await hashSkillContent(input.skillMd)
   const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db))
   const existing = await Effect.runPromise(store.getActiveGlobalBySlug(parsed.name))
+
   if (Option.isSome(existing)) {
     throw new AgentSkillConflictError({ message: `Skill '${parsed.name}' already exists` })
   }
+
   const previousPackage = await readGlobalSkillMarkdown(input.bucket, parsed.name)
   await writeGlobalSkillMarkdown(input.bucket, parsed.name, input.skillMd)
+
   try {
     return await Effect.runPromise(
       store.createGlobal({
@@ -641,6 +696,7 @@ export async function createAdminGlobalSkill(input: {
         () => undefined,
       )
     }
+
     throw error
   }
 }
@@ -654,6 +710,7 @@ export async function resolveRuntimeSkillPackages(input: {
 }): Promise<RuntimeSkillPackage[]> {
   const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db))
   const effective = await Effect.runPromise(store.listEffectiveGlobal(input.userId, "harness"))
+
   return Promise.all(
     effective
       .filter((skill) => skill.enabled)
@@ -700,5 +757,6 @@ export async function listIsolateGlobalSkillNames(input: {
       isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db),
     ).listEffectiveGlobal(input.userId, "isolate"),
   )
+
   return effective.filter((skill) => skill.enabled).map((skill) => skill.name)
 }

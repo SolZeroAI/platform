@@ -21,6 +21,7 @@ export function list({
       const userId = yield* requirePrincipalUserId(request, principal)
       const limit = parseListNumber(query.limit, 50, 100)
       const offset = parseListNumber(query.offset, 0, 10_000)
+
       const result = yield* new WorkflowStore(db).listWorkflows({
         userId,
         limit,
@@ -30,7 +31,9 @@ export function list({
         sortDir: query.sortDir,
         status: query.status,
       })
+
       const serverUrl = getInfraServerUrl(env)
+
       return json({
         workflows: result.workflows.map((workflow) =>
           formatWorkflow(workflow, undefined, serverUrl),

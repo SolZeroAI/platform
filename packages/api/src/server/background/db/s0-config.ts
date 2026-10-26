@@ -1,5 +1,6 @@
 /* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-manual-effect-channels, s0-lint/no-match-effect-branch, s0-lint/no-ternary -- S0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { SecretReference } from "@solzero/shared"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
@@ -51,20 +52,37 @@ export const S0_CONFIG_LOCATIONS = {
   mcpcf: "active stage config:mcpcf",
 } as const
 
-export function getS0DeploymentConfig<T>(env: object, bindingName: string): Option.Option<T> {
-  return Option.fromNullishOr(Reflect.get(env, bindingName)).pipe(
-    Option.filter(
-      (value): value is T => typeof value === "object" && value !== null && !Array.isArray(value),
-    ),
+function readDeploymentBinding(
+  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Bindings are read by name.
+  source: object,
+  bindingName: string,
+): unknown {
+  // SAFETY: Worker env objects keep deployment config and secrets on string binding names. bindingName is one of those names.
+  return (source as { readonly [name: string]: unknown })[bindingName]
+}
+
+export function getS0DeploymentConfig<Config>(
+  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Bindings are read by name.
+  env: object,
+  bindingName: string,
+): Option.Option<Config> {
+  const value = readDeploymentBinding(env, bindingName)
+  const accepted = typeof value === "object" && value !== null && !Array.isArray(value)
+
+  // SAFETY: accepted is true only for a non-array object. Config is the deployment object stored on this binding.
+  return Match.value(accepted).pipe(
+    Match.when(true, () => Option.some(value as Config)),
+    Match.orElse(() => Option.none<Config>()),
   )
 }
 
 export function getS0DeploymentSecret(
+  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Secret bindings are read by name.
   env: object,
   reference: SecretReference | null | undefined,
 ): Option.Option<string> {
   return Option.fromNullishOr(reference).pipe(
-    Option.flatMap((resolved) => Option.fromNullishOr(Reflect.get(env, resolved.env))),
+    Option.flatMap((resolved) => Option.fromNullishOr(readDeploymentBinding(env, resolved.env))),
     Option.filter((value): value is string => typeof value === "string"),
     Option.filter((value) => value.length > 0),
   )
@@ -141,11 +159,15 @@ export class S0ConfigStore {
       try: () => this.kv.get(key),
       catch: toError,
     })
+
     return yield* Option.match(Option.fromNullishOr(raw), {
       onNone: () => Effect.succeed(Option.none<T>()),
       onSome: (resolved) =>
         Effect.try({
-          try: () => parseJson(resolved) as T,
+          try: () =>
+            /* SAFETY: parseJson(resolved) was stored by this service in the T shape. */ parseJson(
+              resolved,
+            ) as T,
           catch: toError,
         }).pipe(Effect.map(Option.some)),
     })
@@ -179,6 +201,7 @@ export class S0ConfigStore {
     key: string,
   ) {
     const record = yield* this.getEncryptedSecretRecord(key)
+
     return Option.isSome(record)
   })
 
@@ -188,6 +211,7 @@ export class S0ConfigStore {
   ) {
     const encryptionKey = yield* requireEncryptionKey(this.encryptionKey)
     const record = yield* this.getEncryptedSecretRecord(key)
+
     return yield* Option.match(record, {
       onNone: () => Effect.succeed(Option.none<string>()),
       onSome: (resolved) =>
@@ -227,6 +251,7 @@ export class S0ConfigStore {
     key: string,
   ) {
     const parsed = yield* this.getJson(key)
+
     return Option.flatMap(parsed, readEncryptedSecretRecord)
   })
 }
@@ -246,6 +271,7 @@ export interface S0ConfigStorePromise {
 
 export function createS0ConfigStore(kv: KVNamespace, encryptionKey?: string): S0ConfigStorePromise {
   const store = new S0ConfigStore(kv, encryptionKey)
+
   return {
     getJson: (key) => runS0ConfigEffect(store.getJson(key)),
     putJson: (key, value) => runS0ConfigEffect(store.putJson(key, value)),

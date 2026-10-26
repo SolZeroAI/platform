@@ -60,7 +60,9 @@ export interface LitellmModelRegistry {
 }
 
 export type LitellmConfigSource = "default" | "deployment" | "kv"
+
 export type LitellmSecretSource = "deployment" | "kv" | "none"
+
 export type LitellmRegistrySource = "kv" | "none"
 
 export interface LitellmProviderConfigPresence {

@@ -149,6 +149,7 @@ export function CodeEditor({
         if (!update.docChanged || suppressChangeRef.current || readOnly) {
           return
         }
+
         onChangeRef.current?.(update.state.doc.toString())
       }),
     ],
@@ -164,9 +165,12 @@ export function CodeEditor({
       parent: containerRef.current,
       state: EditorState.create({ doc: valueRef.current, extensions }),
     })
+
     viewRef.current = view
+
     const frameId = window.requestAnimationFrame(() => {
       view.requestMeasure()
+
       if (autoFocus) {
         view.focus()
       }
@@ -175,6 +179,7 @@ export function CodeEditor({
     return () => {
       window.cancelAnimationFrame(frameId)
       view.destroy()
+
       if (viewRef.current === view) {
         viewRef.current = null
       }
@@ -183,10 +188,13 @@ export function CodeEditor({
 
   useEffect(() => {
     const view = viewRef.current
+
     if (!view) {
       return
     }
+
     const currentValue = view.state.doc.toString()
+
     if (currentValue === value) {
       return
     }

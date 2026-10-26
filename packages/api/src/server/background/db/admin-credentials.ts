@@ -34,6 +34,7 @@ function requireControlPlane(env: Env): Env {
   if (!hasControlPlane(env)) {
     throw new Error("Control-plane database is required to reconcile managed admin credentials")
   }
+
   return env
 }
 
@@ -78,6 +79,7 @@ async function findOrCreateUser(env: Env, email: string, now: string) {
     `SELECT "id" FROM "user" WHERE lower("email") = ?1 LIMIT 1`,
     [email],
   )
+
   if (existing) return existing.id
 
   const userId = crypto.randomUUID()
@@ -87,17 +89,21 @@ async function findOrCreateUser(env: Env, email: string, now: string) {
     email,
     now,
   ])
+
   const created = await runControlPlaneSqlFirst<{ id: string }>(
     env,
     `SELECT "id" FROM "user" WHERE lower("email") = ?1 LIMIT 1`,
     [email],
   )
+
   if (!created) throw new Error(`Failed to provision configured admin '${email}'`)
+
   return created.id
 }
 
 async function reconcileAdmin(env: Env, email: string, plaintextPassword: string, now: string) {
   const userId = await findOrCreateUser(env, email, now)
+
   const account = await runControlPlaneSqlFirst<CredentialAccountRow>(
     env,
     `SELECT "id", "password"
@@ -106,12 +112,14 @@ async function reconcileAdmin(env: Env, email: string, plaintextPassword: string
        LIMIT 1`,
     [userId, CREDENTIAL_AUTH_PROVIDER_ID],
   )
+
   const passwordCurrent = account?.password
     ? await verifyPassword({ hash: account.password, password: plaintextPassword })
     : false
 
   if (!passwordCurrent) {
     const password = await hashPassword(plaintextPassword)
+
     if (account) {
       await runControlPlaneSql(
         env,
@@ -127,6 +135,7 @@ async function reconcileAdmin(env: Env, email: string, plaintextPassword: string
         now,
       ])
     }
+
     await runControlPlaneSql(env, `DELETE FROM "session" WHERE "userId" = ?1`, [userId])
   }
 
@@ -144,6 +153,7 @@ async function removeStaleAdmins(env: Env, configuredEmails: ReadonlySet<string>
     env,
     `SELECT "userId", "email" FROM "managed_admin_credential"`,
   )
+
   await Promise.all(
     rows
       .filter((row) => !configuredEmails.has(row.email.toLowerCase()))
@@ -169,6 +179,7 @@ export const reconcileManagedAdminCredentialsUncached = Effect.fn(
   const controlPlane = requireControlPlane(env)
   const config = yield* getAdminConfig(env)
   const configuredEmails = new Set(config.adminEmails.map((email) => email.trim().toLowerCase()))
+
   if (configuredEmails.size === 0) {
     return yield* promiseOrDie(() => removeStaleAdmins(controlPlane, configuredEmails))
   }
@@ -185,6 +196,7 @@ export const reconcileManagedAdminCredentialsUncached = Effect.fn(
 
 export function reconcileManagedAdminCredentials(env: Env): Promise<void> {
   const existing = reconciliationByEnv.get(env)
+
   if (existing) return existing
 
   // oxlint-disable-next-line effect/effect-run-in-body -- Worker adapters consume this idempotent reconciliation as a cached Promise.
@@ -194,6 +206,8 @@ export function reconcileManagedAdminCredentials(env: Env): Promise<void> {
       throw error
     },
   )
+
   reconciliationByEnv.set(env, reconciliation)
+
   return reconciliation
 }

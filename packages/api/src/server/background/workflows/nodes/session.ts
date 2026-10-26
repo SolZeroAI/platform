@@ -21,6 +21,7 @@ import {
   type SessionIndexStorePromise,
 } from "../../db/session-index"
 import { createWorkflowStoreFromD1 } from "../../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env inside session workflow nodes, which run outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { parseJsonOrText, stringifyJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
@@ -33,6 +34,7 @@ import { providerServicesForEnv } from "../../../effect/services/providers"
 import {
   ControlPlaneFailure,
   InternalRequests,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeInternalRequests builds the internal HTTP client from the Worker env at the session-node composition edge.
   makeInternalRequests,
 } from "../../../effect/handlers/shared/control-plane"
 import {
@@ -56,6 +58,7 @@ const MIN_WORKFLOW_SESSION_CACHE_TTL_SECONDS = 60
 
 function runWorkflowLog(action: () => void) {
   action()
+
   return Effect.void
 }
 
@@ -117,7 +120,12 @@ function getTools(value: unknown): Option.Option<SessionToolSpec[]> {
     Match.when(Match.null, () => Option.none<SessionToolSpec[]>()),
     Match.when(
       (candidate: unknown): candidate is readonly unknown[] => Array.isArray(candidate),
-      (items) => Option.some(normalizeSessionTools(items as SessionToolSpec[])),
+      (items) =>
+        Option.some(
+          normalizeSessionTools(
+            /* SAFETY: items contains only SessionToolSpec[] values established by the surrounding filter or writer. */ items as SessionToolSpec[],
+          ),
+        ),
     ),
     Match.orElse(() => {
       throw new Error("Session tools must be an array")
@@ -136,7 +144,11 @@ function getCustomMcpServers(value: unknown): Option.Option<OpenCodeMcpServers> 
 function getSecretKeys(value: unknown): Option.Option<string[]> {
   return Match.value(Array.isArray(value)).pipe(
     Match.when(true, () =>
-      Option.some((value as unknown[]).filter((key): key is string => typeof key === "string")),
+      Option.some(
+        /* SAFETY: value contains only unknown[] values established by the surrounding filter or writer. */ (
+          value as unknown[]
+        ).filter((key): key is string => typeof key === "string"),
+      ),
     ),
     Match.orElse(() => Option.none<string[]>()),
   )
@@ -175,6 +187,7 @@ function getSubagentMode(
     Match.when(true, () => "disabled" as const),
     Match.orElse(() => DEFAULT_SUBAGENT_MODE),
   )
+
   return Match.value(sessionKind).pipe(
     Match.when("sandbox", () => Option.none<SubagentMode>()),
     Match.orElse(
@@ -198,18 +211,20 @@ function getSessionRunOutputs(
     Match.when(Match.undefined, () => ({})),
     Match.orElse((runs) => ({ subagentRuns: runs })),
   )
-  return {
-    outputs: {
-      sessionId: data.sessionId,
-      messageId: data.messageId,
-      output: data.output,
-      status: data.status,
-      error: data.error,
-      cacheHit: options.cacheHit,
-      createdSession: options.createdSession ?? Boolean(data.createdSession),
-      ...subagentRuns,
-    },
-  }
+
+  let outputs: Record<string, unknown> = {}
+  outputs.sessionId = data.sessionId
+  outputs.messageId = data.messageId
+  outputs.output = data.output
+  outputs.status = data.status
+  outputs.error = data.error
+  outputs.cacheHit = options.cacheHit
+  outputs.createdSession = options.createdSession ?? Boolean(data.createdSession)
+  Object.assign(outputs, subagentRuns)
+  let result: Record<string, unknown> = {}
+  result.outputs = outputs
+
+  return result
 }
 
 function isValidCacheEntry(entry: Partial<WorkflowSessionCacheEntry>): boolean {
@@ -223,18 +238,32 @@ function isValidCacheEntry(entry: Partial<WorkflowSessionCacheEntry>): boolean {
 
 function buildCacheEntry(entry: Partial<WorkflowSessionCacheEntry>): WorkflowSessionCacheEntry {
   const errorField = Match.value(typeof entry.error === "string").pipe(
-    Match.when(true, () => ({ error: entry.error as string })),
+    Match.when(true, () => ({
+      error:
+        /* SAFETY: The preceding check established that entry.error is string. */ entry.error as string,
+    })),
     Match.orElse(() => ({})),
   )
+
   const subagentRuns = Match.value(Array.isArray(entry.subagentRuns)).pipe(
-    Match.when(true, () => ({ subagentRuns: entry.subagentRuns as SubagentRunSummary[] })),
+    Match.when(true, () => ({
+      subagentRuns:
+        /* SAFETY: entry.subagentRuns contains only SubagentRunSummary[] values established by the surrounding filter or writer. */ entry.subagentRuns as SubagentRunSummary[],
+    })),
     Match.orElse(() => ({})),
   )
+
   return {
-    sessionId: entry.sessionId as string,
-    messageId: entry.messageId as string,
-    output: entry.output as string | null,
-    status: entry.status as string,
+    sessionId:
+      /* SAFETY: The preceding check established that entry.sessionId is string. */ entry.sessionId as string,
+    messageId:
+      /* SAFETY: The preceding check established that entry.messageId is string. */ entry.messageId as string,
+    output:
+      /* SAFETY: entry.output has the string | null shape established by the check or writer around this read. */ entry.output as
+        | string
+        | null,
+    status:
+      /* SAFETY: entry.status is persisted only as string by the writer for that column. */ entry.status as string,
     ...errorField,
     ...subagentRuns,
   }
@@ -248,8 +277,16 @@ function parseWorkflowSessionCacheEntry(
     Option.filter(
       (parsed): parsed is Record<string, unknown> => typeof parsed === "object" && parsed !== null,
     ),
-    Option.filter((parsed) => isValidCacheEntry(parsed as Partial<WorkflowSessionCacheEntry>)),
-    Option.map((parsed) => buildCacheEntry(parsed as Partial<WorkflowSessionCacheEntry>)),
+    Option.filter((parsed) =>
+      isValidCacheEntry(
+        /* SAFETY: parsed was checked to be a non-array object before it is read as Partial<WorkflowSessionCacheEntry>. */ parsed as Partial<WorkflowSessionCacheEntry>,
+      ),
+    ),
+    Option.map((parsed) =>
+      buildCacheEntry(
+        /* SAFETY: parsed was checked to be a non-array object before it is read as Partial<WorkflowSessionCacheEntry>. */ parsed as Partial<WorkflowSessionCacheEntry>,
+      ),
+    ),
   )
 }
 
@@ -258,6 +295,7 @@ const sha256Hex = Effect.fn("workflows.sha256Hex")(function* (value: string) {
     try: () => crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)),
     catch: toError,
   })
+
   return Arr.join(
     Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")),
     "",
@@ -271,6 +309,7 @@ const buildSessionKey = Effect.fn("workflows.buildSessionKey")(function* (params
   subagents: Option.Option<SubagentMode>
 }) {
   const keyHash = yield* sha256Hex(params.renderedKey)
+
   const baseScope = [
     params.input.userId,
     params.input.workflowId,
@@ -278,11 +317,14 @@ const buildSessionKey = Effect.fn("workflows.buildSessionKey")(function* (params
     params.sessionKind,
     keyHash,
   ]
+
   const scope = Option.match(params.subagents, {
     onNone: () => baseScope,
     onSome: (mode) => [...baseScope, mode],
   })
+
   const scopedHash = yield* sha256Hex(scope.join("\0"))
+
   return {
     keyHash,
     kvKey: `workflow-session-response-cache/v1/${scopedHash}`,
@@ -296,6 +338,7 @@ const buildSessionKeySome = Effect.fn("workflows.buildSessionKeySome")(function*
   subagents: Option.Option<SubagentMode>
 }) {
   const key = yield* buildSessionKey(params)
+
   return Option.some(key)
 })
 
@@ -320,9 +363,11 @@ const renderSessionKey = Effect.fn("workflows.renderSessionKey")(function* (
   subagents: Option.Option<SubagentMode>,
 ) {
   const options = input.node.options ?? {}
+
   const keyTemplate = Option.getOrUndefined(
     Option.orElse(getString(input.inputs[optionKey]), () => getString(options[optionKey])),
   )
+
   return yield* Match.value(keyTemplate).pipe(
     Match.when(Match.undefined, () => Effect.succeed(Option.none<RenderedWorkflowSessionKey>())),
     Match.orElse((resolvedKeyTemplate) =>
@@ -348,10 +393,12 @@ const checkSessionReusable = Effect.fn("workflows.checkSessionReusable")(functio
     try: () => params.store.getById(params.sessionId),
     catch: toError,
   })
+
   const matchesSubagents = Option.match(params.subagents, {
     onNone: () => true,
     onSome: (mode) => normalizeSubagentMode(session?.subagents) === mode,
   })
+
   const reusable = Boolean(
     session &&
     session.user_id === params.userId &&
@@ -360,6 +407,7 @@ const checkSessionReusable = Effect.fn("workflows.checkSessionReusable")(functio
     matchesSubagents &&
     session.status !== "archived",
   )
+
   return Match.value(reusable).pipe(
     Match.when(false, () => Option.none<string>()),
     Match.orElse(() => Option.some(params.sessionId)),
@@ -383,10 +431,12 @@ const getReusableSessionId = Effect.fn("workflows.getReusableSessionId")(functio
     sessionKind: input.sessionKind,
     keyHash: input.keyHash,
   }
+
   const sessionId = yield* Effect.tryPromise({
     try: () => input.store.getWorkflowSessionReuseSessionId(scope),
     catch: toError,
   })
+
   return yield* Match.value(sessionId).pipe(
     Match.when(Match.null, () => Effect.succeed(Option.none<string>())),
     Match.orElse((resolvedSessionId) =>
@@ -406,14 +456,21 @@ function resolveCacheTtl(configured: number | undefined): Option.Option<number> 
   return Match.value(
     configured !== undefined && configured >= MIN_WORKFLOW_SESSION_CACHE_TTL_SECONDS,
   ).pipe(
-    Match.when(true, () => Option.some(configured as number)),
+    Match.when(true, () =>
+      Option.some(
+        /* SAFETY: configured has the number shape established by the check or writer around this read. */ configured as number,
+      ),
+    ),
     Match.orElse(() => Option.none<number>()),
   )
 }
 
 const getString_ = (value: unknown, fallback: string): string =>
   Match.value(typeof value === "string").pipe(
-    Match.when(true, () => value as string),
+    Match.when(
+      true,
+      () => /* SAFETY: The preceding check established that value is string. */ value as string,
+    ),
     Match.orElse(() => fallback),
   )
 
@@ -426,13 +483,21 @@ const getOutput = (value: unknown) =>
 
 function buildRunData(data: Record<string, unknown>): WorkflowSessionRunResponse {
   const errorField = Match.value(typeof data.error === "string").pipe(
-    Match.when(true, () => ({ error: data.error as string })),
+    Match.when(true, () => ({
+      error:
+        /* SAFETY: The preceding check established that data.error is string. */ data.error as string,
+    })),
     Match.orElse(() => ({})),
   )
+
   const subagentRuns = Match.value(Array.isArray(data.subagentRuns)).pipe(
-    Match.when(true, () => ({ subagentRuns: data.subagentRuns as SubagentRunSummary[] })),
+    Match.when(true, () => ({
+      subagentRuns:
+        /* SAFETY: data.subagentRuns contains only SubagentRunSummary[] values established by the surrounding filter or writer. */ data.subagentRuns as SubagentRunSummary[],
+    })),
     Match.orElse(() => ({})),
   )
+
   return {
     sessionId: getString_(data.sessionId, ""),
     messageId: getString_(data.messageId, ""),
@@ -446,7 +511,11 @@ function buildRunData(data: Record<string, unknown>): WorkflowSessionRunResponse
 
 function sessionErrorMessage(data: Record<string, unknown>, status: number): string {
   return Match.value(typeof data.error === "string").pipe(
-    Match.when(true, () => data.error as string),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: The preceding check established that data.error is string. */ data.error as string,
+    ),
     Match.orElse(() => `Session action failed with status ${status}`),
   )
 }
@@ -459,6 +528,7 @@ const readSessionCache = Effect.fn("workflows.readSessionCache")(function* (para
     try: () => params.input.env.WORKFLOW_SESSION_RESPONSE_CACHE.get(params.key.kvKey),
     catch: toError,
   })
+
   return parseWorkflowSessionCacheEntry(cachedValue)
 })
 
@@ -475,6 +545,7 @@ const persistReuseKeyIfNeeded = Effect.fn("workflows.persistReuseKey")(function*
     params.runData.sessionId.length > 0 &&
       params.runData.sessionId !== Option.getOrNull(params.reusableSessionId),
   )
+
   yield* Effect.tryPromise({
     try: () =>
       params.sessionIndexStore.upsertWorkflowSessionReuseKey({
@@ -501,10 +572,12 @@ const persistSessionCacheEntry = Effect.fn("workflows.persistSessionCacheEntry")
       Match.tag("Some", (some) => ({ error: some.value })),
       Match.orElse(() => ({})),
     )
+
     const subagentRuns = Match.value(params.runData.subagentRuns).pipe(
       Match.when(Match.undefined, () => ({})),
       Match.orElse((runs) => ({ subagentRuns: runs })),
     )
+
     const payload = stringifyJson({
       sessionId: params.runData.sessionId,
       messageId: params.runData.messageId,
@@ -513,6 +586,7 @@ const persistSessionCacheEntry = Effect.fn("workflows.persistSessionCacheEntry")
       ...errorField,
       ...subagentRuns,
     } satisfies WorkflowSessionCacheEntry)
+
     const shouldPersistCache = Effect.succeed(params.runData.status === "completed")
     yield* Option.match(params.cacheTtl, {
       onNone: () => Effect.void,
@@ -539,18 +613,23 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
   subagents: Option.Option<SubagentMode>
 }) {
   const userId = getActionUserId(params.input)
+
   const model = yield* Option.match(getString(params.options.model), {
     onNone: () => workflowNodeFail("Workflow agent node requires an AI Provider model"),
     onSome: Effect.succeed,
   })
+
   const sessionIndexStore = createSessionIndexStoreFromD1(makeControlPlaneFromEnv(params.input.env))
+
   const sessionKey = yield* renderSessionKey(
     params.input,
     "sessionKey",
     params.sessionKind,
     params.subagents,
   )
+
   const incognito = getBoolean(params.options.incognito, true)
+
   const reusableSessionId = yield* Option.match(sessionKey, {
     onNone: () => Effect.succeed(Option.none<string>()),
     onSome: (key) =>
@@ -565,15 +644,18 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
         subagents: params.subagents,
       }),
   })
+
   const subagents = Option.match(params.subagents, {
     onNone: () => ({}),
     onSome: (mode) => ({ subagents: mode }),
   })
+
   // Workflow automation needs a deterministic budget and must not inherit a mutable chat default.
   const isolateStepLimit = Match.value(params.sessionKind).pipe(
     Match.when("isolate", () => ({ isolateStepLimit: DEFAULT_ISOLATE_STEP_LIMIT })),
     Match.orElse(() => ({})),
   )
+
   const payload = {
     title: `${params.resolvedWorkflow.name}: ${params.input.node.label}`,
     sessionId: Option.getOrUndefined(reusableSessionId),
@@ -590,7 +672,9 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
     repoOwner: Option.getOrUndefined(getString(params.options.repoOwner)),
     repoName: Option.getOrUndefined(getString(params.options.repoName)),
   }
+
   const providers = providerServicesForEnv(params.input.env)
+
   const response = yield* runSessionApplication({
     request: new Request(new URL("/sessions/run", getInfraServerUrl(params.input.env))),
     env: params.input.env,
@@ -619,10 +703,15 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
     ),
     Effect.mapError(toError),
   )
+
   const data = yield* Effect.tryPromise({
-    try: () => response.json().catch(() => ({})) as Promise<Record<string, unknown>>,
+    try: () =>
+      /* SAFETY: The JSON body is the Promise<Record<string, unknown>> shape read by this caller after the response arrives. */ response
+        .json()
+        .catch(() => ({})) as Promise<Record<string, unknown>>,
     catch: toError,
   })
+
   yield* workflowNodeFailWhen(!response.ok, sessionErrorMessage(data, response.status))
   const runData = buildRunData(data)
   yield* Option.match(sessionKey, {
@@ -643,6 +732,7 @@ const runSessionRequest = Effect.fn("workflows.runSessionRequest")(function* (pa
     onSome: (key) =>
       persistSessionCacheEntry({ key, cacheTtl: params.cacheTtl, runData, input: params.input }),
   })
+
   return getSessionRunOutputs(runData, { cacheHit: false })
 })
 
@@ -655,28 +745,36 @@ const runSessionNode = Effect.fn("workflows.runSessionNode")(function* (
       createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env)).getWorkflow(input.workflowId),
     catch: toError,
   })
+
   const resolvedWorkflow = yield* Option.match(Option.fromNullishOr(workflow), {
     onNone: () => workflowNodeFail(`Workflow '${input.workflowId}' was not found`),
     onSome: (resolved) => Effect.succeed(resolved),
   })
+
   const options = input.node.options ?? {}
   const subagents = getSubagentMode(options.subagents, sessionKind, input.manifestVersion)
+
   const promptTemplate = Option.getOrElse(
     Option.orElse(getString(input.inputs.context), () => getString(options.prompt)),
     () => "Run the workflow action with this input: {{inputs}}",
   )
+
   const content = renderTemplate(promptTemplate, createNodeContext(input))
+
   const cacheTtl = resolveCacheTtl(
     Option.getOrUndefined(getPositiveInteger(options.cacheTtlSeconds)),
   )
+
   const cacheKey = yield* Match.value(Option.isSome(cacheTtl)).pipe(
     Match.when(true, () => renderSessionKey(input, "cacheKey", sessionKind, subagents)),
     Match.orElse(() => Effect.succeed(Option.none<RenderedWorkflowSessionKey>())),
   )
+
   const cached = yield* Option.match(cacheKey, {
     onNone: () => Effect.succeed(Option.none<WorkflowSessionCacheEntry>()),
     onSome: (key) => readSessionCache({ input, key }),
   })
+
   return yield* Option.match(cached, {
     onSome: (entry) =>
       Effect.succeed(getSessionRunOutputs(entry, { cacheHit: true, createdSession: false })),

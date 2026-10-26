@@ -5,6 +5,7 @@ const effectUtilityImportSources = new Set(["effect/Clock", "effect/DateTime"])
 
 export function isS0RequestObservabilitySurface(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
+
   return (
     normalized.endsWith("/apps/api/index.ts") ||
     /\/apps\/api\/infra(?:\/|$)/.test(normalized) ||
@@ -15,6 +16,7 @@ export function isS0RequestObservabilitySurface(filename: string): boolean {
 
 export function isS0AllowedDynamicImportBoundary(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
+
   return (
     normalized.endsWith("/packages/api/src/server/background/workflows/runner.ts") ||
     normalized.endsWith("/apps/web/src/components/s0-loader.tsx") ||
@@ -26,6 +28,7 @@ export function isS0AllowedDynamicImportBoundary(filename: string): boolean {
 
 export function isS0AllowedBackendEffectBoundary(filename: string): boolean {
   const normalized = filename.replaceAll("\\", "/")
+
   return (
     /\/packages\/infra\/alchemy(?:\.[^.]+)?\.run\.ts$/.test(normalized) ||
     /\/packages\/infra\/src\/stacks(?:\/|$)/.test(normalized)
@@ -37,6 +40,7 @@ export function hasEffectSignal(program: NodeLike): boolean {
     if (candidate.type === "ImportDeclaration") {
       const source = nodeChild(candidate, "source")
       const value = literalValue(source)
+
       return (
         value === "effect" ||
         value === "@effect-atom/atom-react" ||
@@ -45,7 +49,9 @@ export function hasEffectSignal(program: NodeLike): boolean {
           !effectUtilityImportSources.has(value))
       )
     }
+
     const parts = memberParts(candidate)
+
     return parts?.[0] === "Effect" && parts.length > 1
   })
 }

@@ -81,6 +81,7 @@ const resolveToolKindAvailability = Effect.fn("controlPlane.resolveToolKindAvail
     definition: SessionToolAvailabilityDefinition,
   ) {
     const selectedTools = tools.filter((tool) => tool.kind === definition.kind)
+
     const availability = definition.resolve(env, selectedTools).pipe(
       Effect.catch((errorValue) =>
         Effect.logWarning("session_tools.availability_lookup_failed").pipe(
@@ -101,7 +102,9 @@ const resolveToolKindAvailability = Effect.fn("controlPlane.resolveToolKindAvail
         ),
       ),
     )
+
     const hasSelectedTools = Effect.succeed(selectedTools.length > 0)
+
     return yield* Effect.when(availability, hasSelectedTools).pipe(
       Effect.map(Option.getOrElse((): SessionToolAvailability[] => [])),
     )
@@ -112,12 +115,15 @@ export const resolveSessionListToolAvailability = Effect.fn(
   "controlPlane.resolveSessionListToolAvailability",
 )(function* (env: ApiEnv, resolutions: readonly StoredSessionToolResolution[]) {
   const tools = resolutions.flatMap((resolution) => resolution.tools)
+
   const unavailableByKind = yield* Effect.forEach(
     SESSION_TOOL_AVAILABILITY_REGISTRY,
     (definition) => resolveToolKindAvailability(env, tools, definition),
     { concurrency: "unbounded" },
   )
+
   const availability = unavailableByKind.flat()
+
   return resolutions.map((resolution) =>
     applyStoredSessionToolAvailability(resolution, availability),
   )

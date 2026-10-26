@@ -33,12 +33,14 @@ function skillFailure(cause: unknown): ControlPlaneFailure {
     Option.map((tagged) => String(tagged._tag)),
     Option.getOrElse(() => ""),
   )
+
   const status = Match.value(tag).pipe(
     Match.when("AgentSkillValidationError", () => 400),
     Match.when("AgentSkillConflictError", () => 409),
     Match.when("AgentSkillNotFoundError", () => 404),
     Match.orElse(() => 500),
   )
+
   return new ControlPlaneFailure({ payload: { error: describeError(cause) }, status })
 }
 
@@ -63,6 +65,7 @@ const response = Effect.fn("admin.skills.response")(function* (context: ControlP
     try: () => listAdminGlobalSkills(context.db),
     catch: skillFailure,
   })
+
   return json({ skills })
 })
 
@@ -70,6 +73,7 @@ export function agentSkills() {
   return runControlPlane(
     Effect.fn("admin.skills.list")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
+
       return yield* response(context)
     }),
   )
@@ -79,14 +83,17 @@ export function createAgentSkill({ payload }: { payload: AdminAgentSkillCreatePa
   return runControlPlane(
     Effect.fn("admin.skills.create")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       const parsed = yield* Effect.try({
         try: () => parseAgentSkillMarkdown(payload.skillMd),
         catch: skillFailure,
       })
+
       const contentHash = yield* Effect.tryPromise({
         try: () => hashSkillContent(payload.skillMd),
         catch: skillFailure,
       })
+
       return yield* withAudit(
         {
           context,
@@ -130,6 +137,7 @@ export function updateAgentSkill({
       const admin = yield* requireAdmin(context)
       const store = new AgentSkillStore(context.db)
       const skill = yield* store.requireActive(params.id).pipe(Effect.mapError(skillFailure))
+
       return yield* withAudit(
         {
           context,
@@ -154,6 +162,7 @@ export function deleteAgentSkill({ params }: { params: AdminIdParams }) {
       const admin = yield* requireAdmin(context)
       const store = new AgentSkillStore(context.db)
       const skill = yield* store.requireActive(params.id).pipe(Effect.mapError(skillFailure))
+
       return yield* withAudit(
         {
           context,

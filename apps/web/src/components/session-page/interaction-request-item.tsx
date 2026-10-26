@@ -37,6 +37,7 @@ export function InteractionRequestItem({
     if (userToggledRef.current) {
       return
     }
+
     setIsExpanded(isPending && isStreamingFocus)
   }, [isPending, isStreamingFocus])
 
@@ -114,6 +115,7 @@ function PermissionInteractionBody({
 }) {
   const patterns = event.patterns.filter(Boolean)
   const disabled = submitting || response != null
+
   const reply = (value: "once" | "always" | "reject") =>
     onReply({
       runtime: "opencode",
@@ -188,15 +190,18 @@ function QuestionInteractionBody({
 }) {
   const [selectedByIndex, setSelectedByIndex] = useState<Record<number, string[]>>({})
   const [customByIndex, setCustomByIndex] = useState<Record<number, string>>({})
+
   const answers = useMemo(
     () =>
       event.questions.map((question, index) => {
         const selected = selectedByIndex[index] ?? []
         const custom = (customByIndex[index] ?? "").trim()
+
         return custom && question.custom ? [...selected, custom] : selected
       }),
     [customByIndex, event.questions, selectedByIndex],
   )
+
   const canSubmit =
     !submitting &&
     response == null &&
@@ -206,11 +211,13 @@ function QuestionInteractionBody({
   const toggleOption = (questionIndex: number, label: string, multiple: boolean | undefined) => {
     setSelectedByIndex((current) => {
       const currentValues = current[questionIndex] ?? []
+
       const nextValues = multiple
         ? currentValues.includes(label)
           ? currentValues.filter((value) => value !== label)
           : [...currentValues, label]
         : [label]
+
       return { ...current, [questionIndex]: nextValues }
     })
   }
@@ -223,6 +230,7 @@ function QuestionInteractionBody({
     <div className="space-y-4 text-sm">
       {event.questions.map((question, questionIndex) => {
         const selected = selectedByIndex[questionIndex] ?? []
+
         return (
           <div key={`${event.interactionId}-${questionIndex}`} className="space-y-2">
             <div>
@@ -232,6 +240,7 @@ function QuestionInteractionBody({
             <div className="flex flex-wrap gap-2">
               {question.options.map((option) => {
                 const active = selected.includes(option.label)
+
                 return (
                   <button
                     key={option.label}
@@ -308,14 +317,18 @@ function formatInteractionResponse(
   if (!response) {
     return null
   }
+
   if (response.kind === "permission") {
     if (response.reply === "once") {
       return "Allowed once"
     }
+
     if (response.reply === "always") {
       return "Always allowed"
     }
+
     return "Rejected"
   }
+
   return response.rejected ? "Rejected" : "Answered"
 }

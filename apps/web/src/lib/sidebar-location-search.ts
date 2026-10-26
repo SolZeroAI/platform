@@ -9,15 +9,35 @@ export type SidebarLocationSearch = {
   view?: string
 }
 
-function readSearchString(search: object, key: keyof SidebarLocationSearch): string | undefined {
-  const value = Reflect.get(search, key)
+type SidebarSearchRecord = {
+  category?: unknown
+  githubSetup?: unknown
+  oktaReconnect?: unknown
+  slackUserId?: unknown
+  mcpQuery?: unknown
+  mcpServerId?: unknown
+  mcpServerLabel?: unknown
+  view?: unknown
+}
+
+function isSidebarSearchRecord(search: unknown): search is SidebarSearchRecord {
+  return typeof search === "object" && search !== null
+}
+
+function readSearchString(
+  search: SidebarSearchRecord,
+  key: keyof SidebarLocationSearch,
+): string | undefined {
+  const value = search[key]
+
   return typeof value === "string" && value.length > 0 ? value : undefined
 }
 
 export function parseSidebarLocationSearch(search: unknown): SidebarLocationSearch {
-  if (typeof search !== "object" || search === null) {
+  if (!isSidebarSearchRecord(search)) {
     return {}
   }
+
   return {
     category: readSearchString(search, "category"),
     githubSetup: readSearchString(search, "githubSetup"),

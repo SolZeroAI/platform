@@ -130,9 +130,11 @@ function runMigration(sql: SqlStorage, statement: string): void {
     sql.exec(statement)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
+
     if (message.includes("duplicate column") || message.includes("already exists")) {
       return
     }
+
     throw error
   }
 }
