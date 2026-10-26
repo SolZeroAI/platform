@@ -33,7 +33,7 @@ test(
 test(
   "session MCP definitions and subagent preferences persist",
   { session: "admin" },
-  async ({ app, browser, screen, agent }) => {
+  async ({ app, browser, screen }) => {
     const customMcpServers = {
       remote: { type: "remote", url: "http://localhost:4319/mcp", enabled: false },
       local: { type: "local", command: ["node", "--version"], enabled: false },
@@ -66,12 +66,12 @@ test(
       })
       await app.open(`/session/${sessionId}`)
       await expect(screen.getByRole("button", "Tools", { exact: true })).toBeVisible()
-      await agent.act("Open the Agent tools editor")
+      await screen.getByRole("button", "Tools", { exact: true }).tap()
       await expect(screen.getByLabel("Tool call limit")).toHaveValue("38")
       await screen.getByLabel("Tool call limit").fill("39")
-      await agent.act(
-        "Set Sub-agents to Disabled and click Update tools. Finish when the Agent tools dialog closes.",
-      )
+      await screen.getByRole("dialog").getByRole("combobox").tap()
+      await screen.getByRole("option", "Disabled").tap()
+      await screen.getByRole("dialog").getByRole("button", "Update tools", { exact: true }).tap()
       await expect(screen.getByRole("dialog")).not.toBeVisible()
       await browser.reload()
       const saved = await api<object>(browser, path)

@@ -46,19 +46,41 @@ It never prints values. The shared local gateway credentials can be selected wit
 `E2E_ENV_FILE=/Users/jbeckman/projects/personal/alchemy-new/config/.env` on the maintainer's
 machine; this path is optional and is never assumed in CI.
 
-Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and `CF_AI_GATEWAY_E2E_TOKEN`.
-The Clef step executor and the `decisionFilter` in `e2e.config.ts` both call
-`@cf/cloudflare/clef` through the account's existing default AI Gateway. The gateway id
-is `default`. `CF_AI_GATEWAY_E2E_TOKEN` is the token with access to that gateway and
-permission to execute Workers AI. These calls do not use the AI Gateway the application
-provisions for a stage or a run, and the suite does not read that gateway's logs.
-`CF_AI_GATEWAY_E2E_SKIP_CACHE=1` bypasses response caching on the default gateway,
-independently of e2e action replay. `e2e list --changed-since <ref>` and
-`e2e run --changed-since <ref>` ask the decision filter which tests the change can affect.
-A change to the loaded config or a known lockfile keeps every test. No Jev or text reasoning
-model is substituted. Clef chooses actions and semantic verdicts from the observed tree
-and redacted screenshots; exact text values come from `agent.act` params. Use `expect`
-for polling and extraction: Clef does not implement `agent.waitFor` or `agent.extract`.
+Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. `CLOUDFLARE_API_TOKEN` stays
+the Alchemy deployment token. The semantic model does not read it, and it does not
+read the gateway or run token the application provisions for a stage or a run.
+The suite does not read that gateway's logs.
+`e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
+gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
+`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Response caching uses a
+3600 second TTL. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` sets `cf-aig-skip-cache` and
+bypasses gateway response caching independently of e2e action replay. The gateway
+retries with three attempts and exponential backoff. The decision adapter sends
+`reasoning_effort: none` and array message content. This model rejects `none`
+and array content, and its default token budget stops during reasoning, so the
+request uses `low`, joins text parts into a string, and allows 8193 output tokens.
+The gateway cache key includes that token budget. 8192 had stored a length finish
+and an inconclusive verdict, so this budget misses those entries. Later identical
+requests still cache for 3600 seconds.
+The route calls chat models. It does not expose a Clef decision model. The test filter
+and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
+The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
+The workflow rename action question adds one sentence: choose the button named
+Save workflow name, and choose done when that button is not offered. The completion
+question for that task adds one sentence: the save holds when that button was
+activated and is now absent. A conditional action sentence still activated the
+selected Overview tab. The skill question chooses the checked Enable switch
+for the supplied skill, then done when Use admin default is visible. Creating
+a bot, deleting its routine, searching MCPs, opening Agent tools, and setting
+Sub-agents use the named controls directly.
+A failed test runs once more. The model sometimes spends the output budget
+before the JSON answer, and the new attempt has a new page, so the gateway
+does not replay that body.
+`e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
+tests the change can affect. A change to the loaded config or a known lockfile keeps
+every test. `agent.act` and `agent.assert` use the decision adapter. The same language
+model answers `agent.waitFor` and `agent.extract`. Exact text values come from
+`agent.act` params. Use `expect` for deterministic polling and extraction.
 
 The application runtime model is separate from the semantic test executor. The test
 profile declares the existing Workers AI default and provider catalog. `E2E_APP_MODEL`
@@ -83,7 +105,7 @@ Claude Code. OpenCode and Codex prompts, tools, follow-ups, and history are core
 ## Recorded-action replay
 
 `nub run test` uses verified action recordings in `.e2e/cache`. A warm `agent.act` can
-replay its controls and check its recorded final state without Clef calls; the immediate
+replay its controls and check its recorded final state without model calls; the immediate
 exact assertions still run. Fresh fixture names are marked with e2e `unique()` in action
 parameters, so their current values replace recording slots instead of changing the key.
 Keep choices that change the action flow, such as light versus dark mode, ordinary values.
@@ -128,7 +150,7 @@ For a local accounting report, run `nub exec tsx scripts/e2e/ai-report.mjs init`
 the tests and `nub exec tsx scripts/e2e/ai-report.mjs summarize` afterward. These commands
 use the pinned Node runtime and do not make model calls.
 
-The summary counts the suite's own Clef calls. Executor token counts and cost come from
+The summary counts the suite's own decision-model calls. Executor token counts and cost come from
 the model records in the e2e report. Decision-filter spend comes from the usage suffix on
 that report's filter note, and is left unknown when the suffix is absent. The summary does
 not measure application inference, and it does not read AI Gateway logs. Missing
@@ -145,7 +167,7 @@ SDK telemetry is disabled with `E2E_TELEMETRY_DISABLED=1`.
 
 The installed CLI refreshed the pristine `.agents/skills/e2e` guidance and the Claude
 skill symlink. `.mcp.json` and `.cursor/mcp.json` invoke the installed MCP server through
-`nub run --silent test:e2e:mcp`. The MCP command uses the same registered SDK process and verified exit cleanup as test runs; `--silent` keeps Nub headers out of JSON-RPC stdout. Project-specific Node/Nub, Clef, lifecycle and feedback rules live in
+`nub run --silent test:e2e:mcp`. The MCP command uses the same registered SDK process and verified exit cleanup as test runs; `--silent` keeps Nub headers out of JSON-RPC stdout. Project-specific Node/Nub, gateway, lifecycle and feedback rules live in
 `AGENTS.md` and this guide. Upstream feedback or other outgoing messages require explicit
 human authorization.
 
@@ -205,7 +227,7 @@ starts. Enable the commented integration blocks in this profile:
 | Claude Code | Gateway providerKeys.anthropic references `S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY`; `E2E_CLAUDE_CODE_MODEL=cloudflare-ai-gateway/anthropic/claude-opus-5` | Anthropic messages-compatible model and container bootstrap |
 | OpenCode/Codex (core) | Shipped Workers AI GPT-OSS120b; override independently with `E2E_OPENCODE_MODEL`, `E2E_CODEX_MODEL` | Docker and the configured application Workers AI binding/run token; optional OpenAI gateway models additionally need `S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY` in providerKeys.openai |
 | OIDC | `auth.providers.<id>` kind=oidc, issuer/clientId and a chosen clientSecret env reference; signIn/provisionUsers/link capabilities | Isolated IdP clients with localhost callback URLs; distinct admin/member users |
-| LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the Clef decision token as an application provider |
+| LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the e2e AI Gateway token as an application provider |
 
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
@@ -339,7 +361,7 @@ locally. Chromium receives native clipboard read/write permissions through the s
 pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
 have no Copy button in the current UI; the runtime response's existing Copy markdown
 control verifies the native permission path. Replay cache is preserved by CI rather than checked into Git. `test:e2e:live`
-forces fresh Clef decisions; `test:e2e:cache-strict` fails on stale recordings. Read
+forces fresh model decisions; `test:e2e:cache-strict` fails on stale recordings. Read
 `.e2e/report.json`, `.e2e/summary.md`, failure pages and the ignored stack log to diagnose
 failures. Treat unsupported runtime services and missing credentials as explicit blockers;
 do not convert failures into skips or claim green coverage from collection alone.
