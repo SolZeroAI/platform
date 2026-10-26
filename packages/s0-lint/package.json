@@ -11,7 +11,7 @@
     "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
-    "@oxlint/plugins": "1.87.0"
+    "@oxlint/plugins": "1.89.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
