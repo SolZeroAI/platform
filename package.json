@@ -77,11 +77,11 @@
     "test:e2e:mcp": "tsx scripts/e2e/run.ts --mcp"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.3",
+    "@effect/platform-node": "4.0.6",
     "alchemy": "2.0.0-beta.81",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.3"
+    "effect": "4.0.6"
   },
   "devDependencies": {
     "@ai-sdk/openai-compatible": "3.0.44",
@@ -118,8 +118,8 @@
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.1",
-    "@effect/platform-node": "4.0.3",
-    "@effect/platform-node-shared": "4.0.3",
+    "@effect/platform-node": "4.0.6",
+    "@effect/platform-node-shared": "4.0.6",
     "@effect/sql-d1": "4.0.3",
     "@effect/sql-pg": "4.0.3",
     "@effect/sql-sqlite-do": "4.0.3",
@@ -127,7 +127,7 @@
     "@modelcontextprotocol/sdk": "1.30.0",
     "ai": "7.0.152",
     "chat": "4.40.0",
-    "effect": "4.0.3",
+    "effect": "4.0.6",
     "workerd": "1.20261006.1"
   },
   "devEngines": {

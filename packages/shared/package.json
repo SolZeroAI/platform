@@ -19,7 +19,7 @@
     "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
-    "effect": "4.0.3",
+    "effect": "4.0.6",
     "yaml": "2.9.0"
   },
   "devDependencies": {
