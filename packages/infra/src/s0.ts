@@ -81,6 +81,7 @@ function createCloudflareAiGateway(input: {
   return Effect.gen(function* () {
     // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and local stacks never call the Cloudflare Gateway API.
     if (!config.enabled) return undefined
+
     // oxlint-disable-next-line s0-lint/no-if-statement -- A mock AI gateway layer needs the native binding shape without provisioning an account resource.
     if (input.apiEnv.S0_AI_GATEWAY_LAYER === "mock") {
       return mockAiGateway(input.appName, input.stageMetadata.name)
@@ -94,7 +95,9 @@ function createCloudflareAiGateway(input: {
       collectLogs: config.collectLogs,
       storeId: secretsStore.storeId,
     }
+
     const resource = yield* Cloudflare.AI.Gateway("ai-gateway", gatewayProps)
+
     yield* Effect.forEach(
       CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
       (provider) =>
@@ -115,6 +118,7 @@ function createCloudflareAiGateway(input: {
         ),
       { concurrency: "unbounded" },
     )
+
     const runToken = yield* Cloudflare.ApiToken.AccountApiToken("ai-gateway-run-token", {
       accountId: input.cloudflareAccountId,
       name: `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,

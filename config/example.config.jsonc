@@ -3,7 +3,6 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
-  "providerLayer": "live",
   "aiGatewayLayer": "live",
   // Optional. A complete brand object takes precedence over VITE_S0_BRAND_* environment values.
   // Omit it to keep the existing environment overrides or SolZero defaults.

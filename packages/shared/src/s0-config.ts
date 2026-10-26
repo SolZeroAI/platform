@@ -112,6 +112,7 @@ export type S0LitellmConfig = typeof S0LitellmConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- deployment-managed AI Gateway configuration is a plain JSON DTO
 export const S0ProviderLayerSchema = Schema.Literals(["live", "mock"])
+
 export type S0ProviderLayer = typeof S0ProviderLayerSchema.Type
 
 export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
@@ -189,7 +190,6 @@ export type S0AuthConfig = typeof S0AuthConfigSchema.Type
 
 const S0ResolvedConfigFields = {
   schemaVersion: Schema.Literal(S0_CONFIG_SCHEMA_VERSION),
-  providerLayer: S0ProviderLayerSchema,
   aiGatewayLayer: S0ProviderLayerSchema,
   deployment: S0DeploymentConfigSchema,
   application: S0ApplicationConfigSchema,

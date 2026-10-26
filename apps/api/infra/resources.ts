@@ -59,6 +59,7 @@ export function createAgentContainerApplication(
     // Any local alchemy dev can build container images from this directory.
     // Each runtime is a subdirectory that contains a Dockerfile.
     const localContexts = yield* Config.String("S0_LOCAL_CONTAINER_CONTEXTS").pipe(Config.option)
+
     const imageSource = Option.match(localContexts, {
       onNone: () => ({ image: AGENT_CONTAINER_IMAGES[options.runtime] }),
       onSome: (contexts) => ({

@@ -29,24 +29,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function messageText(message: Record<string, unknown>): string {
   if (typeof message.content === "string") return message.content
+
   if (typeof message.text === "string") return message.text
+
   if (typeof message.output === "string") return message.output
+
   return JSON.stringify(message.content ?? message.text ?? "")
 }
 
 function userParts(value: unknown): string[] {
   if (!Array.isArray(value)) return []
+
   return value.flatMap((message) => {
     if (!isRecord(message)) return []
+
     if (message.role === "user" || message.type === "input_text") return [messageText(message)]
+
     return []
   })
 }
 
 function userText(inputs: unknown): string {
   if (!isRecord(inputs)) return ""
+
   const prompt = typeof inputs.prompt === "string" ? inputs.prompt : ""
+
   const input = typeof inputs.input === "string" ? inputs.input : ""
+
   return [...userParts(inputs.messages), ...userParts(inputs.input), input, prompt]
     .filter((part) => part.length > 0)
     .join("\n")
@@ -54,6 +63,7 @@ function userText(inputs: unknown): string {
 
 function hasToolResult(inputs: unknown): boolean {
   if (!isRecord(inputs)) return false
+
   return [inputs.messages, inputs.input].some(
     (value) =>
       Array.isArray(value) &&
@@ -66,10 +76,14 @@ function hasToolResult(inputs: unknown): boolean {
 
 function mockTurn(inputs: unknown): MockTurn {
   const user = userText(inputs)
+
   const marker = user.match(/marker[:\s]+([A-Za-z0-9_-]+)/)?.[1]
+
   const explicitMarker = user.match(/Reply with only this marker:\s*([A-Za-z0-9_-]+)/)?.[1]
+
   const delegate =
     user.includes(MOCK_DELEGATE_TOOL) && !hasToolResult(inputs) && marker !== undefined
+
   return Match.value(delegate).pipe(
     Match.when(true, () => ({
       kind: "tool" as const,
@@ -90,29 +104,40 @@ function toolCall(turn: Extract<MockTurn, { kind: "tool" }>) {
 }
 
 function generation(turn: MockTurn) {
-  return Match.value(turn.kind).pipe(
-    Match.when("tool", () => ({
+  return Match.value(turn).pipe(
+    Match.when({ kind: "tool" }, (toolTurn) => ({
       response: "",
-      tool_calls: [toolCall(turn as Extract<MockTurn, { kind: "tool" }>)],
+      tool_calls: [toolCall(toolTurn)],
       usage,
     })),
-    Match.orElse(() => ({ response: (turn as Extract<MockTurn, { kind: "text" }>).text, usage })),
+    Match.orElse((textTurn) => ({ response: textTurn.text, usage })),
+  )
+}
+
+function ssePayload(turn: MockTurn): string {
+  return Match.value(turn).pipe(
+    Match.when({ kind: "tool" }, (toolTurn) => {
+      const calls = JSON.stringify({ tool_calls: [toolCall(toolTurn)] })
+
+      const finish = JSON.stringify({ finish_reason: "tool_calls", usage })
+
+      return `data: ${calls}\n\ndata: ${finish}\n\ndata: [DONE]\n\n`
+    }),
+    Match.orElse((textTurn) => {
+      const chunk = JSON.stringify({ response: textTurn.text })
+
+      const finish = JSON.stringify({ finish_reason: "stop", usage })
+
+      return `data: ${chunk}\n\ndata: ${finish}\n\ndata: [DONE]\n\n`
+    }),
   )
 }
 
 function sseStream(turn: MockTurn): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder()
-  const payload = Match.value(turn.kind).pipe(
-    Match.when(
-      "tool",
-      () =>
-        `data: ${JSON.stringify({ tool_calls: [toolCall(turn as Extract<MockTurn, { kind: "tool" }>)] })}\n\ndata: ${JSON.stringify({ finish_reason: "tool_calls", usage })}\n\ndata: [DONE]\n\n`,
-    ),
-    Match.orElse(
-      () =>
-        `data: ${JSON.stringify({ response: (turn as Extract<MockTurn, { kind: "text" }>).text })}\n\ndata: ${JSON.stringify({ finish_reason: "stop", usage })}\n\ndata: [DONE]\n\n`,
-    ),
-  )
+
+  const payload = ssePayload(turn)
+
   return new ReadableStream({
     start(controller) {
       controller.enqueue(encoder.encode(payload))
@@ -121,8 +146,23 @@ function sseStream(turn: MockTurn): ReadableStream<Uint8Array> {
   })
 }
 
+function chatMessage(turn: MockTurn) {
+  return Match.value(turn).pipe(
+    Match.when({ kind: "tool" }, (toolTurn) => ({
+      role: "assistant",
+      content: "",
+      tool_calls: [toolCall(toolTurn)],
+    })),
+    Match.orElse((textTurn) => ({
+      role: "assistant",
+      content: textTurn.text,
+    })),
+  )
+}
+
 function chatCompletion(turn: MockTurn) {
   const tool = turn.kind === "tool"
+
   return {
     id: "chatcmpl-mock",
     object: "chat.completion",
@@ -131,11 +171,7 @@ function chatCompletion(turn: MockTurn) {
     choices: [
       {
         index: 0,
-        message: {
-          role: "assistant",
-          content: tool ? "" : turn.text,
-          ...(tool ? { tool_calls: [toolCall(turn)] } : {}),
-        },
+        message: chatMessage(turn),
         finish_reason: tool ? "tool_calls" : "stop",
       },
     ],
@@ -177,6 +213,7 @@ function anthropicMessage(text: string) {
 
 function httpBody(endpoint: string, query: unknown) {
   const turn = mockTurn(query)
+
   return Match.value(endpoint.includes("/messages")).pipe(
     Match.when(true, () => anthropicMessage(turn.kind === "text" ? turn.text : "")),
     Match.orElse(() =>
@@ -199,11 +236,12 @@ const mockGateway = {
   getUrl: async () => "https://workers-ai.local/mock",
   run: async (data: GatewayRunRequest | readonly GatewayRunRequest[]) => {
     const request = Array.isArray(data) ? data[0] : data
+
     return jsonResponse(httpBody(request?.endpoint ?? "", request?.query))
   },
 }
 
-export const mockAiGatewayBinding = {
+const mockAiGatewayBindingValue = {
   aiGatewayLogId: null,
   gateway: () => mockGateway,
   aiSearch() {
@@ -214,7 +252,9 @@ export const mockAiGatewayBinding = {
   },
   run: async (_model: string, inputs: unknown, options?: { returnRawResponse?: boolean }) => {
     const turn = mockTurn(inputs)
+
     const streaming = isRecord(inputs) && inputs.stream === true
+
     return Match.value(options?.returnRawResponse === true).pipe(
       Match.when(true, () => jsonResponse(chatCompletion(turn))),
       Match.orElse(() =>
@@ -227,9 +267,13 @@ export const mockAiGatewayBinding = {
   },
   models: async () => [],
   toMarkdown: () => ({}),
-} as unknown as Ai
+}
 
-const unavailableAiGatewayBinding = {
+export const mockAiGatewayBinding =
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- Workers AI declares Ai as an abstract class, so a structural binding is not assignable without crossing unknown.
+  /* SAFETY: This object implements run, gateway, models, toMarkdown, aiSearch, and autorag, the Ai binding surface isolate and container calls use. */ mockAiGatewayBindingValue as unknown as Ai
+
+const unavailableAiGatewayBindingValue = {
   aiGatewayLogId: null,
   gateway: () => ({
     patchLog: async () => undefined,
@@ -247,7 +291,11 @@ const unavailableAiGatewayBinding = {
   run: async () => Promise.reject(new Error("AI gateway binding is missing")),
   models: async () => Promise.reject(new Error("AI gateway binding is missing")),
   toMarkdown: () => ({}),
-} as unknown as Ai
+}
+
+const unavailableAiGatewayBinding =
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- Workers AI declares Ai as an abstract class, so a structural binding is not assignable without crossing unknown.
+  /* SAFETY: This object implements the same Ai binding methods and rejects every call when a live stage has no AI_GATEWAY binding. */ unavailableAiGatewayBindingValue as unknown as Ai
 
 export class AiGatewayBinding extends Context.Service<AiGatewayBinding, Ai>()(
   "s0/api/AiGatewayBinding",
@@ -276,10 +324,12 @@ export function aiGatewayBindingForContext(env: ApiEnv): Ai {
 
 export async function mockAiGatewayHttpResponse(binding: Ai, request: Request): Promise<Response> {
   const url = new URL(request.url)
+
   const query = await request
     .clone()
     .json()
     .catch(() => ({}))
+
   return binding.gateway("mock").run({
     provider: "workers-ai",
     endpoint: url.pathname,

@@ -4,7 +4,6 @@
   "properties": {
     "$schema": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
     "schemaVersion": { "type": "number", "enum": [1] },
-    "providerLayer": { "type": "string", "enum": ["live", "mock"] },
     "aiGatewayLayer": { "type": "string", "enum": ["live", "mock"] },
     "deployment": {
       "type": "object",
@@ -699,7 +698,6 @@
   },
   "required": [
     "schemaVersion",
-    "providerLayer",
     "aiGatewayLayer",
     "deployment",
     "application",

@@ -10,7 +10,6 @@ import * as Option from "effect/Option"
 import {
   CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
-  CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
   normalizeCloudflareAiGatewayResponse,
 } from "../ai-providers/cloudflare-ai-gateway"
 import { providerServicesForEnv } from "../../effect/services/providers"
@@ -284,6 +283,7 @@ function createProviderFetch(input: {
 
 async function gatewayUniversalRequest(request: Request) {
   const url = new URL(request.url)
+
   const query = await Match.value(request.method === "GET" || request.method === "HEAD").pipe(
     Match.when(true, () => Promise.resolve({})),
     Match.orElse(() =>
@@ -293,8 +293,11 @@ async function gatewayUniversalRequest(request: Request) {
         .catch(() => ({})),
     ),
   )
+
   const headers = Object.fromEntries(request.headers.entries())
+
   const native = url.pathname.match(/^\/v1\/[^/]+\/[^/]+\/([^/]+)\/(.*)$/)
+
   return Match.value(
     url.hostname === CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST && native !== null,
   ).pipe(
@@ -321,9 +324,11 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
     const binding = requireAiGatewayBinding(input.env)
     const providerRequest = new Request(request, init)
     const headers = new Headers(providerRequest.headers)
-    const runToken = stringOption(
-      Reflect.get(input.env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET),
-    ).pipe(Option.filter((value) => value.trim().length > 0))
+
+    const runToken = stringOption(input.env.CLOUDFLARE_AI_GATEWAY_RUN_TOKEN).pipe(
+      Option.filter((value) => value.trim().length > 0),
+    )
+
     Option.match(runToken, {
       onNone: () => undefined,
       onSome: (token) => headers.set("cf-aig-authorization", `Bearer ${token}`),
@@ -335,7 +340,9 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
       }),
       Match.orElse(() => undefined),
     )
+
     const universal = await gatewayUniversalRequest(new Request(providerRequest, { headers }))
+
     return binding.gateway(requireAiGatewayId(input.env)).run(universal)
   }
 }

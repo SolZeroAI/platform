@@ -31,6 +31,7 @@ if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
     process.env.NODE_EXTRA_CA_CERTS = path
   }
 }
+
 // The core suite exercises source-image OpenCode and Codex runtimes.
 process.env.E2E_CONTAINER_RUNTIME ??= "1"
 
@@ -92,6 +93,7 @@ export const appEnvironment = Object.fromEntries(
     // env key set is part of that digest, so a worker-only key fails the run
     // with CONFIG_NOT_DETERMINISTIC before any test starts.
     if (name.startsWith("E2E_WEB_BROWSERS_") || name === "E2E_WARNED_TSCONFIGS") return false
+
     // The decision model reads these from the test runner. The application child must not.
     return ![
       "CF_AI_GATEWAY_E2E_TOKEN",

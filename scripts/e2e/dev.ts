@@ -46,6 +46,7 @@ try {
         `\nLABEL dev.solzero.e2e.run="${run.runId}"\n`,
       )
     }
+
     appEnvironment.S0_LOCAL_CONTAINER_CONTEXTS = contexts
   }
 

@@ -3,6 +3,6 @@ packages:
   "release:solzero": minor
 ---
 
-## Select live or mock provider layers
+## Answer local model calls without an account AI Gateway
 
-Set `providerLayer` to `live` or `mock` for identity and GitHub. Set `aiGatewayLayer` to `live` or `mock` for Workers AI. `aiGatewayLayer: mock` answers `run()` and `gateway()` locally and does not provision an account AI Gateway, secrets store, or run token. Remove `aiProviders.cloudflareAiGateway.localBinding`; that field is no longer accepted.
+Set `aiGatewayLayer` to `mock` to answer Workers AI `run()` and `gateway()` locally. That choice does not provision an account AI Gateway, secrets store, or run token. Leave it `live` for deployed stages. Remove `aiProviders.cloudflareAiGateway.localBinding`; that field is no longer accepted.

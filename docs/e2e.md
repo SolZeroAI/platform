@@ -37,7 +37,7 @@ secrets; real credentials still come from the environment.
 After stopping the local test stack, run `test:e2e:cleanup` with the same credential file
 and profile. It validates the run's local Alchemy state, then destroys that state and
 removes the run directory, labelled containers, and images. It refuses an unexpected
-remote resource. `config/e2e-dev.config.jsonc` keeps `providerLayer` at `live` and sets `aiGatewayLayer` to `mock`. Identity and GitHub stay on their live providers. The mock AI binding answers Workers AI `run()` and `gateway()` calls locally and does not provision an account AI Gateway, secrets store, or run token. `aiProviders.cloudflareAiGateway.enabled` stays true so the catalog still has models.
+remote resource. `config/e2e-dev.config.jsonc` sets `aiGatewayLayer` to `mock`. Identity and GitHub stay on their live providers. The mock AI binding answers Workers AI `run()` and `gateway()` calls locally and does not provision an account AI Gateway, secrets store, or run token. `aiProviders.cloudflareAiGateway.enabled` stays true so the catalog still has models.
 When `CLOUDFLARE_API_TOKEN` is unset, cleanup does not call the Cloudflare API. The replay
 cache remains available. Stopping dev alone does not remove the run directory.
 
