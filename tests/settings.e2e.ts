@@ -53,11 +53,11 @@ test(
 test(
   "MCP deep link and legacy settings URL open the MCP tab",
   { session: "admin" },
-  async ({ app, screen, browser, agent }) => {
+  async ({ app, screen, browser }) => {
     await app.open("/settings?category=mcp")
     await expect(browser).toHaveURL(/category=agents.*tab=mcps/)
     await expect(screen.getByLabel("Search MCPs")).toBeVisible()
-    await agent.act("Search MCPs for the supplied query", { params: { query: "e2e-no-server" } })
+    await screen.getByLabel("Search MCPs").fill("e2e-no-server")
     await expect(screen.getByLabel("Search MCPs")).toHaveValue("e2e-no-server")
   },
 )

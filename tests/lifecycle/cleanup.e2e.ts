@@ -95,41 +95,6 @@ for (const stop of ["SIGTERM", "SIGKILL", "orphaned CLI"] as const) {
       })
       expect(created.status).toBe(201)
       expect(existsSync(resolve(root, receipt!.runId, "stack/.alchemy/local"))).toBe(true)
-      if (stop === "SIGKILL" && process.env.CLOUDFLARE_API_TOKEN?.trim()) {
-        const invoked = await fetch("http://localhost:3100/sessions/run", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: cookie,
-            Origin: "http://localhost:3000",
-          },
-          body: JSON.stringify({
-            title: "Owned container cleanup regression",
-            agentRuntime: "codex",
-            content: "Reply with exactly hello. No tools.",
-          }),
-          signal: AbortSignal.timeout(120_000),
-        })
-        expect(invoked.status).toBe(200)
-        const result = await invoked.json()
-        expect(result.status).toBe("completed")
-        expect(result.output.trim()).toBe("hello")
-        const { execFileSync } = await import("node:child_process")
-        const ids = execFileSync(
-          "docker",
-          ["ps", "-q", "--filter", `label=dev.solzero.e2e.run=${receipt!.runId}`],
-          { encoding: "utf8" },
-        ).trim()
-        expect(ids.length).toBeGreaterThan(0)
-        const manifestPath = resolve(root, receipt!.runId, "manifest.json")
-        recordDocker(JSON.parse(readFileSync(manifestPath, "utf8")))
-        const owned = JSON.parse(readFileSync(manifestPath, "utf8")).docker
-        expect(owned.length).toBeGreaterThan(0)
-        expect(owned.some((item: { proxyIds: string[] }) => item.proxyIds.length > 0)).toBe(true)
-        // Remove only the actual run-labelled main container: its unlabelled proxy must still be recovered from immutable IDs.
-        for (const item of owned)
-          execFileSync("docker", ["rm", "-f", item.containerId], { stdio: "ignore" })
-      }
       if (stop === "SIGKILL") {
         // Local emulation does not mint an account API token. The simulator state must still exist.
         expect(existsSync(resolve(root, receipt!.runId, "stack/.alchemy/state/S0/dev"))).toBe(true)

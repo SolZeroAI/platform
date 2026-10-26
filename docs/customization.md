@@ -76,6 +76,13 @@ The shared templates support `master` only. Set repository variable `S0_CI_RUNNE
 `PLANETSCALE_ORGANIZATION` as needed. Empty `DATABASE` retains D1. PlanetScale deployments need
 `PLANETSCALE_SERVICE_TOKEN_ID` and `PLANETSCALE_SERVICE_TOKEN` secrets.
 
+Deploy Preview and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is the exact
+value `true`. Set `CLOUDFLARE_API_TOKEN` for the stage you deploy. SolZeroAI/platform does not set
+`CLOUDFLARE_DEPLOY`, so those jobs stay skipped and the public repository does not need the token.
+A fork that deploys sets both the variable and the token. The same steps then run as before.
+
+Put production deploy secrets in a GitHub environment named `prod`. Limit that environment to the
+`master` branch. Only the Deploy job selects `prod`. Put preview secrets in the `pre` environment.
 Keep Cloudflare account credentials in the matching environment so pre and prod can use separate
 accounts without changing workflow source. Environment secrets override repository secrets of the
 same name. Rotate GitHub App secrets in place as `GH_APP_PRIVATE_KEY`, `GH_APP_CLIENT_SECRET`, and
@@ -84,7 +91,7 @@ The templates also pass the explicit Okta secret reference.
 
 Ephemeral PR previews stay on D1. Standing pre and production can select PlanetScale. Do not enable
 paid per-PR databases until their provisioning, ownership receipts, and cleanup are supported.
-Public SolZero deployment guards and release ownership guards remain in force.
+Release ownership guards remain in force.
 
 ## PlanetScale provisioning
 

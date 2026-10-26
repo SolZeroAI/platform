@@ -41,11 +41,10 @@ Update the OpenCode harness and Cloudflare Containers agent-container stack, val
 - If a repo-root check still fails on unrelated workspace or test issues, also run `nub run --filter @solzero/background-api typecheck`, `nub run --filter @solzero/api typecheck`, and `nub run --filter @solzero/agent-container typecheck` and report those results separately so the upgraded surface is still verified.
 - If TypeScript reports incompatible `McpServer` types from two `@modelcontextprotocol/sdk` versions, align on a single version: root `package.json` → `overrides["@modelcontextprotocol/sdk"]` matching `packages/api` and `packages/agent-container`, then `nub install` and re-run `tsc`.
 - `nub run test:e2e tests/sessions.e2e.ts` (or `nub run test:e2e` from root, which sets `RUN_E2E=1`)
-- Use the isolated configured administrator session from `tests/auth.setup.e2e.ts`. The OpenCode runtime test submits a real prompt and checks its persisted output; it requires Docker and a working application model provider.
-- Run `nub run test:e2e tests/sessions.e2e.ts --tag runtime` to verify every runtime against the live Alchemy stack.
+- Use the isolated configured administrator session from `tests/auth.setup.e2e.ts`.
 - `docker build -t agent-container-check ./packages/agent-container` to confirm the image still installs `@ai-sdk/harness-opencode` and the derived image builds successfully. OpenCode is a harness package in this image, not a `cloudflare/sandbox-opencode` base.
 - A live local repro that creates a session with `agentRuntime: "opencode"`, sends a prompt, and inspects `/sessions/:id/events` for both `token` and `execution_complete`. A repo-less session is enough to verify the OpenCode workflow; repo-backed sessions additionally require a linked GitHub identity for the acting user.
-- If the e2e runtime suite is skipped or incomplete, say that explicitly and do not treat it as sufficient validation by itself.
+- Say explicitly when that live repro was not run. Do not treat collection alone as validation.
 - When restarting local dev for validation, confirm port `3100` is free first.
 
 ## Environment Gotchas

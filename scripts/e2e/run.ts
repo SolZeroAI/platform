@@ -23,8 +23,6 @@ const env: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_E2E_RUNNER_PID: String(process.pid),
 }
-// Action-replay bypass must not replay a stored Clef decision either.
-if (forwarded.includes("--no-cache")) env.E2E_CLEF_DECISION_CACHE = "0"
 const child = spawn(
   process.execPath,
   [

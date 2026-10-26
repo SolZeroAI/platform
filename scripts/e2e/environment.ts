@@ -27,10 +27,8 @@ if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
     process.env.NODE_EXTRA_CA_CERTS = path
   }
 }
-// The core suite exercises source-image OpenCode and Codex runtimes.
+// Local alchemy dev builds the committed container images instead of pulling published digests.
 process.env.E2E_CONTAINER_RUNTIME ??= "1"
-// Only the isolated test launcher opts into content-free application AI accounting.
-process.env.E2E_AI_USAGE ??= "1"
 process.env.E2E_TELEMETRY_DISABLED ??= "1"
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {
@@ -72,7 +70,7 @@ export const appEnvironment = Object.fromEntries(
     // env key set is part of that digest, so a worker-only key fails the run
     // with CONFIG_NOT_DETERMINISTIC before any test starts.
     if (name.startsWith("E2E_WEB_BROWSERS_") || name === "E2E_WARNED_TSCONFIGS") return false
-    // Clef reads these from the test runner. The application child must not.
+    // The decision model reads these from the test runner. The application child must not.
     return ![
       "CF_AI_GATEWAY_E2E_TOKEN",
       "CF_AI_GATEWAY_E2E_ID",

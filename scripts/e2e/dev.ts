@@ -24,7 +24,7 @@ try {
     const docker = spawnSync("docker", ["info"], { stdio: "ignore" })
     if (docker.status !== 0) {
       throw new Error(
-        "Core harness flows require a running Docker daemon. Start Docker before running e2e.",
+        "Local container image builds require a running Docker daemon. Start Docker before running e2e.",
       )
     }
     const contexts = resolve(stackDirectory(run), "containers")

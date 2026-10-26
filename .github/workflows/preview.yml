@@ -1,7 +1,9 @@
 # Copyable Deploy Preview template. Keep this file valid YAML. Do not comment it out.
-# On SolZeroAI/platform, disable it with Actions → Deploy Preview → Disable workflow
-# (`gh workflow disable preview.yml`). Disabled state is per-repo; fork owners enable it
-# on their Actions page. The invert guard below is the belt if the public workflow is enabled.
+# Each job runs only when the repository variable CLOUDFLARE_DEPLOY is the exact value true.
+# SolZeroAI/platform does not set that variable, so these jobs skip and this repository
+# does not need CLOUDFLARE_API_TOKEN. A fork sets CLOUDFLARE_DEPLOY to true and sets the token.
+# Disabled state is per-repo. On SolZeroAI/platform, Deploy Preview stays disabled
+# (Actions → Deploy Preview → Disable workflow). Fork owners enable it on their Actions page.
 # Do not add secrets on SolZeroAI/platform.
 name: Deploy Preview
 
@@ -14,8 +16,9 @@ on:
       - master
     types:
       - opened
-      - reopened
       - synchronize
+      - reopened
+      - ready_for_review
       - closed
   workflow_dispatch:
     inputs:
@@ -46,7 +49,7 @@ concurrency:
 jobs:
   validate:
     name: Validate
-    if: ${{ github.repository != 'SolZeroAI/platform' && (github.event_name != 'pull_request' || github.event.action != 'closed') && (github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'deploy-standing-pre') }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && (github.event_name != 'pull_request' || github.event.action != 'closed') && (github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'deploy-standing-pre') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     uses: ./.github/workflows/validate.yml
     permissions:
       actions: read
@@ -57,7 +60,7 @@ jobs:
   deploy-preview:
     name: Deploy preview stage
     needs: validate
-    if: ${{ github.repository != 'SolZeroAI/platform' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: pre
@@ -193,7 +196,7 @@ jobs:
 
   cleanup-preview:
     name: Clean up preview stage
-    if: ${{ github.repository != 'SolZeroAI/platform' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral')) }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral')) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: pre
