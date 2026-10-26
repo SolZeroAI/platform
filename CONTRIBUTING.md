@@ -51,10 +51,14 @@ nub run build
 ```
 
 `nub run lint` runs Oxlint with `s0-lint`, `@mpsuesser/oxlint-plugin-effect`, and
-`anti-slop` from `github:dmmulroy/anti-slop`. This repository also enables the opt-in
-`anti-slop-effect` plugin because the workspace depends on Effect. Those anti-slop rules
-run at `warn`. Lint loads the GitHub package through `tsx` because that package ships
-TypeScript source.
+`anti-slop` from `github:dmmulroy/anti-slop` (lockfile commit `13909c9`, package version
+`0.1.2`). This repository also enables the opt-in `anti-slop-effect` plugin because the
+workspace depends on Effect. Those anti-slop rules, including the native
+`oxc/no-accumulating-spread` companion, run at `error`. Four boundary rules stay off until a
+schema migration can replace the current parsers: `no-runtime-typeof`, `no-unknown-parameters`,
+`no-unknown-returns`, and `no-unsafe-dictionary-type`. `require-readable-spacing` stays off in
+ten files that are already at the `s0-lint/max-file-lines` cap. Lint loads the GitHub package
+through `tsx` because that package ships TypeScript source.
 
 GitHub Actions on SolZeroAI/platform runs `config:check`, `typecheck`, `lint`, `format`, and actionlint.
 Deploy Preview and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is `true`.
