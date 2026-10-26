@@ -60,30 +60,12 @@ const cloudflare = createOpenAICompatible({
             insert: true,
           },
           {
-            mark: "Goal of this step: Set Sub-agents to Disabled and click Update tools.",
-            text: 'The next target is the combobox that shows Enabled. Its name is Sub-agents. Choose it even though this goal has more parts. When the option named "Disabled" is offered, choose it. Then choose the button named "Update tools". When that dialog is gone, choose done.',
-          },
-          {
-            mark: "Task of this step: Set Sub-agents to Disabled and click Update tools.",
-            text: 'Answer holds when the Agent tools dialog is absent after the button named "Update tools" was activated. Answer fails when the screen shows an error.',
-            insert: true,
-          },
-          {
             mark: "Goal of this step: Open the Agent tools editor",
             text: 'Choose the button named "Tools". When the menu is open, choose the button named "Edit". When the Agent tools dialog is open, choose done. Choose a button, not a textbox.',
           },
           {
             mark: "Task of this step: Open the Agent tools editor",
             text: "Answer holds when the Agent tools dialog is open. Answer fails when the screen shows an error.",
-            insert: true,
-          },
-          {
-            mark: "Goal of this step: Create the supplied bot from the completed form.",
-            text: 'Choose the button named "Create bot". When the page heading shows the supplied bot name, choose done.',
-          },
-          {
-            mark: "Task of this step: Create the supplied bot from the completed form.",
-            text: "Answer holds when the page heading shows the supplied bot name. Answer fails when the screen shows an error.",
             insert: true,
           },
           {

@@ -69,14 +69,11 @@ The workflow rename action question adds one sentence: choose the button named
 Save workflow name, and choose done when that button is not offered. The completion
 question for that task adds one sentence: the save holds when that button was
 activated and is now absent. A conditional action sentence still activated the
-selected Overview tab. The Sub-agents action question chooses the combobox that
-shows Enabled even when that tap does not finish the goal, then the Disabled
-option and the Update tools button, and chooses done when the dialog is gone.
-Its completion question holds when that dialog is absent after Update tools was
-activated. The Agent tools editor question chooses the Tools button, then Edit,
-and chooses a button rather than a textbox. The same request also names the
-controls for creating a bot and turning off a skill Enable switch,
-and each of those completion questions states the visible result that holds.
+selected Overview tab. The Agent tools editor question chooses the Tools button,
+then Edit, and chooses a button rather than a textbox. The skill question
+chooses the checked Enable switch for the supplied skill, then done when Use
+admin default is visible. Creating a bot, searching MCPs, and setting
+Sub-agents use the named controls directly.
 A failed test runs once more. The model sometimes spends the output budget
 before the JSON answer, and the new attempt has a new page, so the gateway
 does not replay that body.

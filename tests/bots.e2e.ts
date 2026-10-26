@@ -13,10 +13,7 @@ test(
     await screen
       .getByLabel("Bot instructions")
       .fill("Disposable e2e bot. Never call external tools.")
-    await agent.act(
-      "Create the supplied bot from the completed form. Finish when its detail page shows the supplied name as a heading.",
-      { params: { name: unique(name) } },
-    )
+    await screen.getByRole("button", "Create bot", { exact: true }).tap()
     await expect(screen.getByRole("heading", name)).toBeVisible()
     await expect(browser).toHaveURL(/\/bots\/[^/]+$/)
     const botId = (await browser.url()).split("/").pop()!
