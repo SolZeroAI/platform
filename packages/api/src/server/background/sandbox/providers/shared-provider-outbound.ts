@@ -37,7 +37,8 @@ export const resolveSharedProviderOutboundHosts = Effect.fn(
         gatewayConfig.enabled &&
         Option.isSome(gatewayId) &&
         Option.isSome(cloudflareAiGatewayRestBaseUrl(env)) &&
-        Option.isSome(stringEnvValue(env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET)),
+        (env.S0_AI_GATEWAY_LAYER === "mock" ||
+          Option.isSome(stringEnvValue(env, CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET))),
     ),
     Option.map(() => CLOUDFLARE_AI_GATEWAY_API_HOST),
   )

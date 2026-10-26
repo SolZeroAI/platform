@@ -60,14 +60,12 @@ function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
   ) as Redacted.Redacted<string>
 }
 
-function localAiGateway(appName: string, stageName: string): ApiAiGatewayBinding {
-  // Same local Workers AI shape for a mock stack and for a deployment that sets
-  // aiProviders.cloudflareAiGateway.localBinding. Neither calls the Cloudflare API.
+function mockAiGateway(appName: string, stageName: string): ApiAiGatewayBinding {
+  // The mock provider layer keeps a local Workers AI binding so the catalog can
+  // see models. It does not provision an account gateway, secrets store, or run token.
   return {
     resource: Cloudflare.Workers.AI("AI_GATEWAY"),
     gatewayId: `${appName}-${stageName}-ai-gateway`,
-    runToken: "local-ai-gateway-run-token",
-    secretsStoreId: "local-ai-gateway-secrets-store",
   }
 }
 
@@ -81,9 +79,9 @@ function createCloudflareAiGateway(input: {
   return Effect.gen(function* () {
     // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and local stacks never call the Cloudflare Gateway API.
     if (!config.enabled) return undefined
-    // oxlint-disable-next-line s0-lint/no-if-statement -- Mock stacks and localBinding deployments need the native binding shape without provisioning an account resource.
-    if (input.apiEnv.S0_PROVIDER_LAYER === "mock" || config.localBinding === true) {
-      return localAiGateway(input.appName, input.stageMetadata.name)
+    // oxlint-disable-next-line s0-lint/no-if-statement -- A mock AI gateway layer needs the native binding shape without provisioning an account resource.
+    if (input.apiEnv.S0_AI_GATEWAY_LAYER === "mock") {
+      return mockAiGateway(input.appName, input.stageMetadata.name)
     }
 
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")

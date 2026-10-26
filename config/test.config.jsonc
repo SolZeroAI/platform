@@ -3,6 +3,8 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
+  "providerLayer": "live",
+  "aiGatewayLayer": "live",
   "deployment": {
     "appName": "s0",
     "zone": "localhost",

@@ -23,8 +23,10 @@ import {
   normalizeCloudflareAiGatewayResponse,
   prepareWorkersAiResponses,
   streamWorkersAiResponse,
+  aiGatewayBindingForEnv,
   createApiRequestObserver,
   decryptCloudflareAiGatewayByokProxyCredential,
+  mockAiGatewayHttpResponse,
   withApiSurfaceSpan,
   DynamicUserWorkflow,
   DynamicWorkflowBinding,
@@ -104,6 +106,28 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
     const apiKeyOption = credential.pipe(
       Option.flatMap(({ secretName }) => resolveSharedProviderApiKey(env, secretName)),
     )
+    if (env.S0_AI_GATEWAY_LAYER === "mock") {
+      const prepared = await prepareWorkersAiResponses(request).catch((error: unknown) => {
+        if (error instanceof Error && error.message.startsWith("Workers AI")) return error
+        throw error
+      })
+      if (prepared instanceof Error)
+        return Response.json(
+          { error: { message: prepared.message, type: "invalid_request_error" } },
+          { status: 400 },
+        )
+      const upstream = await mockAiGatewayHttpResponse(
+        aiGatewayBindingForEnv(env),
+        prepared.request,
+      )
+      const response = prepared.streaming
+        ? await streamWorkersAiResponse(upstream, prepared.functionNames)
+        : upstream
+      log.set({ upstreamStatus: response.status })
+      return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
+        ? normalizeCloudflareAiGatewayResponse(response)
+        : response
+    }
     const requestedModel = await sharedProviderRequestModel(request)
     const providerCredential = Option.match(credential, {
       onNone: () => null,

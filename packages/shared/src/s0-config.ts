@@ -103,10 +103,11 @@ export const S0LitellmConfigSchema = Schema.Struct({
 export type S0LitellmConfig = typeof S0LitellmConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- deployment-managed AI Gateway configuration is a plain JSON DTO
+export const S0ProviderLayerSchema = Schema.Literals(["live", "mock"])
+export type S0ProviderLayer = typeof S0ProviderLayerSchema.Type
+
 export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
-  // A local binding lets any alchemy dev deployment skip account gateway and run-token provisioning.
-  localBinding: Schema.optional(Schema.Boolean),
   cacheTtl: Schema.NullOr(Schema.Number),
   collectLogs: Schema.Boolean,
   defaultModel: Schema.String,
@@ -174,6 +175,8 @@ export type S0AuthConfig = typeof S0AuthConfigSchema.Type
 
 const S0ResolvedConfigFields = {
   schemaVersion: Schema.Literal(S0_CONFIG_SCHEMA_VERSION),
+  providerLayer: S0ProviderLayerSchema,
+  aiGatewayLayer: S0ProviderLayerSchema,
   deployment: S0DeploymentConfigSchema,
   application: S0ApplicationConfigSchema,
   admins: AdminConfigSchema,

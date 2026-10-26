@@ -8,7 +8,7 @@ nub run test:e2e -- tests/advanced-sessions.e2e.ts
 ```
 
 Read `docs/e2e.md` for credentials and current verification status. Use the real Alchemy
-stack; do not substitute mocks or a standalone web server.
+stack. The e2e stage selects the mock AI Gateway binding, which answers Workers AI locally.
 
 Keep these product facts honest:
 
@@ -16,3 +16,4 @@ Keep these product facts honest:
   link.
 - Custom MCP configuration and the tools/subagent editor persist exact preferences through
   UI save and reload.
+- Isolate delegation records a child run and returns the child's marker in the parent output.

@@ -3,6 +3,8 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
+  "providerLayer": "live",
+  "aiGatewayLayer": "mock",
   "brand": {
     "name": "Fork Fixture",
     "logoLightPath": "/images/solzero-logo.svg",
@@ -96,7 +98,6 @@
     // Cloudflare AI Gateway is deployment-managed and available to Isolate and compatible container runtimes.
     "cloudflareAiGateway": {
       "enabled": true,
-      "localBinding": true,
       "cacheTtl": null,
       "collectLogs": true,
       "defaultModel": "@cf/openai/gpt-oss-120b",

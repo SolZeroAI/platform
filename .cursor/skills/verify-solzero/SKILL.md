@@ -31,7 +31,7 @@ nub run test:e2e -- --changed-since origin/master
 
 The environment loader reads the selected private file, then `config/.env` and `config/.dev.vars`; existing environment values win. Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. The launcher boots local `alchemy dev` and does not read `CLOUDFLARE_API_TOKEN`. Never print credential values. The launcher creates its owned run’s `.dev.vars` with mode 0600 and generates the isolated administrator password in an ignored file. Use the suite's registered secret handles for browser credential input.
 
-`nub run test` runs core flows. `nub run test:e2e:all` adds the deferred external integrations; `nub run test:e2e:external` selects only those deferred cases. Focus one area with `nub run test:e2e -- tests/<file>.e2e.ts` after reading its feature file under `features/`. Read External fixture preflight in `docs/e2e.md` before deferred suites. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
+`nub run test` runs core flows, including Isolate, OpenCode, and Codex prompts against the mock AI Gateway binding. `nub run test:e2e:all` adds the deferred external integrations and Claude Code; `nub run test:e2e:external` selects only those deferred cases. Focus one area with `nub run test:e2e -- tests/<file>.e2e.ts` after reading its feature file under `features/`. Read External fixture preflight in `docs/e2e.md` before deferred suites. Missing integration credentials or linked identities are blockers, and collection alone does not establish coverage.
 
 ## Prove behavior
 

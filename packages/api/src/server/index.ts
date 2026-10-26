@@ -39,6 +39,10 @@ export { default as cron } from "./cron"
 export { handler as effectApiHandler } from "./effect/runtime"
 export { makeCloudflareContext } from "./effect/services/cloudflare"
 export {
+  aiGatewayBindingForEnv,
+  mockAiGatewayHttpResponse,
+} from "./effect/services/ai-gateway-binding"
+export {
   createApiRequestObserver,
   createNoopTracing,
   withApiSurfaceSpan,

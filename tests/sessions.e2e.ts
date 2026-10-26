@@ -1,5 +1,6 @@
 import { test } from "@e2e-dev/web"
 import { expect, unique } from "e2e"
+import { requireFixture } from "./support/external-fixtures"
 import { api, uniqueName } from "./support/api"
 
 test(
@@ -97,3 +98,85 @@ test(
     }
   },
 )
+
+for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
+  test(
+    `${runtime} executes a real prompt and persists its output`,
+    {
+      session: "admin",
+      tags:
+        runtime === "isolate"
+          ? ["runtime"]
+          : runtime === "claude-code"
+            ? ["runtime", "external", "harness"]
+            : ["runtime", "harness"],
+    },
+    async ({ app, browser, screen }) => {
+      if (runtime !== "isolate") requireFixture("E2E_CONTAINER_RUNTIME")
+      if (runtime === "claude-code") requireFixture("E2E_CLAUDE_CODE_MODEL")
+      const literalHello = runtime === "isolate" || runtime === "codex"
+      const marker = uniqueName("E2E_OUTPUT")
+      const result = await api<{
+        sessionId: string
+        messageId: string
+        status: string
+        output: string
+        error?: string
+      }>(browser, "/sessions/run", "POST", {
+        title: uniqueName(`e2e-${runtime}`),
+        agentRuntime: runtime,
+        content: literalHello
+          ? "Reply with only hello. Do not call any tools."
+          : `Reply with only this marker: ${marker}. Do not call any external tools.`,
+        ...((process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
+        process.env.E2E_APP_MODEL)
+          ? {
+              model:
+                process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
+                process.env.E2E_APP_MODEL,
+            }
+          : {}),
+      })
+      try {
+        expect(result.status, result.error ?? runtime).toBe("completed")
+        if (literalHello) expect(result.output.trim()).toBe("hello")
+        else expect(result.output).toContain(marker)
+        await app.open(`/session/${result.sessionId}`)
+        // Assistant cards have mr-8; user prompts have ml-8 and must not satisfy hello.
+        const output = literalHello
+          ? browser.locator("div.group.mr-8").getByText("hello", { exact: true })
+          : screen.getByText(marker, { exact: false }).last()
+        await expect(output).toBeVisible()
+        if (runtime === "isolate") {
+          await expect(screen.getByRole("button", "Copy markdown").last()).toBeVisible()
+          await output.hover()
+          await screen.getByRole("button", "Copy markdown").last().tap()
+          const copied = await browser.evaluate(() => navigator.clipboard.readText())
+          expect(copied).toBe(result.output)
+        }
+        await browser.reload()
+        await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
+        await expect(output).toBeVisible()
+        if (literalHello) {
+          const persisted = await api<{
+            events: Array<{ type: string; data: { content?: string } }>
+          }>(browser, `/sessions/${result.sessionId}/events?messageId=${result.messageId}`)
+          expect(
+            persisted.events
+              .filter((event) => event.type === "token")
+              .at(-1)
+              ?.data.content?.trim(),
+          ).toBe("hello")
+          expect(persisted.events.filter((event) => event.type === "tool_call").length).toBe(0)
+        }
+        const messages = await api<{ messages: object[] }>(
+          browser,
+          `/sessions/${result.sessionId}/messages`,
+        )
+        expect(messages.messages.length).toBeGreaterThan(0)
+      } finally {
+        await api(browser, `/sessions/${result.sessionId}`, "DELETE")
+      }
+    },
+  )
+}

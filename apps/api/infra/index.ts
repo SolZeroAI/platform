@@ -49,6 +49,7 @@ export type ApiSecretInput = string | Output.Output<Redacted.Redacted<string>>
 
 export interface ApiInfraEnv {
   readonly S0_PROVIDER_LAYER: "live" | "mock"
+  readonly S0_AI_GATEWAY_LAYER: "live" | "mock"
   readonly S0_CONFIG_FILE: string
   readonly S0_BRAND_NAME: string
   readonly S0_SERVICE_NAME: string
@@ -146,7 +147,8 @@ export function getApiInfraEnv(
     ),
   )
   return {
-    S0_PROVIDER_LAYER: "live",
+    S0_PROVIDER_LAYER: config.providerLayer,
+    S0_AI_GATEWAY_LAYER: config.aiGatewayLayer,
     S0_CONFIG_FILE: configurationFile,
     S0_BRAND_NAME: config.brand.name,
     S0_SERVICE_NAME: `${config.deployment.appName}-agent-control-plane`,
@@ -203,8 +205,8 @@ export interface CreateApiOptions {
 export interface ApiAiGatewayBinding {
   readonly resource: Cloudflare.AI.Gateway | Cloudflare.AIBinding
   readonly gatewayId: string | Output.Output<string>
-  readonly runToken: ApiSecretInput
-  readonly secretsStoreId: string | Output.Output<string>
+  readonly runToken?: ApiSecretInput
+  readonly secretsStoreId?: string | Output.Output<string>
 }
 
 interface CreateApiBindingsOptions {
@@ -310,6 +312,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     APP_VERSION: deploymentMetadata.appVersion,
     COMMIT_SHA: deploymentMetadata.commitSha,
     S0_PROVIDER_LAYER: env.S0_PROVIDER_LAYER,
+    S0_AI_GATEWAY_LAYER: env.S0_AI_GATEWAY_LAYER,
     S0_CONFIG_FILE: env.S0_CONFIG_FILE,
     S0_BRAND_NAME: env.S0_BRAND_NAME,
     S0_SERVICE_NAME: env.S0_SERVICE_NAME,
@@ -342,7 +345,9 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     GITHUB_APP_PRIVATE_KEY: env.GITHUB_APP_PRIVATE_KEY,
     GITHUB_APP_WEBHOOK_SECRET: env.GITHUB_APP_WEBHOOK_SECRET,
     SLACK_TOKEN: env.SLACK_TOKEN,
-    ...(aiGateway ? { CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: aiGateway.runToken } : {}),
+    ...(aiGateway?.runToken !== undefined
+      ? { CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: aiGateway.runToken }
+      : {}),
   }
   const secrets = { ...env.configSecretBindings, ...fixedSecrets }
   validateApiVariableBindings(variables, secrets)
@@ -354,7 +359,9 @@ function createApiBindings(options: CreateApiBindingsOptions) {
       ? {
           AI_GATEWAY: aiGateway.resource,
           AI_GATEWAY_ID: aiGateway.gatewayId,
-          AI_GATEWAY_SECRETS_STORE_ID: aiGateway.secretsStoreId,
+          ...(aiGateway.secretsStoreId !== undefined
+            ? { AI_GATEWAY_SECRETS_STORE_ID: aiGateway.secretsStoreId }
+            : {}),
         }
       : {}),
 
@@ -403,7 +410,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
     GITHUB_APP_PRIVATE_KEY: secretInput(fixedSecrets.GITHUB_APP_PRIVATE_KEY),
     GITHUB_APP_WEBHOOK_SECRET: secretInput(fixedSecrets.GITHUB_APP_WEBHOOK_SECRET),
     SLACK_TOKEN: secretInput(fixedSecrets.SLACK_TOKEN),
-    ...(aiGateway
+    ...(aiGateway?.runToken !== undefined
       ? {
           CLOUDFLARE_AI_GATEWAY_RUN_TOKEN: secretInput(aiGateway.runToken),
         }

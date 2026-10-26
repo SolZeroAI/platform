@@ -4,6 +4,8 @@
   "properties": {
     "$schema": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
     "schemaVersion": { "type": "number", "enum": [1] },
+    "providerLayer": { "type": "string", "enum": ["live", "mock"] },
+    "aiGatewayLayer": { "type": "string", "enum": ["live", "mock"] },
     "deployment": {
       "type": "object",
       "properties": {
@@ -261,7 +263,6 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
-            "localBinding": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] },
             "cacheTtl": {
               "anyOf": [
                 {
@@ -698,6 +699,8 @@
   },
   "required": [
     "schemaVersion",
+    "providerLayer",
+    "aiGatewayLayer",
     "deployment",
     "application",
     "admins",
