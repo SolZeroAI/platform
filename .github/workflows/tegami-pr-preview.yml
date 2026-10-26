@@ -6,8 +6,9 @@ on:
       - master
     types:
       - opened
-      - reopened
       - synchronize
+      - reopened
+      - ready_for_review
 
 permissions:
   contents: read
@@ -15,6 +16,7 @@ permissions:
 jobs:
   preview:
     name: Build release preview
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:

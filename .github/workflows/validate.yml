@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - master
@@ -27,6 +32,7 @@ permissions:
 jobs:
   validate:
     name: Repository validation
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
@@ -90,7 +96,7 @@ jobs:
     concurrency:
       group: solzero-e2e-cloudflare-${{ github.repository }}
       cancel-in-progress: false
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     # The github reporter edits one pull request comment. Artifact recovery reads Actions APIs.

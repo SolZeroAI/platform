@@ -52,6 +52,8 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 
 ## Cloud-agent PR artifacts
 
+A cloud agent opens the pull request as a draft. Run lint, typecheck, and tests locally before each push. Mark the pull request ready for review when the work is done. CI runs only when the pull request is ready for review, and on each later push.
+
 A cloud-agent pull request that changes user-visible behavior must attach proof. Skip this proof for a pin bump, a config-only change, or a markdown-only change.
 
 - Boot `apps/web` (port 3000) and `apps/api` (port 3100). The verify skill starts that pair on the isolated Alchemy stack from `e2e.config.ts`.
