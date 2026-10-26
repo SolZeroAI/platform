@@ -9,6 +9,7 @@ export function get({ params }: { params: { id: string } }) {
     Effect.fn("workflows.get")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, params.id)
       const manifest = yield* readWorkflowManifest(context.env, workflow.manifest_key)
+
       return json({
         workflow: formatWorkflow(workflow, manifest, getInfraServerUrl(context.env)),
       })

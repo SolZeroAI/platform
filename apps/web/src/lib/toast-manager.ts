@@ -21,8 +21,10 @@ export function showErrorToast(title: string, options?: ErrorToastOptions) {
 
 export function showActionableErrorToast(message: string) {
   const help = getCloudflareAiGatewayErrorHelp(message)
+
   if (!help) {
     showErrorToast(message)
+
     return
   }
 

@@ -24,8 +24,8 @@ export interface AdminConfigPresence {
 }
 
 function getStore(env: Env): Option.Option<S0ConfigStore> {
-  return Option.fromNullishOr(Reflect.get(env, "S0_CONFIG")).pipe(
-    Option.map((kv) => new S0ConfigStore(kv as KVNamespace, env.REPO_SECRETS_ENCRYPTION_KEY)),
+  return Option.fromNullishOr(env.S0_CONFIG).pipe(
+    Option.map((kv) => new S0ConfigStore(kv, env.REPO_SECRETS_ENCRYPTION_KEY)),
   )
 }
 
@@ -44,10 +44,12 @@ export const getAdminConfigWithPresence = Effect.fn("adminConfig.getConfig")(fun
     onNone: () =>
       Effect.gen(function* () {
         const store = getStore(env)
+
         const value = yield* Option.match(store, {
           onNone: () => Effect.succeed(Option.none<unknown>()),
           onSome: (resolved) => resolved.getJson(S0_CONFIG_KEYS.admin.config),
         })
+
         return Option.match(value, {
           onSome: (config) =>
             ({
@@ -72,6 +74,7 @@ export const getAdminConfigWithPresence = Effect.fn("adminConfig.getConfig")(fun
 
 export const getAdminConfig = Effect.fn("adminConfig.get")(function* (env: Env) {
   const presence = yield* getAdminConfigWithPresence(env)
+
   return presence.config
 })
 
@@ -80,5 +83,6 @@ export const isAdminEmailForEnv = Effect.fn("adminConfig.isAdminEmail")(function
   email: string | null | undefined,
 ) {
   const config = yield* getAdminConfig(env)
+
   return isAdminEmail(email, config)
 })

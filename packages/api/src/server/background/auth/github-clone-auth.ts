@@ -52,15 +52,19 @@ export const resolveGitHubCloneCredentials = Effect.fn("githubApp.resolveCloneCr
       input.session.repo_owner,
       "GitHub repo owner is missing",
     )
+
     const repoName = requireCloneAuthString(input.session.repo_name, "GitHub repo name is missing")
+
     const installationId = requireCloneAuthNumber(
       input.session.github_installation_id,
       "GitHub App installation metadata is missing for this repo-backed session",
     )
+
     const repositoryId = requireCloneAuthNumber(
       input.session.github_repo_id,
       "GitHub App installation metadata is missing for this repo-backed session",
     )
+
     const appConfig = Option.getOrThrowWith(
       getGitHubAppConfig(input.env),
       () => new GitHubAppError({ message: "GitHub App credentials are not configured" }),

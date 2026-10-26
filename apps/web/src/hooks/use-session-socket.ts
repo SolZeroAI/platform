@@ -89,11 +89,13 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
   const [participants, setParticipants] = useState<ParticipantPresence[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [currentParticipantId, setCurrentParticipantId] = useState<string | null>(null)
+
   const currentParticipantRef = useRef<{
     participantId: string
     name: string
     avatar?: string
   } | null>(null)
+
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttempts = useRef(0)
 
@@ -139,10 +141,13 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
    */
   const processSandboxEvent = useCallback((event: SandboxEvent) => {
     setEvents((prev) => [...prev, event])
+
     if (event.type === "execution_complete") {
       setSessionState((prev) => (prev ? { ...prev, isProcessing: false } : null))
+
       return
     }
+
     if (event.type === "error") {
       setSessionState((prev) =>
         prev
@@ -170,23 +175,28 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           // Reset replay buffering state
           replayCompleteRef.current = false
           liveEventBufferRef.current = []
+
           if (data.state) {
             setSessionState(normalizeRuntimeProcessingState(data.state))
           }
+
           // Store the current user's participant ID and info for author attribution
           if (data.participantId) {
             setCurrentParticipantId(data.participantId)
           }
+
           // Initialize participant ref immediately for sendPrompt author attribution
           if (data.participant) {
             currentParticipantRef.current = data.participant
           }
+
           break
 
         case "session_state":
           if (data.state) {
             setSessionState(normalizeRuntimeProcessingState(data.state))
           }
+
           break
 
         case "prompt_queued":
@@ -204,6 +214,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
               processSandboxEvent(event)
             }
           }
+
           break
 
         case "replay_complete": {
@@ -217,9 +228,11 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           // Flush buffered live events in a single state update
           const buffered = liveEventBufferRef.current
           liveEventBufferRef.current = []
+
           if (buffered.length > 0) {
             setEvents((prev) => [...prev, ...buffered])
           }
+
           break
         }
 
@@ -235,14 +248,18 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
             const activity = data.activity
             setRuntimeActivity((prev) => {
               const existingIndex = prev.findIndex((item) => item.id === activity.id)
+
               if (existingIndex >= 0) {
                 const next = [...prev]
                 next[existingIndex] = activity
+
                 return next
               }
+
               return [...prev, activity]
             })
           }
+
           setRuntimeActivityLoading(false)
           setRuntimeActivityError(null)
           break
@@ -253,6 +270,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
             // Prepend older events to the beginning
             setEvents((prev) => [...data.items!, ...prev])
           }
+
           setHasMoreHistory(data.hasMore ?? false)
           cursorRef.current = data.cursor ?? null
           setLoadingHistory(false)
@@ -269,6 +287,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
                 const currentParticipant = data.participants!.find(
                   (p) => p.participantId === currentId,
                 )
+
                 if (currentParticipant) {
                   currentParticipantRef.current = {
                     participantId: currentParticipant.participantId,
@@ -277,15 +296,18 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
                   }
                 }
               }
+
               return currentId
             })
           }
+
           break
 
         case "presence_leave":
           if (data.userId) {
             setParticipants((prev) => prev.filter((p) => p.userId !== data.userId))
           }
+
           break
 
         case "sandbox_warming":
@@ -326,6 +348,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
                 : null,
             )
           }
+
           break
 
         case "sandbox_ready":
@@ -347,12 +370,15 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
             setArtifacts((prev) => {
               // Avoid duplicates
               const existing = prev.find((a) => a.id === artifact.id)
+
               if (existing) {
                 return prev.map((a) => (a.id === artifact.id ? artifact : a))
               }
+
               return [...prev, artifact]
             })
           }
+
           break
 
         case "artifact_updated":
@@ -360,12 +386,14 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
             const artifact = data.artifact
             setArtifacts((prev) => prev.map((a) => (a.id === artifact.id ? artifact : a)))
           }
+
           break
 
         case "session_status":
           if (data.status) {
             setSessionState((prev) => (prev ? { ...prev, status: data.status! } : null))
           }
+
           break
 
         case "processing_status":
@@ -384,6 +412,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
                 : null,
             )
           }
+
           break
 
         case "sandbox_error":
@@ -427,6 +456,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         if (response.status === 401) {
           throw new WsTokenRequestError(response.status, "Please sign in to connect")
         }
+
         const error = await response.text()
         throw new WsTokenRequestError(
           response.status,
@@ -434,14 +464,18 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         )
       }
 
+      // SAFETY: The websocket token response includes token, which is checked to be a non-empty string below.
       const data = (await response.json()) as { token?: unknown }
+
       if (typeof data.token !== "string" || data.token.length === 0) {
         throw new WsTokenRequestError(null, "Websocket token response did not include a token")
       }
+
       return data.token
     })()
 
     wsTokenRequestRef.current = request
+
     try {
       return await request
     } finally {
@@ -457,14 +491,19 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     // Use ref to avoid race conditions with React StrictMode
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log("WebSocket already open")
+
       return
     }
+
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
       console.log("WebSocket already connecting")
+
       return
     }
+
     if (connectingRef.current) {
       console.log("Connection in progress (ref)")
+
       return
     }
 
@@ -475,14 +514,17 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     // Fetch a WebSocket auth token first
     if (!wsTokenRef.current) {
       let token: string
+
       try {
         token = await fetchWsToken()
       } catch (error) {
         if (!mountedRef.current || connectionGeneration !== connectionGenerationRef.current) {
           connectingRef.current = false
           setConnecting(false)
+
           return
         }
+
         console.error("Failed to fetch WS token:", error)
         setAuthError(
           error instanceof WsTokenRequestError && error.status === 401
@@ -491,32 +533,42 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         )
         connectingRef.current = false
         setConnecting(false)
+
         return
       }
+
       if (!mountedRef.current || connectionGeneration !== connectionGenerationRef.current) {
         connectingRef.current = false
         setConnecting(false)
+
         return
       }
+
       const currentSocket = wsRef.current
+
       if (
         currentSocket?.readyState === WebSocket.OPEN ||
         currentSocket?.readyState === WebSocket.CONNECTING
       ) {
         connectingRef.current = false
         setConnecting(false)
+
         return
       }
+
       wsTokenRef.current = token
     }
 
     const subscribeToken = wsTokenRef.current
+
     if (!subscribeToken) {
       connectingRef.current = false
       setConnecting(false)
       setAuthError("Failed to authenticate session connection")
+
       return
     }
+
     const wsUrl = `${getWebSocketOrigin()}/sessions/${sessionId}/ws`
     console.log("WebSocket connecting to:", wsUrl)
 
@@ -526,12 +578,16 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     ws.onopen = () => {
       if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
         ws.close()
+
         return
       }
+
       if (!mountedRef.current) {
         ws.close()
+
         return
       }
+
       console.log("WebSocket connected!")
       connectingRef.current = false
       setConnected(true)
@@ -552,6 +608,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
         return
       }
+
       try {
         const data = JSON.parse(event.data)
         handleMessage(data)
@@ -564,6 +621,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
         return
       }
+
       console.log("WebSocket closed:", {
         code: event.code,
         reason: event.reason,
@@ -586,6 +644,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         // Clear the token so we fetch a new one on reconnect
         wsTokenRef.current = null
         wsTokenRequestRef.current = null
+
         return
       }
 
@@ -594,6 +653,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         setConnectionError("Agent expired. Please reconnect.")
         wsTokenRef.current = null
         wsTokenRequestRef.current = null
+
         return
       }
 
@@ -601,6 +661,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       if (mountedRef.current && !event.wasClean) {
         wsTokenRef.current = null
         wsTokenRequestRef.current = null
+
         if (reconnectAttempts.current < 5) {
           const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
           reconnectAttempts.current++
@@ -623,6 +684,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
         return
       }
+
       console.error("WebSocket error event:", error)
     }
   }, [sessionId, handleMessage, fetchWsToken])
@@ -630,6 +692,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
   const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.error("WebSocket not connected")
+
       return
     }
 
@@ -637,6 +700,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       console.error("Not subscribed yet, waiting...")
       // Retry after a short delay
       setTimeout(() => sendPrompt(content, model, reasoningEffort), 500)
+
       return
     }
 
@@ -664,6 +728,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return
     }
+
     wsRef.current.send(JSON.stringify({ type: "stop" }))
   }, [])
 
@@ -671,6 +736,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return
     }
+
     wsRef.current.send(
       JSON.stringify({
         type: "interaction_reply",
@@ -683,11 +749,13 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return
     }
+
     wsRef.current.send(JSON.stringify({ type: "typing" }))
   }, [])
 
   const loadOlderEvents = useCallback(() => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+
     if (!hasMoreHistory || loadingHistory || !cursorRef.current) return
     setLoadingHistory(true)
     wsRef.current.send(
@@ -704,6 +772,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       wsRef.current.close()
       wsRef.current = null
     }
+
     connectingRef.current = false
     reconnectAttempts.current = 0
     wsTokenRef.current = null // Clear token to fetch fresh one
@@ -721,13 +790,16 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     return () => {
       mountedRef.current = false
       connectionGenerationRef.current += 1
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
       }
+
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
       }
+
       subscribedRef.current = false
       connectingRef.current = false
     }

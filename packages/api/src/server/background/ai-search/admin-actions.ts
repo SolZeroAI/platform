@@ -23,6 +23,7 @@ function exportSourceValue(source: AiSearchSourceRecord) {
 export const exportAiSearchConfig = Effect.fn("aiSearch.exportConfig")(function* (env: Env) {
   const registry = new AiSearchRegistryStore(env)
   const sources = yield* registry.listSources()
+
   const lines = [
     "// AI Search sources are runtime registry data stored in S0_CONFIG KV.",
     stringifyJson({ aiSearchSources: sources.map(exportSourceValue) }),

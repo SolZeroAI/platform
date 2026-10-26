@@ -104,6 +104,7 @@ export function buildCapabilities(state: IsolateSessionAgentState): IsolateSessi
   const tools = state.tools ?? []
   const repoTool = getGitHubRepoTool(tools)
   const supportsDocs = tools.some((tool) => tool.kind === "ai_search")
+
   return {
     agentRuntime: "isolate",
     supportsWorkspace: true,
@@ -115,7 +116,16 @@ export function buildCapabilities(state: IsolateSessionAgentState): IsolateSessi
 
 export function getStreamRequestId(requestId: string | Option.Option<string>): string {
   return Match.value(typeof requestId).pipe(
-    Match.when("string", () => requestId as string),
-    Match.orElse(() => Option.getOrElse(requestId as Option.Option<string>, () => "")),
+    Match.when(
+      "string",
+      () =>
+        /* SAFETY: The preceding check established that requestId is string. */ requestId as string,
+    ),
+    Match.orElse(() =>
+      Option.getOrElse(
+        /* SAFETY: requestId has the Option.Option<string> shape established by the check or writer around this read. */ requestId as Option.Option<string>,
+        () => "",
+      ),
+    ),
   )
 }

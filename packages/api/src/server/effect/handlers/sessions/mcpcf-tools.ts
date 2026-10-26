@@ -8,6 +8,7 @@ import type {
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
 } from "@solzero/api"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- mcpcf-tools.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because session MCP settings read control-plane rows in the handler.
 import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../db/control-plane-db"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
@@ -45,6 +46,7 @@ type McpcfServerForSettings = Effect.Success<
 
 type McpcfConfig = Effect.Success<ReturnType<McpcfRegistryStore["getConfigOrDefault"]>>
 
+// SAFETY: a missing value omits the key. A present value is that one field of Partial<Record<K, V>>.
 const optionalField = <const K extends string, V>(key: K, value: V | null | undefined) =>
   Option.match(Option.fromNullishOr(value), {
     onNone: () => ({}) as Partial<Record<K, V>>,
@@ -66,10 +68,12 @@ const listUserSecretKeys = Effect.fn("sessions.mcpcf.listUserSecretKeys")(functi
   userId: string,
 ) {
   const secretsStore = requireGlobalSecretsStore(env)
+
   const keys = yield* Option.match(secretsStore, {
     onNone: () => Effect.succeed<readonly string[]>([]),
     onSome: (store) => store.listSecretKeys({ userId, includeMcpcfManaged: true }),
   })
+
   return new Set(keys)
 })
 
@@ -79,6 +83,7 @@ const resolveOauthConfigured = Effect.fn("sessions.mcpcf.resolveOauthConfigured"
   providerId: string | null | undefined,
 ) {
   const provider = Option.fromNullishOr(providerId).pipe(Option.filter((id) => id.length > 0))
+
   return yield* Option.match(provider, {
     onNone: () => Effect.succeed(false),
     onSome: (resolvedProviderId) =>
@@ -116,6 +121,7 @@ async function hasLinkedOAuthAccount(input: {
        LIMIT 1`,
     [input.providerId, input.userId],
   )
+
   return Boolean(row)
 }
 
@@ -124,6 +130,7 @@ function buildAdminUrl(trimmedBaseUrl: string): string {
   url.pathname = `${url.pathname.replace(/\/+$/, "")}/admin`
   url.search = ""
   url.searchParams.set("view", "tokens")
+
   return url.toString()
 }
 
@@ -131,6 +138,7 @@ function getContextForgeApiKeysUrl(baseUrl: string | null | undefined) {
   const trimmed = Option.fromNullishOr(baseUrl?.trim()).pipe(
     Option.filter((value) => value.length > 0),
   )
+
   return Option.match(trimmed, {
     onNone: () => null,
     onSome: (trimmedBaseUrl) =>
@@ -172,25 +180,34 @@ function formatUserServerSettings(input: {
   const authType = normalizeServerAuthType(input.server)
   const upstreamAuthType = normalizeServerUpstreamAuthType(input.server)
   const gatewayAuthTokenRequired = isMcpcfGatewayTokenAuthType(authType)
+
   const gatewayAuthTokenConfigured =
     gatewayAuthTokenRequired && input.userSecretKeys.has(getUserMcpcfGatewayApiTokenSecretKey())
+
   const upstreamAuthTokenRequired = isMcpcfUserTokenAuthType(upstreamAuthType)
   const defaultTokenSecretKey = getUserMcpcfAuthTokenSecretKey(input.server.id)
   const authTokenSecretKey = input.userConfig?.authTokenSecretKey ?? defaultTokenSecretKey
+
   const upstreamAuthTokenConfigured =
     upstreamAuthTokenRequired && input.userSecretKeys.has(authTokenSecretKey)
+
   const authTokenRequired = gatewayAuthTokenRequired || upstreamAuthTokenRequired
+
   const authTokenConfigured =
     authTokenRequired &&
     (!gatewayAuthTokenRequired || gatewayAuthTokenConfigured) &&
     (!upstreamAuthTokenRequired || upstreamAuthTokenConfigured)
+
   const gatewayConfiguredForUser =
     (gatewayAuthTokenRequired && gatewayAuthTokenConfigured) ||
     (!gatewayAuthTokenRequired && authType === "oauth" && input.oauthConfigured) ||
     (!gatewayAuthTokenRequired && authType !== "oauth")
+
   const configuredForUser =
     gatewayConfiguredForUser && (!upstreamAuthTokenRequired || upstreamAuthTokenConfigured)
+
   const toolNames = new Set(input.server.tools.map((tool) => tool.name))
+
   const disabledTools = (input.userConfig?.disabledTools ?? []).filter((toolName) =>
     toolNames.has(toolName),
   )
@@ -239,6 +256,7 @@ function formatServerSummary(input: {
 }) {
   const authType = input.server.authType ?? normalizeMcpcfAuthType(input.server.rawMetadata)
   const upstreamAuthType = normalizeMcpcfUpstreamAuthType(input.server.rawMetadata)
+
   const settings = formatUserServerSettings({
     server: input.server,
     contextForgeUrl: input.contextForgeUrl,
@@ -248,10 +266,12 @@ function formatServerSummary(input: {
     userConfig: input.userConfig,
     userSecretKeys: input.userSecretKeys,
   })
+
   const authLabel = formatMcpcfAuthLabel({
     authType,
     oauthProviderId: input.config.userOauthProviderId,
   })
+
   return {
     id: input.server.id,
     slug: input.server.slug,
@@ -289,12 +309,15 @@ export function mcpcfServers() {
 
       const servers = yield* registry.listAvailableServers()
       const serverIds = servers.map((server) => server.id)
+
       const userConfigs = yield* new UserMcpcfServerConfigStore(
         makeControlPlaneFromEnv(env),
       ).listByUserAndServerIds(userId, serverIds)
+
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
       )
+
       const userSecretKeys = yield* listUserSecretKeys(env, userId)
       const oauthConfigured = yield* resolveOauthConfigured(env, userId, config.userOauthProviderId)
       const contextForgeUrl = config.baseUrl.trim()
@@ -331,6 +354,7 @@ export function mcpcfTools({ params }: { params: McpcfServerParams }) {
       )
 
       const serverRecord = yield* registry.getServer(params.serverId)
+
       const server = yield* requireOption(
         serverRecord.pipe(
           Option.filter((value) => Boolean(value.enabled) && value.sourceStatus === "active"),
@@ -355,6 +379,7 @@ type McpcfUserSettingsSortKey = "label" | "auth" | "configured" | "tools" | "def
 
 function parsePositiveInt(value: string | undefined, fallback: number, max: number): number {
   const parsed = Number.parseInt(value ?? "", 10)
+
   return Match.value(Number.isFinite(parsed) && parsed > 0).pipe(
     Match.when(true, () => Math.min(parsed, max)),
     Match.orElse(() => fallback),
@@ -363,6 +388,7 @@ function parsePositiveInt(value: string | undefined, fallback: number, max: numb
 
 function parseNonNegativeInt(value: string | undefined): number {
   const parsed = Number.parseInt(value ?? "", 10)
+
   return Match.value(Number.isFinite(parsed) && parsed >= 0).pipe(
     Match.when(true, () => parsed),
     Match.orElse(() => 0),
@@ -429,6 +455,7 @@ function activeToolCount(server: FormattedUserServerSettings): number {
 function authFilterValue(server: FormattedUserServerSettings): string {
   const authLabel = authTypeLabel(server).toLowerCase()
   const authType = gatewayAuthType(server)
+
   return Match.value(true).pipe(
     Match.when(
       () => authType === "token" || authLabel.includes("token"),
@@ -508,6 +535,7 @@ function compareServers(
     compareBySortKey(left, right, sortBy) ||
     compareStrings(left.label, right.label) ||
     compareStrings(left.id, right.id)
+
   return applySortDir(primary, sortDir)
 }
 
@@ -550,6 +578,7 @@ function filterMcpcfUserSettings(
     configuredFilter: query.configured?.trim().toLowerCase() ?? "",
     defaultToolsFilter: query.defaultTools?.trim().toLowerCase() ?? "",
   }
+
   return servers.filter((server) => matchesMcpcfUserSettings(server, filters))
 }
 
@@ -579,12 +608,15 @@ export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) 
       const contextForgeUrl = config.baseUrl.trim()
       const contextForgeApiKeysUrl = getContextForgeApiKeysUrl(contextForgeUrl)
       const serverIds = servers.map((server) => server.id)
+
       const userConfigs = yield* new UserMcpcfServerConfigStore(
         makeControlPlaneFromEnv(env),
       ).listByUserAndServerIds(userId, serverIds)
+
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
       )
+
       const userSecretKeys = yield* listUserSecretKeys(env, userId)
       const oauthConfigured = yield* resolveOauthConfigured(env, userId, config.userOauthProviderId)
 
@@ -599,6 +631,7 @@ export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) 
           userSecretKeys,
         }),
       )
+
       const filteredServers = filterMcpcfUserSettings(formattedServers, query)
       const sortedServers = sortMcpcfUserSettings(filteredServers, sortBy, sortDir)
       const total = sortedServers.length
@@ -690,6 +723,7 @@ export function updateMcpcfContextForgeTokenSettings({
       const token = Option.fromNullishOr(payload.token?.trim()).pipe(
         Option.filter((value) => value.length > 0),
       )
+
       const clearToken = payload.clearToken ?? false
       const shouldWriteSecret = Option.isSome(token) || clearToken
       const writeStore = requireGlobalSecretsStore(env)
@@ -733,6 +767,7 @@ const writeUpstreamAuthToken = Effect.fn("sessions.mcpcf.writeUpstreamAuthToken"
     onSome: (resolvedStore) =>
       resolvedStore.setSecrets({ [authTokenSecretKey]: token }, { userId }),
   })
+
   return authTokenSecretKey
 })
 
@@ -758,6 +793,7 @@ const clearUpstreamAuthToken = Effect.fn("sessions.mcpcf.clearUpstreamAuthToken"
     onNone: () => Effect.void,
     onSome: (key) => deleteSecretIfPresent(store, key, userId),
   })
+
   return Option.match(keyOption, {
     onNone: () => existingKey,
     onSome: () => null,
@@ -816,6 +852,7 @@ export function updateMcpcfSettings({
       )
 
       const serverRecord = yield* registry.getServer(params.serverId)
+
       const server = yield* requireOption(
         serverRecord.pipe(
           Option.filter((value) => Boolean(value.enabled) && value.sourceStatus === "active"),
@@ -826,9 +863,11 @@ export function updateMcpcfSettings({
 
       const upstreamAuthType = normalizeServerUpstreamAuthType(server)
       const upstreamAuthTokenRequired = isMcpcfUserTokenAuthType(upstreamAuthType)
+
       const authToken = Option.fromNullishOr(payload.authToken?.trim()).pipe(
         Option.filter((value) => value.length > 0),
       )
+
       yield* failWhen(
         Option.isSome(authToken) && !upstreamAuthTokenRequired,
         "This MCP server does not accept a user upstream token",
@@ -837,9 +876,11 @@ export function updateMcpcfSettings({
 
       const userConfigStore = new UserMcpcfServerConfigStore(makeControlPlaneFromEnv(env))
       const existing = yield* userConfigStore.get(userId, server.id)
+
       const existingKey = Option.getOrNull(
         Option.flatMap(existing, (record) => Option.fromNullishOr(record.authTokenSecretKey)),
       )
+
       const shouldClear = Boolean(payload.clearAuthToken)
       const shouldClearUpstream = shouldClear && Boolean(existingKey)
       const secretsStoreNeeded = Option.isSome(authToken) || shouldClearUpstream
@@ -860,6 +901,7 @@ export function updateMcpcfSettings({
       })
 
       const toolNames = new Set(server.tools.map((tool) => tool.name))
+
       const disabledTools = resolveDisabledTools(
         payload.disabledTools,
         toolNames,

@@ -4,12 +4,15 @@ import { JsonRecord, StringMap } from "./common"
 import { SUBAGENT_MODES } from "@solzero/shared"
 
 export const SessionKind = Schema.Literals(["isolate", "sandbox"])
+
 export type SessionKind = typeof SessionKind.Type
 
 export const AgentRuntime = Schema.Literals(["isolate", "opencode", "codex", "claude-code"])
+
 export type AgentRuntime = typeof AgentRuntime.Type
 
 export const SessionStatus = Schema.Literals(["created", "active", "completed", "archived"])
+
 export type SessionStatus = typeof SessionStatus.Type
 
 export const SessionKindWithDefault = SessionKind.pipe(
@@ -17,15 +20,19 @@ export const SessionKindWithDefault = SessionKind.pipe(
 )
 
 export const SubagentMode = Schema.Literals(SUBAGENT_MODES)
+
 export type SubagentMode = typeof SubagentMode.Type
 
 export const MessageSource = Schema.Literals(["web", "slack", "extension", "github"])
+
 export type MessageSource = typeof MessageSource.Type
 
 export const MessageStatus = Schema.Literals(["pending", "processing", "completed", "failed"])
+
 export type MessageStatus = typeof MessageStatus.Type
 
 export const AttachmentType = Schema.Literals(["file", "image", "url"])
+
 export type AttachmentType = typeof AttachmentType.Type
 
 export const GitHubRepoSessionTool = Schema.Struct({
@@ -54,6 +61,7 @@ export const SessionToolSpec = Schema.Union([
   McpcfSessionTool,
   WorkflowBuilderSessionTool,
 ])
+
 export type SessionToolSpec = typeof SessionToolSpec.Type
 
 export const OpenCodeMcpOAuth = Schema.Union([
@@ -83,9 +91,11 @@ export const OpenCodeLocalMcpServer = Schema.Struct({
 })
 
 export const OpenCodeMcpServer = Schema.Union([OpenCodeRemoteMcpServer, OpenCodeLocalMcpServer])
+
 export type OpenCodeMcpServer = typeof OpenCodeMcpServer.Type
 
 export const OpenCodeMcpServers = Schema.Record(Schema.String, OpenCodeMcpServer)
+
 export type OpenCodeMcpServers = typeof OpenCodeMcpServers.Type
 
 export const SessionAttachment = Schema.Struct({
@@ -125,6 +135,7 @@ export const CreateSessionPayload = Schema.Struct({
   githubEmail: Schema.optionalKey(Schema.String),
   incognito: Schema.optionalKey(Schema.Boolean),
 })
+
 export type CreateSessionPayload = typeof CreateSessionPayload.Type
 
 export const RunSessionPayload = Schema.Struct({
@@ -137,12 +148,14 @@ export const RunSessionPayload = Schema.Struct({
   attachments: Schema.optionalKey(Schema.Array(SessionAttachment)),
   callbackContext: Schema.optionalKey(CallbackContext),
 })
+
 export type RunSessionPayload = typeof RunSessionPayload.Type
 
 export const SlackCreateSessionPayload = Schema.Struct({
   ...CreateSessionPayload.fields,
   slackUserId: Schema.String,
 })
+
 export type SlackCreateSessionPayload = typeof SlackCreateSessionPayload.Type
 
 export const PromptPayload = Schema.Struct({
@@ -154,12 +167,14 @@ export const PromptPayload = Schema.Struct({
   attachments: Schema.optionalKey(Schema.Array(SessionAttachment)),
   callbackContext: Schema.optionalKey(CallbackContext),
 })
+
 export type PromptPayload = typeof PromptPayload.Type
 
 export const ResumeSessionPayload = Schema.Struct({
   messageId: Schema.optionalKey(Schema.String),
   reason: Schema.Literal("okta_reconnect"),
 })
+
 export type ResumeSessionPayload = typeof ResumeSessionPayload.Type
 
 export const UpdateSessionToolsPayload = Schema.Struct({
@@ -170,6 +185,7 @@ export const UpdateSessionToolsPayload = Schema.Struct({
   repoOwner: Schema.optionalKey(Schema.String),
   repoName: Schema.optionalKey(Schema.String),
 })
+
 export type UpdateSessionToolsPayload = typeof UpdateSessionToolsPayload.Type
 
 export const WsTokenPayload = Schema.Struct({
@@ -178,16 +194,19 @@ export const WsTokenPayload = Schema.Struct({
   githubName: Schema.optionalKey(Schema.String),
   githubEmail: Schema.optionalKey(Schema.String),
 })
+
 export type WsTokenPayload = typeof WsTokenPayload.Type
 
 export const IdParams = {
   id: Schema.String,
 }
+
 export type IdParams = { id: string }
 
 export const McpcfServerParams = {
   serverId: Schema.String,
 }
+
 export type McpcfServerParams = { serverId: string }
 
 export const SessionsListQuery = {
@@ -205,6 +224,7 @@ export const SessionsListQuery = {
   repoOwner: Schema.optionalKey(Schema.String),
   repoName: Schema.optionalKey(Schema.String),
 }
+
 export type SessionsListQuery = {
   limit?: string
   offset?: string
@@ -390,6 +410,7 @@ export const McpcfUserSettingsListQuery = {
   configured: Schema.optionalKey(Schema.String),
   defaultTools: Schema.optionalKey(Schema.String),
 }
+
 export type McpcfUserSettingsListQuery = {
   limit?: string
   offset?: string
@@ -416,6 +437,7 @@ export const McpcfUserServerSettingsPayload = Schema.Struct({
   defaultToolsEnabled: Schema.optionalKey(Schema.Boolean),
   disabledTools: Schema.optionalKey(Schema.Array(Schema.String)),
 })
+
 export type McpcfUserServerSettingsPayload = typeof McpcfUserServerSettingsPayload.Type
 
 export class McpcfContextForgeTokenSettings extends Schema.Class<McpcfContextForgeTokenSettings>(
@@ -431,6 +453,7 @@ export const McpcfContextForgeTokenSettingsPayload = Schema.Struct({
   token: Schema.optionalKey(Schema.NullOr(Schema.String)),
   clearToken: Schema.optionalKey(Schema.Boolean),
 })
+
 export type McpcfContextForgeTokenSettingsPayload =
   typeof McpcfContextForgeTokenSettingsPayload.Type
 

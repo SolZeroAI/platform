@@ -6,6 +6,7 @@ import { loadAdminAiSearchForRoute } from "@/lib/admin-console.functions"
 export const Route = createFileRoute("/_authenticated/admin/ai-search")({
   beforeLoad: ({ search }) => {
     const canonicalSearch = canonicalAdminSearchForView("ai-search", search)
+
     if (isCanonicalAdminSearch(search, canonicalSearch)) {
       return
     }
@@ -22,5 +23,6 @@ export const Route = createFileRoute("/_authenticated/admin/ai-search")({
 function AdminAiSearchRoutePage() {
   const search = Route.useSearch()
   const initialAdminAiSearch = Route.useLoaderData()
+
   return <AdminPage initialAdminAiSearch={initialAdminAiSearch} search={search} view="ai-search" />
 }

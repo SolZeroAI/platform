@@ -31,6 +31,7 @@ import {
 
 export function parseListNumber(value: string | undefined, fallback: number, max: number): number {
   const parsed = Number(value)
+
   return Match.value(Number.isFinite(parsed) && parsed >= 0).pipe(
     Match.when(true, () => Math.min(Math.floor(parsed), max)),
     Match.orElse(() => fallback),
@@ -43,10 +44,12 @@ export function formatWorkflow(
   serverUrl?: string,
 ) {
   const webhookPath = `/workflows/webhooks/${record.webhook_id}`
+
   const webhookUrl = Option.match(Option.fromNullishOr(serverUrl), {
     onSome: (base) => new URL(webhookPath, base).toString(),
     onNone: () => null,
   })
+
   return {
     id: record.id,
     userId: record.user_id,
@@ -73,10 +76,13 @@ function formatWorkflowManifestMigration(migration: WorkflowManifestMigrationRes
 }
 
 export function formatWorkflowRun(run: WorkflowRunRecord) {
+  // SAFETY: workflow output_json stores a JSON object. parseJson returns that decoded value.
   const output = Option.match(Option.fromNullishOr(run.output_json), {
     onSome: (raw) => parseJson(raw) as Record<string, unknown>,
     onNone: () => null,
   })
+
+  // SAFETY: workflow input_json stores a JSON object. parseJson returns that decoded value.
   return {
     id: run.id,
     workflowId: run.workflow_id,
@@ -124,6 +130,7 @@ export const requireWorkflowForUser = Effect.fn("workflows.requireWorkflowForUse
   const found = yield* store.getWorkflowForUser(workflowId, userId)
   const workflow = yield* requireOption(found, "Workflow not found", 404)
   yield* failUnless(workflow.status !== "archived", "Workflow not found", 404)
+
   return { workflow, userId }
 })
 
@@ -135,6 +142,7 @@ export function createWorkflow(input: { payload: { name: string; manifest: unkno
   return runControlPlane(
     Effect.fn("workflows.create")(function* ({ request, env, principal, identityProvider }) {
       const identity = yield* resolveUserIdentity(request, env, principal, identityProvider)
+
       const created = yield* new WorkflowLifecycle(env)
         .createWorkflow({
           name: input.payload.name,
@@ -142,6 +150,7 @@ export function createWorkflow(input: { payload: { name: string; manifest: unkno
           userId: identity.userId,
         })
         .pipe(Effect.mapError(lifecycleFailure))
+
       return json(
         {
           workflow: formatWorkflow(created.workflow, created.manifest, getInfraServerUrl(env)),
@@ -160,6 +169,7 @@ export function updateWorkflow(input: {
   return runControlPlane(
     Effect.fn("workflows.update")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, input.params.id)
+
       const updated = yield* new WorkflowLifecycle(context.env)
         .updateWorkflow({
           workflow,
@@ -167,6 +177,7 @@ export function updateWorkflow(input: {
           manifest: input.payload.manifest,
         })
         .pipe(Effect.mapError(lifecycleFailure))
+
       return json({
         workflow: formatWorkflow(
           updated.workflow,
@@ -186,14 +197,17 @@ export function updateWorkflowName(input: { params: { id: string }; payload: { n
       yield* failUnless(name.length > 0, "Workflow name is required", 400)
       const { workflow } = yield* requireWorkflowForUser(context, input.params.id)
       const store = new WorkflowStore(context.db)
+
       const updated = yield* store.updateWorkflowName({
         id: workflow.id,
         userId: workflow.user_id,
         name,
         updatedAt: Date.now(),
       })
+
       const resolved = yield* requireOption(updated, "Workflow not found", 404)
       const manifest = yield* readWorkflowManifest(context.env, resolved.manifest_key)
+
       return json({
         workflow: formatWorkflow(resolved, manifest, getInfraServerUrl(context.env)),
       })
@@ -207,6 +221,7 @@ export function runWorkflow(input: { params: { id: string }; payload: { trigger?
       const { workflow } = yield* requireWorkflowForUser(context, input.params.id)
       const trigger = createWorkflowTrigger(input.payload.trigger)
       const run = yield* new WorkflowLifecycle(context.env).startWorkflowRun({ workflow, trigger })
+
       return json({ run: formatWorkflowRun(run) }, 201)
     }),
   )

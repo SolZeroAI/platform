@@ -16,6 +16,7 @@ export function SessionDetailDrawer({
 }) {
   const sandboxStatus = readString(detail.state, "sandboxStatus")
   const runtimeError = readString(detail.state, "runtimeError")
+
   return (
     <Drawer title="Agent details" subtitle={detail.session.id} onClose={onClose}>
       <MetadataList
@@ -57,6 +58,7 @@ export function RunDetailDrawer({
 }) {
   const selectedRun =
     detail.runs.find((run) => run.id === detail.selectedRunId) ?? detail.runs[0] ?? null
+
   const sessionIds = selectedRun
     ? findSessionIds([
         selectedRun.input,
@@ -64,6 +66,7 @@ export function RunDetailDrawer({
         ...detail.events.map((event) => event.data),
       ])
     : []
+
   return (
     <Drawer title="Workflow runs" subtitle={detail.workflow.name} onClose={onClose}>
       <div className="mb-3 flex flex-wrap gap-2">
@@ -142,6 +145,7 @@ export function Drawer({
         <Button
           type="button"
           onClick={onClose}
+          // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
           shape="circle"
           size="sm"
           variant="secondary"
@@ -179,6 +183,7 @@ export function JsonSection({ title, value }: { title: string; value: unknown })
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const normalized = status.toLowerCase()
+
   const variant: BadgeVariant =
     normalized === "completed" || normalized === "active" || normalized === "ready"
       ? "success"
@@ -187,5 +192,6 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
         : normalized === "archived"
           ? "secondary"
           : "warning"
+
   return <Badge variant={variant}>{label ?? status}</Badge>
 }

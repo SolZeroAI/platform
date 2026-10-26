@@ -3,8 +3,11 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare"
 import { randomBytes } from "node:crypto"
 
 const kind = process.argv[2]
+
 if (!["r2", "kv", "session"].includes(kind ?? "")) throw new Error("Invalid fixture kind")
+
 const token = randomBytes(48).toString("base64url")
+
 const bundle = await build({
   entryPoints: ["tests/support/storage-worker.ts"],
   bundle: true,
@@ -14,6 +17,7 @@ const bundle = await build({
   external: ["cloudflare:workers"],
   write: false,
 })
+
 function create(role: string) {
   return new Miniflare(
     convertV4MiniflareOptions({
@@ -39,10 +43,13 @@ function create(role: string) {
     }),
   )
 }
+
 const source = create("source"),
   destination = create("destination")
+
 try {
   const [sourceUrl, destinationUrl] = await Promise.all([source.ready, destination.ready])
+
   if (kind === "r2") {
     const bucket = await source.getR2Bucket("BUCKET")
     await bucket.put("workflows/original/code.js", "export default 'original';", {
@@ -53,6 +60,7 @@ try {
     await bucket.put("empty", new Uint8Array())
   } else if (kind === "kv") {
     const kv = await source.getKVNamespace("KV")
+
     for (let index = 0; index < 105; index++)
       await kv.put(`entry-${String(index).padStart(3, "0")}`, String(index), {
         metadata: { index },
@@ -67,16 +75,20 @@ try {
     const response = await fetch(new URL("/seed", sourceUrl), {
       headers: { Authorization: `Bearer ${token}` },
     })
+
     if (!response.ok) throw new Error("Durable Object fixture could not be seeded")
   }
+
   process.send?.({ token, sourceUrl: sourceUrl.origin, destinationUrl: destinationUrl.origin })
   let stopping = false
+
   const stop = async () => {
     if (stopping) return
     stopping = true
     await Promise.all([source.dispose(), destination.dispose()])
     process.disconnect?.()
   }
+
   process.on("message", () => {
     void stop()
   })

@@ -6,14 +6,17 @@ function normalizeNonEmpty(value: string | undefined): string | undefined {
   }
 
   const trimmed = value.trim()
+
   return trimmed.length > 0 ? trimmed : undefined
 }
 
 export function getAppStage(): string {
   const stage = normalizeNonEmpty(import.meta.env.VITE_STAGE)
+
   if (!stage) {
     throw new Error("VITE_STAGE is not configured in the web app environment.")
   }
+
   return stage
 }
 
@@ -23,23 +26,28 @@ export function getAppVersion(): string {
 
 function configuredBoolean(name: string, value: string | undefined): boolean {
   if (value === "true") return true
+
   if (value === "false") return false
   throw new Error(`${name} must be configured as either "true" or "false".`)
 }
 
 function configuredPositiveNumber(name: string, value: string | undefined): number {
   const number = Number(value)
+
   if (!Number.isFinite(number) || number <= 0) {
     throw new Error(`${name} must be configured as a positive number.`)
   }
+
   return number
 }
 
 export function getAppStageMetadata(): AppStageMetadata {
   const logLevel = import.meta.env.VITE_S0_LOG_LEVEL
+
   if (logLevel !== "trace" && logLevel !== "debug") {
     throw new Error('VITE_S0_LOG_LEVEL must be configured as either "trace" or "debug".')
   }
+
   return {
     name: getAppStage(),
     app: {
@@ -68,5 +76,6 @@ export function getWebSocketOrigin(): string {
   }
 
   const websocketProtocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+
   return `${websocketProtocol}//${window.location.host}/api`
 }

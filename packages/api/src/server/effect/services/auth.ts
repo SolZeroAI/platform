@@ -12,6 +12,7 @@ import {
   type AuthPrincipal,
 } from "@solzero/api"
 import { UserApiKeyStore } from "../../background/db/user-api-keys"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- auth.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because API key verification reads the control plane.
 import { makeControlPlaneFromEnv } from "../db/control-plane-db"
 import { getSessionContextFromHeaders } from "../../lib/better-auth"
 import { CloudflareContext } from "./cloudflare"
@@ -22,6 +23,7 @@ export const CurrentRequest = HttpServerRequest.HttpServerRequest
 
 const verifyApiKey = Effect.fn("auth.verifyApiKey")(function* (rawApiKey: string, env: ApiEnv) {
   const store = new UserApiKeyStore(makeControlPlaneFromEnv(env))
+
   const verified = yield* store
     .verify(rawApiKey)
     .pipe(
@@ -29,10 +31,12 @@ const verifyApiKey = Effect.fn("auth.verifyApiKey")(function* (rawApiKey: string
         Effect.fail(new InternalServerError({ message: "Failed to verify API key" })),
       ),
     )
+
   const account = yield* Option.match(verified, {
     onNone: () => Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
     onSome: Effect.succeed,
   })
+
   return {
     kind: "api_key",
     keyId: account.keyId,
@@ -65,6 +69,7 @@ function apiKeyFromAuthorization(value: string): Option.Option<string> {
 function explicitApiKey(headers: Headers): Option.Option<string> {
   const authorization = nonEmptyHeader(headers, "authorization")
   const apiKey = nonEmptyHeader(headers, "x-api-key")
+
   return Match.value({
     hasApiKey: Option.isSome(apiKey),
     hasAuthorization: Option.isSome(authorization),
@@ -83,10 +88,12 @@ const verifyUserSession = Effect.fn("auth.verifyUserSession")(function* (
   env: ApiEnv,
 ) {
   const sessionContext = yield* getSessionContextFromHeaders(env, request.headers)
+
   const resolved = yield* Option.match(Option.fromNullishOr(sessionContext), {
     onNone: () => Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
     onSome: Effect.succeed,
   })
+
   return {
     kind: "user_session",
     userId: resolved.user.id,
@@ -104,6 +111,7 @@ export const authenticateControlPlaneRequest = Effect.fn("auth.authenticateContr
           Match.orElse(() => new UnauthorizedError({ message: "Unauthorized" })),
         ),
     })
+
     return yield* Option.match(apiKey, {
       onNone: () => verifyUserSession(request, env),
       onSome: (value) => verifyApiKey(value, env),
@@ -117,14 +125,17 @@ export const authenticateControlPlaneRequest = Effect.fn("auth.authenticateContr
 const providePrincipal = (handler: never, principal: AuthPrincipal) =>
   Effect.provideService(handler, CurrentPrincipal, principal)
 
+// SAFETY: HttpApiMiddleware types the handler channel as never. This generator only supplies CurrentPrincipal and returns that same handler.
 const authenticateCurrentRequest = (handler: never) =>
   Effect.gen(function* () {
     const { env } = yield* CloudflareContext
     const request = requestFromSource(yield* CurrentRequest)
     const principal = yield* authenticateControlPlaneRequest(request, env)
+
     return yield* providePrincipal(handler, principal)
   }) as never
 
+// SAFETY: ControlPlaneAuth's bearerAuth and apiKey callbacks are typed never. authenticateCurrentRequest is that callback.
 export const ControlPlaneAuthLive = Layer.succeed(ControlPlaneAuth, {
   bearerAuth: (handler: never) => authenticateCurrentRequest(handler),
   apiKey: (handler: never) => authenticateCurrentRequest(handler),

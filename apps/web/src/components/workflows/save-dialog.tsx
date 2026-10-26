@@ -123,6 +123,7 @@ export function WorkflowSaveDialogIcon({ phase }: { phase: WorkflowSaveDialogSta
       </span>
     )
   }
+
   if (phase === "failure") {
     return (
       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kumo-danger-tint/10 text-kumo-danger ring-1 ring-kumo-danger/30">
@@ -130,6 +131,7 @@ export function WorkflowSaveDialogIcon({ phase }: { phase: WorkflowSaveDialogSta
       </span>
     )
   }
+
   return (
     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kumo-tint text-kumo-subtle ring-1 ring-kumo-hairline">
       <Save className="h-4 w-4" aria-hidden />

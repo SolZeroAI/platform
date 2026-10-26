@@ -20,24 +20,29 @@ const SECRET_PATTERNS: ReadonlyArray<[RegExp, string]> = [
 
 function replaceControlCharacter(character: string): string {
   const codePoint = character.codePointAt(0) ?? 0
+
   return codePoint < 32 || codePoint === 127 ? " " : character
 }
 
 function compactWhitespace(value: string): string {
   const withoutControls = Array.from(value, replaceControlCharacter).join("")
+
   return withoutControls.replace(/\s+/gu, " ").trim()
 }
 
 /** Redact credential-like values before truncating model-authored compact text. */
 export function sanitizeSubagentCompactText(value: string, maxLength: number): string {
   const compact = compactWhitespace(value)
+
   const redacted = SECRET_PATTERNS.reduce(
     (current, [pattern, replacement]) => current.replace(pattern, replacement),
     compact,
   )
+
   if (redacted.length <= maxLength) {
     return redacted
   }
+
   return maxLength <= 1 ? "…".slice(0, maxLength) : `${redacted.slice(0, maxLength - 1)}…`
 }
 

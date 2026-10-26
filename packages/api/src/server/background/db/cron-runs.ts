@@ -13,6 +13,7 @@ import { parseJsonRecord, stringifyJson } from "../../lib/json"
 import { d1Error } from "./errors"
 
 export type CronRunTrigger = "scheduled" | "manual"
+
 export type CronRunStatus = "success" | "failure" | "skipped"
 
 export interface CronRunRecord {
@@ -56,8 +57,10 @@ function toCronRun(row: AppSchema["cronRuns"]["$inferSelect"]): CronRunRecord {
     id: row.id,
     jobId: row.jobId,
     cron: row.cron,
-    trigger: row.trigger as CronRunTrigger,
-    status: row.status as CronRunStatus,
+    trigger:
+      /* SAFETY: row.trigger is persisted only as CronRunTrigger by the writer for that column. */ row.trigger as CronRunTrigger,
+    status:
+      /* SAFETY: row.status is persisted only as CronRunStatus by the writer for that column. */ row.status as CronRunStatus,
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     durationMs: row.durationMs,
@@ -74,6 +77,7 @@ export function sanitizeCronErrorMessage(value: unknown): string {
     Match.when(Match.instanceOf(Error), (error) => error.message),
     Match.orElse((resolved) => String(resolved)),
   )
+
   return message.replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]").slice(0, 2000)
 }
 
@@ -93,6 +97,7 @@ export class CronRunsStore {
   ) {
     const durationMs = Math.max(0, input.finishedAt - input.startedAt)
     const createdAt = input.finishedAt
+
     const row = {
       id: `crn_${generateId(12)}`,
       jobId: input.jobId,
@@ -108,10 +113,12 @@ export class CronRunsStore {
       actorEmail: input.actorEmail ?? null,
       createdAt,
     }
+
     yield* Effect.tryPromise({
       try: () => this.drizzle.insert(this.schema.cronRuns).values(row),
       catch: d1Error("db.cronRuns.insertRun"),
     })
+
     return toCronRun(row)
   })
 
@@ -127,6 +134,7 @@ export class CronRunsStore {
       ],
       { concurrency: "unbounded" },
     )
+
     return {
       jobId,
       latestRun: Option.getOrNull(latestRun),
@@ -146,6 +154,7 @@ export class CronRunsStore {
       ),
       Match.orElse(() => eq(this.schema.cronRuns.jobId, jobId)),
     )
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -156,6 +165,7 @@ export class CronRunsStore {
           .limit(1),
       catch: d1Error("db.cronRuns.getLatestRun"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), toCronRun)
   })
 }

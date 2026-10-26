@@ -1,4 +1,5 @@
 import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
+import * as Match from "effect/Match"
 import { Empty } from "@cloudflare/kumo/components/empty"
 import { Input } from "@cloudflare/kumo/components/input"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
@@ -75,9 +76,11 @@ export function WorkflowCreationModePanel({
           const templates = WORKFLOW_TEMPLATES.filter(
             (template) => template.complexity === group.complexity,
           )
+
           if (templates.length === 0) {
             return null
           }
+
           return (
             <section key={group.complexity}>
               <h3 className="mb-2 text-xs font-semibold text-kumo-subtle">{group.label}</h3>
@@ -130,6 +133,7 @@ export function WorkflowCreationModePanel({
           onChange={(event) => {
             const file = event.currentTarget.files?.[0]
             event.currentTarget.value = ""
+
             if (file) {
               onImportFile(file)
             }
@@ -254,6 +258,7 @@ export function WorkflowIndexLanding({
     ],
     [deletingWorkflowId, onRequestDeleteWorkflow],
   )
+
   const table = useWorkflowIndexTable({
     data: workflows,
     columns,
@@ -379,6 +384,7 @@ export function useWorkflowIndexTable({
   onStateChange: (patch: WorkflowListStatePatch) => void
 }): Table<WorkflowSummary> {
   const tableData = useMemo(() => data, [data])
+
   return useReactTable({
     data: tableData,
     columns,
@@ -405,6 +411,7 @@ export function useWorkflowIndexTable({
         updater,
         state.status ? [{ id: "status", value: state.status }] : [],
       )
+
       onStateChange({
         status: String(filters.find((filter) => filter.id === "status")?.value ?? ""),
         pageIndex: 0,
@@ -414,6 +421,7 @@ export function useWorkflowIndexTable({
       const sorting = applyUpdater(updater, [
         { id: state.sortBy, desc: state.sortDir === "desc" },
       ]).slice(0, 1)
+
       const nextSort = sorting[0]
       onStateChange({
         sortBy: isWorkflowListSortBy(nextSort?.id) ? nextSort.id : "updatedAt",
@@ -426,6 +434,7 @@ export function useWorkflowIndexTable({
         pageIndex: state.pageIndex,
         pageSize: state.pageSize,
       })
+
       onStateChange({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
@@ -478,6 +487,7 @@ export function WorkflowIndexTable({
   onSelectWorkflow: (workflowId: string) => void
 }) {
   const rows = table.getRowModel().rows
+
   return (
     <div className="space-y-3">
       <div className="overflow-auto rounded-xl bg-kumo-elevated/80 [container-type:inline-size]">
@@ -575,8 +585,12 @@ export function WorkflowIndexTable({
 }
 
 export function WorkflowStatusBadge({ status }: { status: WorkflowSummary["status"] }) {
-  const variant: BadgeVariant =
-    status === "active" ? "success" : status === "archived" ? "secondary" : "warning"
+  const variant: BadgeVariant = Match.value(status).pipe(
+    Match.when("active", () => "success" as const),
+    Match.when("archived", () => "secondary" as const),
+    Match.orElse(() => "warning" as const),
+  )
+
   return (
     <Badge variant={variant} className="uppercase">
       {status}
@@ -588,9 +602,11 @@ export function WorkflowSortIcon({ direction }: { direction: false | "asc" | "de
   if (direction === "asc") {
     return <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden />
   }
+
   if (direction === "desc") {
     return <ChevronDown className="h-3.5 w-3.5" aria-hidden />
   }
+
   return <ChevronsUpDown className="h-3.5 w-3.5 text-kumo-subtle" aria-hidden />
 }
 
@@ -604,20 +620,24 @@ export function setTableFilter<TData>(table: Table<TData>, id: string, value: st
 
 export function formatWorkflowStatusFilterValue(value: unknown): string {
   const status = String(value ?? "")
+
   return status === WORKFLOW_STATUS_ALL_FILTER ? "All statuses" : status
 }
 
 export function formatWorkflowRunStatusFilterValue(value: unknown): string {
   const status = String(value ?? "")
+
   return status === WORKFLOW_STATUS_ALL_FILTER ? "All statuses" : status
 }
 
 export function formatWorkflowRunTriggerFilterValue(value: unknown): string {
   const triggerKind = String(value ?? "")
+
   return triggerKind === WORKFLOW_STATUS_ALL_FILTER ? "All triggers" : triggerKind
 }
 
 export function applyUpdater<T>(updater: T | ((current: T) => T), current: T): T {
+  // SAFETY: A function updater is the table setState callback and is applied to the current value.
   return typeof updater === "function" ? (updater as (current: T) => T)(current) : updater
 }
 
@@ -650,12 +670,15 @@ export function workflowListQueryParams(state: WorkflowListTableState): URLSearc
   params.set("offset", String(state.pageIndex * state.pageSize))
   params.set("sortBy", state.sortBy)
   params.set("sortDir", state.sortDir)
+
   if (state.q.trim()) {
     params.set("q", state.q.trim())
   }
+
   if (state.status.trim()) {
     params.set("status", state.status.trim())
   }
+
   return params
 }
 
@@ -665,15 +688,19 @@ export function workflowRunQueryParams(state: WorkflowRunTableState): URLSearchP
   params.set("offset", String(state.pageIndex * state.pageSize))
   params.set("sortBy", state.sortBy)
   params.set("sortDir", state.sortDir)
+
   if (state.q.trim()) {
     params.set("q", state.q.trim())
   }
+
   if (state.status.trim()) {
     params.set("status", state.status.trim())
   }
+
   if (state.triggerKind.trim()) {
     params.set("triggerKind", state.triggerKind.trim())
   }
+
   return params
 }
 
@@ -683,6 +710,7 @@ export function WorkflowsIndexPage({
   initialProviderSettings?: ProviderSettingsResponse | null
 }) {
   const { pathname } = useLocation()
+
   return (
     <WorkflowsPage
       pathname={pathname}

@@ -21,10 +21,12 @@ function skillFailure(cause: unknown): ControlPlaneFailure {
     Option.map((tagged) => String(tagged._tag)),
     Option.getOrElse(() => ""),
   )
+
   const status = Match.value(tag).pipe(
     Match.when("AgentSkillNotFoundError", () => 404),
     Match.orElse(() => 500),
   )
+
   return new ControlPlaneFailure({ payload: { error: describeError(cause) }, status })
 }
 
@@ -36,6 +38,7 @@ const listForUser = Effect.fn("skills.listForUser")(function* (
     try: () => listEffectiveGlobalSkills({ db: context.db, userId }),
     catch: skillFailure,
   })
+
   return json({ skills })
 })
 
@@ -43,6 +46,7 @@ export function list() {
   return runControlPlane(
     Effect.fn("skills.list")(function* (context: ControlPlaneContext) {
       const userId = yield* requirePrincipalUserId(context.request, context.principal)
+
       return yield* listForUser(context, userId)
     }),
   )
@@ -61,6 +65,7 @@ export function setPreference({
       yield* new AgentSkillStore(context.db)
         .setPreference(userId, params.skillId, payload.enabled)
         .pipe(Effect.mapError(skillFailure))
+
       return yield* listForUser(context, userId)
     }),
   )
@@ -73,6 +78,7 @@ export function clearPreference({ params }: { params: AgentSkillParams }) {
       yield* new AgentSkillStore(context.db)
         .clearPreference(userId, params.skillId)
         .pipe(Effect.mapError(skillFailure))
+
       return yield* listForUser(context, userId)
     }),
   )

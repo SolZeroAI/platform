@@ -88,20 +88,26 @@ function booleanFlag(value: boolean): string {
   )
 }
 
-const errorField = (error: string | undefined) =>
+interface RunErrorField {
+  readonly error?: string
+}
+
+const errorField = (error: string | undefined): RunErrorField =>
   Option.match(Option.fromNullishOr(error), {
-    onNone: () => ({}) as { error?: string },
-    onSome: (value) => ({ error: value }),
+    onNone: (): RunErrorField => ({}),
+    onSome: (value): RunErrorField => ({ error: value }),
   })
 
 const createNewRunSession = Effect.fn("sessions.run.createNew")(function* (
   context: RunSessionContext,
 ) {
   const requestedKind = context.forcedKind ?? context.payload.sessionKind ?? "isolate"
+
   const requestedRuntime = resolveAgentRuntime({
     agentRuntime: context.payload.agentRuntime,
     sessionKind: requestedKind,
   })
+
   const sessionKind = sessionKindForAgentRuntime(requestedRuntime)
   yield* failWhen(
     context.executionMode === "stream" && sessionKind === "sandbox",
@@ -123,6 +129,7 @@ const createNewRunSession = Effect.fn("sessions.run.createNew")(function* (
     context.actorUserId,
     context.identityProvider,
   )
+
   yield* validateRequestedAiSearchSessionTools(context.env, resolved.requestedTools)
   yield* validateRequestedMcpcfSessionTools(context.env, resolved.requestedTools, {
     userId: identity.userId,
@@ -206,6 +213,7 @@ const resolveRunSession = Effect.fn("sessions.run.resolve")(function* (context: 
   const sessionId = Option.fromNullishOr(context.payload.sessionId?.trim()).pipe(
     Option.filter((value) => value.length > 0),
   )
+
   return yield* Option.match(sessionId, {
     onNone: () => createNewRunSession(context),
     onSome: (existingSessionId) => resolveExistingRunSession(context, existingSessionId),
@@ -218,6 +226,7 @@ function buildStreamResponse(resolved: ResolvedRunSession, promptResponse: Respo
   headers.set("x-session-kind", resolved.sessionKind)
   headers.set("x-agent-runtime", resolved.agentRuntime)
   headers.set("x-created-session", booleanFlag(resolved.createdSession))
+
   return new Response(promptResponse.body, {
     status: promptResponse.status,
     statusText: promptResponse.statusText,
@@ -230,9 +239,11 @@ const collectSyncPrompt = Effect.fn("sessions.run.collectSync")(function* (input
   resolved: ResolvedRunSession
   promptResponse: Response
 }) {
+  // SAFETY: the sync prompt route returns JSON with the created messageId.
   const promptData = yield* Effect.tryPromise(
     () => input.promptResponse.json() as Promise<{ messageId: string }>,
   )
+
   const stub = getSessionStub(input.env, input.resolved.sessionId)
   const promptResult = yield* waitForPromptResult(stub, promptData.messageId)
   const log = yield* EffectRequestLogger
@@ -247,10 +258,12 @@ const collectSyncPrompt = Effect.fn("sessions.run.collectSync")(function* (input
     hasError: Boolean(promptResult.error),
     errorMessage: promptResult.error ?? null,
   })
+
   const subagentRunField = Match.value(promptResult.subagentRuns).pipe(
     Match.when(Match.undefined, () => ({})),
     Match.orElse((subagentRuns) => ({ subagentRuns })),
   )
+
   const response: RunSessionPromptResponse = {
     sessionId: input.resolved.sessionId,
     sessionKind: input.resolved.sessionKind,
@@ -262,6 +275,7 @@ const collectSyncPrompt = Effect.fn("sessions.run.collectSync")(function* (input
     ...subagentRunField,
     ...errorField(promptResult.error),
   }
+
   return json(response)
 })
 
@@ -348,6 +362,7 @@ export function runSessionHttp(payload: RunSessionPayload, forcedKind?: SessionK
         "Unauthorized",
         401,
       )
+
       return yield* runSessionApplication({
         request,
         env,

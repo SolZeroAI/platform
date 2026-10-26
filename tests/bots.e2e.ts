@@ -18,6 +18,7 @@ test(
     await expect(browser).toHaveURL(/\/bots\/[^/]+$/)
     const botId = (await browser.url()).split("/").pop()!
     const routineName = uniqueName("e2e-routine")
+
     const { routine } = await api<{ routine: { id: string } }>(
       browser,
       `/bots/${botId}/routines`,
@@ -30,6 +31,7 @@ test(
         until: Date.now() + 86400_000,
       },
     )
+
     try {
       await browser.reload()
       await expect(screen.getByText(routineName, { exact: true })).toBeVisible()
@@ -43,6 +45,7 @@ test(
         browser,
         `/bots/${botId}/routines`,
       )
+
       if (list.routines.some((item) => item.id === routine.id))
         await api(browser, `/bots/${botId}/routines/${routine.id}`, "DELETE")
     }

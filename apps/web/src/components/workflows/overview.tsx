@@ -149,6 +149,7 @@ export function WorkflowOverview({
 }) {
   const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null
   const showRunDetails = runDetailsOpen && selectedRun !== null
+
   return (
     <div
       className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none"
@@ -349,6 +350,7 @@ export function RunHistoryTable({
     state,
     onStateChange,
   })
+
   const rows = table.getRowModel().rows
 
   return (
@@ -471,10 +473,12 @@ export function useWorkflowRunTable({
   onStateChange: (patch: WorkflowRunStatePatch) => void
 }): Table<WorkflowRun> {
   const tableData = useMemo(() => data, [data])
+
   const columnFilters = [
     ...(state.status ? [{ id: "status", value: state.status }] : []),
     ...(state.triggerKind ? [{ id: "triggerKind", value: state.triggerKind }] : []),
   ]
+
   return useReactTable({
     data: tableData,
     columns,
@@ -508,6 +512,7 @@ export function useWorkflowRunTable({
       const sorting = applyUpdater(updater, [
         { id: state.sortBy, desc: state.sortDir === "desc" },
       ]).slice(0, 1)
+
       const nextSort = sorting[0]
       onStateChange({
         sortBy: isWorkflowRunSortBy(nextSort?.id) ? nextSort.id : "updatedAt",
@@ -520,6 +525,7 @@ export function useWorkflowRunTable({
         pageIndex: state.pageIndex,
         pageSize: state.pageSize,
       })
+
       onStateChange({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
@@ -605,6 +611,7 @@ export function RunDetailsSidebar({
       .filter((event) => event.eventType === "approval_submitted" && event.nodeId)
       .map((event) => event.nodeId),
   )
+
   const artifacts = useMemo(
     () => getWorkflowRunArtifactSummaries(run, events, workflowManifest),
     [events, run, workflowManifest],
@@ -627,6 +634,7 @@ export function RunDetailsSidebar({
             disabled={deleting}
             loading={deleting}
             size="lg"
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="square"
             variant="ghost"
             className="bg-transparent! text-kumo-danger! shadow-none! ring-0! hover:bg-kumo-danger-tint/20! focus:ring-0! focus-visible:ring-0!"
@@ -638,6 +646,7 @@ export function RunDetailsSidebar({
             type="button"
             onClick={onClose}
             size="lg"
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="square"
             variant="secondary"
             aria-label="Close run details"
@@ -856,28 +865,34 @@ export function RunArtifactViewerButton({ artifact }: { artifact: WorkflowRunArt
   const [artifactContent, setArtifactContent] = useState<WorkflowRunArtifactContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+
   const viewerValue = artifactContent
     ? getCodeTextForValue(artifactContent.content)
     : formatJson({ error: loadError ?? "Artifact content has not loaded." })
+
   const viewerLanguage = artifactContent ? getCodeLanguageForValue(artifactContent.content) : "json"
 
   const openArtifact = async (open: () => void) => {
     if (artifactContent) {
       open()
+
       return
     }
+
     if (loading) {
       return
     }
 
     setLoading(true)
     setLoadError(null)
+
     try {
       const data = await requestJson<{ artifact: WorkflowRunArtifactContent }>(
         `/api/workflows/${encodeURIComponent(artifact.workflowId)}/runs/${encodeURIComponent(
           artifact.runId,
         )}/artifacts/${encodeURIComponent(artifact.nodeId)}`,
       )
+
       setArtifactContent(data.artifact)
     } catch (errorValue) {
       setLoadError(errorValue instanceof Error ? errorValue.message : "Failed to load artifact")

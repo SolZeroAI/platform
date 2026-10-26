@@ -8,6 +8,7 @@ import { useCallback, useRef } from "react"
 
 export function SecretsSettings() {
   const addSecretRef = useRef<(() => void) | null>(null)
+
   const registerAddSecret = useCallback((openCreateDialog: () => void) => {
     addSecretRef.current = openCreateDialog
   }, [])

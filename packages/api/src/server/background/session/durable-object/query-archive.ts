@@ -108,15 +108,18 @@ type SessionDODelegate = any
 
 export async function handleStop(host: SessionDODelegate): Promise<Response> {
   await host.stopExecution()
+
   return Response.json({ status: "stopping" })
 }
 
 export function handleListEvents(host: SessionDODelegate, url: URL): Response {
   const limit = Math.min(Number.parseInt(url.searchParams.get("limit") || "100"), 500)
+
   const events = Option.match(Option.fromNullishOr(url.searchParams.get("messageId")), {
     onNone: () => host.repository.events.listEvents(limit),
     onSome: (messageId) => host.repository.events.listEventsForMessage(messageId),
   })
+
   return Response.json({
     events: events.map((event) => ({
       id: event.id,
@@ -130,6 +133,7 @@ export function handleListEvents(host: SessionDODelegate, url: URL): Response {
 
 export function handleListRuntimeActivity(host: SessionDODelegate, url: URL): Response {
   const limit = Math.min(Number.parseInt(url.searchParams.get("limit") || "100"), 500)
+
   return Response.json({
     activity: host.listSerializedRuntimeActivity(limit),
   })
@@ -140,6 +144,7 @@ export function listSerializedRuntimeActivity(
   limit: number,
 ): RuntimeActivityEvent[] {
   const rows = host.repository.listRuntimeActivity(limit)
+
   return rows.map((row, index) =>
     host.serializeRuntimeActivity(
       row,
@@ -151,6 +156,7 @@ export function listSerializedRuntimeActivity(
 export function handleListMessages(host: SessionDODelegate, url: URL): Response {
   const limit = Math.min(Number.parseInt(url.searchParams.get("limit") || "100"), 500)
   const messages = host.repository.listMessages(limit)
+
   return Response.json({
     messages: messages.map((message) => ({
       id: message.id,
@@ -167,6 +173,7 @@ export function handleListMessages(host: SessionDODelegate, url: URL): Response 
 
 export function handleListArtifacts(host: SessionDODelegate): Response {
   const artifacts = host.repository.listArtifacts()
+
   return Response.json({
     artifacts: artifacts.map((artifact) => host.serializeArtifact(artifact)),
   })
@@ -176,7 +183,9 @@ export async function handleGenerateWsToken(
   host: SessionDODelegate,
   request: Request,
 ): Promise<Response> {
-  const body = (await request.json()) as WsTokenBody
+  const body =
+    /* SAFETY: The JSON body is the WsTokenBody shape read by this caller after the response arrives. */ (await request.json()) as WsTokenBody
+
   return Option.match(Option.fromNullishOr(body.userId || undefined), {
     onNone: () => Promise.resolve(Response.json({ error: "userId is required" }, { status: 400 })),
     onSome: (userId) => host.generateWsTokenForUser(userId, body),
@@ -221,6 +230,7 @@ export function createWsParticipant(
     role: "member",
     joinedAt: Date.now(),
   })
+
   return host.repository.getParticipantById(id)
 }
 
@@ -241,6 +251,7 @@ export async function issueWsToken(
     createdAt: now,
     expiresAt: now + WS_TOKEN_TTL_MS,
   })
+
   return Response.json({
     token: plainToken,
     participantId: participant.id,
@@ -251,7 +262,11 @@ export async function handleVerifySandboxToken(
   host: SessionDODelegate,
   request: Request,
 ): Promise<Response> {
-  const body = (await request.json()) as { token: string }
+  const body =
+    /* SAFETY: The JSON body is the { token: string } shape read by this caller after the response arrives. */ (await request.json()) as {
+      token: string
+    }
+
   return Option.match(Option.fromNullishOr(body.token || undefined), {
     onNone: () => Response.json({ valid: false, error: "Missing token" }, { status: 400 }),
     onSome: (token) => host.verifySandboxToken(token),
@@ -292,21 +307,13 @@ export function matchSandboxAuthToken(
   )
 }
 
-export function serializeArtifact(
-  host: SessionDODelegate,
-  artifact: ArtifactRow,
-): {
-  id: string
-  type: string
-  url: string | null
-  metadata: SessionArtifactMetadata | null
-  prNumber?: number
-  createdAt: number
-} {
+export function serializeArtifact(host: SessionDODelegate, artifact: ArtifactRow) {
   const metadata = parseArtifactMetadata(artifact.metadata)
+
   const prNumber = Option.getOrUndefined(
     Option.liftPredicate(metadata?.prNumber, (value): value is number => typeof value === "number"),
   )
+
   return {
     id: artifact.id,
     type: artifact.type,
@@ -321,19 +328,7 @@ export function serializeRuntimeActivity(
   host: SessionDODelegate,
   row: RuntimeActivityRow,
   previousCreatedAt: number | null,
-): {
-  id: string
-  type: string
-  sandboxId: string | null
-  summary: string
-  statusFrom: string | null
-  statusTo: string | null
-  keepAlive: boolean | null
-  reason: string | null
-  data: Record<string, unknown>
-  createdAt: number
-  durationSincePreviousMs: number | null
-} {
+) {
   return {
     id: row.id,
     type: row.type,
@@ -354,7 +349,11 @@ export function serializeRuntimeActivity(
 }
 
 export async function handleArchive(host: SessionDODelegate, request: Request): Promise<Response> {
-  const body = (await request.json()) as { userId?: string }
+  const body =
+    /* SAFETY: The JSON body is the { userId?: string } shape read by this caller after the response arrives. */ (await request.json()) as {
+      userId?: string
+    }
+
   return Option.match(Option.fromNullishOr(body.userId), {
     onNone: () => Promise.resolve(Response.json({ error: "userId is required" }, { status: 400 })),
     onSome: () => host.archiveSession(),
@@ -410,10 +409,12 @@ export function revertArchive(
   errorValue: unknown,
 ): Response {
   host.repository.updateSessionStatus(session.id, previousStatus, Date.now())
+
   const message = toErrorWithFallback(
     errorValue,
     "Failed to destroy sandbox during archive",
   ).message
+
   return Response.json({ error: message }, { status: 500 })
 }
 
@@ -428,6 +429,7 @@ export function finalizeArchive(
     onSome: (message) => host.broadcastArchivedProcessing(message, sandboxId),
   })
   host.broadcast({ type: "session_status", status: "archived" })
+
   return Response.json({ status: "archived" })
 }
 
@@ -454,7 +456,11 @@ export async function handleUnarchive(
   host: SessionDODelegate,
   request: Request,
 ): Promise<Response> {
-  const body = (await request.json()) as { userId?: string }
+  const body =
+    /* SAFETY: The JSON body is the { userId?: string } shape read by this caller after the response arrives. */ (await request.json()) as {
+      userId?: string
+    }
+
   return Option.match(Option.fromNullishOr(body.userId), {
     onNone: () => Promise.resolve(Response.json({ error: "userId is required" }, { status: 400 })),
     onSome: () => host.unarchiveSession(),
@@ -471,5 +477,6 @@ export function unarchiveSession(host: SessionDODelegate): Response {
 export function unarchiveResolvedSession(host: SessionDODelegate, session: SessionRow): Response {
   host.repository.updateSessionStatus(session.id, "active", Date.now())
   host.broadcast({ type: "session_status", status: "active" })
+
   return Response.json({ status: "active" })
 }

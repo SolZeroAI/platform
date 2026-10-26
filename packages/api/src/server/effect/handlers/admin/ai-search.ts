@@ -39,10 +39,12 @@ export const getAiSearchAdminResponse = Effect.fn("admin.getAiSearchAdminRespons
   context: ControlPlaneContext,
 ) {
   const registry = new AiSearchRegistryStore(context.env)
+
   const [sources, instances] = yield* Effect.all(
     [registry.listSourcesWithPresence(), registry.listCloudflareInstances()],
     { concurrency: "unbounded" },
   )
+
   return {
     sources: sources.map(formatSource),
     instances: instances.map(formatInstance),
@@ -62,6 +64,7 @@ export const performExportAiSearchConfig = Effect.fn("admin.performExportAiSearc
     const result = yield* exportAiSearchConfig(context.env).pipe(
       Effect.catch((cause) => failMessage(describeError(cause), 500)),
     )
+
     const log = yield* EffectRequestLogger
     yield* log.emit({
       event: "admin.ai_search.config.exported",
@@ -72,6 +75,7 @@ export const performExportAiSearchConfig = Effect.fn("admin.performExportAiSearc
         sourceCount: result.sourceCount,
       },
     })
+
     return json(result)
   },
 )
@@ -83,9 +87,11 @@ export const performCreateAiSearchSource = Effect.fn("admin.performCreateAiSearc
     payload: AdminAiSearchSourcePayload,
   ) {
     const registry = new AiSearchRegistryStore(context.env)
+
     const source = yield* registry
       .createSource(payload)
       .pipe(Effect.catch((cause) => failMessage(describeError(cause), 400)))
+
     const log = yield* EffectRequestLogger
     yield* log.emit({
       event: "admin.ai_search.source.created",
@@ -97,6 +103,7 @@ export const performCreateAiSearchSource = Effect.fn("admin.performCreateAiSearc
         enabled: source.enabled,
       },
     })
+
     return json(yield* getAiSearchAdminResponse(context))
   },
 )
@@ -109,9 +116,11 @@ export const performUpdateAiSearchSource = Effect.fn("admin.performUpdateAiSearc
     payload: AdminAiSearchSourcePayload,
   ) {
     const registry = new AiSearchRegistryStore(context.env)
+
     const source = yield* registry
       .updateSource(sourceId, payload)
       .pipe(Effect.catch((cause) => failMessage(describeError(cause), 400)))
+
     const log = yield* EffectRequestLogger
     yield* log.emit({
       event: "admin.ai_search.source.updated",
@@ -123,6 +132,7 @@ export const performUpdateAiSearchSource = Effect.fn("admin.performUpdateAiSearc
         enabled: source.enabled,
       },
     })
+
     return json(yield* getAiSearchAdminResponse(context))
   },
 )
@@ -142,6 +152,7 @@ export const performDeleteAiSearchSource = Effect.fn("admin.performDeleteAiSearc
         sourceId,
       },
     })
+
     return json(yield* getAiSearchAdminResponse(context))
   },
 )

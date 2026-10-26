@@ -71,6 +71,7 @@ export function getSessionSourceLabel(source: SessionInitiationSource | undefine
 
 export async function archiveSession(sessionId: string): Promise<ArchiveSessionFailure | null> {
   let response: Response
+
   try {
     response = await fetch(`/api/sessions/${sessionId}/archive`, {
       method: "POST",
@@ -97,16 +98,21 @@ export async function archiveSession(sessionId: string): Promise<ArchiveSessionF
 async function getArchiveFailureMessage(response: Response): Promise<string> {
   try {
     const contentType = response.headers.get("content-type") ?? ""
+
     if (contentType.includes("application/json")) {
+      // SAFETY: A failed session response JSON carries error or message text.
       const body = (await response.json()) as { error?: unknown; message?: unknown }
+
       if (typeof body.error === "string" && body.error.length > 0) {
         return body.error
       }
+
       if (typeof body.message === "string" && body.message.length > 0) {
         return body.message
       }
     } else {
       const text = await response.text()
+
       if (text.trim().length > 0) {
         return text.trim()
       }

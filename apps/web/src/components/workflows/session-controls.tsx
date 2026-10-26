@@ -1,4 +1,5 @@
 import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
+import * as Match from "effect/Match"
 import { InputArea } from "@cloudflare/kumo/components/input"
 import {
   ArrowRightFromLine,
@@ -66,6 +67,7 @@ export function SessionToolsDialogControls({
 }) {
   const [repoDialogOpen, setRepoDialogOpen] = useState(false)
   const [toolsDialogOpen, setToolsDialogOpen] = useState(false)
+
   const {
     repos,
     loadingRepos,
@@ -76,13 +78,16 @@ export function SessionToolsDialogControls({
     repoPagination,
     updateRepoQuery,
   } = useGitHubRepos()
+
   const selectedTools = useMemo(() => normalizeSessionTools(value), [value])
   const selectedRepo = getGitHubRepoTool(selectedTools)
+
   const repoSummary = selectedRepo
     ? `${selectedRepo.repoOwner}/${selectedRepo.repoName}`
     : loadingRepos
       ? "Loading repositories..."
       : "No repository"
+
   const toolsSummary = summarizeSessionTools(
     selectedTools.filter((tool) => tool.kind !== "github_repo"),
     { emptyLabel: "No tools selected", customMcpServers },
@@ -168,18 +173,23 @@ export function getSessionNodeTools(value: unknown): SessionToolSpec[] {
       continue
     }
 
+    // SAFETY: item was checked to be a non-array object, so kind and the repo fields are read by string key.
     const tool = item as Record<string, unknown>
+
     if (tool.kind === "github_repo" && !repoTool) {
       const repoOwner = typeof tool.repoOwner === "string" ? tool.repoOwner.trim() : ""
       const repoName = typeof tool.repoName === "string" ? tool.repoName.trim() : ""
+
       if (repoOwner && repoName) {
         repoTool = { kind: "github_repo", repoOwner, repoName }
       }
+
       continue
     }
 
     if (tool.kind === AI_SEARCH_SESSION_TOOL_KIND) {
       const sourceId = typeof tool.sourceId === "string" ? tool.sourceId : ""
+
       try {
         const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
         docTools.set(normalizedSourceId, {
@@ -189,6 +199,7 @@ export function getSessionNodeTools(value: unknown): SessionToolSpec[] {
       } catch {
         // Ignore invalid persisted tool records; the runtime validator handles active edits.
       }
+
       continue
     }
 
@@ -199,6 +210,7 @@ export function getSessionNodeTools(value: unknown): SessionToolSpec[] {
 
     if (tool.kind === MCPCF_SESSION_TOOL_KIND) {
       const serverId = typeof tool.serverId === "string" ? tool.serverId.trim() : ""
+
       if (serverId) {
         mcpcfTools.set(serverId, { kind: MCPCF_SESSION_TOOL_KIND, serverId })
       }
@@ -271,6 +283,7 @@ export function WorkflowNodeCatalogSubButton({
   onClearPreview: () => void
 }) {
   const disabled = Boolean(item.disabledReason)
+
   return (
     <button
       type="button"
@@ -280,8 +293,10 @@ export function WorkflowNodeCatalogSubButton({
       onDragStart={(event) => {
         if (disabled) {
           event.preventDefault()
+
           return
         }
+
         onDragStart(event, item)
       }}
       onDragEnd={onDragEnd}
@@ -339,6 +354,7 @@ export const WORKFLOW_NODE_CATEGORY_ICONS: Record<WorkflowNodeCategory, LucideIc
 
 export function NodeIcon({ type, className }: { type: WorkflowNodeType; className?: string }) {
   const Icon = WORKFLOW_NODE_ICON_COMPONENTS[getWorkflowNodeDefinition(type).editor.icon]
+
   return <Icon className={className} aria-hidden />
 }
 
@@ -422,8 +438,12 @@ export function getCategoryMenuSubButtonDragClassName(category: WorkflowNodeCate
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const variant: BadgeVariant =
-    status === "completed" ? "success" : status === "failed" ? "error" : "warning"
+  const variant: BadgeVariant = Match.value(status).pipe(
+    Match.when("completed", () => "success" as const),
+    Match.when("failed", () => "error" as const),
+    Match.orElse(() => "warning" as const),
+  )
+
   return (
     <Badge variant={variant} className="uppercase">
       {status}
@@ -444,9 +464,11 @@ export function RunEventStatusIcon({ eventType, level }: { eventType: string; le
             : eventType === "node_completed"
               ? ArrowRightToLine
               : null
+
   if (!Icon) {
     return <StatusDot level={level} />
   }
+
   return (
     <Icon className={`h-3.5 w-3.5 ${getRunEventIconClassName(eventType, level)}`} aria-hidden />
   )
@@ -457,29 +479,29 @@ export function StatusDot({ level }: { level: string }) {
 }
 
 export function getStatusDotClassName(level: string): string {
-  const className =
-    level === "error"
-      ? "bg-kumo-danger-tint"
-      : level === "warn"
-        ? "bg-kumo-warning-tint"
-        : "bg-kumo-success-tint"
-  return className
+  return Match.value(level).pipe(
+    Match.when("error", () => "bg-kumo-danger-tint"),
+    Match.when("warn", () => "bg-kumo-warning-tint"),
+    Match.orElse(() => "bg-kumo-success-tint"),
+  )
 }
 
 export function getStatusIndicatorClassName(level: string): string {
-  return level === "error"
-    ? "text-kumo-danger"
-    : level === "warn"
-      ? "text-kumo-warning"
-      : "text-kumo-success"
+  return Match.value(level).pipe(
+    Match.when("error", () => "text-kumo-danger"),
+    Match.when("warn", () => "text-kumo-warning"),
+    Match.orElse(() => "text-kumo-success"),
+  )
 }
 
 export function getRunEventIconClassName(eventType: string, level: string): string {
   if (level === "error" || level === "warn") {
     return getStatusIndicatorClassName(level)
   }
+
   if (eventType.startsWith("run_")) {
     return "text-kumo-brand"
   }
+
   return eventType.endsWith("_completed") ? "text-kumo-success" : "text-kumo-info"
 }

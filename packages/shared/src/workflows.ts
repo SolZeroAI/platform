@@ -36,6 +36,7 @@ export {
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
 } from "./workflow-nodes"
+
 export type {
   WorkflowActionNodeType,
   WorkflowNodeAdapterCategory,
@@ -62,6 +63,7 @@ export {
   WORKFLOW_MANIFEST_VERSION,
   WORKFLOW_SUBAGENTS_MANIFEST_VERSION,
 } from "./workflows/manifest-types"
+
 export type {
   WorkflowCronTriggerOptions,
   WorkflowDateTimeTriggerOptions,
@@ -94,6 +96,7 @@ export type {
   WorkflowTemplateComplexity,
   WorkflowUserApprovalOptions,
 } from "./workflows/manifest-types"
+
 export {
   parseWorkflowManifest,
   parseWorkflowManifestDraft,
@@ -103,9 +106,13 @@ export {
   WorkflowManifestSchema,
   WorkflowNodeOptionsSchema,
 } from "./workflows/manifest-schema"
+
 export type { WorkflowManifestDraft } from "./workflows/manifest-schema"
+
 export type { WorkflowSlackBlock } from "./workflows/manifest-types"
+
 export { WORKFLOW_TEMPLATES } from "./workflows/templates"
+
 const WORKFLOW_R2_CONTENT_ENCODING_MANIFEST_VERSION = 2
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -126,6 +133,7 @@ function normalizeWorkflowDraftNode(value: unknown, index: number): WorkflowMani
   }
 
   const type = readString(value.type)
+
   if (!isWorkflowNodeType(type)) {
     throw new Error(
       `Workflow node '${readString(value.id, String(index))}' has invalid type '${type}'`,
@@ -133,6 +141,7 @@ function normalizeWorkflowDraftNode(value: unknown, index: number): WorkflowMani
   }
 
   const id = readString(value.id, `node-${index + 1}`).trim()
+
   if (!id) {
     throw new Error(`Workflow node at index ${index} must have an id`)
   }
@@ -157,19 +166,24 @@ function normalizeWorkflowDraftNodeForManifestVersion(
 ): WorkflowManifestNode {
   const normalizeR2Encoding =
     manifestVersion < WORKFLOW_R2_CONTENT_ENCODING_MANIFEST_VERSION && node.type === "r2-put-object"
+
   const normalizeIsolateSubagents =
     manifestVersion < WORKFLOW_SUBAGENTS_MANIFEST_VERSION && node.type === "isolate-session"
+
   if (!normalizeR2Encoding && !normalizeIsolateSubagents) {
     return node
   }
 
   const options = { ...node.options }
+
   if (normalizeR2Encoding) {
     options.encoding = "text"
   }
+
   if (normalizeIsolateSubagents) {
     options.subagents = "disabled"
   }
+
   return {
     ...node,
     options,
@@ -187,14 +201,18 @@ function normalizeWorkflowDraftEdge(
 
   const source = readString(value.source).trim()
   const target = readString(value.target).trim()
+
   if (!source || !target) {
     throw new Error(`Workflow edge at index ${index} must have source and target`)
   }
+
   const sourceNode = nodeById.get(source)
   const targetNode = nodeById.get(target)
+
   if (!sourceNode) {
     throw new Error(`Workflow edge '${source}->${target}' references unknown source node`)
   }
+
   if (!targetNode) {
     throw new Error(`Workflow edge '${source}->${target}' references unknown target node`)
   }
@@ -240,6 +258,7 @@ function validateWorkflowEdgeHandle(input: {
 
   const definition = getWorkflowNodeDefinitionForNode(input.node)
   const ports = input.direction === "source" ? definition.outputs : definition.inputs
+
   if (ports.some((port) => port.id === input.handle)) {
     return
   }
@@ -256,9 +275,11 @@ function normalizeWorkflowDraftManifest(input: unknown, fallbackName: string): W
 
   const rawNodes = Array.isArray(input.nodes) ? input.nodes : []
   const manifestVersion = readNumber(input.version, 0)
+
   const nodes = rawNodes
     .map(normalizeWorkflowDraftNode)
     .map((node) => normalizeWorkflowDraftNodeForManifestVersion(node, manifestVersion))
+
   if (nodes.length === 0) {
     throw new Error("Workflow manifest must include at least one node")
   }
@@ -268,6 +289,7 @@ function normalizeWorkflowDraftManifest(input: unknown, fallbackName: string): W
     if (nodeIds.has(node.id)) {
       throw new Error(`Duplicate workflow node id '${node.id}'`)
     }
+
     nodeIds.add(node.id)
   })
 
@@ -293,9 +315,11 @@ export function getWorkflowExecutionOrder(manifest: WorkflowManifest): string[] 
     if (!nodeIds.has(edge.source)) {
       throw new Error(`Workflow edge '${edge.id}' references unknown source node '${edge.source}'`)
     }
+
     if (!nodeIds.has(edge.target)) {
       throw new Error(`Workflow edge '${edge.id}' references unknown target node '${edge.target}'`)
     }
+
     inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1)
     const current = outgoing.get(edge.source) ?? []
     current.push(edge.target)
@@ -312,15 +336,19 @@ export function getWorkflowExecutionOrder(manifest: WorkflowManifest): string[] 
     if (queue.length === 0) {
       return
     }
+
     const [node, ...rest] = queue
     order.push(node.id)
 
     const newlyReady: typeof initialQueue = []
+
     ;(outgoing.get(node.id) ?? []).forEach((targetId) => {
       const nextDegree = (inDegree.get(targetId) ?? 0) - 1
       inDegree.set(targetId, nextDegree)
+
       if (nextDegree === 0) {
         const target = nodeById.get(targetId)
+
         if (target) {
           newlyReady.push(target)
         }
@@ -329,6 +357,7 @@ export function getWorkflowExecutionOrder(manifest: WorkflowManifest): string[] 
 
     processQueue([...rest, ...newlyReady])
   }
+
   processQueue(initialQueue)
 
   if (order.length !== manifest.nodes.length) {
@@ -349,6 +378,7 @@ export function validateWorkflowDraft(input: unknown): WorkflowDraftValidationRe
     warnings.push(...optionValidation.warnings)
     errors.push(...optionValidation.errors)
     errors.push(...validateWorkflowNodeTemplateReferences(manifest))
+
     if (errors.length > 0) {
       return {
         valid: false,
@@ -357,7 +387,9 @@ export function validateWorkflowDraft(input: unknown): WorkflowDraftValidationRe
         executionOrder: [],
       }
     }
+
     const executionOrder = getWorkflowExecutionOrder(manifest)
+
     return {
       valid: true,
       errors,
@@ -367,6 +399,7 @@ export function validateWorkflowDraft(input: unknown): WorkflowDraftValidationRe
     }
   } catch (errorValue) {
     errors.push(errorValue instanceof Error ? errorValue.message : "Invalid workflow manifest")
+
     return {
       valid: false,
       errors,
@@ -382,6 +415,7 @@ export function createWorkflowExportDocument(input: {
   sourceManifestVersion?: number
 }): WorkflowExportDocument {
   const validation = validateWorkflowDraft(input.manifest)
+
   if (!validation.valid || !validation.manifest) {
     throw new Error(validation.errors[0] ?? "Invalid workflow manifest")
   }
@@ -411,13 +445,17 @@ export function serializeWorkflowExport(input: {
 }
 
 export function parseWorkflowExport(source: string): WorkflowExportDocument {
+  // SAFETY: yaml parse returns any, so this drops that any before isRecord accepts only an object.
   const parsed = parseYaml(source) as unknown
+
   if (!isRecord(parsed)) {
     throw new Error("Workflow export must be a YAML object")
   }
+
   if (parsed.kind !== "s0.workflow") {
     throw new Error("Workflow export kind must be 's0.workflow'")
   }
+
   if (parsed.exportVersion !== 1) {
     throw new Error("Unsupported workflow export version")
   }
@@ -426,7 +464,9 @@ export function parseWorkflowExport(source: string): WorkflowExportDocument {
     parsed.manifest,
     readString(parsed.name, "Workflow"),
   )
+
   const validation = validateWorkflowDraft(manifest)
+
   if (!validation.valid || !validation.manifest) {
     throw new Error(validation.errors[0] ?? "Invalid workflow manifest")
   }

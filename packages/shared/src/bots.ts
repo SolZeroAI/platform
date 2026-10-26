@@ -4,21 +4,27 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 const BOT_STATUSES = ["active", "paused"] as const
+
 export type BotStatus = (typeof BOT_STATUSES)[number]
 
 const BOT_ROUTINE_KINDS = ["standing", "temporary"] as const
+
 export type BotRoutineKind = (typeof BOT_ROUTINE_KINDS)[number]
 
 const BOT_ROUTINE_CADENCE_KINDS = ["cron", "interval"] as const
+
 export type BotRoutineCadenceKind = (typeof BOT_ROUTINE_CADENCE_KINDS)[number]
 
 const BOT_ROUTINE_WATCH_KINDS = ["none", "github_pull_request"] as const
+
 export type BotRoutineWatchKind = (typeof BOT_ROUTINE_WATCH_KINDS)[number]
 
 const BOT_ROUTINE_WATCH_COMPLETE_WHEN = ["merged_or_closed", "checks_concluded"] as const
+
 export type BotRoutineWatchCompleteWhen = (typeof BOT_ROUTINE_WATCH_COMPLETE_WHEN)[number]
 
 const BOT_ROUTINE_STATUSES = ["active"] as const
+
 type BotRoutineStatus = (typeof BOT_ROUTINE_STATUSES)[number]
 
 export const BotStatusSchema = Schema.Literals(BOT_STATUSES)
@@ -55,11 +61,13 @@ const StoredBotRoutineCadenceSchema = Schema.Struct({
 const decodeStoredBotRoutineWatch = Schema.decodeUnknownOption(
   Schema.fromJsonString(StoredBotRoutineWatchSchema),
 )
+
 const decodeStoredBotRoutineCadence = Schema.decodeUnknownOption(
   Schema.fromJsonString(StoredBotRoutineCadenceSchema),
 )
 
 type StoredBotRoutineWatch = typeof StoredBotRoutineWatchSchema.Type
+
 type StoredBotRoutineCadence = typeof StoredBotRoutineCadenceSchema.Type
 
 const BOT_ROUTINE_ALARM_PREFIX = "routine:"
@@ -148,9 +156,11 @@ export class BotRoutineValidationError extends Error {
 
 function requireNonEmpty(value: string | undefined, field: string): string {
   const trimmed = value?.trim() ?? ""
+
   if (trimmed.length === 0) {
     throw new BotRoutineValidationError(field, `${field} is required`)
   }
+
   return trimmed
 }
 
@@ -169,6 +179,7 @@ function requirePositiveUnixTimestamp(value: number): number {
 
 function requireIsoTimestamp(value: string): number {
   const parsed = Date.parse(value)
+
   return Match.value(Number.isFinite(parsed)).pipe(
     Match.when(true, () => parsed),
     Match.orElse(() => {
@@ -203,28 +214,34 @@ function normalizeBotRoutineWatch(
   if (!watch || watch.kind === "none" || watch.kind === undefined) {
     return { kind: "none" }
   }
+
   if (!isBotRoutineWatchKind(watch.kind) || watch.kind !== "github_pull_request") {
     throw new BotRoutineValidationError(
       "watch.kind",
       "watch.kind must be none or github_pull_request",
     )
   }
+
   const owner = requireNonEmpty(watch.owner, "watch.owner")
   const repo = requireNonEmpty(watch.repo, "watch.repo")
   const pullNumber = watch.pullNumber
+
   if (!Number.isInteger(pullNumber) || (pullNumber ?? 0) <= 0) {
     throw new BotRoutineValidationError(
       "watch.pullNumber",
       "watch.pullNumber must be a positive integer",
     )
   }
+
   const completeWhen = watch.completeWhen ?? "checks_concluded"
+
   if (!isBotRoutineWatchCompleteWhen(completeWhen)) {
     throw new BotRoutineValidationError(
       "watch.completeWhen",
       "watch.completeWhen must be merged_or_closed or checks_concluded",
     )
   }
+
   return {
     kind: "github_pull_request",
     owner,
@@ -237,18 +254,23 @@ function normalizeBotRoutineWatch(
 function normalizeBotRoutineCadence(cadence: StoredBotRoutineCadence): BotRoutineCadence {
   if (cadence.kind === "cron") {
     const cron = requireNonEmpty(cadence.cron, "cadence.cron")
+
     if (!isCronExpression(cron)) {
       throw new BotRoutineValidationError(
         "cadence.cron",
         "cadence.cron must be a five-field UTC cron",
       )
     }
+
     return { kind: "cron", cron }
   }
+
   if (!isBotRoutineCadenceKind(cadence.kind) || cadence.kind !== "interval") {
     throw new BotRoutineValidationError("cadence.kind", "cadence.kind must be cron or interval")
   }
+
   const intervalSeconds = cadence.intervalSeconds
+
   if (
     !Number.isInteger(intervalSeconds) ||
     intervalSeconds === undefined ||
@@ -260,6 +282,7 @@ function normalizeBotRoutineCadence(cadence: StoredBotRoutineCadence): BotRoutin
       `cadence.intervalSeconds must be an integer from ${MIN_BOT_ROUTINE_INTERVAL_SECONDS} to ${MAX_BOT_ROUTINE_INTERVAL_SECONDS}`,
     )
   }
+
   return { kind: "interval", intervalSeconds }
 }
 
@@ -276,20 +299,25 @@ export function normalizeCreateBotRoutineInput(
   if (!isBotRoutineKind(input.kind)) {
     throw new BotRoutineValidationError("kind", "kind must be standing or temporary")
   }
+
   const until = parseUntilTimestamp(input.until)
   const watch = normalizeBotRoutineWatch(input.watch)
+
   if (until !== null && until <= Date.now()) {
     throw new BotRoutineValidationError("until", "until must be in the future")
   }
+
   if (input.kind === "standing" && until !== null) {
     throw new BotRoutineValidationError("until", "standing routines cannot set until")
   }
+
   if (input.kind === "temporary" && until === null && watch.kind === "none") {
     throw new BotRoutineValidationError(
       "until",
       "temporary routines need an until deadline or a finite watch",
     )
   }
+
   return {
     name: requireNonEmpty(input.name, "name"),
     kind: input.kind,
@@ -316,6 +344,7 @@ export function nextRoutineRunAt(input: {
   if (input.cadence.kind === "cron") {
     return input.nextCronDate(input.cadence.cron ?? "", new Date(input.now)).toISOString()
   }
+
   return new Date(
     input.now + (input.cadence.intervalSeconds ?? MIN_BOT_ROUTINE_INTERVAL_SECONDS) * 1000,
   ).toISOString()
@@ -329,7 +358,9 @@ export function parseRoutineAlarmWorkflowId(workflowId: string): string | null {
   if (!workflowId.startsWith(BOT_ROUTINE_ALARM_PREFIX)) {
     return null
   }
+
   const routineId = workflowId.slice(BOT_ROUTINE_ALARM_PREFIX.length)
+
   return routineId.length > 0 ? routineId : null
 }
 
@@ -365,6 +396,7 @@ function describeBotRoutineWatch(watch: BotRoutineWatch): string {
   if (watch.kind !== "github_pull_request") {
     return "none"
   }
+
   return `github_pull_request ${watch.owner}/${watch.repo}#${watch.pullNumber} completeWhen=${watch.completeWhen}`
 }
 
@@ -373,6 +405,7 @@ export function buildRoutineTickPrompt(
 ): string {
   const untilLine =
     routine.until === null ? "Deadline: none" : `Deadline: ${new Date(routine.until).toISOString()}`
+
   return [
     `Routine "${routine.name}" fired.`,
     `Routine id: ${routine.id}`,
@@ -397,9 +430,11 @@ export function evaluateRoutineTick(input: {
   if (input.status !== "active") {
     return { action: "stop" }
   }
+
   if (isTemporaryRoutineExpired(input)) {
     return { action: "expire" }
   }
+
   return {
     action: "run",
     nextRunAt: nextRoutineRunAt({

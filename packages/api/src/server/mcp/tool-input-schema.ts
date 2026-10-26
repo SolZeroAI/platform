@@ -3,6 +3,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 function isMcpObjectInputSchema(value: unknown): value is Tool["inputSchema"] {
+  // SAFETY: the object check established a non-null object. MCP input schemas carry a type field.
   return (
     typeof value === "object" && value !== null && (value as { type?: unknown }).type === "object"
   )
@@ -56,6 +57,7 @@ export function objectInputSchema<S extends Schema.Decoder<unknown, never>>(
   const jsonSchema = Schema.toStandardJSONSchemaV1(schema)["~standard"].jsonSchema.input({
     target: "draft-07",
   })
+
   return Option.getOrThrowWith(
     toMcpObjectInputSchema(jsonSchema),
     () => new Error("Effect schema did not produce an MCP object input schema"),

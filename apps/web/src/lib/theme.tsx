@@ -4,6 +4,7 @@ import { ScriptOnce } from "@tanstack/react-router"
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
 
 export type Theme = "light" | "dark" | "system"
+
 export type ResolvedTheme = "light" | "dark"
 
 const THEME_STORAGE_KEY = "theme"
@@ -39,6 +40,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 function readStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY)
+
   return stored === "light" || stored === "dark" ? stored : "system"
 }
 
@@ -63,6 +65,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     media.addEventListener("change", updateSystemPreference)
 
     setMounted(true)
+
     return () => media.removeEventListener("change", updateSystemPreference)
   }, [])
 
@@ -75,11 +78,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!mounted) {
       return
     }
+
     applyResolvedTheme(resolvedTheme)
   }, [mounted, resolvedTheme])
 
   const setTheme = (next: Theme) => {
     setThemeState(next)
+
     if (next === "system") {
       localStorage.removeItem(THEME_STORAGE_KEY)
     } else {
@@ -103,8 +108,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext)
+
   if (context === undefined) {
     throw new Error("useTheme must be used within a ThemeProvider")
   }
+
   return context
 }

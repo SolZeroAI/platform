@@ -18,6 +18,7 @@ import { pgRelations } from "../server/effect/db/control-plane-db"
 import {
   CopyConflictError,
   copyControlPlane,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- copy-d1-to-planetscale-command.ts builds makeDrizzleCopyDestination from the destination client at the composition edge because the CLI opens the copy destination before any Effect layer.
   makeDrizzleCopyDestination,
   type CopyReport,
 } from "./d1-to-planetscale-copy"
@@ -33,19 +34,24 @@ export const COPY_D1_TO_PLANETSCALE_NAME = "copy-d1-to-planetscale"
 
 export function openSourceSqlite(path: string): DatabaseSync {
   const resolved = resolve(path)
+
   if (!existsSync(resolved)) {
     throw new Error(`Source dump not found: ${resolved}`)
   }
+
   if (resolved.endsWith(".sql")) {
     const sqlite = new DatabaseSync(":memory:")
+
     try {
       sqlite.exec(readFileSync(resolved, "utf8"))
     } catch {
       sqlite.close()
       throw new Error("Invalid source SQL dump")
     }
+
     return sqlite
   }
+
   return new DatabaseSync(resolved, { readOnly: true })
 }
 
@@ -62,14 +68,17 @@ export function formatCopyReport(report: CopyReport): string {
     `conflicts=${report.conflicts}`,
     `overwritten=${report.overwritten}`,
   ]
+
   lines.push(`missingSourceTables=${report.missingSourceTables.join(",")}`)
   lines.push(`reconciledBuiltinSeed=${report.reconciledBuiltinSeed}`)
   lines.push("tables:")
+
   for (const table of report.tables) {
     lines.push(
       `  ${table.table} source=${table.sourceRows} destBefore=${table.destRowsBefore} destAfter=${table.destRowsAfter} inserted=${table.inserted} skipped=${table.skipped} conflicts=${table.conflicts} overwritten=${table.overwritten} verified=${table.verified} sourceChecksum=${table.sourceChecksum ?? "unverified"} destChecksum=${table.destChecksum ?? "unverified"}`,
     )
   }
+
   return lines.join("\n")
 }
 
@@ -129,23 +138,28 @@ export const copyD1ToPlanetscaleCommand = Command.make(
   (flags) =>
     Effect.gen(function* () {
       yield* Console.log(COPY_D1_TO_PLANETSCALE_BANNER)
+
       if (flags.apply && !flags.sourceWritesFrozen)
         return yield* Effect.fail(
           new CopyConflictError(
             "--apply requires --source-writes-frozen. Freeze writes and drain runs before the final export.",
           ),
         )
+
       if (flags.apply && flags.verifyOnly)
         return yield* Effect.fail(
           new CopyConflictError("--apply and --verify-only are mutually exclusive."),
         )
       yield* Console.log("")
       const cwd = process.cwd()
+
       const jsoncPath = Option.getOrElse(flags.config, () =>
         resolve(cwd, s0ConfigPathForStage("prod", process.env.S0_CONFIG_PROFILE)),
       )
+
       const envPath = Option.getOrElse(flags.envFile, () => resolve(cwd, "config/.env"))
       const destUrl = Option.getOrElse(flags.destUrl, () => process.env.DATABASE_URL ?? "")
+
       if (!destUrl)
         return yield* Effect.fail(
           new CopyConflictError(
@@ -154,12 +168,14 @@ export const copyD1ToPlanetscaleCommand = Command.make(
         )
       const jsonc = existsSync(jsoncPath) ? readFileSync(jsoncPath, "utf8") : "{\n}\n"
       const envFile = existsSync(envPath) ? readFileSync(envPath, "utf8") : ""
+
       const edits = planPlanetscaleCutoverEdits({
         jsonc,
         envFile,
         jsoncPath,
         envPath,
       })
+
       yield* Console.log(
         "Cutover edits after a successful copy. Apply these yourself, then deploy.",
       )
@@ -185,12 +201,15 @@ export const copyD1ToPlanetscaleCommand = Command.make(
           })
         },
       })
+
       if (!flags.apply) {
         yield* Console.log("Dry-run: planning the copy. Destination writes are disabled.")
       }
+
       const { source, client } = yield* Effect.try({
         try: () => {
           const source = openSourceSqlite(flags.sourceSqlite)
+
           try {
             return {
               source,
@@ -211,14 +230,19 @@ export const copyD1ToPlanetscaleCommand = Command.make(
             "Could not open the source dump or destination client. File and connection details are suppressed.",
           ),
       })
+
       const destDrizzle = drizzle({ client, relations: pgRelations })
+
       const dest = makeDrizzleCopyDestination(destDrizzle, {
         sizeBytes: async () => {
           const rows = await client.unsafe("SELECT pg_database_size(current_database()) AS bytes")
+          // SAFETY: pg_database_size returns one row whose bytes column is the numeric database size.
           const parsed = Number((rows[0] as { bytes?: unknown } | undefined)?.bytes)
+
           return Number.isFinite(parsed) ? parsed : null
         },
       })
+
       const report = yield* copyControlPlane({
         source,
         dest,
@@ -237,6 +261,7 @@ export const copyD1ToPlanetscaleCommand = Command.make(
           }),
         ),
       )
+
       yield* Console.log(formatCopyReport(report))
     }),
 ).pipe(

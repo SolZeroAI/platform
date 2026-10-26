@@ -79,12 +79,14 @@ function isSavedWorkflowArtifactNodeType(
 
 function looksLikeJsonDocument(value: string): boolean {
   const trimmed = value.trim()
+
   return trimmed.startsWith("{") || trimmed.startsWith("[")
 }
 
 function parseStoredArtifactContent(text: string, contentType: string | null): unknown {
   const shouldParseJson =
     (contentType ?? "").toLowerCase().includes("json") || looksLikeJsonDocument(text)
+
   return Match.value(shouldParseJson).pipe(
     Match.when(true, () => parseJsonOrText(text)),
     Match.orElse(() => text),
@@ -154,6 +156,7 @@ function buildArtifactReference(
   const eventOutput = resolveEventOutput(eventData)
   const output = Option.orElse(resolveRunOutput(runOutputs, match.node_id), () => eventOutput)
   const nodeId = readNonEmptyNodeId(match.node_id)
+
   return Option.all({ output, nodeType, nodeId }).pipe(
     Option.map((resolved) => ({
       nodeId: resolved.nodeId,
@@ -171,7 +174,9 @@ function getWorkflowRunArtifactReference(input: {
   const runOutputs = parseJsonRecordOption(input.run.output_json).pipe(
     Option.flatMap((runOutput) => asJsonRecord(runOutput.outputs)),
   )
+
   const sortedEvents = [...input.events].sort((left, right) => left.sequence - right.sequence)
+
   return Arr.findFirst(sortedEvents, (event) => matchesArtifactEvent(event, input.nodeId)).pipe(
     Option.flatMap((match) => buildArtifactReference(match, runOutputs)),
   )
@@ -180,6 +185,7 @@ function getWorkflowRunArtifactReference(input: {
 export function formatRunEvent(
   event: Effect.Success<ReturnType<WorkflowStore["listRunEvents"]>>[number],
 ) {
+  // SAFETY: workflow event data_json stores a JSON object. parseJson returns that decoded value.
   return {
     id: event.id,
     workflowId: event.workflow_id,
@@ -208,6 +214,7 @@ const fetchRunEvents = Effect.fn("workflows.fetchRunEvents")(function* (
   runId: string,
 ) {
   const rows = yield* store.listRunEvents(workflowId, runId)
+
   return rows.map(formatRunEvent)
 })
 
@@ -219,20 +226,25 @@ const getRunsSnapshot = Effect.fn("workflows.getRunsSnapshot")(function* (input:
   requestedRunId?: string
 }) {
   const rows = yield* input.store.listRuns(input.workflowId)
+
   const reconciledRows = yield* Effect.tryPromise(() =>
     Promise.all(
       rows.map((run) => reconcileWorkflowRun({ env: input.env, workflow: input.workflow, run })),
     ),
   )
+
   const runs = reconciledRows.map(formatWorkflowRun)
+
   const selectedRunId = Option.fromNullishOr(input.requestedRunId).pipe(
     Option.filter((candidate) => runs.some((run) => run.id === candidate)),
     Option.orElse(() => Option.fromNullishOr(runs[0]?.id)),
   )
+
   const events = yield* Option.match(selectedRunId, {
     onNone: () => Effect.succeed<ReturnType<typeof formatRunEvent>[]>([]),
     onSome: (runId) => fetchRunEvents(input.store, input.workflowId, runId),
   })
+
   return {
     runs,
     runId: Option.getOrNull(selectedRunId),
@@ -248,10 +260,13 @@ const terminateLiveInstance = Effect.fn("workflows.terminateLiveInstance")(funct
   const workflowBinding = yield* Effect.tryPromise(() =>
     getWrappedWorkflowBinding(input.workflow, input.run.workflow_version),
   )
+
   const instance = yield* Effect.tryPromise(() =>
     workflowBinding.get(input.run.workflow_instance_id ?? ""),
   )
+
   yield* Effect.tryPromise(() => instance.terminate())
+
   return true
 })
 
@@ -262,6 +277,7 @@ const terminateLiveInstance = Effect.fn("workflows.terminateLiveInstance")(funct
 const terminateRunInstanceIfLive = Effect.fn("workflows.terminateRunInstanceIfLive")(
   function* (input: { workflow: WorkflowRecord; run: WorkflowRunRecord }) {
     const isLive = Boolean(input.run.workflow_instance_id) && isLiveRunStatus(input.run.status)
+
     return yield* Match.value(isLive).pipe(
       Match.when(false, () => Effect.succeed(false)),
       Match.orElse(() => terminateLiveInstance(input)),
@@ -277,6 +293,7 @@ const getWorkflowRunInstance = Effect.fn("workflows.getWorkflowRunInstance")(fun
   const workflowBinding = yield* Effect.tryPromise(() =>
     getWrappedWorkflowBinding(workflow, run.workflow_version),
   )
+
   return yield* Effect.tryPromise(() => workflowBinding.get(run.workflow_instance_id ?? ""))
 })
 
@@ -289,20 +306,24 @@ const loadR2ArtifactResponse = Effect.fn("workflows.loadR2ArtifactResponse")(fun
   storageKey: string
 }) {
   const { env, log, params, artifact, key, storageKey } = input
+
   const binding = Option.getOrElse(
     readNonEmptyString(artifact.output.bucket),
     () => "WORKFLOW_BUCKET",
   )
+
   const bucket = yield* requireOption(
     getWorkflowR2BucketBinding(env, binding),
     `Unsupported workflow R2 bucket '${binding}'`,
     400,
   )
+
   const object = yield* requireOption(
     Option.fromNullishOr(yield* Effect.tryPromise(() => bucket.get(storageKey))),
     "Workflow artifact object not found",
     404,
   )
+
   const text = yield* Effect.tryPromise(() => object.text())
   const contentType = object.httpMetadata?.contentType ?? null
   log.set({
@@ -314,6 +335,7 @@ const loadR2ArtifactResponse = Effect.fn("workflows.loadR2ArtifactResponse")(fun
     binding,
     key,
   })
+
   return json({
     artifact: {
       nodeId: artifact.nodeId,
@@ -338,20 +360,24 @@ const loadKvArtifactResponse = Effect.fn("workflows.loadKvArtifactResponse")(fun
   storageKey: string
 }) {
   const { env, log, params, artifact, key, storageKey } = input
+
   const binding = Option.getOrElse(
     readNonEmptyString(artifact.output.namespace),
     () => "USER_WORKFLOW_KV",
   )
+
   const namespace = yield* requireOption(
     getWorkflowKvNamespaceBinding(env, binding),
     `Unsupported workflow KV namespace '${binding}'`,
     400,
   )
+
   const text = yield* requireOption(
     Option.fromNullishOr(yield* Effect.tryPromise(() => namespace.get(storageKey))),
     "Workflow artifact object not found",
     404,
   )
+
   log.set({
     workflowId: params.id,
     runId: params.runId,
@@ -361,6 +387,7 @@ const loadKvArtifactResponse = Effect.fn("workflows.loadKvArtifactResponse")(fun
     binding,
     key,
   })
+
   return json({
     artifact: {
       nodeId: artifact.nodeId,
@@ -385,23 +412,29 @@ const loadRunArtifactResponse = Effect.fn("workflows.loadRunArtifactResponse")(f
 }) {
   const { env, db, log, params } = input
   const store = new WorkflowStore(db)
+
   const run = yield* requireOption(
     yield* store.getRun(params.id, params.runId),
     "Workflow run not found",
     404,
   )
+
   const events = yield* store.listRunEvents(params.id, params.runId)
+
   const artifact = yield* requireOption(
     getWorkflowRunArtifactReference({ run, events, nodeId: params.nodeId }),
     "Workflow artifact not found",
     404,
   )
+
   const key = yield* requireOption(
     readNonEmptyString(artifact.output.key),
     "Workflow artifact key not found",
     404,
   )
+
   const storageKey = prefixStorageKeyWithUserId(run.user_id, key)
+
   return yield* Match.value(artifact.nodeType).pipe(
     Match.when("r2-put-object", () =>
       loadR2ArtifactResponse({ env, log, params, artifact, key, storageKey }),
@@ -507,6 +540,7 @@ export function runs({ params, query }: { params: { id: string }; query: Workflo
       const store = new WorkflowStore(context.db)
       const limit = parseListNumber(query.limit, 20, 100)
       const offset = parseListNumber(query.offset, 0, 10_000)
+
       const result = yield* store.listRunPage({
         workflowId: params.id,
         limit,
@@ -517,11 +551,13 @@ export function runs({ params, query }: { params: { id: string }; query: Workflo
         status: query.status,
         triggerKind: query.triggerKind,
       })
+
       const reconciledRows = yield* Effect.tryPromise(() =>
         Promise.all(
           result.runs.map((run) => reconcileWorkflowRun({ env: context.env, workflow, run })),
         ),
       )
+
       return json({
         runs: reconciledRows.map(formatWorkflowRun),
         total: result.total,
@@ -542,9 +578,11 @@ export function getRun({ params }: { params: { id: string; runId: string } }) {
       const store = new WorkflowStore(context.db)
       const run = yield* store.getRun(params.id, params.runId)
       const resolvedRun = yield* requireOption(run, "Workflow run not found", 404)
+
       const reconciledRun = yield* Effect.tryPromise(() =>
         reconcileWorkflowRun({ env: context.env, workflow, run: resolvedRun }),
       )
+
       return json({ run: formatWorkflowRun(reconciledRun) })
     }),
   )
@@ -563,6 +601,7 @@ export function deleteRun({ params }: { params: { id: string; runId: string } })
       )
       const deleted = yield* store.deleteRun(params.id, params.runId)
       yield* failUnless(Boolean(deleted), "Workflow run not found", 404)
+
       return json({ status: "deleted", workflowId: params.id, runId: params.runId })
     }),
   )
@@ -577,6 +616,7 @@ export function runEvents({ params }: { params: { id: string; runId: string } })
       yield* log.set({
         eventsLength: events.length,
       })
+
       return json({
         events: events.map(formatRunEvent),
       })
@@ -592,6 +632,7 @@ export function runArtifactContent({
   return runControlPlane(
     Effect.fn("workflows.runArtifactContent")(function* (context) {
       yield* requireWorkflowForUser(context, params.id)
+
       return yield* loadRunArtifactResponse({
         env: context.env,
         db: context.db,
@@ -628,14 +669,17 @@ export function approveRun({
 
       const approvedAt = new Date().toISOString()
       const approvalEventType = `workflow-approval:${params.id}:${params.runId}:${payload.nodeId}`
+
       const decision = Match.value(payload.approved).pipe(
         Match.when(true, () => "approved" as const),
         Match.orElse(() => "rejected" as const),
       )
+
       const message = Match.value(payload.approved).pipe(
         Match.when(true, () => "Approval submitted"),
         Match.orElse(() => "Rejection submitted"),
       )
+
       const comment = payload.comment ?? ""
 
       const instance = yield* getWorkflowRunInstance(workflow, resolvedRun)
@@ -691,6 +735,7 @@ export function runEventsStream({
   return runControlPlane(
     Effect.fn("workflows.runEventsStream")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, params.id)
+
       return createRunEventsStreamResponse({
         env: context.env,
         db: context.db,

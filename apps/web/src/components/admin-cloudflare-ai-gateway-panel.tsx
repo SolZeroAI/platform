@@ -11,8 +11,11 @@ import { ExternalLink, Save, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { DocsSectionHeading, EnvLockIcon, Field } from "./admin-ai-provider-panel-ui"
 
+type CloudflareProviderKeyUpdate = AdminCloudflareAiGatewayProviderKeysPayload["keys"][number]
+
 const CLOUDFLARE_AI_GATEWAY_CONFIG_ENV_VAR = "S0_CONFIG_CLOUDFLARE_AI_GATEWAY"
 const CLOUDFLARE_AI_GATEWAY_DOCS_URL = "https://developers.cloudflare.com/ai-gateway/"
+
 const CLOUDFLARE_AI_GATEWAY_BYOK_DOCS_URL =
   "https://developers.cloudflare.com/ai-gateway/configuration/bring-your-own-keys/"
 
@@ -29,8 +32,10 @@ export function AdminCloudflareAiGatewayPanel({
     () => Object.values(data?.models ?? {}).sort((a, b) => a.id.localeCompare(b.id)),
     [data?.models],
   )
+
   const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({})
   const [clearedProviderIds, setClearedProviderIds] = useState<ReadonlySet<string>>(new Set())
+
   const keyDirty =
     Object.values(keyDrafts).some((value) => value.trim().length > 0) || clearedProviderIds.size > 0
 
@@ -44,17 +49,25 @@ export function AdminCloudflareAiGatewayPanel({
       keys: (data?.providerKeys ?? []).flatMap((provider) => {
         const apiKey = keyDrafts[provider.providerId]?.trim() ?? ""
         const clearApiKey = clearedProviderIds.has(provider.providerId)
-        return apiKey || clearApiKey
-          ? [
-              {
-                providerId: provider.providerId,
-                ...(apiKey ? { apiKey } : {}),
-                ...(clearApiKey ? { clearApiKey: true } : {}),
-              },
-            ]
-          : []
+
+        if (!apiKey && !clearApiKey) {
+          return []
+        }
+
+        const update: CloudflareProviderKeyUpdate = { providerId: provider.providerId }
+
+        if (apiKey) {
+          Object.assign(update, { apiKey })
+        }
+
+        if (clearApiKey) {
+          Object.assign(update, { clearApiKey: true })
+        }
+
+        return [update]
       }),
     })
+
     if (saved) {
       setKeyDrafts({})
       setClearedProviderIds(new Set())
@@ -173,6 +186,7 @@ export function AdminCloudflareAiGatewayPanel({
           {(data?.providerKeys ?? []).map((provider) => {
             const cleared = clearedProviderIds.has(provider.providerId)
             const configured = provider.configured && !cleared
+
             return (
               <div key={provider.providerId} className="space-y-2">
                 <Field
@@ -190,6 +204,7 @@ export function AdminCloudflareAiGatewayPanel({
                     setClearedProviderIds((current) => {
                       const next = new Set(current)
                       next.delete(provider.providerId)
+
                       return next
                     })
                   }}

@@ -38,6 +38,7 @@ function updateFingerprint(fingerprint: number, value: string): number {
     (accumulator, codeUnit) => Math.imul(accumulator ^ codeUnit, FNV_1A_PRIME),
     fingerprint,
   )
+
   return next >>> 0
 }
 
@@ -65,6 +66,7 @@ export function getWorkflowRuntimeKernelModules(): Record<string, string> {
   return Object.fromEntries(
     WORKFLOW_RUNTIME_ABI_VERSIONS.map((version) => {
       const kernel = getWorkflowRuntimeKernel(version)
+
       return [kernel.moduleName, kernel.source]
     }),
   )
@@ -79,8 +81,10 @@ export function getWorkflowRuntimeKernelSourceFingerprint(
       const withModuleName = updateFingerprint(accumulator, moduleName)
       const withModuleSeparator = updateFingerprint(withModuleName, FINGERPRINT_FIELD_SEPARATOR)
       const withSource = updateFingerprint(withModuleSeparator, source)
+
       return updateFingerprint(withSource, FINGERPRINT_FIELD_SEPARATOR)
     }, FNV_1A_OFFSET_BASIS)
+
   return fingerprint.toString(36)
 }
 

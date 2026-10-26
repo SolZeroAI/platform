@@ -18,6 +18,7 @@ function formatWhen(value: number | null): string {
   if (value === null) {
     return "none"
   }
+
   return new Date(value).toLocaleString()
 }
 
@@ -25,6 +26,7 @@ function formatCadence(routine: BotRoutineRecord): string {
   if (routine.cadence.kind === "cron") {
     return `cron ${routine.cadence.cron}`
   }
+
   return `every ${routine.cadence.intervalSeconds} seconds`
 }
 
@@ -32,6 +34,7 @@ function formatWatch(routine: BotRoutineRecord): string {
   if (routine.watch.kind !== "github_pull_request") {
     return "none"
   }
+
   return `${routine.watch.owner}/${routine.watch.repo}#${routine.watch.pullNumber}`
 }
 
@@ -58,6 +61,7 @@ export function BotDetailPage({ botId }: { botId: string }) {
         { signal },
       ),
     ])
+
     setBot(botData.bot)
     setRoutines(routineData.routines)
   }
@@ -68,8 +72,10 @@ export function BotDetailPage({ botId }: { botId: string }) {
       if (controller.signal.aborted) {
         return
       }
+
       showErrorToast(getErrorMessage(error))
     })
+
     return () => controller.abort()
   }, [botId])
 
@@ -77,12 +83,16 @@ export function BotDetailPage({ botId }: { botId: string }) {
     if (!bot) {
       return
     }
+
     setOpening(true)
+
     try {
       if (bot.sessionId) {
         await navigate({ to: "/session/$id", params: { id: bot.sessionId } })
+
         return
       }
+
       const created = await requestJson<{ sessionId: string }>("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,6 +102,7 @@ export function BotDetailPage({ botId }: { botId: string }) {
           title: bot.name,
         }),
       })
+
       await requestJson(`/api/bots/${encodeURIComponent(bot.id)}/open`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -108,6 +119,7 @@ export function BotDetailPage({ botId }: { botId: string }) {
   const handleCreateRoutine = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setCreating(true)
+
     try {
       const watch =
         watchOwner.trim() && watchRepo.trim() && watchPullNumber.trim()
@@ -119,6 +131,7 @@ export function BotDetailPage({ botId }: { botId: string }) {
               completeWhen: "checks_concluded" as const,
             }
           : { kind: "none" as const }
+
       await requestJson(`/api/bots/${encodeURIComponent(botId)}/routines`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

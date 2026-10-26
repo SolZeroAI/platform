@@ -27,6 +27,7 @@ test(
     await expect(limit).toBeEnabled()
     const original = await limit.inputValue()
     const next = original === "35" ? "36" : "35"
+
     try {
       await limit.fill(next)
       await expect(limit).toHaveValue(next)
@@ -42,6 +43,7 @@ test(
     } finally {
       await limit.fill(original)
       const save = screen.getByRole("button", "Save", { exact: true })
+
       if (await save.isEnabled()) {
         await save.tap()
         await expect(save).not.toBeEnabled()
@@ -70,6 +72,7 @@ test(
     await app.open("/settings?category=secrets")
     await expect(screen.getByRole("button", "Add secret", { exact: true })).toBeVisible()
     let created = false
+
     try {
       await agent.act("Open the Add secret editor")
       await expect(screen.getByRole("dialog")).toBeVisible()
@@ -97,6 +100,7 @@ test(
     await expect(screen.getByRole("button", "Account menu")).toBeVisible()
     const original = await browser.evaluate(() => document.documentElement.dataset.mode ?? "light")
     const next = original === "dark" ? "light" : "dark"
+
     try {
       await agent.act(
         `Click Switch to ${next} mode. Finish when the button is named Switch to ${original} mode.`,

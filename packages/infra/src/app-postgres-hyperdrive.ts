@@ -24,6 +24,7 @@ export interface AppPostgresHyperdriveInput {
 function parsedDatabaseUrl(raw: string) {
   const url = new URL(raw)
   const database = url.pathname.replace(/^\//, "")
+
   const port = Option.match(
     Option.fromNullishOr(url.port).pipe(Option.filter((value) => value.length > 0)),
     {
@@ -31,6 +32,7 @@ function parsedDatabaseUrl(raw: string) {
       onSome: (value) => Number(value),
     },
   )
+
   return Option.all({
     host: Option.fromNullishOr(url.hostname).pipe(Option.filter((value) => value.length > 0)),
     user: Option.fromNullishOr(url.username).pipe(Option.filter((value) => value.length > 0)),
@@ -51,6 +53,7 @@ function parsedDatabaseUrl(raw: string) {
 
 function localHyperdriveConnection(input: AppPostgresHyperdriveInput) {
   const origin = parsedDatabaseUrl(input.databaseUrl ?? LOCAL_PGLITE_DATABASE_URL)
+
   return Cloudflare.Hyperdrive.Connection("app-postgres-hyperdrive", {
     name: `${input.appName}-app-hd-${input.stageName}`,
     origin: {
@@ -111,6 +114,7 @@ function remoteHyperdrive(input: AppPostgresHyperdriveInput) {
 export function createAppPostgresHyperdrive(input: AppPostgresHyperdriveInput) {
   return Effect.gen(function* () {
     const context = yield* Alchemy.AlchemyContext
+
     return yield* Match.value(input.mode).pipe(
       Match.when("local", () => localHyperdrive(input, context)),
       Match.orElse(() => remoteHyperdrive(input)),

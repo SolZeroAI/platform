@@ -28,6 +28,7 @@ function cloudflareErrorMessage(status: number, payload: CloudflareSubdomainPayl
     .map((error) => error.message)
     .filter((message): message is string => typeof message === "string" && message.length > 0)
     .join("; ")
+
   return Match.value(details.length > 0).pipe(
     Match.when(
       true,
@@ -40,6 +41,7 @@ function cloudflareErrorMessage(status: number, payload: CloudflareSubdomainPayl
 function subdomainOrThrow(status: number, payload: CloudflareSubdomainPayload): string {
   const subdomain = payload.result?.subdomain?.trim() ?? ""
   const ok = status >= 200 && status < 300 && payload.success === true && subdomain.length > 0
+
   return Match.value(ok).pipe(
     Match.when(true, () => subdomain),
     Match.orElse(() => {
@@ -51,6 +53,7 @@ function subdomainOrThrow(status: number, payload: CloudflareSubdomainPayload): 
 const decodeSubdomainPayload = Schema.decodeUnknownSync(
   Schema.fromJsonString(CloudflareSubdomainPayload),
 )
+
 const encodeSubdomainBody = Schema.encodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
@@ -104,6 +107,7 @@ function fetchOrCreateSubdomain(accountId: string) {
   return Effect.gen(function* () {
     const token = yield* requiredConfigString("CLOUDFLARE_API_TOKEN")
     const existing = yield* readAccountSubdomain(accountId, token).pipe(Effect.option)
+
     return yield* Option.match(existing, {
       onSome: (subdomain) => Effect.succeed(subdomain),
       onNone: () =>
@@ -132,6 +136,7 @@ export function resolveDeployedWorkersDevOrigin(input: {
   const applicable =
     input.stageMetadata.infra.alchemyStateStore === "cloudflare" &&
     input.stageMetadata.infra.zone === "localhost"
+
   const workersDevOrigin = requiredConfigString("CLOUDFLARE_ACCOUNT_ID").pipe(
     Effect.flatMap((accountId) => readWorkersDevSubdomain(accountId)),
     Effect.map((subdomain) =>
@@ -141,6 +146,7 @@ export function resolveDeployedWorkersDevOrigin(input: {
       }),
     ),
   )
+
   return Match.value(applicable).pipe(
     Match.when(true, () => workersDevOrigin),
     Match.orElse(() => Effect.succeed(input.stageMetadata)),

@@ -98,6 +98,7 @@ function AiProviderRequiredDialog({ isAdmin, onClose }: { isAdmin: boolean; onCl
           <Button
             type="button"
             onClick={onClose}
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="circle"
             variant="ghost"
             aria-label={`Close ${title} dialog`}

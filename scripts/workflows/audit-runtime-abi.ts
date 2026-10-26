@@ -21,37 +21,52 @@ function usage(): never {
   )
 }
 
-function parseArgs(argv: string[]): { write: boolean; paths: string[] } {
+interface AuditArgs {
+  write: boolean
+  paths: string[]
+}
+
+interface ManifestDocument {
+  manifest: unknown
+  writeBack(value: unknown): unknown
+}
+
+function parseArgs(argv: string[]): AuditArgs {
   let write = false
   const paths: string[] = []
+
   for (const arg of argv) {
     if (arg === "--write") {
       write = true
       continue
     }
+
     if (arg.startsWith("-")) {
       usage()
     }
+
     paths.push(arg)
   }
+
   if (paths.length === 0) {
     usage()
   }
+
   return { write, paths }
 }
 
-function readManifestDocument(parsed: unknown): {
-  manifest: unknown
-  writeBack(value: unknown): unknown
-} {
+function readManifestDocument(parsed: unknown): ManifestDocument {
   if (parsed && typeof parsed === "object" && "manifest" in parsed) {
     return {
+      // SAFETY: this branch established parsed is a non-null object with a manifest field.
       manifest: (parsed as { manifest: unknown }).manifest,
       writeBack(value) {
+        // SAFETY: this branch established parsed is a non-null object, so its own fields stay on the written document.
         return { ...(parsed as Record<string, unknown>), manifest: value }
       },
     }
   }
+
   return {
     manifest: parsed,
     writeBack(value) {
@@ -62,14 +77,18 @@ function readManifestDocument(parsed: unknown): {
 
 async function auditPath(path: string, write: boolean): Promise<AuditOutput> {
   const source = await readFile(path, "utf8")
+  // SAFETY: JSON.parse returns any, so this drops that any before readManifestDocument accepts the document.
   const parsed = JSON.parse(source) as unknown
   const document = readManifestDocument(parsed)
+
   const result = auditWorkflowManifestRuntimeCompatibility({
     manifest: document.manifest,
     name: path,
     normalizeManifest: normalizeWorkflowManifest,
   })
+
   let wrote = false
+
   if (write && result.valid) {
     await writeFile(
       path,
@@ -78,6 +97,7 @@ async function auditPath(path: string, write: boolean): Promise<AuditOutput> {
     )
     wrote = true
   }
+
   return {
     path,
     valid: result.valid,
@@ -93,6 +113,7 @@ async function main() {
   const { write, paths } = parseArgs(process.argv.slice(2))
   const results = await Promise.all(paths.map((path) => auditPath(path, write)))
   console.log(JSON.stringify({ write, results }, null, 2))
+
   if (results.some((result) => !result.valid)) {
     process.exitCode = 1
   }

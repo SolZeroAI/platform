@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
+import * as Match from "effect/Match"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Empty } from "@cloudflare/kumo/components/empty"
 import { Input } from "@cloudflare/kumo/components/input"
@@ -55,10 +56,12 @@ export function PreviousSessionsTable() {
   const [globalFilter, setGlobalFilter] = useState("")
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }])
+
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
   })
+
   const fetchSequenceRef = useRef(0)
   const lastLoadErrorToastRef = useRef("")
   const lastArchiveFailureToastRef = useRef("")
@@ -77,23 +80,29 @@ export function PreviousSessionsTable() {
   const handleArchiveOne = useCallback(async (sessionId: string) => {
     setArchivingSessionIds((current) => new Set(current).add(sessionId))
     setArchiveFailures([])
+
     try {
       const failure = await archiveSession(sessionId)
+
       if (failure) {
         setArchiveFailures([failure])
+
         return
       }
+
       setSessions((current) => current.filter((session) => session.id !== sessionId))
       setTotal((current) => Math.max(0, current - 1))
       setSelectedSessionIds((current) => {
         const next = new Set(current)
         next.delete(sessionId)
+
         return next
       })
     } finally {
       setArchivingSessionIds((current) => {
         const next = new Set(current)
         next.delete(sessionId)
+
         return next
       })
     }
@@ -108,6 +117,7 @@ export function PreviousSessionsTable() {
           const pageIds = sessions.map((session) => session.id)
           const selectedVisibleCount = pageIds.filter((id) => selectedSessionIds.has(id)).length
           const checked = pageIds.length > 0 && selectedVisibleCount === pageIds.length
+
           return (
             <input
               type="checkbox"
@@ -117,6 +127,7 @@ export function PreviousSessionsTable() {
                 const nextChecked = event.target.checked
                 setSelectedSessionIds((current) => {
                   const next = new Set(current)
+
                   for (const id of pageIds) {
                     if (nextChecked) {
                       next.add(id)
@@ -124,6 +135,7 @@ export function PreviousSessionsTable() {
                       next.delete(id)
                     }
                   }
+
                   return next
                 })
               }}
@@ -141,11 +153,13 @@ export function PreviousSessionsTable() {
               const nextChecked = event.target.checked
               setSelectedSessionIds((current) => {
                 const next = new Set(current)
+
                 if (nextChecked) {
                   next.add(row.original.id)
                 } else {
                   next.delete(row.original.id)
                 }
+
                 return next
               })
             }}
@@ -288,16 +302,21 @@ export function PreviousSessionsTable() {
         limit: String(pagination.pageSize),
         offset: String(pagination.pageIndex * pagination.pageSize),
       })
+
       const trimmedSearch = globalFilter.trim()
+
       if (trimmedSearch) {
         params.set("q", trimmedSearch)
       }
+
       for (const filter of columnFilters) {
         if (typeof filter.value === "string" && filter.value.trim()) {
           params.set(filter.id, filter.value.trim())
         }
       }
+
       const [sort] = sorting
+
       if (sort) {
         params.set("sortBy", sort.id)
         params.set("sortDir", sort.desc ? "desc" : "asc")
@@ -305,21 +324,27 @@ export function PreviousSessionsTable() {
 
       try {
         const response = await fetch(`/api/sessions?${params.toString()}`, { signal })
+
+        // SAFETY: /api/sessions returns SessionListResponse and an error string when response.ok is false.
         const data = (await response.json().catch(() => ({}))) as SessionListResponse & {
           error?: string
         }
+
         if (!response.ok) {
           throw new Error(data.error ?? `Request failed with status ${response.status}`)
         }
+
         if (fetchSequenceRef.current !== sequence) {
           return
         }
+
         setSessions(Array.isArray(data.sessions) ? data.sessions : [])
         setTotal(typeof data.total === "number" ? data.total : 0)
       } catch (errorValue) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         setError(errorValue instanceof Error ? errorValue.message : "Failed to load agents")
       } finally {
         if (fetchSequenceRef.current === sequence) {
@@ -332,9 +357,11 @@ export function PreviousSessionsTable() {
 
   useEffect(() => {
     const controller = new AbortController()
+
     const timeoutId = setTimeout(() => {
       void loadSessions(controller.signal)
     }, 200)
+
     return () => {
       clearTimeout(timeoutId)
       controller.abort()
@@ -345,6 +372,7 @@ export function PreviousSessionsTable() {
     if (!error || lastLoadErrorToastRef.current === error) {
       return
     }
+
     lastLoadErrorToastRef.current = error
     addSessionErrorToast("Could not load previous sessions", error)
   }, [error])
@@ -353,12 +381,15 @@ export function PreviousSessionsTable() {
     if (archiveFailures.length === 0) {
       return
     }
+
     const key = archiveFailures
       .map((failure) => `${failure.sessionId}:${failure.status ?? "network"}:${failure.message}`)
       .join("|")
+
     if (lastArchiveFailureToastRef.current === key) {
       return
     }
+
     lastArchiveFailureToastRef.current = key
     const firstFailure = archiveFailures[0]
     addSessionErrorToast(
@@ -377,21 +408,26 @@ export function PreviousSessionsTable() {
     setSelectedSessionIds((current) => {
       const available = new Set(sessions.map((session) => session.id))
       const next = new Set([...current].filter((id) => available.has(id)))
+
       return next.size === current.size ? current : next
     })
   }, [sessions])
 
   const handleArchiveSelected = useCallback(async () => {
     const sessionIds = [...selectedSessionIds]
+
     if (sessionIds.length === 0) {
       return
     }
+
     setArchiveFailures([])
     setArchivingSessionIds((current) => {
       const next = new Set(current)
+
       for (const id of sessionIds) {
         next.add(id)
       }
+
       return next
     })
 
@@ -399,14 +435,17 @@ export function PreviousSessionsTable() {
       const results = await Promise.all(
         sessionIds.map(async (sessionId) => {
           const failure = await archiveSession(sessionId)
+
           return failure ?? { sessionId, archived: true as const }
         }),
       )
+
       const archivedSessionIds = new Set(
         results
           .filter((result): result is { sessionId: string; archived: true } => "archived" in result)
           .map((result) => result.sessionId),
       )
+
       const failures = results.filter(
         (result): result is ArchiveSessionFailure => !("archived" in result),
       )
@@ -416,19 +455,24 @@ export function PreviousSessionsTable() {
         setTotal((current) => Math.max(0, current - archivedSessionIds.size))
         setSelectedSessionIds((current) => {
           const next = new Set(current)
+
           for (const id of archivedSessionIds) {
             next.delete(id)
           }
+
           return next
         })
       }
+
       setArchiveFailures(failures)
     } finally {
       setArchivingSessionIds((current) => {
         const next = new Set(current)
+
         for (const id of sessionIds) {
           next.delete(id)
         }
+
         return next
       })
     }
@@ -485,6 +529,7 @@ export function PreviousSessionsTable() {
               <KumoTable.Row key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const isActions = header.column.id === "actions"
+
                   return (
                     <KumoTable.Head
                       key={header.id}
@@ -542,6 +587,7 @@ export function PreviousSessionsTable() {
                 >
                   {row.getVisibleCells().map((cell) => {
                     const isActions = cell.column.id === "actions"
+
                     return (
                       <KumoTable.Cell
                         key={cell.id}
@@ -603,6 +649,7 @@ function FilterSelect<TData>({
   options: readonly string[]
 }) {
   const allLabel = `All ${label.toLowerCase()}`
+
   return (
     <Select
       value={getTableFilter(table, id) || FILTER_ALL}
@@ -624,6 +671,7 @@ function FilterSelect<TData>({
 
 function formatFilterSelectValue(allLabel: string, value: unknown): string {
   const normalized = String(value ?? "")
+
   return normalized === FILTER_ALL || normalized === "" ? allLabel : normalized
 }
 
@@ -652,14 +700,21 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
   if (direction === "asc") {
     return <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden />
   }
+
   if (direction === "desc") {
     return <ChevronDown className="h-3.5 w-3.5" aria-hidden />
   }
+
   return <ChevronsUpDown className="h-3.5 w-3.5 text-kumo-subtle" aria-hidden />
 }
 
 function SourceLabel({ source }: { source: SessionItem["source"] }) {
-  const Icon = source === "api" ? Code2 : source === "slack" ? MessageSquare : Globe2
+  const Icon = Match.value(source).pipe(
+    Match.when("api", () => Code2),
+    Match.when("slack", () => MessageSquare),
+    Match.orElse(() => Globe2),
+  )
+
   return (
     <span className="inline-flex items-center gap-1.5 text-kumo-subtle">
       <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -670,12 +725,14 @@ function SourceLabel({ source }: { source: SessionItem["source"] }) {
 
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase()
+
   const variant: BadgeVariant =
     normalized === "completed" || normalized === "active"
       ? "success"
       : normalized === "archived"
         ? "secondary"
         : "warning"
+
   return (
     <Badge variant={variant} className="uppercase">
       {status}
@@ -691,6 +748,7 @@ function UnavailableToolsBadge({ unavailableTools }: Pick<SessionItem, "unavaila
   const details = unavailableTools
     .map((tool) => {
       const label = tool.toolId ?? tool.kind ?? "stored tool"
+
       return `${label}: ${tool.reason.replaceAll("_", " ")}`
     })
     .join("\n")
@@ -719,6 +777,7 @@ function formatSessionRuntime(session: SessionItem): string {
 
 function getTableFilter<TData>(table: Table<TData>, id: string): string {
   const value = table.getColumn(id)?.getFilterValue()
+
   return typeof value === "string" ? value : ""
 }
 
@@ -727,6 +786,7 @@ function setTableFilter<TData>(table: Table<TData>, id: string, value: string) {
 }
 
 function applyUpdater<T>(updater: T | ((current: T) => T), current: T): T {
+  // SAFETY: A function updater is the table setState callback and is applied to the current value.
   return typeof updater === "function" ? (updater as (value: T) => T)(current) : updater
 }
 

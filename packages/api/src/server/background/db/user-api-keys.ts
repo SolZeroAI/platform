@@ -112,6 +112,7 @@ export class UserApiKeyStore {
     keyId: string,
   ) {
     const now = Date.now()
+
     const revoked = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -135,6 +136,7 @@ export class UserApiKeyStore {
     const keyIdOption = Option.fromNullishOr(rawApiKey.match(API_KEY_PATTERN)).pipe(
       Option.flatMap((match) => Option.fromNullishOr(match[1])),
     )
+
     return yield* Option.match(keyIdOption, {
       onNone: () => Effect.succeed(Option.none<VerifiedApiKey>()),
       onSome: (keyId) => this.verifyKey(rawApiKey, keyId),
@@ -179,6 +181,7 @@ export class UserApiKeyStore {
     const incomingHash = yield* hashToken(rawApiKey).pipe(
       Effect.mapError(d1Error("db.userApiKeys.verify")),
     )
+
     return yield* Match.value(incomingHash === row.keyHash).pipe(
       Match.when(false, () => Effect.succeed(Option.none<VerifiedApiKey>())),
       Match.orElse(() => this.touchLastUsed(row)),
@@ -198,6 +201,7 @@ export class UserApiKeyStore {
           .where(eq(this.schema.userApiKeys.keyId, row.keyId)),
       catch: d1Error("db.userApiKeys.verify"),
     })
+
     return Option.some<VerifiedApiKey>({ keyId: row.keyId, userId: row.userId })
   })
 }

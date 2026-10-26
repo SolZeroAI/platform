@@ -28,7 +28,9 @@ export function getFinishReason(json: string): Option.Option<string> {
     Option.filter((chunk) => chunk.type === "finish"),
     Option.flatMap((chunk) =>
       Option.liftPredicate(
-        (chunk as { finishReason?: unknown }).finishReason,
+        /* SAFETY: chunk has the { finishReason?: unknown } shape established by the check or writer around this read. */ (
+          chunk as { finishReason?: unknown }
+        ).finishReason,
         (value): value is string => typeof value === "string",
       ),
     ),

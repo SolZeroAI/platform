@@ -9,6 +9,12 @@ import type {
 import { sanitizeSubagentTaskPreview } from "@solzero/shared"
 import type { IsolateSubagentDelegation } from "../subagent"
 
+interface IsolateDelegationFields {
+  task: string
+  context?: string
+  expectedOutput?: string
+}
+
 const TASK_INPUT_LIMIT = 16_000
 const CONTEXT_INPUT_LIMIT = 32_000
 const EXPECTED_OUTPUT_INPUT_LIMIT = 8_000
@@ -23,12 +29,15 @@ function optionalString(
   if (value === undefined) {
     return { success: true, value: undefined }
   }
+
   if (typeof value !== "string") {
     return { success: false, error: new Error(`${name} must be a string`) }
   }
+
   if (value.length > limit) {
     return { success: false, error: new Error(`${name} must not exceed ${limit} characters`) }
   }
+
   return { success: true, value }
 }
 
@@ -36,35 +45,46 @@ function validateDelegation(value: unknown): ValidationResult<IsolateSubagentDel
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return { success: false, error: new Error("delegation input must be an object") }
   }
+
+  // SAFETY: validateDelegation only reads task, context, and expectedOutput after rejecting non-objects.
   const input = value as Record<string, unknown>
+
   if (typeof input.task !== "string" || input.task.trim().length === 0) {
     return { success: false, error: new Error("task is required") }
   }
+
   if (input.task.length > TASK_INPUT_LIMIT) {
     return {
       success: false,
       error: new Error(`task must not exceed ${TASK_INPUT_LIMIT} characters`),
     }
   }
+
   const context = optionalString(input.context, "context", CONTEXT_INPUT_LIMIT)
+
   if (!context.success) {
     return context
   }
+
   const expectedOutput = optionalString(
     input.expectedOutput,
     "expectedOutput",
     EXPECTED_OUTPUT_INPUT_LIMIT,
   )
+
   if (!expectedOutput.success) {
     return expectedOutput
   }
+
+  const delegation: IsolateDelegationFields = { task: input.task }
+
+  if (context.value !== undefined) delegation.context = context.value
+
+  if (expectedOutput.value !== undefined) delegation.expectedOutput = expectedOutput.value
+
   return {
     success: true,
-    value: {
-      task: input.task,
-      ...(context.value === undefined ? {} : { context: context.value }),
-      ...(expectedOutput.value === undefined ? {} : { expectedOutput: expectedOutput.value }),
-    },
+    value: delegation,
   }
 }
 
@@ -100,11 +120,13 @@ export type DelegateToSubagentTool = Tool<IsolateSubagentDelegation, string | Ag
 export { sanitizeSubagentTaskPreview }
 
 /** Preserve ordinary tool inputs, but persist only a redacted task preview for delegation. */
-export function sanitizeParentToolCallArgs(toolName: string, args: unknown): unknown {
+export function sanitizeParentToolCallArgs(toolName: string, args: unknown) {
   if (toolName !== "delegate_to_subagent") {
     return args
   }
+
   const task = isRecord(args) && typeof args.task === "string" ? args.task : ""
+
   return { task: sanitizeSubagentTaskPreview(task) }
 }
 
@@ -116,8 +138,10 @@ function isValidChunkBody(value: unknown): value is string {
   if (typeof value !== "string") {
     return false
   }
+
   try {
     const parsed: unknown = JSON.parse(value)
+
     return isOfficialUiMessageChunk(parsed)
   } catch {
     return false
@@ -132,9 +156,11 @@ function isOfficialUiMessageChunk(value: unknown): boolean {
   if (!isRecord(value) || typeof value.type !== "string") {
     return false
   }
+
   if (value.type.startsWith("data-")) {
     return Object.hasOwn(value, "data")
   }
+
   switch (value.type) {
     case "text-start":
     case "text-end":
@@ -224,36 +250,50 @@ function progressFromChunk(chunk: Record<string, unknown>): AgentToolProgressSna
   if (chunk.type !== "data-agent-progress" || !isRecord(chunk.data)) {
     return undefined
   }
+
   const progress = chunk.data
   const fraction = numberField(progress.fraction)
   const message = stringField(progress.message)
   const phase = stringField(progress.phase)
   const milestone = stringField(progress.milestone)
-  return {
-    at: numberField(progress.at) ?? Date.now(),
-    ...(fraction === undefined ? {} : { fraction }),
-    ...(message === undefined ? {} : { message }),
-    ...(phase === undefined ? {} : { phase }),
-    ...(milestone === undefined ? {} : { milestone }),
-  }
+
+  const snapshot: AgentToolProgressSnapshot = { at: numberField(progress.at) ?? Date.now() }
+
+  if (fraction !== undefined) snapshot.fraction = fraction
+
+  if (message !== undefined) snapshot.message = message
+
+  if (phase !== undefined) snapshot.phase = phase
+
+  if (milestone !== undefined) snapshot.milestone = milestone
+
+  return snapshot
 }
 
 export function parseSubagentChunkActivity(body: string): SubagentChunkActivity | null {
   try {
     const chunk: unknown = JSON.parse(body)
+
     if (!isRecord(chunk) || typeof chunk.type !== "string") {
       return null
     }
+
     const toolType =
       chunk.type === "tool-input-start" ||
       chunk.type === "tool-input-available" ||
       chunk.type === "tool-call"
+
     const progress = progressFromChunk(chunk)
-    return {
-      ...(toolType && typeof chunk.toolName === "string" ? { toolName: chunk.toolName } : {}),
-      ...(toolType && typeof chunk.toolCallId === "string" ? { toolCallId: chunk.toolCallId } : {}),
-      ...(progress === undefined ? {} : { progress }),
-    }
+
+    const activity: SubagentChunkActivity = {}
+
+    if (toolType && typeof chunk.toolName === "string") activity.toolName = chunk.toolName
+
+    if (toolType && typeof chunk.toolCallId === "string") activity.toolCallId = chunk.toolCallId
+
+    if (progress !== undefined) activity.progress = progress
+
+    return activity
   } catch {
     return null
   }
@@ -263,6 +303,7 @@ function isAgentToolEvent(value: unknown): boolean {
   if (!isRecord(value) || typeof value.kind !== "string" || typeof value.runId !== "string") {
     return false
   }
+
   switch (value.kind) {
     case "started":
       return typeof value.agentType === "string" && typeof value.order === "number"
@@ -291,8 +332,10 @@ export function parseAgentToolEventMessage(
   if (typeof message !== "string") {
     return null
   }
+
   try {
     const parsed: unknown = JSON.parse(message)
+
     if (
       !isRecord(parsed) ||
       parsed.type !== "agent-tool-event" ||
@@ -304,6 +347,8 @@ export function parseAgentToolEventMessage(
     ) {
       return null
     }
+
+    // SAFETY: The checks above established the agent-tool-event fields required by AgentToolEventMessage.
     return parsed as AgentToolEventMessage
   } catch {
     return null
@@ -314,14 +359,17 @@ export function toAgentToolFailure(result: RunAgentToolResult): AgentToolFailure
   if (result.status === "completed") {
     throw new Error("Completed sub-agent results cannot be converted to failures")
   }
-  return {
+
+  const failure: AgentToolFailure = {
     ok: false,
     status: result.status,
     error: result.error ?? `Sub-agent run ended with status '${result.status}'`,
     retryable: result.status === "interrupted",
-    ...(result.reason === undefined ? {} : { reason: result.reason }),
-    ...(result.childStillRunning === undefined
-      ? {}
-      : { childStillRunning: result.childStillRunning }),
   }
+
+  if (result.reason !== undefined) failure.reason = result.reason
+
+  if (result.childStillRunning !== undefined) failure.childStillRunning = result.childStillRunning
+
+  return failure
 }

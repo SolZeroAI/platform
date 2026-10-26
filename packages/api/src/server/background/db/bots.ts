@@ -82,6 +82,7 @@ export class BotStore {
   create(userId: string, input: CreateBotInput) {
     const normalized = normalizeCreateBotInput(input)
     const now = Date.now()
+
     const record: BotSummary = {
       id: newPrefixedId("bot_"),
       userId,
@@ -92,6 +93,7 @@ export class BotStore {
       createdAt: now,
       updatedAt: now,
     }
+
     return Effect.tryPromise({
       try: () =>
         this.drizzle.insert(this.schema.bots).values({
@@ -154,6 +156,7 @@ export class BotStore {
 
   attachSession(userId: string, botId: string, sessionId: string) {
     const now = Date.now()
+
     return this.getOwned(userId, botId).pipe(
       Effect.flatMap((bot) =>
         Effect.tryPromise({
@@ -171,6 +174,7 @@ export class BotStore {
   createRoutine(userId: string, botId: string, input: CreateBotRoutineInput) {
     const normalized = normalizeCreateBotRoutineInput(input)
     const now = Date.now()
+
     return this.getOwned(userId, botId).pipe(
       Effect.map((bot) => ({
         id: newPrefixedId("routine_"),

@@ -9,6 +9,7 @@ import type { SubagentMode } from "./subagents"
 
 // Session states
 export type SessionStatus = "created" | "active" | "completed" | "archived"
+
 export type SandboxStatus =
   | "pending"
   | "spawning"
@@ -20,6 +21,7 @@ export type SandboxStatus =
   | "stopped"
   | "stale"
   | "failed"
+
 export type SessionInitiationSource = "web" | "slack" | "api"
 
 export interface SessionRuntimeCapabilities {
@@ -107,10 +109,12 @@ export function isOktaReconnectMcpDiscoveryError(event: McpDiscoveryErrorLike): 
 
   const serverName = getMcpDiscoveryServerName(event).toLowerCase()
   const error = (event.error ?? "").toLowerCase()
+
   const isMcpContextForge =
     serverName.includes("mcp context forge") ||
     serverName.includes("context forge") ||
     error.includes("mcp context forge")
+
   const hasReconnectText =
     error.includes("reconnect your configured oauth account") ||
     error.includes("reconnect okta") ||

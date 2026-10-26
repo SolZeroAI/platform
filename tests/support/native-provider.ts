@@ -4,6 +4,7 @@ import { expect } from "e2e"
 import { requireFixture } from "./external-fixtures"
 
 const executeProcess = promisify(execFile)
+
 const execute = (
   command: string,
   args: string[],
@@ -25,10 +26,13 @@ export async function verifyExplicitNativeLimit(sessionId: string) {
     ],
     { timeout: 10_000 },
   )
+
   const owned: string[] = []
+
   for (const row of running.stdout.trim().split("\n").filter(Boolean)) {
     if (row.endsWith("-proxy")) continue
     const id = row.split(" ")[0]!
+
     const selected = await execute(
       "docker",
       [
@@ -47,17 +51,23 @@ export async function verifyExplicitNativeLimit(sessionId: string) {
       ],
       { timeout: 10_000 },
     )
+
+    // SAFETY: the container probe writes JSON with belongs, status, and optional error fields.
     const ownership = JSON.parse(selected.stdout) as {
       belongs: boolean
       status: number
       errorKind?: string
       errorCode?: string
     }
+
     console.info("container ownership check", ownership)
+
     if (ownership.belongs) owned.push(id)
   }
+
   expect(owned).toHaveLength(1)
   const account = requireFixture("CLOUDFLARE_ACCOUNT_ID")
+
   const probe = await execute(
     "docker",
     [
@@ -86,12 +96,15 @@ export async function verifyExplicitNativeLimit(sessionId: string) {
     ],
     { timeout: 40_000, maxBuffer: 4096 },
   )
+
+  // SAFETY: the native limit probe writes JSON with status, terminal, reason, and outputTokens.
   const result = JSON.parse(probe.stdout) as {
     status: number
     terminal: string
     reason: string
     outputTokens: number
   }
+
   console.info("native explicit-limit probe", result)
   expect(result.status).toBe(200)
   expect(result.terminal).toBe("incomplete")

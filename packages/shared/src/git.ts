@@ -18,6 +18,7 @@ function getCommitEmail(
   if (publicEmail) {
     return publicEmail
   }
+
   return generateNoreplyEmail(githubId, githubLogin)
 }
 

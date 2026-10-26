@@ -11,6 +11,7 @@ import { asc, and, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Predicate from "effect/Predicate"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- UserProviderConfigsStore is a D1 factory. Production callers import at module scope; replacing this constructor needs a Layer-owned D1 capability.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
@@ -67,6 +68,7 @@ interface StoredCustomProviderPayload {
 }
 
 const OPENCODE_PERMISSION_PREFERENCE_COLUMN = "opencode_permission_json"
+
 const USER_PROVIDER_OPENCODE_PERMISSION_MIGRATION_MESSAGE =
   "OpenCode permission settings database migration has not been applied. Run D1 migration 0024_opencode_permission_preferences.sql."
 
@@ -109,6 +111,7 @@ function toCustomProviderSnapshot(
     row.providerJson,
     row.displayName || row.providerId,
   )
+
   return {
     providerId: row.providerId,
     name: payload.name,
@@ -127,6 +130,7 @@ function buildCustomRuntimeRecord(
     row.providerJson,
     row.displayName || row.providerId,
   )
+
   return {
     providerId: row.providerId,
     scope: row.scope,
@@ -140,6 +144,7 @@ function buildCustomRuntimeRecord(
 
 function isMissingOpenCodePermissionPreferenceColumn(errorValue: unknown): boolean {
   const messages = getErrorMessages(errorValue).join("\n")
+
   return (
     messages.includes(OPENCODE_PERMISSION_PREFERENCE_COLUMN) &&
     (/no such column/i.test(messages) ||
@@ -149,11 +154,7 @@ function isMissingOpenCodePermissionPreferenceColumn(errorValue: unknown): boole
 }
 
 function isD1Error(errorValue: unknown): errorValue is D1Error {
-  return Boolean(
-    errorValue &&
-    typeof errorValue === "object" &&
-    (errorValue as { _tag?: unknown })._tag === "D1Error",
-  )
+  return Predicate.isTagged(errorValue, "D1Error")
 }
 
 function describeUserProviderD1Error(error: D1Error): string {
@@ -232,6 +233,7 @@ export class UserProviderConfigsStore {
   private toRuntimeProviderRecord = Effect.fn("db.userProviderConfigs.toRuntimeProviderRecord")(
     function* (this: UserProviderConfigsStore, row: UserProviderConfigRow) {
       const apiKey = yield* this.decryptApiKey(row.apiKeyEncrypted)
+
       return Match.value(row.scope === "shared_override").pipe(
         Match.when(
           true,
@@ -267,10 +269,12 @@ export class UserProviderConfigsStore {
   ) {
     const existingRows = yield* this.listConfigRows(userId)
     const existingByProviderId = new Map(existingRows.map((row) => [row.providerId, row] as const))
+
     const retainedProviderIds = new Set<string>([
       ...input.sharedOverrides.map((override) => override.providerId),
       ...input.customProviders.map((provider) => provider.providerId),
     ])
+
     const now = Date.now()
 
     yield* Effect.forEach(
@@ -317,9 +321,11 @@ export class UserProviderConfigsStore {
     )
 
     const existingPreference = yield* this.getPreference(userId)
+
     const opencodePermissionJson = Option.getOrNull(
       stringifyOpenCodePermissionOption(Option.fromNullishOr(input.opencodePermission)),
     )
+
     yield* this.writePreference(
       userId,
       input,
@@ -395,6 +401,7 @@ export class UserProviderConfigsStore {
   ) {
     const existingPreferenceRows = yield* this.getPreferenceWithoutOpenCodePermission(userId)
     const existingPreference = Option.fromNullishOr(existingPreferenceRows[0])
+
     const d1 = yield* Option.match(Option.fromNullishOr(this.d1), {
       onNone: () =>
         Effect.fail(
@@ -407,6 +414,7 @@ export class UserProviderConfigsStore {
         ),
       onSome: Effect.succeed,
     })
+
     yield* Effect.tryPromise({
       try: () =>
         d1
@@ -453,6 +461,7 @@ export class UserProviderConfigsStore {
       override.apiKey,
       override.clearApiKey,
     )
+
     const createdAt = Option.getOrElse(
       Option.map(existing, (row) => row.createdAt),
       () => now,
@@ -506,12 +515,14 @@ export class UserProviderConfigsStore {
       provider.apiKey,
       provider.clearApiKey,
     )
+
     const payload: StoredCustomProviderPayload = {
       name: provider.name,
       npm: provider.npm,
       options: provider.options,
       models: provider.models,
     }
+
     const createdAt = Option.getOrElse(
       Option.map(existing, (row) => row.createdAt),
       () => now,
@@ -597,8 +608,13 @@ export class UserProviderConfigsStore {
           ),
       catch: d1Error("db.userProviderConfigs.listConfigRows"),
     })
+
     return rows.map(
-      (row): UserProviderConfigRow => ({ ...row, scope: row.scope as UserProviderScope }),
+      (row): UserProviderConfigRow => ({
+        ...row,
+        scope:
+          /* SAFETY: row.scope is persisted only as UserProviderScope by the writer for that column. */ row.scope as UserProviderScope,
+      }),
     )
   })
 
@@ -620,6 +636,7 @@ export class UserProviderConfigsStore {
         () => this.getPreferenceWithoutOpenCodePermission(userId),
       ),
     )
+
     return Option.fromNullishOr(rows[0])
   })
 
@@ -641,6 +658,7 @@ export class UserProviderConfigsStore {
           .limit(1),
       catch: d1Error("db.userProviderConfigs.getPreferenceWithoutOpenCodePermission"),
     })
+
     return rows.map(
       (row): UserProviderPreferenceRow => ({
         ...row,
@@ -662,6 +680,7 @@ function runUserProviderConfigsEffect<A>(effect: Effect.Effect<A, D1Error>): Pro
       Match.when(isD1Error, (d1) => new Error(describeUserProviderD1Error(d1))),
       Match.orElse((other) => other),
     )
+
     throw error
   })
 }
@@ -690,7 +709,9 @@ export function createUserProviderConfigsStoreFromD1(
       d1,
     })),
   )
+
   const store = new UserProviderConfigsStore(resolved.db, resolved.d1, encryptionKey)
+
   return {
     getSettingsSnapshot: (userId) =>
       runUserProviderConfigsEffect(store.getSettingsSnapshot(userId)),
@@ -733,14 +754,16 @@ function parseStoredCustomProviderPayload(
   fallbackName: string,
 ): StoredCustomProviderPayload {
   const parsed = parseStoredJsonObject(value)
+
   return {
     name: Option.getOrElse(readStoredStringOption(parsed.name), () => fallbackName),
     npm: Option.getOrUndefined(readStoredStringOption(parsed.npm)),
     options: Option.getOrUndefined(readStoredRecordOption(parsed.options)),
-    models: Option.getOrElse(readStoredRecordOption(parsed.models), () => ({})) as Record<
-      string,
-      ProviderModelDefinition
-    >,
+    models:
+      /* SAFETY: Option.getOrElse(readStoredRecordOption(parsed.models), () => ({})) was checked to be a non-array object before it is read as Record< string, ProviderModelDefinition >. */ Option.getOrElse(
+        readStoredRecordOption(parsed.models),
+        () => ({}),
+      ) as Record<string, ProviderModelDefinition>,
   }
 }
 
@@ -759,6 +782,12 @@ function readStoredStringOption(value: unknown): Option.Option<string> {
 function readStoredRecordOption(value: unknown): Option.Option<Record<string, unknown>> {
   return Option.fromNullishOr(value).pipe(
     Option.filter((resolved) => typeof resolved === "object" && !Array.isArray(resolved)),
-    Option.map((resolved) => resolved as Record<string, unknown>),
+    Option.map(
+      (resolved) =>
+        /* SAFETY: resolved was checked to be a non-array object before it is read as Record<string, unknown>. */ resolved as Record<
+          string,
+          unknown
+        >,
+    ),
   )
 }

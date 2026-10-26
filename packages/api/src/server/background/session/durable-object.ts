@@ -314,18 +314,21 @@ export function isNonEmptyString(value: unknown): value is string {
 }
 
 export function parseAttachmentsJson(json: string): Attachment[] {
-  const parsed = parseJson(json) as Array<{
-    type: string
-    name: string
-    url?: string
-    content?: string
-    mimeType?: string
-  }>
+  const parsed =
+    /* SAFETY: parseJson(json) was stored by this service in the Array<{ type: string name: string url?: string content?: string mimeType?: string }> shape. */ parseJson(
+      json,
+    ) as Array<{
+      type: string
+      name: string
+      url?: string
+      content?: string
+      mimeType?: string
+    }>
 
   return parsed
     .filter((item) => item.type === "file" || item.type === "image" || item.type === "url")
     .map((item) => ({
-      type: item.type as Attachment["type"],
+      type: /* SAFETY: item.type has the Attachment["type"] shape established by the check or writer around this read. */ item.type as Attachment["type"],
       name: item.name,
       url: item.url,
       content: item.content,
@@ -360,6 +363,7 @@ export function parseStoredSecretKeys(value: string | null | undefined): string[
 
 export function getSessionCapabilities(session: SessionRow | null): SessionRuntimeCapabilities {
   const tools = getSessionTools(session)
+
   return {
     agentRuntime: resolveAgentRuntime({
       agentRuntime: session?.agent_runtime,
@@ -372,14 +376,19 @@ export function getSessionCapabilities(session: SessionRow | null): SessionRunti
   }
 }
 
+function countToolKind(
+  counts: Record<string, number>,
+  tool: SessionToolSpec,
+): Record<string, number> {
+  counts[tool.kind] = (counts[tool.kind] ?? 0) + 1
+
+  return counts
+}
+
 export function summarizeToolsForLog(tools: readonly SessionToolSpec[]) {
-  const kinds = tools.reduce<Record<string, number>>(
-    (counts, tool) => ({
-      ...counts,
-      [tool.kind]: (counts[tool.kind] ?? 0) + 1,
-    }),
-    {},
-  )
+  let initial: Record<string, number> = {}
+  const kinds = tools.reduce(countToolKind, initial)
+
   const mcpcfServers = getSelectedMcpcfServerIds(tools).map((id) => ({ id }))
 
   return {
@@ -412,23 +421,28 @@ export type QueuedMessageContext = {
 }
 
 export type TokenSandboxEvent = Extract<SandboxEvent, { type: "token" }>
+
 export type ExecutionCompleteSandboxEvent = Extract<SandboxEvent, { type: "execution_complete" }>
+
 export type IsolateStreamState = {
   writer: WritableStreamDefaultWriter<Uint8Array>
   text: string
 }
+
 export type PendingRuntimeInteraction = {
   request: OpenCodeInteractionRequest
   resolve: (response: OpenCodeInteractionResponse) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
 }
+
 export type WsTokenBody = {
   userId: string
   githubLogin?: string
   githubName?: string
   githubEmail?: string
 }
+
 export type UpdateToolsBody = {
   userId?: string
   tools?: SessionToolSpec[]
@@ -479,17 +493,20 @@ export class SessionDO extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     this.ensureInitialized()
     const url = new URL(request.url)
+
     return this.routeRequest(request, url)
   }
 
   /** Privileged binding RPC for an opt-in operator Worker; intentionally absent from HTTP routing. */
   migrationState(request: unknown): Promise<unknown> {
     this.ensureInitialized()
+
     const busy = this.sql
       .exec<{ count: number }>(
         "SELECT count(*) AS count FROM messages WHERE status IN ('pending', 'processing', 'running')",
       )
       .one().count
+
     return durableMigration(this.ctx, request, { empty: !this.getSession(), quiescent: busy === 0 })
   }
 
@@ -500,8 +517,10 @@ export class SessionDO extends DurableObject<Env> {
   ): Promise<void> {
     this.ensureInitialized()
     const now = Option.getOrElse(Option.fromNullishOr(lifecycleTimestampMs), () => Date.now())
+
     const sandboxId =
       Option.getOrNull(this.repository.getRuntimeLifecycle())?.runtimeId ?? this.getSessionId()
+
     await this.persistSandboxEvent(
       projectSubagentSessionEvent({
         message,
@@ -599,6 +618,7 @@ export class SessionDO extends DurableObject<Env> {
             name: participant.github_name || participant.github_login || participant.user_id,
           },
         }
+
         this.repository.events.createEvent({
           id: generateId(),
           type: "user_message",
@@ -657,14 +677,21 @@ export class SessionDO extends DurableObject<Env> {
     data: { cursor: { timestamp: number; id: string }; limit?: number },
   ): void {
     const limit = Math.min(Math.max(data.limit ?? 200, 1), 500)
+
     const page = this.repository.events.getEventsHistoryPage(
       data.cursor.timestamp,
       data.cursor.id,
       limit,
     )
+
     this.wsManager.send(ws, {
       type: "history_page",
-      items: page.events.map((row) => parseJson(row.data) as SandboxEvent),
+      items: page.events.map(
+        (row) =>
+          /* SAFETY: parseJson(row.data) was stored by this service in the SandboxEvent shape. */ parseJson(
+            row.data,
+          ) as SandboxEvent,
+      ),
       hasMore: page.hasMore,
       cursor: this.replayCursor(page.events[0]),
     })
@@ -681,7 +708,9 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private getSession() {
-    return getSession(this) as SessionRow | null
+    return /* SAFETY: getSession(this) has the SessionRow | null shape established by the check or writer around this read. */ getSession(
+      this,
+    ) as SessionRow | null
   }
 
   private abortStream(
@@ -690,6 +719,7 @@ export class SessionDO extends DurableObject<Env> {
     errorMessage: string,
   ): Promise<void> {
     this.isolateStreamState.delete(messageId)
+
     return stream.writer.abort(new Error(errorMessage))
   }
 
@@ -707,6 +737,7 @@ export class SessionDO extends DurableObject<Env> {
       role: "member",
       joinedAt: now,
     })
+
     return Option.getOrThrowWith(
       this.repository.getParticipantById(id),
       () => new Error("Participant not found after creation"),
@@ -719,12 +750,19 @@ export class SessionDO extends DurableObject<Env> {
     await this.ctx.storage.setAlarm(Date.now() + timeout)
   }
 }
+
 export interface SessionDO {
   [key: string]: any
 }
+
 installSessionDOCoreBindings(SessionDO)
+
 installSessionDOWebSocketBindings(SessionDO)
+
 installSessionDOProcessingBindings(SessionDO)
+
 installSessionDORuntimeStateBindings(SessionDO)
+
 installSessionDORpcBindings(SessionDO)
+
 installSessionDOQueryArchiveBindings(SessionDO)

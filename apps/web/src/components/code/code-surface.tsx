@@ -85,15 +85,19 @@ export function CodeSurface({
   useEffect(() => {
     if (!open) {
       setDialogContentReady(false)
+
       return
     }
 
     let nextFrameId: number | null = null
+
     const frameId = window.requestAnimationFrame(() => {
       nextFrameId = window.requestAnimationFrame(() => setDialogContentReady(true))
     })
+
     return () => {
       window.cancelAnimationFrame(frameId)
+
       if (nextFrameId !== null) {
         window.cancelAnimationFrame(nextFrameId)
       }
@@ -114,19 +118,24 @@ export function CodeSurface({
 
   const handleCopy = async () => {
     const success = await copyToClipboard(displayValue)
+
     if (!success) {
       return
     }
+
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1200)
   }
 
   const handleFormatJson = () => {
     const result = formatJsonText(draft)
+
     if (!result.ok) {
       setFormatError(result.error)
+
       return
     }
+
     setDraft(result.value)
     setFormatError(null)
   }
@@ -135,6 +144,7 @@ export function CodeSurface({
     if (mode !== "editable" || !onSave) {
       return
     }
+
     onSave(draft)
     setOpen(false)
   }
@@ -245,6 +255,7 @@ export function CodeSurface({
                   <Button
                     type="button"
                     onClick={() => setOpen(false)}
+                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                     shape="circle"
                     variant="ghost"
                     aria-label="Close code dialog"
@@ -271,6 +282,7 @@ export function CodeSurface({
                   language={language}
                   onChange={(nextValue) => {
                     setDraft(nextValue)
+
                     if (formatError) {
                       setFormatError(null)
                     }

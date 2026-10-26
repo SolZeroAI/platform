@@ -35,8 +35,10 @@ export function groupEvents(
     if (currentSubagentRunIds.size > 0) {
       const runs = [...currentSubagentRunIds].flatMap((runId) => {
         const run = subagentState.runsById.get(runId)
+
         return run ? [run] : []
       })
+
       if (runs.length > 0) {
         groups.push({
           type: "subagent_group",
@@ -44,6 +46,7 @@ export function groupEvents(
           id: `subagent-group-${currentSubagentEventId ?? groupIndex}-${groupIndex++}`,
         })
       }
+
       currentSubagentRunIds = new Set()
       currentSubagentMessageId = null
       currentSubagentEventId = null
@@ -56,15 +59,20 @@ export function groupEvents(
     eventId: string,
   ) => {
     const newRuns = runs.filter((run) => !includedSubagentRunIds.has(run.runId))
+
     if (newRuns.length === 0) {
       return
     }
+
     flushToolGroup()
+
     if (currentSubagentMessageId !== null && currentSubagentMessageId !== messageId) {
       flushSubagentGroup()
     }
+
     currentSubagentMessageId = messageId
     currentSubagentEventId ??= eventId
+
     for (const run of newRuns) {
       currentSubagentRunIds.add(run.runId)
       includedSubagentRunIds.add(run.runId)
@@ -74,6 +82,7 @@ export function groupEvents(
   for (const event of events) {
     if (event.type === "subagent_event") {
       const run = subagentState.runsById.get(event.runId)
+
       if (run) {
         appendSubagentRuns([run], event.messageId, event.eventId)
       }
@@ -81,6 +90,7 @@ export function groupEvents(
       const subagentRuns = event.callId
         ? subagentState.runsByParentToolCallId.get(event.callId)
         : undefined
+
       if (event.tool === "delegate_to_subagent" && subagentRuns?.length) {
         appendSubagentRuns(
           subagentRuns,
@@ -89,6 +99,7 @@ export function groupEvents(
         )
         continue
       }
+
       flushSubagentGroup()
       currentToolGroup.push(event)
     } else if (shouldHideMcpDiscoveryError(event, hiddenDiscoveryErrorKeys)) {

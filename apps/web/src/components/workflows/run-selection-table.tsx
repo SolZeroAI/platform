@@ -33,6 +33,7 @@ export function WorkflowRunSelectionTable({
   const visibleSelectedCount = visibleRunIds.filter((id) => selectedRunIds.has(id)).length
   const allVisibleSelected = runs.length > 0 && visibleSelectedCount === runs.length
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected
+
   const selectionColumn = useMemo<ColumnDef<WorkflowRun>>(
     () => ({
       id: "selection",
@@ -66,6 +67,7 @@ export function WorkflowRunSelectionTable({
       someVisibleSelected,
     ],
   )
+
   const columns = useMemo(() => [selectionColumn, ...WORKFLOW_RUN_COLUMNS], [selectionColumn])
   const table = useWorkflowRunTable({ data: runs, columns, total, state, onStateChange })
   const rows = table.getRowModel().rows
@@ -119,6 +121,7 @@ export function WorkflowRunSelectionTable({
             ) : (
               rows.map((row) => {
                 const selected = selectedRunIds.has(row.original.id)
+
                 return (
                   <KumoTable.Row
                     key={row.id}

@@ -32,6 +32,7 @@ export function projectSubagentSessionEvent(
   input: SubagentSessionEventProjectionInput,
 ): SubagentSessionEvent {
   const event = input.message.event
+
   const common: SubagentSessionEventCommon = {
     type: "subagent_event" as const,
     eventId: `sae_${event.runId}_${input.message.sequence}`,
@@ -89,6 +90,7 @@ function projectStartedEvent(
   started: Extract<AgentToolEventMessage["event"], { kind: "started" }>,
 ): SubagentSessionEvent {
   const preview = readAgentToolInputPreview(started.inputPreview)
+
   return {
     ...common,
     kind: "started",
@@ -145,6 +147,7 @@ export function terminalAgentToolEventMessage(
     parentToolCallId: run.parentToolCallId,
     sequence,
   }
+
   return Match.value(result).pipe(
     Match.when({ status: "completed" }, (completed) => ({
       ...common,
@@ -237,7 +240,10 @@ function optionalPreviewField<Key extends "task" | "model">(
     Option.liftPredicate(value, (candidate): candidate is string => typeof candidate === "string"),
     {
       onNone: () => ({}),
-      onSome: (resolved) => ({ [key]: resolved }) as Record<Key, string>,
+      onSome: (resolved) =>
+        /* SAFETY: ({ [key]: resolved }) was checked to be a non-array object before it is read as Record<Key, string>. */ ({
+          [key]: resolved,
+        }) as Record<Key, string>,
     },
   )
 }

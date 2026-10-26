@@ -7,6 +7,7 @@ import {
   type WorkflowRecord,
   type WorkflowRunRecord,
 } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env inside workflow lifecycle commands, which have no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { parseJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -65,6 +66,7 @@ const workflowNotFound = (message: string = NOT_FOUND_MESSAGE) =>
  */
 function failLifecycleWhen<E>(condition: boolean, error: E) {
   const conditionEffect = Effect.succeed(condition)
+
   return Effect.fail(error).pipe(Effect.when(conditionEffect))
 }
 
@@ -142,7 +144,7 @@ export function createWorkflowTrigger(value: unknown): WorkflowTriggerPayload {
       (candidate: unknown): candidate is Record<string, unknown> =>
         isRecord(candidate) && isTriggerKind(candidate.kind),
       (record) => ({
-        kind: record.kind as WorkflowTriggerPayload["kind"],
+        kind: /* SAFETY: record.kind has the WorkflowTriggerPayload["kind"] shape established by the check or writer around this read. */ record.kind as WorkflowTriggerPayload["kind"],
         nodeId: stringFieldOr(record.nodeId, null),
         payload: Match.value(record.payload).pipe(
           Match.when(isRecord, (resolved) => resolved),
@@ -230,10 +232,12 @@ export class WorkflowLifecycle {
         input.manifest,
         getWorkflowManifestName(input.manifest, input.name),
       )
+
       const manifest = migration.manifest
       const workflowId = `wf_${this.createId(12)}`
       const version = 1
       const code = this.compileWorkflow(manifest)
+
       const artifacts = yield* this.writeArtifacts({
         env: this.env,
         manifest,
@@ -242,7 +246,9 @@ export class WorkflowLifecycle {
         workflowId,
         version,
       })
+
       const now = this.now()
+
       const workflow = yield* Effect.tryPromise({
         try: () =>
           this.store.createWorkflow({
@@ -278,13 +284,16 @@ export class WorkflowLifecycle {
   updateWorkflow(input: { workflow: WorkflowRecord; name: string; manifest: unknown }) {
     return Effect.gen({ self: this }, function* () {
       const previousManifest = yield* this.readPreviousManifest(input.workflow.manifest_key)
+
       const migration = yield* this.migrateManifest(
         input.manifest,
         getWorkflowManifestName(input.manifest, input.name),
       )
+
       const manifest = migration.manifest
       const version = input.workflow.manifest_version + 1
       const code = this.compileWorkflow(manifest)
+
       const artifacts = yield* this.writeArtifacts({
         env: this.env,
         manifest,
@@ -308,6 +317,7 @@ export class WorkflowLifecycle {
           }),
         catch: toError,
       })
+
       const workflow = yield* Option.match(Option.fromNullishOr(updated), {
         onNone: () => Effect.fail(workflowNotFound()),
         onSome: (resolved) => Effect.succeed(resolved),
@@ -356,11 +366,14 @@ export class WorkflowLifecycle {
         workflowId: input.workflow.id,
       })
       const updatedAt = this.now()
+
       const disabled = yield* Effect.tryPromise({
         try: () => this.store.disableWorkflow(input.workflow.id, input.workflow.user_id, updatedAt),
         catch: toError,
       })
+
       yield* failLifecycleWhen(!disabled, workflowNotFound())
+
       return { ...input.workflow, status: "disabled" as const, updated_at: updatedAt }
     })
   }
@@ -369,10 +382,12 @@ export class WorkflowLifecycle {
     return Effect.gen({ self: this }, function* () {
       const manifest = yield* this.readManifest(this.env, input.workflow.manifest_key)
       const updatedAt = this.now()
+
       const enabled = yield* Effect.tryPromise({
         try: () => this.store.enableWorkflow(input.workflow.id, input.workflow.user_id, updatedAt),
         catch: toError,
       })
+
       yield* failLifecycleWhen(!enabled, workflowNotFound())
       yield* this.scheduleDateTriggers({
         env: this.env,
@@ -385,6 +400,7 @@ export class WorkflowLifecycle {
         workflow: { ...input.workflow, status: "active", updated_at: updatedAt },
         manifest,
       })
+
       return { ...input.workflow, status: "active" as const, updated_at: updatedAt }
     })
   }
@@ -401,11 +417,13 @@ export class WorkflowLifecycle {
         env: this.env,
         workflowId: input.workflow.id,
       })
+
       const archived = yield* Effect.tryPromise({
         try: () =>
           this.store.archiveWorkflow(input.workflow.id, input.workflow.user_id, this.now()),
         catch: toError,
       })
+
       yield* failLifecycleWhen(!archived, workflowNotFound())
     })
   }
@@ -414,6 +432,7 @@ export class WorkflowLifecycle {
     return Effect.gen({ self: this }, function* () {
       const workflow = yield* this.requireWorkflow(workflowId)
       yield* this.archiveWorkflow({ workflow })
+
       return workflow
     })
   }
@@ -421,11 +440,13 @@ export class WorkflowLifecycle {
   unarchiveWorkflow(input: { workflow: WorkflowRecord }) {
     return Effect.gen({ self: this }, function* () {
       const manifest = yield* this.readManifest(this.env, input.workflow.manifest_key)
+
       const unarchived = yield* Effect.tryPromise({
         try: () =>
           this.store.unarchiveWorkflow(input.workflow.id, input.workflow.user_id, this.now()),
         catch: toError,
       })
+
       yield* failLifecycleWhen(!unarchived, workflowNotFound())
       yield* this.scheduleDateTriggers({
         env: this.env,
@@ -445,6 +466,7 @@ export class WorkflowLifecycle {
     return Effect.gen({ self: this }, function* () {
       const workflow = yield* this.requireWorkflow(workflowId)
       yield* this.unarchiveWorkflow({ workflow })
+
       return workflow
     })
   }
@@ -462,6 +484,7 @@ export class WorkflowLifecycle {
         new WorkflowLifecycleInputError({ message: "Workflow is disabled" }),
       )
       const userId = input.userId ?? input.workflow.user_id
+
       const oktaUserId = yield* Match.value(input.oktaUserId).pipe(
         Match.when(Match.undefined, () =>
           this.resolveOktaUserIdAdapter(this.env, input.workflow.user_id).pipe(
@@ -470,6 +493,7 @@ export class WorkflowLifecycle {
         ),
         Match.orElse((resolved) => Effect.succeed(resolved)),
       )
+
       return yield* Effect.tryPromise({
         try: () =>
           this.startRunAdapter({
@@ -488,6 +512,7 @@ export class WorkflowLifecycle {
   startWorkflowRunById(input: { workflowId: string; trigger: WorkflowTriggerPayload }) {
     return Effect.gen({ self: this }, function* () {
       const workflow = yield* this.requireWorkflow(input.workflowId)
+
       return yield* this.startWorkflowRun({ workflow, trigger: input.trigger })
     })
   }
@@ -495,15 +520,19 @@ export class WorkflowLifecycle {
   retryWorkflowRun(input: { workflowId: string; runId: string }) {
     return Effect.gen({ self: this }, function* () {
       const workflow = yield* this.requireWorkflow(input.workflowId)
+
       const run = yield* Effect.tryPromise({
         try: () => this.store.getRun(input.workflowId, input.runId),
         catch: toError,
       })
+
       const resolvedRun = yield* Option.match(Option.fromNullishOr(run), {
         onNone: () => Effect.fail(workflowNotFound("Workflow run not found")),
         onSome: (resolved) => Effect.succeed(resolved),
       })
+
       const trigger = yield* readRetryTrigger(resolvedRun)
+
       return yield* this.startWorkflowRun({ workflow, trigger })
     })
   }
@@ -537,6 +566,7 @@ export class WorkflowLifecycle {
         try: () => this.store.getWorkflow(workflowId),
         catch: toError,
       })
+
       return yield* Option.match(Option.fromNullishOr(workflow), {
         onNone: () => Effect.fail(workflowNotFound()),
         onSome: (resolved) => Effect.succeed(resolved),

@@ -13,6 +13,7 @@ export function artifacts({ params }: { params: IdParams }) {
       yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, "http://internal/internal/artifacts")
     }),
   )

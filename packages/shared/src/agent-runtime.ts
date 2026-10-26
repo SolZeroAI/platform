@@ -17,6 +17,7 @@ export function resolveAgentRuntime(input: {
   if (isAgentRuntime(input.agentRuntime)) {
     return input.agentRuntime
   }
+
   return input.sessionKind === "sandbox" ? "opencode" : "isolate"
 }
 

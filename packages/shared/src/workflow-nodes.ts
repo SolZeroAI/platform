@@ -23,6 +23,7 @@ export {
   WORKFLOW_R2_BUCKET_OPTIONS,
   WORKFLOW_STORAGE_ENCODING_OPTIONS,
 } from "./workflow-nodes/definitions"
+
 export type {
   WorkflowActionNodeType,
   WorkflowKvNamespaceBinding,
@@ -70,6 +71,7 @@ export function getWorkflowNodeDefaultOptions(
   }
 
   const defaults = getWorkflowNodeDefinition(type).defaults
+
   if (defaults.strategy === "static") {
     return cloneWorkflowNodeDefaultOptions(defaults.options)
   }
@@ -91,12 +93,15 @@ export function getWorkflowJsonObjectFields(
   const seen = new Set<string>()
   fields.forEach((field) => {
     const key = typeof field === "string" ? field.trim() : ""
+
     if (!key || seen.has(key)) {
       return
     }
+
     uniqueFields.push(key)
     seen.add(key)
   })
+
   return uniqueFields
 }
 
@@ -118,9 +123,11 @@ export function isWorkflowActionNodeType(value: WorkflowNodeType): value is Work
 
 export function getWorkflowNodeDefinition(type: WorkflowNodeType): WorkflowNodeDefinition {
   const definition = WORKFLOW_NODE_CATALOG.find((item) => item.type === type)
+
   if (!definition) {
     throw new Error(`Unknown workflow node type '${type}'`)
   }
+
   return definition
 }
 
@@ -132,12 +139,14 @@ export function getWorkflowNodeDefinitionForNode(
   node: Pick<WorkflowNodeOptionTarget, "type" | "options"> & { type: WorkflowNodeType },
 ): WorkflowNodeDefinition {
   const definition = getWorkflowNodeDefinition(node.type)
+
   if (node.type !== "json-object") {
     return definition
   }
 
   const fields = getWorkflowJsonObjectFields(node)
   const hasConfiguredFields = Array.isArray(node.options.fields)
+
   return {
     ...definition,
     inputs: hasConfiguredFields
@@ -150,10 +159,12 @@ export function getNextWorkflowJsonObjectFieldName(fields: string[], now = Date.
   if (!fields.includes("value")) {
     return "value"
   }
+
   const candidate = Array.from(
     { length: 99 },
     (_, offset) => `value${fields.length + 1 + offset}`,
   ).find((name) => !fields.includes(name))
+
   return candidate ?? `value${now.toString(36)}`
 }
 
@@ -161,15 +172,13 @@ export function validateWorkflowJsonObjectFieldName(value: string): boolean {
   return WORKFLOW_JSON_OBJECT_FIELD_NAME_PATTERN.test(value)
 }
 
-export function validateWorkflowNodeOptions(manifest: WorkflowNodeValidationGraph): {
-  errors: string[]
-  warnings: string[]
-} {
+export function validateWorkflowNodeOptions(manifest: WorkflowNodeValidationGraph) {
   const errors: string[] = []
   const warnings: string[] = []
 
   manifest.nodes.forEach((node) => {
     const validation = getWorkflowNodeValidationSupport(node.type)
+
     if (!validation) {
       return
     }
@@ -177,13 +186,16 @@ export function validateWorkflowNodeOptions(manifest: WorkflowNodeValidationGrap
     if (validation.optionRules.includes("storage-binding")) {
       errors.push(...validateStorageNodeOptions(node))
     }
+
     if (validation.optionRules.includes("isolate-subagents")) {
       errors.push(...validateIsolateSubagentOptions(node))
     }
+
     if (validation.optionRules.includes("json-object-fields")) {
       errors.push(...validateJsonObjectNodeOptions(node))
       warnings.push(...collectJsonObjectNodeWarnings(node))
     }
+
     if (validation.optionRules.includes("storage-key-portability")) {
       warnings.push(...collectStorageNodeWarnings(node))
     }
@@ -199,6 +211,7 @@ export function validateWorkflowNodeTemplateReferences(
 
   manifest.nodes.forEach((node) => {
     const validation = getWorkflowNodeValidationSupport(node.type)
+
     if (validation?.templateReferences !== "connected-inputs") {
       return
     }
@@ -213,18 +226,22 @@ export function validateWorkflowNodeTemplateReferences(
     const connectedInputHandles = getConnectedInputHandles(manifest, node)
     references.forEach((reference) => {
       const [root, inputHandle] = reference.templatePath.split(".")
+
       if (root === "inputs") {
         if (!inputHandle && connectedInputHandles.size === 0) {
           errors.push(
             `Workflow node '${node.id}' option '${reference.optionPath}' references inputs, but the node has no connected inputs`,
           )
+
           return
         }
+
         if (inputHandle && !connectedInputHandles.has(inputHandle)) {
           errors.push(
             `Workflow node '${node.id}' option '${reference.optionPath}' references unavailable input '${inputHandle}'. Connect an upstream output to '${inputHandle}' before using '{{${reference.templatePath}}}'`,
           )
         }
+
         return
       }
 
@@ -232,6 +249,7 @@ export function validateWorkflowNodeTemplateReferences(
         errors.push(
           `Workflow node '${node.id}' option '${reference.optionPath}' references '{{${reference.templatePath}}}', but workflow templates can only read connected inputs. Connect that output to this node and use '{{inputs.<input>}}'`,
         )
+
         return
       }
 
@@ -250,9 +268,11 @@ function readNowMs(now: Date | number | undefined): number {
   if (now instanceof Date) {
     return now.getTime()
   }
+
   if (typeof now === "number") {
     return now
   }
+
   return Date.now()
 }
 
@@ -269,11 +289,13 @@ function getBindingValue(
   key: "bucket" | "encoding" | "namespace" | "key",
 ): string | null {
   const value = options[key]
+
   return typeof value === "string" && value.trim() ? value.trim() : null
 }
 
 function keyLooksUserScoped(value: string): boolean {
   const firstSegment = value.split("/")[0] ?? ""
+
   return (
     /^user[_-][A-Za-z0-9_-]+$/.test(firstSegment) ||
     /^usr_[A-Za-z0-9_-]+$/.test(firstSegment) ||
@@ -289,6 +311,7 @@ function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
 
   if (node.type === "r2-put-object" || node.type === "r2-get-object") {
     const bucket = getBindingValue(node.options, "bucket")
+
     if (bucket && !r2Bindings.has(bucket)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 bucket '${bucket}'`)
     }
@@ -296,9 +319,11 @@ function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
 
   if (node.type === "r2-put-object") {
     const encoding = getBindingValue(node.options, "encoding")
+
     const storageEncodings = new Set<string>(
       WORKFLOW_STORAGE_ENCODING_OPTIONS.map((option) => option.value),
     )
+
     if (encoding && !storageEncodings.has(encoding)) {
       errors.push(`Workflow node '${node.id}' uses unsupported R2 content encoding '${encoding}'`)
     }
@@ -306,6 +331,7 @@ function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
 
   if (node.type === "kv-put" || node.type === "kv-get") {
     const namespace = getBindingValue(node.options, "namespace")
+
     if (namespace && !kvBindings.has(namespace)) {
       errors.push(`Workflow node '${node.id}' uses unsupported KV namespace '${namespace}'`)
     }
@@ -316,9 +342,11 @@ function validateStorageNodeOptions(node: WorkflowNodeOptionTarget): string[] {
 
 function validateIsolateSubagentOptions(node: WorkflowNodeOptionTarget): string[] {
   const value = node.options.subagents
+
   if (node.type !== "isolate-session" || value === undefined || isSubagentMode(value)) {
     return []
   }
+
   return [
     `Workflow node '${node.id}' uses unsupported sub-agent mode '${String(value)}'. Expected 'enabled' or 'disabled'.`,
   ]
@@ -335,6 +363,7 @@ function collectStorageNodeWarnings(node: WorkflowNodeOptionTarget): string[] {
   }
 
   const key = getBindingValue(node.options, "key")
+
   if (!key || !keyLooksUserScoped(key)) {
     return []
   }
@@ -355,20 +384,27 @@ function validateJsonObjectNodeOptions(node: WorkflowNodeOptionTarget): string[]
   fields.forEach((field) => {
     if (!field) {
       errors.push(`Workflow node '${node.id}' has an empty JSON object field`)
+
       return
     }
+
     if (!validateWorkflowJsonObjectFieldName(field)) {
       errors.push(
         `Workflow node '${node.id}' has invalid JSON object field '${field}'. Field names must start with a letter or underscore and contain only letters, numbers, underscores, or hyphens.`,
       )
+
       return
     }
+
     if (seen.has(field)) {
       errors.push(`Workflow node '${node.id}' has duplicate JSON object field '${field}'`)
+
       return
     }
+
     seen.add(field)
   })
+
   return errors
 }
 
@@ -378,12 +414,14 @@ function collectJsonObjectNodeWarnings(node: WorkflowNodeOptionTarget): string[]
   }
 
   const fields = node.options.fields.map((field) => (typeof field === "string" ? field.trim() : ""))
+
   return fields.length === 0
     ? [`Workflow node '${node.id}' has no JSON object fields configured`]
     : []
 }
 
 const workflowTemplatePathPattern = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g
+
 const workflowMetadataTemplateRoots = new Set([
   "workflowId",
   "runId",
@@ -401,6 +439,7 @@ function collectStringTemplateReferences(
     Array.from(value.matchAll(workflowTemplatePathPattern)).forEach((match) => {
       references.push({ optionPath: path, templatePath: match[1] ?? "" })
     })
+
     return
   }
 
@@ -408,6 +447,7 @@ function collectStringTemplateReferences(
     value.forEach((item, index) =>
       collectStringTemplateReferences(item, `${path}[${index}]`, references),
     )
+
     return
   }
 
@@ -427,6 +467,7 @@ function getConnectedInputHandles(
       .filter((edge) => edge.target === node.id)
       .map((edge) => edge.targetHandle || "input"),
   )
+
   if (
     node.options.inputValues &&
     typeof node.options.inputValues === "object" &&
@@ -438,5 +479,6 @@ function getConnectedInputHandles(
       }
     })
   }
+
   return handles
 }

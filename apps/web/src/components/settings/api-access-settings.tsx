@@ -93,6 +93,7 @@ function formatTimestamp(value: number | null): string {
   if (!value) {
     return "Never"
   }
+
   return new Date(value).toLocaleString()
 }
 
@@ -100,19 +101,26 @@ function formatAccountTimestamp(value: string | undefined): string {
   if (!value) {
     return "Unknown"
   }
+
   return new Date(value).toLocaleString()
 }
 
 function normalizeAccounts(value: unknown): LinkedAccountItem[] {
   if (Array.isArray(value)) {
+    // SAFETY: An array from the linked-accounts response is the LinkedAccountItem list.
     return value as LinkedAccountItem[]
   }
+
   if (value && typeof value === "object" && "data" in value) {
+    // SAFETY: The linked-accounts payload was checked to contain data before that field is read.
     const data = (value as { data?: unknown }).data
+
     if (Array.isArray(data)) {
+      // SAFETY: data was checked to be an array of linked-account records.
       return data as LinkedAccountItem[]
     }
   }
+
   return []
 }
 
@@ -132,8 +140,10 @@ export function ApiAccessSettings({
   const [githubProfile, setGithubProfile] = useState<GitHubProfileData | null>(null)
   const [apiKeyLabel, setApiKeyLabel] = useState("")
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
+
   const [contextForgeTokenSettings, setContextForgeTokenSettings] =
     useState<ContextForgeTokenSettings | null>(null)
+
   const [contextForgeToken, setContextForgeToken] = useState("")
   const [clearContextForgeToken, setClearContextForgeToken] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -146,15 +156,19 @@ export function ApiAccessSettings({
   const autoSlackLinkAttemptRef = useRef<string | null>(null)
 
   const activeApiKeys = useMemo(() => apiKeys.filter((item) => !item.revokedAt), [apiKeys])
+
   const githubAccount = useMemo(
     () => accounts.find((account) => account.providerId === "github") ?? null,
     [accounts],
   )
+
   const slackAccounts = useMemo(
     () => accounts.filter((account) => account.providerId === "slack"),
     [accounts],
   )
+
   const requestedSlackUserId = normalizeSlackUserId(slackUserId)
+
   const requestedSlackAccount = useMemo(
     () =>
       requestedSlackUserId
@@ -162,10 +176,12 @@ export function ApiAccessSettings({
         : null,
     [requestedSlackUserId, slackAccounts],
   )
+
   const oktaAccount = useMemo(
     () => accounts.find((account) => account.providerId === "okta") ?? null,
     [accounts],
   )
+
   const configuredLinkProviders = useMemo(
     () =>
       authProviderConfig.providers.filter(
@@ -173,6 +189,7 @@ export function ApiAccessSettings({
       ),
     [authProviderConfig.providers],
   )
+
   const genericLinkProviders = useMemo(
     () =>
       configuredLinkProviders.filter(
@@ -180,16 +197,19 @@ export function ApiAccessSettings({
       ),
     [configuredLinkProviders],
   )
+
   const providerCanLink = useCallback(
     (providerId: string) => configuredLinkProviders.some((provider) => provider.id === providerId),
     [configuredLinkProviders],
   )
+
   const sessionTransferAvailable = BETTER_AUTH_SESSION_TRANSFER_ENABLED && isAdmin
   const fpUrl = useMemo(() => "/api/reference", [])
 
   const load = useCallback(async () => {
     setLoading(true)
     setErrorMessage(null)
+
     try {
       const [keysResponse, accountsResult, contextForgeTokenResponse] = await Promise.all([
         fetch("/api/auth/api-keys"),
@@ -200,12 +220,16 @@ export function ApiAccessSettings({
       if (!keysResponse.ok) {
         throw new Error("Failed to load API keys")
       }
+
       if (!contextForgeTokenResponse.ok) {
         throw new Error("Failed to load ContextForge token settings")
       }
 
+      // SAFETY: GET /api/auth/api-keys returns the keys list after the keys response succeeds.
       const keysData = (await keysResponse.json()) as { keys?: ApiKeyItem[] }
+
       const contextForgeTokenData =
+        // SAFETY: The ContextForge token response matches ContextForgeTokenSettings after response.ok.
         (await contextForgeTokenResponse.json()) as ContextForgeTokenSettings
 
       setApiKeys(keysData.keys ?? [])
@@ -227,6 +251,7 @@ export function ApiAccessSettings({
   useEffect(() => {
     if (!githubAccount) {
       setGithubProfile(null)
+
       return
     }
 
@@ -237,16 +262,20 @@ export function ApiAccessSettings({
         const response = await fetch(
           `/api/auth/account-info?accountId=${encodeURIComponent(githubAccount.id)}`,
         )
+
         if (!response.ok) {
           throw new Error("Failed to load GitHub profile")
         }
 
+        // SAFETY: The GitHub profile response is GitHubAccountInfo after response.ok.
         const payload = (await response.json()) as GitHubAccountInfo
+
         if (!cancelled) {
           setGithubProfile(payload.data ?? null)
         }
       } catch (errorValue) {
         console.error("Failed to load GitHub profile:", errorValue)
+
         if (!cancelled) {
           setGithubProfile(null)
         }
@@ -264,11 +293,13 @@ export function ApiAccessSettings({
     const callbackURL = expectedSlackUserId
       ? buildSlackLinkSettingsPath(expectedSlackUserId, "complete")
       : "/settings"
+
     const errorCallbackURL = expectedSlackUserId
       ? buildSlackLinkSettingsPath(expectedSlackUserId, "error")
       : "/settings"
 
     setLinkingSlack(true)
+
     try {
       await authClient.linkSocial({
         provider: "slack",
@@ -288,12 +319,14 @@ export function ApiAccessSettings({
     if (requestedSlackAccount) {
       setErrorMessage(null)
       setStatusMessage(`Slack account ${requestedSlackUserId} is linked.`)
+
       return
     }
 
     if (slackLink === "error") {
       setStatusMessage(null)
       setErrorMessage(formatSlackLinkError(slackLinkError))
+
       return
     }
 
@@ -302,6 +335,7 @@ export function ApiAccessSettings({
       setErrorMessage(
         `Slack authorization completed, but Slack user ${requestedSlackUserId} was not linked.`,
       )
+
       return
     }
 
@@ -335,16 +369,20 @@ export function ApiAccessSettings({
     if (oktaReconnect === "1") {
       setErrorMessage(null)
       setStatusMessage("Authenticate with Okta to refresh MCP Context Forge access.")
+
       return
     }
+
     if (oktaReconnect === "complete") {
       setErrorMessage(null)
       setStatusMessage(
         "Okta authentication complete. MCP Context Forge tools can use your refreshed account.",
       )
       void load()
+
       return
     }
+
     if (oktaReconnect === "error") {
       setStatusMessage(null)
       setErrorMessage(formatOktaReconnectError(oktaReconnectError))
@@ -370,6 +408,7 @@ export function ApiAccessSettings({
   ) => {
     setStatusMessage(null)
     setErrorMessage(null)
+
     try {
       if (provider.kind === "social") {
         await authClient.linkSocial({ provider: provider.id, callbackURL: "/settings" })
@@ -397,6 +436,7 @@ export function ApiAccessSettings({
     setErrorMessage(null)
 
     setReconnectingOkta(true)
+
     try {
       await reconnectOkta(
         buildOktaReconnectSettingsPath("complete", { hash: false }),
@@ -417,14 +457,18 @@ export function ApiAccessSettings({
     try {
       const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
       const params = new URLSearchParams({ redirect })
+
       const response = await fetch(`/api/auth/session-transfer?${params.toString()}`, {
         headers: { accept: "application/json" },
       })
+
+      // SAFETY: /api/auth/session-transfer returns SessionTransferPayload, with an error when response.ok is false.
       const payload = (await response.json().catch(() => ({}))) as SessionTransferPayload
 
       if (!response.ok) {
         throw new Error(payload.error || "Failed to generate session transfer URL")
       }
+
       if (!payload.redeemUrl) {
         throw new Error("Session transfer response did not include a URL")
       }
@@ -449,6 +493,7 @@ export function ApiAccessSettings({
     }
 
     const copied = await copyToClipboard(sessionTransferUrl)
+
     if (copied) {
       setStatusMessage("Session transfer URL copied to clipboard.")
     }
@@ -465,12 +510,16 @@ export function ApiAccessSettings({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: apiKeyLabel.trim() || undefined }),
     })
+
+    // SAFETY: POST /api/auth/api-keys returns the created key or an error string.
     const payload = (await response.json()) as {
       error?: string
       key?: string
     }
+
     if (!response.ok) {
       setErrorMessage(payload.error ?? "Failed to create API key")
+
       return
     }
 
@@ -483,12 +532,17 @@ export function ApiAccessSettings({
   const handleRevokeApiKey = async (keyId: string) => {
     setStatusMessage(null)
     setErrorMessage(null)
+
     const response = await fetch(`/api/auth/api-keys/${encodeURIComponent(keyId)}`, {
       method: "DELETE",
     })
+
+    // SAFETY: DELETE /api/auth/api-keys/:id returns an error string when the delete fails.
     const payload = (await response.json()) as { error?: string }
+
     if (!response.ok) {
       setErrorMessage(payload.error ?? "Failed to revoke API key")
+
       return
     }
 
@@ -509,9 +563,13 @@ export function ApiAccessSettings({
         clearToken: clearContextForgeToken,
       }),
     })
+
+    // SAFETY: The ContextForge token update returns ContextForgeTokenSettings, with an error when response.ok is false.
     const payload = (await response.json().catch(() => ({}))) as ContextForgeTokenSettings
+
     if (!response.ok) {
       setErrorMessage(payload.error ?? "Failed to save ContextForge API token")
+
       return
     }
 
@@ -575,6 +633,7 @@ export function ApiAccessSettings({
             </SettingsDocsSectionHeading>
             {genericLinkProviders.map((provider) => {
               const account = accounts.find((item) => item.providerId === provider.id)
+
               return (
                 <div
                   key={provider.id}

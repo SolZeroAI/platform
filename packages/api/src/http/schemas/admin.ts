@@ -15,6 +15,7 @@ export const AdminListQuery = {
   repoOwner: Schema.optionalKey(Schema.String),
   repoName: Schema.optionalKey(Schema.String),
 }
+
 export type AdminListQuery = {
   limit?: string
   offset?: string
@@ -39,6 +40,7 @@ export const AdminWorkflowListQuery = {
   status: Schema.optionalKey(Schema.String),
   userId: Schema.optionalKey(Schema.String),
 }
+
 export type AdminWorkflowListQuery = {
   limit?: string
   offset?: string
@@ -52,23 +54,27 @@ export type AdminWorkflowListQuery = {
 export const AdminIdParams = {
   id: Schema.String,
 }
+
 export type AdminIdParams = { id: string }
 
 export const AdminWorkflowRunParams = {
   id: Schema.String,
   runId: Schema.String,
 }
+
 export type AdminWorkflowRunParams = { id: string; runId: string }
 
 export const AdminActionPayload = Schema.Struct({
   reason: Schema.optionalKey(Schema.String),
 })
+
 export type AdminActionPayload = typeof AdminActionPayload.Type
 
 export const AdminRunWorkflowPayload = Schema.Struct({
   trigger: Schema.optionalKey(Schema.Unknown),
   reason: Schema.optionalKey(Schema.String),
 })
+
 export type AdminRunWorkflowPayload = typeof AdminRunWorkflowPayload.Type
 
 export class AdminStatusCount extends Schema.Class<AdminStatusCount>("AdminStatusCount")({
@@ -276,6 +282,7 @@ export const AdminMcpcfConfigPayload = Schema.Struct({
   serverBlacklist: Schema.optionalKey(Schema.Array(Schema.String)),
   adminApiToken: Schema.optionalKey(Schema.String),
 })
+
 export type AdminMcpcfConfigPayload = typeof AdminMcpcfConfigPayload.Type
 
 export class AdminMcpcfRefreshDiffItem extends Schema.Class<AdminMcpcfRefreshDiffItem>(
@@ -339,6 +346,7 @@ export const AdminAiSearchDataSource = Schema.Union([
     includeImages: Schema.Boolean,
   }),
 ])
+
 export type AdminAiSearchDataSource = typeof AdminAiSearchDataSource.Type
 
 export class AdminAiSearchSource extends Schema.Class<AdminAiSearchSource>("AdminAiSearchSource")({
@@ -400,6 +408,7 @@ export const AdminAiSearchSourcePayload = Schema.Struct({
   maxResults: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   dataSource: AdminAiSearchDataSource,
 })
+
 export type AdminAiSearchSourcePayload = typeof AdminAiSearchSourcePayload.Type
 
 export class AdminCronRunRecord extends Schema.Class<AdminCronRunRecord>("AdminCronRunRecord")({
@@ -524,6 +533,7 @@ export const AdminCloudflareAiGatewayProviderKeysPayload = Schema.Struct({
     }),
   ),
 })
+
 export type AdminCloudflareAiGatewayProviderKeysPayload =
   typeof AdminCloudflareAiGatewayProviderKeysPayload.Type
 
@@ -542,6 +552,7 @@ export const AdminLitellmConfigPayload = Schema.Struct({
   adapterOverrides: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   apiKey: Schema.optionalKey(Schema.String),
 })
+
 export type AdminLitellmConfigPayload = typeof AdminLitellmConfigPayload.Type
 
 export class AdminLitellmSyncResponse extends Schema.Class<AdminLitellmSyncResponse>(

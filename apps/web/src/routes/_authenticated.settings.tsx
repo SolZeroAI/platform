@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import * as Match from "effect/Match"
 import { Tabs } from "@cloudflare/kumo/components/tabs"
 import { useEffect, useState, type ReactNode } from "react"
 import { PageHeader } from "@/components/page-header"
@@ -62,7 +63,9 @@ function normalizeSearchString(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined
   }
+
   const trimmed = value.trim()
+
   return trimmed || undefined
 }
 
@@ -72,11 +75,13 @@ export const Route = createFileRoute("/_authenticated/settings")({
     const mcpServerId = normalizeSearchString(search.mcpServerId)
     const mcpServerLabel = normalizeSearchString(search.mcpServerLabel)
     const hasMcpDeepLink = Boolean(mcpQuery || mcpServerId || mcpServerLabel)
+
     const agentLocation = resolveAgentSettingsLocation({
       category: search.category,
       tab: search.tab,
       hasMcpDeepLink,
     })
+
     return {
       category: agentLocation.forceAgentsCategory
         ? "agents"
@@ -113,6 +118,7 @@ function SettingsPage() {
     if (!search.legacyMcpRedirect) {
       return
     }
+
     void navigate({
       replace: true,
       search: (current) => ({
@@ -190,16 +196,16 @@ function SettingsContent({
   return (
     <div className="h-full flex flex-col">
       <PageHeader
-        actions={
-          activeCategory === "agents" ? (
+        actions={Match.value(activeCategory).pipe(
+          Match.when("agents", () => (
             <>
               {activeAgentTab === "runtimes" ? headerActions : null}
               <AgentSettingsTabs tab={activeAgentTab} onChange={onAgentTabChange} />
             </>
-          ) : activeCategory === "providers" ? (
-            headerActions
-          ) : null
-        }
+          )),
+          Match.when("providers", () => headerActions),
+          Match.orElse(() => null),
+        )}
       >
         <SettingsBreadcrumbs category={activeCategory} />
       </PageHeader>
@@ -221,16 +227,18 @@ function SettingsContent({
           )}
           {activeCategory === "agents" && (
             <>
-              {activeAgentTab === "runtimes" ? (
-                <AgentDefaultsSettings onHeaderActionsChange={setHeaderActions} />
-              ) : activeAgentTab === "skills" ? (
-                <AgentSkillsSettings />
-              ) : (
-                <McpSettingsPane
-                  initialQuery={mcpQuery}
-                  selectedServerId={mcpServerId}
-                  selectedServerLabel={mcpServerLabel}
-                />
+              {Match.value(activeAgentTab).pipe(
+                Match.when("runtimes", () => (
+                  <AgentDefaultsSettings onHeaderActionsChange={setHeaderActions} />
+                )),
+                Match.when("skills", () => <AgentSkillsSettings />),
+                Match.orElse(() => (
+                  <McpSettingsPane
+                    initialQuery={mcpQuery}
+                    selectedServerId={mcpServerId}
+                    selectedServerLabel={mcpServerLabel}
+                  />
+                )),
               )}
             </>
           )}
@@ -282,6 +290,7 @@ interface McpSettingsPaneProps {
 function McpSettingsPane(props: McpSettingsPaneProps) {
   const [McpSettingsComponent, setMcpSettingsComponent] =
     useState<ComponentType<McpSettingsPaneProps> | null>(null)
+
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
@@ -297,6 +306,7 @@ function McpSettingsPane(props: McpSettingsPaneProps) {
           setLoadError(true)
         }
       })
+
     return () => {
       mounted = false
     }

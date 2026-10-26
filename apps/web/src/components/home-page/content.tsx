@@ -158,6 +158,7 @@ export function HomeContent({
     if (!composerError || lastComposerErrorToastRef.current === composerError) {
       return
     }
+
     lastComposerErrorToastRef.current = composerError
     addErrorToast("Agent setup failed", composerError)
   }, [addErrorToast, composerError])
@@ -166,6 +167,7 @@ export function HomeContent({
     if (!providerError || lastProviderErrorToastRef.current === providerError) {
       return
     }
+
     lastProviderErrorToastRef.current = providerError
     addErrorToast(providerError)
   }, [addErrorToast, providerError])
@@ -174,6 +176,7 @@ export function HomeContent({
     if (!repoLoadError || lastRepoErrorToastRef.current === repoLoadError) {
       return
     }
+
     lastRepoErrorToastRef.current = repoLoadError
     addErrorToast("Could not load repositories", repoLoadError)
   }, [addErrorToast, repoLoadError])
@@ -182,10 +185,13 @@ export function HomeContent({
     if (!providerCatalogLoaded || providerError || modelOptions.length > 0) {
       return
     }
+
     const message = "An admin needs to set up an AI Provider before agents can run."
+
     if (lastModelNoticeToastRef.current === message) {
       return
     }
+
     lastModelNoticeToastRef.current = message
     appToastManager.add({
       title: "No models configured",
@@ -203,30 +209,40 @@ export function HomeContent({
   }
 
   const selectedRepoTool = getGitHubRepoTool(selectedTools)
+
   const selectedRepoFullName = selectedRepoTool
     ? `${selectedRepoTool.repoOwner}/${selectedRepoTool.repoName}`
     : ""
+
   const selectedRepoAccessibleLabel = selectedRepoFullName
     ? `Repository: ${selectedRepoFullName}`
     : "Repository: No repository"
+
   const selectedToolsCount =
     selectedTools.filter((tool) => tool.kind !== "github_repo").length +
     Object.keys(selectedCustomMcpServers).length
+
   const selectedToolsButtonLabel =
     selectedToolsCount === 0 ? "Tools" : `tool${selectedToolsCount === 1 ? "" : "s"}`
+
   const selectedToolsAccessibleLabel =
     selectedToolsCount === 0 ? "Tools" : `Tools: ${selectedToolsCount} ${selectedToolsButtonLabel}`
+
   const selectedSecretsAccessibleLabel =
     selectedSecretKeys.length === 0
       ? "Secrets: none attached"
       : `Secrets: ${selectedSecretKeys.length} attached`
+
   const selectedAgentRuntimeLabel = formatRuntimeLabel(selectedAgentRuntime)
   const selectedModelLabel = selectedModelOption?.name || "select model"
   const selectedReasoningLabel = getSelectedReasoningLabel(selectedModelOption, reasoningEffort)
+
   const modelControlLoading =
     providerCatalogLoading || Boolean(selectedModel && !selectedModelOption)
+
   const toolbarTooltipHidden =
     sessionDialogOpen || repoDialogOpen || secretsDialogOpen || toolsDialogOpen || modelDialogOpen
+
   const { isOpen: sidebarOpen } = useSidebarContext()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLElement>(null)
@@ -236,6 +252,7 @@ export function HomeContent({
 
   const hash = useLocation({ select: (location) => location.hash })
   const navigate = useNavigate({ from: "/" })
+
   const { scrollToPreviousSessions, scrollToNewAgent } = useHomeScrollAnimation({
     enabled: isAuthenticated,
     containerRef: scrollContainerRef,
@@ -253,6 +270,7 @@ export function HomeContent({
 
     if (isHomePreviousSessionsHash(hash)) {
       scrollToPreviousSessions()
+
       return
     }
 
@@ -338,13 +356,16 @@ export function HomeContent({
                   onRepoQueryChange={updateRepoQuery}
                   onSave={async (tools) => {
                     const repoTool = getGitHubRepoTool(tools)
+
                     const repoFullName = repoTool
                       ? `${repoTool.repoOwner}/${repoTool.repoName}`
                       : null
+
                     const secretKeys = await fetchSyncedSecretKeysForRepo(
                       selectedSecretKeys,
                       repoFullName,
                     )
+
                     setSelectedToolState({
                       tools,
                       secretKeys,
@@ -419,6 +440,7 @@ export function HomeContent({
                         type="button"
                         onClick={(event) => {
                           event.currentTarget.blur()
+
                           if (!creating) {
                             setSessionDialogOpen(true)
                           }
@@ -439,6 +461,7 @@ export function HomeContent({
                         type="button"
                         onClick={(event) => {
                           event.currentTarget.blur()
+
                           if (!creating) {
                             setSecretsDialogOpen(true)
                           }
@@ -466,6 +489,7 @@ export function HomeContent({
                         type="button"
                         onClick={(event) => {
                           event.currentTarget.blur()
+
                           if (!creating) {
                             setRepoDialogOpen(true)
                           }
@@ -489,6 +513,7 @@ export function HomeContent({
                         type="button"
                         onClick={(event) => {
                           event.currentTarget.blur()
+
                           if (!creating) {
                             setToolsDialogOpen(true)
                           }
@@ -544,6 +569,7 @@ export function HomeContent({
                         disabled={
                           !prompt.trim() || creating || !selectedModel || modelOptions.length === 0
                         }
+                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                         shape="circle"
                         variant="secondary"
                         aria-label="Send"

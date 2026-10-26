@@ -19,8 +19,10 @@ export function makeRule(
   } = {},
 ): Rule {
   const requiresEffectFile = options.requiresEffectFile ?? true
+
   const requiresS0RequestObservabilitySurface =
     options.requiresS0RequestObservabilitySurface ?? false
+
   return defineRule({
     meta: {
       type: "suggestion",
@@ -32,14 +34,17 @@ export function makeRule(
     createOnce(context: Context) {
       let effectFile = false
       let matchingFile = false
+
       const report: RuleReporter = (node, message = messages[name]) => {
         context.report({ node, message })
       }
+
       const runtime: RuleRuntime = {
         report,
         shouldRun: () => matchingFile && (!requiresEffectFile || effectFile),
       }
-      return {
+
+      const visitor = {
         before() {
           effectFile = false
           const allowedBackendBoundary = isS0AllowedBackendEffectBoundary(context.filename)
@@ -52,7 +57,11 @@ export function makeRule(
           effectFile = hasEffectSignal(node)
         },
         ...createVisitors(runtime, context),
-      } as unknown as Visitor
+      }
+
+      // SAFETY: oxlint invokes before, Program, and the hooks this rule registers.
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- oxlint's Visitor type is a dependency type this partial visitor does not satisfy.
+      return visitor as unknown as Visitor
     },
   })
 }

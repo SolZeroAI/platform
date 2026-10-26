@@ -118,6 +118,7 @@ export function runChatWithStepLimitRecovery(input: {
     yield* Effect.when(recovery, shouldRecover)
 
     const trimmedOutput = output.trim()
+
     const finalOutput = Option.getOrElse(
       Option.liftPredicate(trimmedOutput, (value) => value.length > 0),
       () => input.getFallbackAssistantText(),

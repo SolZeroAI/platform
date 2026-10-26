@@ -17,9 +17,11 @@ export function deleteApiKey({ params }: { params: KeyIdParams }) {
         "Missing acting user context",
         401,
       )
+
       const store = new UserApiKeyStore(db)
       const deleted = yield* store.revoke(userId, params.keyId)
       yield* failUnless(deleted, "API key not found", 404)
+
       return json({ status: "deleted", keyId: params.keyId })
     }),
   )

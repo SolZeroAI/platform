@@ -16,6 +16,7 @@ test(
     await expect(screen.getByRole("heading", "AI Providers")).toBeVisible()
     await app.open("/admin/ai-search")
     await expect(screen.getByRole("heading", "AI Search")).toBeVisible()
+
     for (const path of [
       "/admin/summary",
       "/admin/sessions",

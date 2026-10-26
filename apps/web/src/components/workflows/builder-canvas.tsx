@@ -139,12 +139,15 @@ export function WorkflowCanvasNodeView({ data, selected }: NodeProps<WorkflowCan
   const [now, setNow] = useState(() => Date.now())
   const triggerWaitLabel = getTriggerWaitLabel(data.node, now)
   const triggerStatus = data.workflowDisabled && triggerWaitLabel ? "Disabled" : triggerWaitLabel
+
   const triggerStatusClassName = data.workflowDisabled
     ? "workflow-status-red"
     : "workflow-status-emerald"
+
   const triggerStatusDotClassName = data.workflowDisabled
     ? "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]"
     : "animate-pulse bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+
   const nodeRingClassName = data.hasValidationErrors
     ? "ring-red-400 shadow-[0_0_0_1px_rgba(248,113,113,0.6)]"
     : selected
@@ -159,6 +162,7 @@ export function WorkflowCanvasNodeView({ data, selected }: NodeProps<WorkflowCan
     const intervalId = window.setInterval(() => {
       setNow(Date.now())
     }, 30_000)
+
     return () => window.clearInterval(intervalId)
   }, [data.node.type])
 
@@ -180,6 +184,7 @@ export function WorkflowCanvasNodeView({ data, selected }: NodeProps<WorkflowCan
             <div className="text-[10px] font-medium text-kumo-subtle">Inputs</div>
             {definition.inputs.map((port) => {
               const manualInput = hasManualInputValue(data.node, port.id)
+
               return (
                 <div key={port.id} className="relative -ml-3 flex min-h-6 items-center gap-2 pl-3">
                   <Handle
@@ -237,30 +242,40 @@ export function getTriggerWaitLabel(node: WorkflowManifestNode, now: number): st
   if (node.type === "webhook-trigger") {
     return "Listening for requests"
   }
+
   if (node.type === "manual-trigger") {
     return "Ready to run manually"
   }
+
   if (node.type === "datetime-trigger") {
     const scheduledAt = typeof node.options.scheduledAt === "string" ? node.options.scheduledAt : ""
     const scheduledAtMs = Date.parse(scheduledAt)
+
     if (!Number.isFinite(scheduledAtMs)) {
       return "Waiting for schedule"
     }
+
     const durationMs = scheduledAtMs - now
+
     if (durationMs <= 0) {
       return "Executing now"
     }
+
     return `Executing in ${formatHumanDuration(durationMs)}`
   }
+
   if (node.type === "cron-trigger") {
     const cron = typeof node.options.cron === "string" ? node.options.cron.trim() : ""
+
     return cron ? `Scheduled by ${cron}` : "Waiting for cron schedule"
   }
+
   return null
 }
 
 export function formatHumanDuration(durationMs: number): string {
   const totalMinutes = Math.round(durationMs / 60_000)
+
   if (totalMinutes < 1) {
     return "less than a minute"
   }
@@ -268,6 +283,7 @@ export function formatHumanDuration(durationMs: number): string {
   const days = Math.floor(totalMinutes / 1_440)
   const hours = Math.floor((totalMinutes % 1_440) / 60)
   const minutes = totalMinutes % 60
+
   const parts = [
     formatDurationPart(days, "day"),
     formatDurationPart(hours, "hour"),
@@ -281,6 +297,7 @@ export function formatDurationPart(value: number, label: string): string | null 
   if (value === 0) {
     return null
   }
+
   return `${value} ${label}${value === 1 ? "" : "s"}`
 }
 
@@ -298,6 +315,7 @@ export function getWorkflowConnectionDetails(
 
   const sourceNode = nodes.find((node) => node.id === edge.source)?.data.node
   const targetNode = nodes.find((node) => node.id === edge.target)?.data.node
+
   if (!sourceNode || !targetNode) {
     return null
   }
@@ -325,22 +343,27 @@ export function getConnectedInputTemplates(
 ): WorkflowTemplateReferenceOption[] {
   const nodeById = new Map(nodes.map((canvasNode) => [canvasNode.id, canvasNode.data.node]))
 
-  return edges
-    .filter((edge) => edge.target === node.id)
-    .map((edge) => {
-      const sourceNode = nodeById.get(edge.source)
-      if (!sourceNode) {
-        return null
-      }
+  const options: WorkflowTemplateReferenceOption[] = []
 
-      const targetHandle = getNormalizedTargetHandle(edge.targetHandle)
+  for (const edge of edges) {
+    if (edge.target !== node.id) {
+      continue
+    }
 
-      return {
-        id: `${edge.id}:${targetHandle}`,
-        handle: targetHandle,
-      }
+    const sourceNode = nodeById.get(edge.source)
+
+    if (!sourceNode) {
+      continue
+    }
+
+    const targetHandle = getNormalizedTargetHandle(edge.targetHandle)
+    options.push({
+      id: `${edge.id}:${targetHandle}`,
+      handle: targetHandle,
     })
-    .filter((option): option is WorkflowTemplateReferenceOption => option !== null)
+  }
+
+  return options
 }
 
 export function getConnectedInputByHandle(
@@ -349,6 +372,7 @@ export function getConnectedInputByHandle(
   edges: WorkflowCanvasEdge[],
 ) {
   const nodeById = new Map(nodes.map((item) => [item.id, item]))
+
   const connectedInputs = new Map<
     string,
     {
@@ -364,6 +388,7 @@ export function getConnectedInputByHandle(
     }
 
     const sourceNode = nodeById.get(edge.source)
+
     if (!sourceNode) {
       continue
     }
@@ -395,6 +420,7 @@ export function NodeInputsPanel({
   const connectedInputByHandle = getConnectedInputByHandle(node, nodes, edges)
   const { secrets, tags: secretTags, loading: loadingSecrets } = useSecrets()
   const [selectedSecretTags, setSelectedSecretTags] = useState<string[]>([])
+
   const visibleSecrets = useMemo(
     () => filterSecretsByTags(secrets, selectedSecretTags),
     [secrets, selectedSecretTags],
@@ -408,13 +434,16 @@ export function NodeInputsPanel({
     <div className="space-y-2">
       {definition.inputs.map((port) => {
         const connectedInput = connectedInputByHandle.get(port.id)
+
         const source = connectedInput
           ? `${connectedInput.sourceNode.id}.${
               connectedInput.sourcePort?.id ?? connectedInput.sourceHandle
             }`
           : null
+
         const inputId = `${node.id}-${port.id}-input`
         const inputTitle = `inputs.${port.id}`
+
         const copyInputTitle = (event: MouseEvent<HTMLButtonElement>): void => {
           event.preventDefault()
           event.stopPropagation()

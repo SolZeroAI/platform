@@ -42,11 +42,13 @@ export function ToolCallGroup({
     if (userToggledRef.current) {
       return
     }
+
     setIsExpanded(isStreamingFocus)
   }, [isStreamingFocus])
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current
+
     if (!el || !isExpanded || (!isProcessing && !isStreamingFocus)) {
       return
     }
@@ -58,9 +60,11 @@ export function ToolCallGroup({
   const firstEvent = events[0]
   const time = formatShortTimestamp(firstEvent.timestamp)
   const fullTimestamp = formatFullTimestamp(firstEvent.timestamp)
+
   const failedCount = events.filter((event) =>
     isToolCallFailed(event, event.callId ? discoveryErrorsByCallId?.get(event.callId) : undefined),
   ).length
+
   const successfulCount = Math.max(0, events.length - failedCount)
 
   return (

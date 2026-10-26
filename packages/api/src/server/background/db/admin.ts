@@ -212,6 +212,7 @@ function workflowSortColumns(schema: AppSchema) {
 
 function parseListNumber(value: string | undefined, fallback: number, max: number): number {
   const parsed = Number(value)
+
   return Match.value(!Number.isFinite(parsed) || parsed < 0).pipe(
     Match.when(true, () => fallback),
     Match.orElse(() => Math.min(Math.floor(parsed), max)),
@@ -220,18 +221,24 @@ function parseListNumber(value: string | undefined, fallback: number, max: numbe
 
 // `parseJsonOrText` returns the original string unchanged when it is not valid JSON, which lets us
 // surface a parse-error record without a try/catch boundary.
+const emptyRecord = (): Record<string, unknown> => ({})
+
 function classifyParsedRecord(
   parsed: unknown,
   raw: string,
 ): Option.Option<Record<string, unknown>> {
   return Match.value(parsed === raw).pipe(
     Match.when(true, () =>
-      Option.some({ parseError: "Invalid JSON", raw } as Record<string, unknown>),
+      Option.some(Object.assign({ parseError: "Invalid JSON", raw }, emptyRecord())),
     ),
     Match.orElse(() =>
-      Match.value(Boolean(parsed) && typeof parsed === "object" && !Array.isArray(parsed)).pipe(
-        Match.when(true, () => Option.some(parsed as Record<string, unknown>)),
-        Match.orElse(() => Option.some({} as Record<string, unknown>)),
+      Option.orElse(
+        Option.liftPredicate(
+          parsed,
+          (value): value is Record<string, unknown> =>
+            Boolean(value) && typeof value === "object" && !Array.isArray(value),
+        ),
+        () => Option.some(emptyRecord()),
       ),
     ),
   )
@@ -283,10 +290,7 @@ function toWorkflowRun(row: AppSchema["workflowRuns"]["$inferSelect"]): AdminWor
     triggerKind: row.triggerKind,
     triggerNodeId: row.triggerNodeId,
     status: row.status,
-    input: Option.getOrElse(
-      parseRecordOption(row.inputJson),
-      () => ({}) as Record<string, unknown>,
-    ),
+    input: Option.getOrElse(parseRecordOption(row.inputJson), () => emptyRecord()),
     output: Option.getOrNull(parseRecordOption(row.outputJson)),
     error: row.error,
     startedAt: row.startedAt,
@@ -332,7 +336,7 @@ function toWorkflowRunEvent(
     eventType: row.eventType,
     level: row.level,
     message: row.message,
-    data: Option.getOrElse(parseRecordOption(row.dataJson), () => ({}) as Record<string, unknown>),
+    data: Option.getOrElse(parseRecordOption(row.dataJson), () => emptyRecord()),
     createdAt: row.createdAt,
   }
 }
@@ -342,9 +346,11 @@ function addLikeFilter(conditions: SQL[], value: string | undefined, columns: An
     onNone: () => undefined,
     onSome: (trimmed) => {
       const pattern = `%${trimmed}%`
+
       const condition = or(
         ...columns.map((column) => sql`lower(coalesce(${column}, '')) LIKE ${pattern}`),
       )
+
       Option.match(Option.fromNullishOr(condition), {
         onNone: () => undefined,
         onSome: (resolved) => {
@@ -393,6 +399,7 @@ function orderBy(
   fallback: string,
 ): SQL {
   const column = resolveSortColumn(columns, query.sortBy, fallback)
+
   return Match.value(query.sortDir === "asc").pipe(
     Match.when(true, () => asc(column)),
     Match.orElse(() => desc(column)),
@@ -479,6 +486,7 @@ export class AdminStore {
     addExactFilter(conditions, this.schema.sessions.repoName, query.repoName)
 
     const where = combineConditions(conditions)
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -503,6 +511,7 @@ export class AdminStore {
     })
 
     const hasMore = rows.length > limit
+
     const pageRows = Match.value(hasMore).pipe(
       Match.when(true, () => rows.slice(0, limit)),
       Match.orElse(() => rows),
@@ -528,6 +537,7 @@ export class AdminStore {
           .limit(1),
       catch: d1Error("db.admin.getSession"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), toSession)
   })
 
@@ -550,6 +560,7 @@ export class AdminStore {
     addExactFilter(conditions, this.schema.workflows.userId, query.userId)
 
     const where = combineConditions(conditions)
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -574,6 +585,7 @@ export class AdminStore {
     })
 
     const hasMore = rows.length > limit
+
     const pageRows = Match.value(hasMore).pipe(
       Match.when(true, () => rows.slice(0, limit)),
       Match.orElse(() => rows),
@@ -603,6 +615,7 @@ export class AdminStore {
           .limit(1),
       catch: d1Error("db.admin.getWorkflow"),
     })
+
     return yield* Option.match(Option.fromNullishOr(rows[0]), {
       onNone: () => Effect.succeed(Option.none<AdminWorkflowRecord>()),
       onSome: (row) => this.buildWorkflowRecordOption(row),
@@ -614,6 +627,7 @@ export class AdminStore {
     row: WorkflowSelectRow,
   ) {
     const record = yield* this.buildWorkflowRecord(row)
+
     return Option.some(record)
   })
 
@@ -623,6 +637,7 @@ export class AdminStore {
   ) {
     const latestRun = yield* this.getLatestWorkflowRun(row.id)
     const runCounts = yield* this.getWorkflowRunCounts(row.id)
+
     return toWorkflow(row, { latestRun: Option.getOrNull(latestRun), runCounts })
   })
 
@@ -641,6 +656,7 @@ export class AdminStore {
           .limit(limit),
       catch: d1Error("db.admin.listWorkflowRuns"),
     })
+
     return rows.map(toWorkflowRun)
   })
 
@@ -663,6 +679,7 @@ export class AdminStore {
           .limit(1),
       catch: d1Error("db.admin.getWorkflowRun"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), toWorkflowRun)
   })
 
@@ -685,6 +702,7 @@ export class AdminStore {
           .orderBy(asc(this.schema.workflowRunEvents.sequence)),
       catch: d1Error("db.admin.listWorkflowRunEvents"),
     })
+
     return rows.map(toWorkflowRunEvent)
   })
 
@@ -702,6 +720,7 @@ export class AdminStore {
           .returning({ id: this.schema.workflows.id }),
       catch: d1Error("db.admin.archiveWorkflow"),
     })
+
     return updated.length > 0
   })
 
@@ -719,6 +738,7 @@ export class AdminStore {
           .returning({ id: this.schema.workflows.id }),
       catch: d1Error("db.admin.unarchiveWorkflow"),
     })
+
     return updated.length > 0
   })
 
@@ -730,6 +750,7 @@ export class AdminStore {
         }),
       catch: d1Error("db.admin.deleteSession"),
     })
+
     return deleted.length > 0
   })
 
@@ -748,6 +769,7 @@ export class AdminStore {
           .returning({ id: this.schema.sessions.id }),
       catch: d1Error("db.admin.updateSessionStatus"),
     })
+
     return updated.length > 0
   })
 
@@ -781,6 +803,7 @@ export class AdminStore {
           .returning({ userId: this.schema.account.userId }),
       catch: d1Error("db.admin.cleanupGitHubAccounts"),
     })
+
     const userIds = [...new Set(deleted.map((row) => row.userId))]
 
     return {
@@ -839,6 +862,7 @@ export class AdminStore {
           .limit(1),
       catch: d1Error("db.admin.getLatestWorkflowRun"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), toWorkflowRun)
   })
 
@@ -858,7 +882,6 @@ export class AdminStore {
     })
     return rows.map(toStatusCount)
   })
-
   private listAttentionItems = Effect.fn("db.admin.listAttentionItems")(function* (
     this: AdminStore,
     now: number,
@@ -866,7 +889,6 @@ export class AdminStore {
     const queuedThreshold = now - 5 * 60 * 1000
     const runningThreshold = now - 60 * 60 * 1000
     const activeSessionThreshold = now - 30 * 60 * 1000
-
     const [failedRuns, queuedRuns, runningRuns, inactiveSessions] = yield* Effect.all(
       [
         Effect.tryPromise({
@@ -928,7 +950,6 @@ export class AdminStore {
       ],
       { concurrency: "unbounded" },
     )
-
     return [
       ...failedRuns.map((run) => ({
         id: `run-failed-${run.id}`,

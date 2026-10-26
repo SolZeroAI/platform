@@ -17,12 +17,16 @@ export function planetscaleStackFlags(
 ) {
   const stage = input.stage ?? process.env.ALCHEMY_STAGE ?? process.env.STAGE ?? "dev"
   const engine = databaseEngineFromProcessEnv(input.database ?? process.env[DATABASE_ENV])
+
   const mode = appDbModeForStage(
     stage,
     input.appDbMode ?? process.env[APP_DB_MODE_ENV],
     input.alchemyDev ?? stage === "dev",
   )
+
   const planetscale = needsPlanetscaleProviders(engine, mode)
+
   if (planetscale) bindPlanetscaleAlchemyAuthFromServiceTokens()
+
   return { planetscale, postgresLogicalDatabase: planetscale }
 }

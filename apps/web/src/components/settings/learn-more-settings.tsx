@@ -43,22 +43,27 @@ const KUMO_BACKGROUND_COLORS = [
 
 function formatColorValue(color: string): string {
   const match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/)
+
   if (!match) return color
 
   const [, red, green, blue, alpha] = match
+
   if (alpha !== undefined && Number(alpha) < 1) return color
 
   const toHex = (channel: string) => Number(channel).toString(16).padStart(2, "0")
+
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`
 }
 
 function readKumoBackgroundValue(className: string, swatch: HTMLDivElement | null): string {
   if (swatch) {
     const rendered = formatColorValue(getComputedStyle(swatch).backgroundColor)
+
     if (rendered) return rendered
   }
 
   const token = className.replace(/^bg-/, "")
+
   return getComputedStyle(document.documentElement).getPropertyValue(`--color-${token}`).trim()
 }
 

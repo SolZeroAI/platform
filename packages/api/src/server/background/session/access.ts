@@ -35,6 +35,7 @@ export const resolveSessionAccess = Effect.fn("session.resolveSessionAccess")(fu
   userId: string,
 ) {
   const session = yield* store.getById(sessionId)
+
   return Option.flatMap(session, (record) =>
     Match.value(record.user_id === userId).pipe(
       Match.when(true, () =>

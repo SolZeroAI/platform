@@ -47,12 +47,14 @@ export function getWorkflowSlackApp({ params }: { params: { id: string } }) {
     Effect.fn("workflows.slackApp.get")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, params.id)
       const manifest = yield* readWorkflowManifest(context.env, workflow.manifest_key)
+
       const setup = yield* getWorkflowSlackAppSetup({
         env: context.env,
         workflow,
         manifest,
         serverUrl: publicServerUrl(context.request),
       })
+
       return json({ slackApp: formatSlackAppSetup(setup) })
     }),
   )
@@ -66,12 +68,14 @@ export function updateWorkflowSlackAppCredentials(input: {
     Effect.fn("workflows.slackApp.update")(function* (context) {
       const { workflow } = yield* requireWorkflowForUser(context, input.params.id)
       const manifest = yield* readWorkflowManifest(context.env, workflow.manifest_key)
+
       const setup = yield* getWorkflowSlackAppSetup({
         env: context.env,
         workflow,
         manifest,
         serverUrl: publicServerUrl(context.request),
       })
+
       const status = yield* storeWorkflowSlackAppCredentials({
         env: context.env,
         workflow,
@@ -79,6 +83,7 @@ export function updateWorkflowSlackAppCredentials(input: {
         signingSecret: input.payload.signingSecret,
         botToken: input.payload.botToken,
       })
+
       return json({
         slackApp: formatSlackAppSetup({
           ...setup,

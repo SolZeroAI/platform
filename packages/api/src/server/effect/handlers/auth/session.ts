@@ -15,6 +15,7 @@ export function session() {
         "Unauthorized",
         401,
       )
+
       return json(userPrincipal.sessionContext)
     }),
   )

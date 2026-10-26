@@ -1,6 +1,7 @@
 "use client"
 
 import type { AdminAgentSkillItem, AdminAgentSkillsResponse } from "@solzero/api"
+import * as Match from "effect/Match"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Switch } from "@cloudflare/kumo/components/switch"
@@ -43,6 +44,7 @@ export function AdminAgentSkillsPanel({
 
   const loadSkills = useCallback(async () => {
     setLoading(true)
+
     try {
       const response = await requestJson<AdminAgentSkillsResponse>("/api/admin/skills")
       setSkills(response.skills)
@@ -68,24 +70,29 @@ export function AdminAgentSkillsPanel({
         Add skill
       </Button>,
     )
+
     return () => onHeaderActionsChange?.(null)
   }, [onHeaderActionsChange])
 
   const createSkill = async () => {
     const editorError = validateSkillMarkdownEditor(skillMd)
+
     if (editorError) {
       setValidationError(editorError)
+
       return
     }
 
     setBusySkillId("create")
     setValidationError("")
+
     try {
       const response = await requestJson<AdminAgentSkillsResponse>("/api/admin/skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skillMd, defaultEnabled }),
       })
+
       setSkills(response.skills)
       setCreateOpen(false)
       setSkillMd(NEW_SKILL_TEMPLATE)
@@ -100,6 +107,7 @@ export function AdminAgentSkillsPanel({
 
   const updateDefault = async (skill: AdminAgentSkillItem, enabled: boolean) => {
     setBusySkillId(skill.id)
+
     try {
       const response = await requestJson<AdminAgentSkillsResponse>(
         `/api/admin/skills/${encodeURIComponent(skill.id)}`,
@@ -109,6 +117,7 @@ export function AdminAgentSkillsPanel({
           body: JSON.stringify({ defaultEnabled: enabled }),
         },
       )
+
       setSkills(response.skills)
     } catch (error) {
       showErrorToast(getErrorMessage(error))
@@ -121,12 +130,15 @@ export function AdminAgentSkillsPanel({
     if (!pendingDelete) {
       return
     }
+
     setBusySkillId(pendingDelete.id)
+
     try {
       const response = await requestJson<AdminAgentSkillsResponse>(
         `/api/admin/skills/${encodeURIComponent(pendingDelete.id)}`,
         { method: "DELETE" },
       )
+
       setSkills(response.skills)
       setPendingDelete(null)
       appToastManager.add({ title: "Global skill deleted", timeout: 4000 })
@@ -201,6 +213,7 @@ export function AdminAgentSkillsPanel({
                     <Button
                       type="button"
                       size="sm"
+                      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                       shape="circle"
                       variant="secondary-destructive"
                       icon={<Trash2 className="h-4 w-4" aria-hidden />}
@@ -223,7 +236,9 @@ export function AdminAgentSkillsPanel({
           if (busySkillId === "create") {
             return
           }
+
           setCreateOpen(open)
+
           if (!open) {
             setValidationError("")
           }
@@ -242,6 +257,7 @@ export function AdminAgentSkillsPanel({
             <Button
               type="button"
               variant="ghost"
+              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
               shape="circle"
               icon={<X className="h-4 w-4" aria-hidden />}
               aria-label="Close add skill dialog"
@@ -337,29 +353,40 @@ export function AdminAgentSkillsPanel({
 }
 
 function formatOrigin(origin: AdminAgentSkillItem["origin"]): string {
-  return origin === "built-in" ? "Built-in" : origin === "skills-sh" ? "skills.sh" : "Admin"
+  return Match.value(origin).pipe(
+    Match.when("built-in", () => "Built-in"),
+    Match.when("skills-sh", () => "skills.sh"),
+    Match.orElse(() => "Admin"),
+  )
 }
 
 export function validateSkillMarkdownEditor(value: string): string | null {
   const match = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/u.exec(value.trim())
+
   if (!match) {
     return "SKILL.md must begin with YAML frontmatter delimited by ---."
   }
+
   const frontmatter = match[1] ?? ""
   const body = match[2]?.trim() ?? ""
   const name = /^name:\s*([^\n]+)$/mu.exec(frontmatter)?.[1]?.trim()
   const description = /^description:\s*([^\n]+)$/mu.exec(frontmatter)?.[1]?.trim()
+
   if (!name) {
     return "Frontmatter must include name."
   }
+
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(name)) {
     return "Skill name must use kebab-case."
   }
+
   if (!description) {
     return "Frontmatter must include description."
   }
+
   if (!body) {
     return "SKILL.md must include a non-empty body."
   }
+
   return null
 }

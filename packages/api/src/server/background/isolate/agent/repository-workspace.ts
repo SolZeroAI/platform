@@ -16,6 +16,7 @@ export function ensureRepositoryWorkspace(input: {
 }) {
   return Effect.gen(function* () {
     const repo = getGitHubRepoTool(input.state.tools)
+
     return yield* Option.match(Option.fromNullishOr(repo), {
       onNone: () => Effect.succeed<{ error?: string }>({}),
       onSome: (resolvedRepo) => prepareRepositoryWorkspaceEffect({ ...input, repo: resolvedRepo }),
@@ -30,6 +31,7 @@ function prepareRepositoryWorkspaceEffect(input: {
   auth?: IsolateCloneAuth
 }) {
   return runRepositoryWorkspacePreparation(input).pipe(
+    // oxlint-disable-next-line anti-slop/no-known-value-widening -- The success value is an empty object. Callers read the optional error field that the failure object also carries.
     Effect.map((): { error?: string } => ({})),
     Effect.catch((cause) =>
       Effect.succeed<{ error?: string }>({
@@ -52,6 +54,7 @@ function runRepositoryWorkspacePreparation(input: {
     const filesystem = new WorkspaceFileSystem(input.workspace)
     const git = createGit(filesystem, REPO_ROOT)
     const branchName = input.state.branchName?.trim() || `s0-agent/${input.state.sessionId}`
+
     const baseBranch = Option.getOrUndefined(
       getCloneBaseBranch({
         repoDefaultBranch: input.state.repoDefaultBranch,
@@ -63,6 +66,7 @@ function runRepositoryWorkspacePreparation(input: {
       try: () => input.workspace.exists(`${REPO_ROOT}/.git`),
       catch: (cause) => cause,
     })
+
     yield* Option.match(
       Option.liftPredicate(hasGitDir, (value) => value === false),
       {
@@ -93,6 +97,7 @@ function cloneRepository(input: {
       try: () => input.workspace.exists(REPO_ROOT),
       catch: (cause) => cause,
     })
+
     yield* Option.match(
       Option.liftPredicate(hasRepoDir, (value) => value === true),
       {
@@ -108,13 +113,16 @@ function cloneRepository(input: {
     const accessToken = Option.fromNullishOr(input.auth?.githubAccessToken).pipe(
       Option.filter((token) => token.length > 0),
     )
+
     const gitAuth = Option.match(accessToken, {
       onNone: () => ({}),
       onSome: (token) => buildGitHubAppGitCredentials(token),
     })
+
     const cloneBranch = Option.fromNullishOr(input.baseBranch).pipe(
       Option.filter((branch) => branch.length > 0),
     )
+
     const branchOption = Option.match(cloneBranch, {
       onNone: () => ({}),
       onSome: (branch) => ({ branch }),

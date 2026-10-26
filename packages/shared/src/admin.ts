@@ -38,6 +38,7 @@ function normalizeDomain(value: string): string {
   while (normalized[start] === "@") {
     start += 1
   }
+
   // oxlint-disable-next-line effect/imperative-loops -- A linear scan avoids regex backtracking on admin-controlled configuration input.
   while (end > start && normalized[end - 1] === ".") {
     end -= 1
@@ -68,11 +69,13 @@ export function isAdminEmail(
   config: AdminConfig = EMPTY_ADMIN_CONFIG,
 ): boolean {
   const normalized = normalizeEmail(email)
+
   if (!normalized) {
     return false
   }
 
   const emailDomain = normalized.split("@")[1] ?? ""
+
   return (
     new Set(config.adminEmails.map(normalizeEmail)).has(normalized) ||
     new Set(config.adminDomains.map(normalizeDomain)).has(emailDomain)

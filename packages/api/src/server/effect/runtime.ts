@@ -8,6 +8,7 @@ import { HttpApiBuilder, HttpApiScalar } from "effect/http-api"
 import { stringifyJson } from "../lib/json"
 import { HttpRoutesLive } from "./routes"
 import { CloudflareContext } from "./services/cloudflare"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- runtime.ts builds makeEffectLoggerLayer from stage metadata at the composition edge because createWebHandler installs the logger before the web handler runs.
 import { makeEffectLoggerLayer, observeEffectHttpApi } from "./services/observability"
 
 type ScalarReferenceConfig = HttpApiScalar.ScalarConfig & {
@@ -26,6 +27,7 @@ const scalarReferenceConfig = {
 
 function baseRoutes(brandName: string) {
   const api = apiForBrand(brandName)
+
   return Layer.mergeAll(
     HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(Layer.provide(HttpRoutesLive)),
     HttpApiScalar.layer(api, { path: "/reference", scalar: scalarReferenceConfig }),
@@ -48,7 +50,9 @@ interface EffectApiWebHandler {
     context?: Context.Context<never>,
   ) => Promise<globalThis.Response>
 }
+
 type TelemetryLayerOptions = Parameters<typeof makeEffectLoggerLayer>[0]
+
 type ApiHandlerOptions = TelemetryLayerOptions & { readonly brandName: string }
 
 const handlerCache = new Map<string, EffectApiWebHandler>()
@@ -92,6 +96,7 @@ function telemetryCacheKey(options: ApiHandlerOptions): string {
 }
 
 function createWebHandler(key: string, options: ApiHandlerOptions): EffectApiWebHandler {
+  // SAFETY: HttpRouter.toWebHandler expects a layer whose requirements are supplied by the web handler cache. The pipeline's remaining channel is erased at this edge.
   const generatedHandler = HttpRouter.toWebHandler(
     baseRoutes(options.brandName).pipe(Layer.provide(makeEffectLoggerLayer(options))) as never,
     {
@@ -99,19 +104,24 @@ function createWebHandler(key: string, options: ApiHandlerOptions): EffectApiWeb
       middleware: observeEffectHttpApi,
     },
   )
+
   const webHandler: EffectApiWebHandler = {
     dispose: generatedHandler.dispose,
     handler(request, context = Context.empty()) {
+      // SAFETY: the cached handler accepts the open Cloudflare context. This call passes that same context.
       return generatedHandler.handler(request, context as never)
     },
   }
+
   handlerCache.set(key, webHandler)
+
   return webHandler
 }
 
 function getWebHandler(context?: Context.Context<never>): EffectApiWebHandler {
   const options = telemetryOptionsFromContext(context)
   const key = telemetryCacheKey(options)
+
   return Option.getOrElse(Option.fromNullishOr(handlerCache.get(key)), () =>
     createWebHandler(key, options),
   )

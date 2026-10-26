@@ -93,13 +93,16 @@ function fetchServersPage(input: {
           onSome: (cursor) => url.searchParams.set("cursor", cursor),
           onNone: () => undefined,
         })
+
         const body = yield* fetchJson(url, {
           headers: {
             Authorization: `Bearer ${input.adminApiToken}`,
           },
         })
+
         const accumulated = [...input.accumulated, ...normalizeCollectionResponse(body, "servers")]
         const cursor = nextCursorFromResponse(body)
+
         return yield* Option.match(cursor, {
           onSome: (nextCursor) =>
             fetchServersPage({
@@ -132,6 +135,7 @@ function fetchServerTools(input: {
   serverId: string
 }) {
   const url = new URL(`${input.config.baseUrl}/servers/${encodeURIComponent(input.serverId)}/tools`)
+
   return fetchJson(url, {
     headers: {
       Authorization: `Bearer ${input.adminApiToken}`,

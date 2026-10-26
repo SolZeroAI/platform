@@ -40,6 +40,7 @@ function promptForModel(
     tools: input.state.tools,
     customMcpServers: input.state.customMcpServers,
   })
+
   return buildIsolateSystemPrompt({
     brandName: input.brandName,
     runtimeModelId: model.runtimeModelId,

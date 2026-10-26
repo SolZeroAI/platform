@@ -29,9 +29,11 @@ function processEnvironment(): Record<string, string> {
 function transportForServer(name: string, server: RuntimeMcpServer) {
   if (server.type === "local") {
     const [command, ...args] = server.command
+
     if (!command) {
       throw new Error(`MCP server '${name}' has no command`)
     }
+
     return new StdioClientTransport({
       command,
       args,
@@ -40,11 +42,13 @@ function transportForServer(name: string, server: RuntimeMcpServer) {
       stderr: "pipe",
     })
   }
+
   if (server.oauth) {
     throw new Error(
       `MCP server '${name}' requires OAuth, which is not available in agent containers`,
     )
   }
+
   return new StreamableHTTPClientTransport(new URL(server.url), {
     requestInit: { headers: server.headers },
   })
@@ -53,12 +57,14 @@ function transportForServer(name: string, server: RuntimeMcpServer) {
 async function connectServer(name: string, server: RuntimeMcpServer): Promise<ConnectedMcpServer> {
   const timeout = server.timeout ?? DEFAULT_MCP_TIMEOUT_MS
   const client = new Client({ name: `s0-agent-${name}`, version: "1.0.0" })
+
   try {
     await client.connect(transportForServer(name, server), {
       timeout,
       maxTotalTimeout: timeout,
     })
     const response = await client.listTools(undefined, { timeout, maxTotalTimeout: timeout })
+
     return { name, client, timeout, tools: response.tools }
   } catch (error) {
     await client.close().catch(() => undefined)
@@ -68,30 +74,41 @@ async function connectServer(name: string, server: RuntimeMcpServer): Promise<Co
 
 function safeToolName(value: string): string {
   const normalized = value.replaceAll(/[^a-zA-Z0-9_-]/g, "_")
+
   return normalized.length > 0 ? normalized : "tool"
 }
 
+function isTextContent(part: unknown): part is { type: "text"; text: string } {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    part.type === "text" &&
+    "text" in part &&
+    typeof part.text === "string"
+  )
+}
+
 function errorText(result: Awaited<ReturnType<Client["callTool"]>>): string {
+  // SAFETY: MCP callTool results carry an optional content array; non-arrays fall back to the generic failure text.
   const content = (result as { content?: unknown }).content
+
   if (!Array.isArray(content)) {
     return "MCP tool failed"
   }
+
   const text = content
-    .filter(
-      (part): part is { type: "text"; text: string } =>
-        typeof part === "object" &&
-        part !== null &&
-        Reflect.get(part, "type") === "text" &&
-        typeof Reflect.get(part, "text") === "string",
-    )
+    .filter(isTextContent)
     .map((part) => part.text)
     .join("\n")
+
   return text || "MCP tool failed"
 }
 
 export async function createMcpTools(servers: RuntimeMcpServers = {}): Promise<McpTools> {
   const enabledServers = Object.entries(servers).filter(([, server]) => server.enabled !== false)
   const connected: ConnectedMcpServer[] = []
+
   try {
     for (const [name, server] of enabledServers) {
       connected.push(await connectServer(name, server))
@@ -100,6 +117,7 @@ export async function createMcpTools(servers: RuntimeMcpServers = {}): Promise<M
     await Promise.all(connected.map((server) => server.client.close().catch(() => undefined)))
     throw error
   }
+
   const tools: ToolSet = {}
 
   for (const server of connected) {
@@ -110,13 +128,16 @@ export async function createMcpTools(servers: RuntimeMcpServers = {}): Promise<M
         inputSchema: jsonSchema(definition.inputSchema),
         execute: async (input) => {
           const result = await server.client.callTool(
+            // SAFETY: dynamicTool passes the model tool input as a JSON object, which callTool arguments require.
             { name: definition.name, arguments: input as Record<string, unknown> },
             undefined,
             { timeout: server.timeout, maxTotalTimeout: server.timeout },
           )
+
           if ("isError" in result && result.isError) {
             throw new Error(errorText(result))
           }
+
           return result
         },
       })

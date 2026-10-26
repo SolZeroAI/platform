@@ -69,8 +69,10 @@ export function getSettingsCategoryFromSearch(search: {
   if (search.githubSetup || search.oktaReconnect || search.slackUserId) {
     return "api-access"
   }
+
   if (search.mcpQuery || search.mcpServerId || search.mcpServerLabel) {
     return "agents"
   }
+
   return isSettingsCategory(search.category) ? search.category : "providers"
 }

@@ -32,6 +32,7 @@ export function createSession(payload: CreateSessionPayload, forcedKind?: Sessio
         onSome: (sessionKind) => ({ ...payload, sessionKind }),
         onNone: () => payload,
       })
+
       const resolved = yield* Effect.try({
         try: () => ({
           requestedTools: resolveRequestedSessionTools(request, body),
@@ -40,6 +41,7 @@ export function createSession(payload: CreateSessionPayload, forcedKind?: Sessio
         catch: (cause) =>
           new ControlPlaneFailure({ payload: { error: describeError(cause) }, status: 400 }),
       })
+
       const identity = yield* resolveUserIdentity(request, env, principal, identityProvider)
       yield* validateRequestedAiSearchSessionTools(env, resolved.requestedTools)
       yield* validateRequestedMcpcfSessionTools(env, resolved.requestedTools, {
@@ -52,11 +54,14 @@ export function createSession(payload: CreateSessionPayload, forcedKind?: Sessio
         agentRuntime: body.agentRuntime,
         sessionKind: body.sessionKind ?? "isolate",
       })
+
       const sessionKind = sessionKindForAgentRuntime(agentRuntime)
+
       const source = Match.value(principal?.kind === "api_key").pipe(
         Match.when(true, () => "api" as const),
         Match.orElse(() => "web" as const),
       )
+
       const sessionId = yield* createSessionWithIdentity({
         env,
         identity,

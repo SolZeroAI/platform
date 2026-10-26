@@ -7,6 +7,7 @@ import {
   type WorkflowRunRecord,
   type WorkflowRunTriggerKind,
 } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the dynamic workflow loader edge, which Cloudflare invokes without an Effect Layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { createApiRequestObserver, type RequestLogger } from "../../effect/services/observability"
@@ -138,6 +139,7 @@ function nonEmptyStringOption(value: unknown): Option.Option<string> {
 
 function formatWorkflowInstanceError(status: WorkflowInstanceStatus): string {
   const error = status.error
+
   return nonEmptyStringOption(error).pipe(
     Option.orElse(() =>
       recordOptionFromUnknown(error).pipe(
@@ -157,6 +159,7 @@ function responseUrlRedaction(payload: Record<string, unknown>): Record<string, 
 
 function redactSlackWorkflowTrigger(trigger: WorkflowTriggerPayload): WorkflowTriggerPayload {
   const payload = Option.getOrElse(recordOptionFromUnknown(trigger.payload), () => ({}))
+
   return {
     ...trigger,
     payload: {
@@ -201,7 +204,8 @@ export async function getWrappedWorkflowBinding(
   version = workflow.manifest_version,
 ): Promise<WorkflowBindingLike> {
   const { wrapWorkflowBinding } = await import("@cloudflare/dynamic-workflows")
-  // oxlint-disable-next-line effect/avoid-any -- Interop cast bridging the untyped `@cloudflare/dynamic-workflows` binding wrapper onto the local `WorkflowBindingLike` RPC surface; the wrapper return type is structurally opaque and is a runtime stub, not Schema-validatable data.
+
+  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Interop cast bridging the untyped `@cloudflare/dynamic-workflows` binding wrapper onto the local `WorkflowBindingLike` RPC surface; the wrapper return type is structurally opaque and is a runtime stub, not Schema-validatable data.
   return wrapWorkflowBinding(getWorkflowBindingMetadata(workflow, version), {
     bindingName: "DYNAMIC_WORKFLOW",
   }) as unknown as WorkflowBindingLike
@@ -210,7 +214,7 @@ export async function getWrappedWorkflowBinding(
 export function getWorkflowBindingMetadata(
   workflow: WorkflowRecord,
   version = workflow.manifest_version,
-): { workflowId: string; version: number; userId: string; codeKey: string } {
+) {
   return {
     workflowId: workflow.id,
     version,
@@ -236,6 +240,7 @@ export function getWorkflowCodeKeyForVersion(workflow: WorkflowRecord, version: 
     }),
     Match.orElse(() => undefined),
   )
+
   return Match.value(version === workflow.manifest_version).pipe(
     Match.when(true, () => workflow.code_key),
     Match.orElse(() =>
@@ -253,6 +258,7 @@ function stringMetadataValue(
   key: string,
 ): Option.Option<string> {
   const value = metadata[key]
+
   return nonEmptyStringOption(value)
 }
 
@@ -324,6 +330,7 @@ async function loadObservedDynamicWorkflowRunner(input: {
   log: RequestLogger
 }): Promise<WorkflowRunner> {
   const workflow = await readWorkflowForLoader(input)
+
   const { codeKey, source } = resolveWorkflowCodeKey({
     workflow,
     workflowId: input.workflowId,
@@ -341,6 +348,7 @@ async function loadObservedDynamicWorkflowRunner(input: {
 
   // oxlint-disable-next-line effect/effect-run-in-body -- Dynamic workflow loader boundary must return a Promise to the Cloudflare SDK while loading code stored by Effect artifact helpers.
   const code = await Effect.runPromise(readWorkflowCode(input.env, codeKey))
+
   const stub = input.env.WORKFLOW_LOADER.load({
     compatibilityDate: DYNAMIC_WORKFLOW_COMPATIBILITY_DATE,
     mainModule: "index.js",
@@ -354,7 +362,7 @@ async function loadObservedDynamicWorkflowRunner(input: {
     globalOutbound: null,
   })
 
-  // oxlint-disable-next-line effect/avoid-any -- Interop cast bridging the dynamic loader stub's generic `getEntrypoint` return onto the local `WorkflowRunner` RPC surface; the entrypoint is a runtime stub, not Schema-validatable data.
+  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Interop cast bridging the dynamic loader stub's generic `getEntrypoint` return onto the local `WorkflowRunner` RPC surface; the entrypoint is a runtime stub, not Schema-validatable data.
   return stub.getEntrypoint("TenantWorkflow") as unknown as WorkflowRunner
 }
 
@@ -365,10 +373,12 @@ export async function loadDynamicWorkflowRunner(
     Match.when(Match.string, (resolved) => resolved),
     Match.orElse(() => ""),
   )
+
   const version = numberMetadataValue(input.metadata.version)
   validateWorkflowLoaderMetadata(workflowId, version)
   const metadataCodeKey = stringMetadataValue(input.metadata, "codeKey")
   const metadataUserId = stringMetadataValue(input.metadata, "userId")
+
   const observer = createApiRequestObserver(
     new Request(
       `http://workflow-loader.internal/workflows/${encodeURIComponent(workflowId)}/v${version}`,
@@ -377,6 +387,7 @@ export async function loadDynamicWorkflowRunner(
     input.env,
     input.ctx,
   )
+
   observer.setRouteBranch(WORKFLOW_LOADER_ROUTE_BRANCH)
   setObserverUserId(observer, metadataUserId)
   observer.log.set({
@@ -387,8 +398,10 @@ export async function loadDynamicWorkflowRunner(
   })
 
   let runner = Option.none<WorkflowRunner>()
+
   function recordLoadedRunner(loadedRunner: WorkflowRunner): Response {
     runner = Option.some(loadedRunner)
+
     return new Response(null, { status: 200 })
   }
 
@@ -402,13 +415,14 @@ export async function loadDynamicWorkflowRunner(
       log,
     }).then(recordLoadedRunner),
   )
+
   return Option.getOrThrowWith(runner, () => new Error("Dynamic workflow runner was not loaded"))
 }
 
 function workflowActionsServiceBinding(input: {
   env: Pick<Env, "WORKFLOW_ACTIONS">
 }): WorkflowActionsEntrypoint {
-  // oxlint-disable-next-line effect/avoid-any -- Interop cast bridging the Cloudflare service binding `env.WORKFLOW_ACTIONS` onto the local `WorkflowActionsEntrypoint` RPC surface; the binding is a runtime stub, not Schema-validatable data.
+  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Interop cast bridging the Cloudflare service binding `env.WORKFLOW_ACTIONS` onto the local `WorkflowActionsEntrypoint` RPC surface; the binding is a runtime stub, not Schema-validatable data.
   return input.env.WORKFLOW_ACTIONS as unknown as WorkflowActionsEntrypoint
 }
 
@@ -416,7 +430,11 @@ export function resolveWorkflowActionsBinding(input: {
   env: Pick<Env, "WORKFLOW_ACTIONS">
   ctx: ExecutionContext
 }): WorkflowActionsEntrypoint {
-  const workflowActions = (input.ctx as WorkflowActionsLoopbackContext).exports?.WorkflowActions
+  const workflowActions =
+    /* SAFETY: input.ctx has the WorkflowActionsLoopbackContext shape established by the check or writer around this read. */ (
+      input.ctx as WorkflowActionsLoopbackContext
+    ).exports?.WorkflowActions
+
   return Match.value(workflowActions).pipe(
     Match.when(
       (resolved: unknown): resolved is NonNullable<typeof workflowActions> =>
@@ -451,17 +469,22 @@ function terminalRunEventFields(terminalUpdate: TerminalWorkflowRunUpdate): {
 }
 
 function terminalRunEventData(terminalUpdate: TerminalWorkflowRunUpdate): Record<string, unknown> {
-  return {
-    source: "workflow_instance_status",
-    ...Option.match(Option.fromNullishOr(terminalUpdate.output), {
-      onNone: () => ({}),
-      onSome: (output) => ({ output }),
-    }),
-    ...Option.match(Option.fromNullishOr(terminalUpdate.error), {
-      onNone: () => ({}),
-      onSome: (error) => ({ error }),
-    }),
-  }
+  let data: Record<string, unknown> = {}
+  data.source = "workflow_instance_status"
+  Option.match(Option.fromNullishOr(terminalUpdate.output), {
+    onNone: () => undefined,
+    onSome: (output) => {
+      data.output = output
+    },
+  })
+  Option.match(Option.fromNullishOr(terminalUpdate.error), {
+    onNone: () => undefined,
+    onSome: (error) => {
+      data.error = error
+    },
+  })
+
+  return data
 }
 
 async function readTerminalWorkflowRunUpdate(input: {
@@ -474,6 +497,7 @@ async function readTerminalWorkflowRunUpdate(input: {
     .then((instance) => instance.status())
     .then((status) => getTerminalWorkflowRunUpdate(status))
     .catch(() => null)
+
   return Option.fromNullishOr(terminalUpdate)
 }
 
@@ -517,6 +541,7 @@ async function reconcileWorkflowRunInstance(input: {
   workflowInstanceId: string
 }): Promise<WorkflowRunRecord> {
   const terminalUpdate = await readTerminalWorkflowRunUpdate(input)
+
   return Option.match(terminalUpdate, {
     onNone: () => Promise.resolve(input.run),
     onSome: (resolvedTerminalUpdate) =>
@@ -580,17 +605,19 @@ export async function startWorkflowRun(input: StartWorkflowRunInput) {
   const instanceId = `wf_${runId}`
   const userId = input.userId.trim()
   validateWorkflowRunUserId(userId)
+
   const oktaUserId = await Match.value(input.oktaUserId).pipe(
     Match.when(
       Match.undefined,
       () =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- Workflow instance creation remains a Promise ABI boundary for Cloudflare dynamic workflows.
+        // oxlint-disable-next-line effect/effect-run-in-body -- SAFETY: resolveOktaUserId succeeds with a string or null, and Effect.runPromise preserves that Promise. Workflow instance creation remains a Promise ABI boundary for Cloudflare dynamic workflows.
         Effect.runPromise(
           resolveOktaUserId(input.env, userId).pipe(Effect.orElseSucceed(() => null)),
         ) as Promise<string | null>,
     ),
     Match.orElse((resolved) => Promise.resolve(resolved)),
   )
+
   const identityData = workflowIdentityData(userId, oktaUserId)
 
   const run = await store.createRun({
@@ -632,6 +659,7 @@ export async function startWorkflowRun(input: StartWorkflowRunInput) {
       metadataHasCodeKey: true,
     })
     const workflowBinding = await getWrappedWorkflowBinding(input.workflow, run.workflow_version)
+
     const instance = await workflowBinding.create({
       id: instanceId,
       params: {
@@ -661,6 +689,7 @@ export async function startWorkflowRun(input: StartWorkflowRunInput) {
       triggerKind: input.trigger.kind,
       triggerNodeId: input.trigger.nodeId ?? null,
     })
+
     return nextRun
   }
 

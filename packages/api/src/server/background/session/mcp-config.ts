@@ -49,15 +49,18 @@ export function buildSessionMcpServersFromPlan(input: {
   stage?: StageMetadataInput | null
 }): OpenCodeMcpServers {
   const { plan } = input
+
   const reservedInternalServerNames = [
     INTERNAL_AI_SEARCH_MCP_SERVER_NAME,
     INTERNAL_WORKFLOW_BUILDER_MCP_SERVER_NAME,
     INTERNAL_MCPCF_MCP_SERVER_NAME,
     ...plan.sandboxMcp.reservedMcpcfServers.map((server) => getMcpcfMcpServerName(server)),
   ]
+
   const collidingServerName = reservedInternalServerNames.find(
     (name) => name in plan.sandboxMcp.customMcpServers,
   )
+
   if (collidingServerName) {
     throw new Error(
       `Custom MCP server name '${collidingServerName}' is reserved for internal s0 tools`,
@@ -77,65 +80,61 @@ export function buildSessionMcpServersFromPlan(input: {
   }
 
   const stage = input.stage ?? "dev"
+  const servers: Record<string, OpenCodeMcpServers[string]> = {}
+  Object.assign(servers, plan.sandboxMcp.customMcpServers)
 
-  return normalizeOpenCodeMcpServers({
-    ...plan.sandboxMcp.customMcpServers,
-    ...(selectedAiSearchSourceIds.length > 0
-      ? {
-          [INTERNAL_AI_SEARCH_MCP_SERVER_NAME]: {
-            type: "remote" as const,
-            url: getAiSearchMcpUrl(stage),
-            enabled: true,
-            oauth: false,
-            headers: {
-              [AI_SEARCH_SOURCE_HEADER]: selectedAiSearchSourceIds.join(","),
-              ...(input.sessionId ? { [AI_SEARCH_SESSION_HEADER]: input.sessionId } : {}),
-            },
-            timeout: 30_000,
-          },
-        }
-      : {}),
-    ...(workflowBuilderEnabled
-      ? {
-          [INTERNAL_WORKFLOW_BUILDER_MCP_SERVER_NAME]: {
-            type: "remote" as const,
-            url: getWorkflowBuilderMcpUrl(stage),
-            enabled: true,
-            oauth: false,
-            headers: input.sessionId
-              ? {
-                  [WORKFLOW_BUILDER_SESSION_HEADER]: input.sessionId,
-                }
-              : {},
-            timeout: 30_000,
-          },
-        }
-      : {}),
-    ...(selectedMcpcfServers.length > 0
-      ? Object.fromEntries(
-          selectedMcpcfServers.map((server) => [
-            getMcpcfMcpServerName(server),
-            {
-              type: "remote" as const,
-              url: getMcpcfMcpUrl(stage),
-              enabled: true,
-              oauth: false,
-              headers: {
-                [MCPCF_SERVER_HEADER]: server.id,
-                ...(input.mcpcfCapability
-                  ? { Authorization: `Bearer ${input.mcpcfCapability}` }
-                  : {}),
-              },
-              timeout: MCPCF_MCP_TIMEOUT_MS,
-            },
-          ]),
-        )
-      : {}),
-  })
+  if (selectedAiSearchSourceIds.length > 0) {
+    let headers: Record<string, string> = {}
+    headers[AI_SEARCH_SOURCE_HEADER] = selectedAiSearchSourceIds.join(",")
+
+    if (input.sessionId) headers[AI_SEARCH_SESSION_HEADER] = input.sessionId
+    servers[INTERNAL_AI_SEARCH_MCP_SERVER_NAME] = {
+      type: "remote",
+      url: getAiSearchMcpUrl(stage),
+      enabled: true,
+      oauth: false,
+      headers,
+      timeout: 30_000,
+    }
+  }
+
+  if (workflowBuilderEnabled) {
+    let headers: Record<string, string> = {}
+
+    if (input.sessionId) headers[WORKFLOW_BUILDER_SESSION_HEADER] = input.sessionId
+    servers[INTERNAL_WORKFLOW_BUILDER_MCP_SERVER_NAME] = {
+      type: "remote",
+      url: getWorkflowBuilderMcpUrl(stage),
+      enabled: true,
+      oauth: false,
+      headers,
+      timeout: 30_000,
+    }
+  }
+
+  if (selectedMcpcfServers.length > 0) {
+    for (const server of selectedMcpcfServers) {
+      let headers: Record<string, string> = {}
+      headers[MCPCF_SERVER_HEADER] = server.id
+
+      if (input.mcpcfCapability) headers.Authorization = `Bearer ${input.mcpcfCapability}`
+      servers[getMcpcfMcpServerName(server)] = {
+        type: "remote",
+        url: getMcpcfMcpUrl(stage),
+        enabled: true,
+        oauth: false,
+        headers,
+        timeout: MCPCF_MCP_TIMEOUT_MS,
+      }
+    }
+  }
+
+  return normalizeOpenCodeMcpServers(servers)
 }
 
 export function parseAllowedAiSearchSources(request: Request): string[] {
   const rawValue = request.headers.get(AI_SEARCH_SOURCE_HEADER)?.trim()
+
   if (!rawValue) {
     return []
   }
@@ -152,6 +151,7 @@ export function parseAllowedAiSearchSources(request: Request): string[] {
 
 export function parseAllowedMcpcfServers(request: Request): string[] {
   const rawValue = request.headers.get(MCPCF_SERVER_HEADER)?.trim()
+
   if (!rawValue) {
     return []
   }

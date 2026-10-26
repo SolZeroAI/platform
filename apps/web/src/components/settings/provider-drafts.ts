@@ -50,12 +50,14 @@ function createDraftId(): string {
 }
 
 function stringifyJson(value: unknown): string {
+  // SAFETY: value was checked to be an object, so Object.keys reads its own string keys.
   if (
     !value ||
     (typeof value === "object" && Object.keys(value as Record<string, unknown>).length === 0)
   ) {
     return ""
   }
+
   return JSON.stringify(value, null, 2)
 }
 
@@ -64,6 +66,7 @@ function readDraftText(value: unknown): string {
 }
 
 function readDraftRecord(value: unknown): Record<string, unknown> | undefined {
+  // SAFETY: A non-array object is read by string keys when turning provider JSON into draft text.
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined
@@ -83,6 +86,7 @@ export function buildSharedProviderDrafts(
       if (provider.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID) {
         return CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS.map((byokProvider) => {
           const override = overridesByProviderId.get(byokProvider.userOverrideProviderId)
+
           return {
             providerId: byokProvider.userOverrideProviderId,
             displayName: `Cloudflare AI Gateway — ${byokProvider.name}`,
@@ -92,11 +96,14 @@ export function buildSharedProviderDrafts(
           }
         })
       }
+
       if (provider.credentialSource === "binding") {
         return []
       }
+
       const providerId = readDraftText(provider.providerId)
       const override = overridesByProviderId.get(providerId)
+
       return [
         {
           providerId,
@@ -175,5 +182,6 @@ export function isProviderSettingsDirty(
   if (!savedFormState) {
     return false
   }
+
   return serializeProviderFormState(defaultModel, sharedDrafts, customDrafts) !== savedFormState
 }

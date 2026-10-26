@@ -44,6 +44,7 @@ export interface BackgroundTracingService {
 
 const HEX_16_BYTES = /^[a-f0-9]{32}$/
 const HEX_8_BYTES = /^[a-f0-9]{16}$/
+
 const CurrentLocalSpanContext = Context.Reference<Option.Option<ActiveLocalSpanContext>>(
   "s0/api/CurrentLocalSpanContext",
   {
@@ -53,6 +54,7 @@ const CurrentLocalSpanContext = Context.Reference<Option.Option<ActiveLocalSpanC
 
 export const LOCAL_TRACE_ID_HEADER = "x-s0-local-trace-id"
 export const LOCAL_PARENT_SPAN_ID_HEADER = "x-s0-local-parent-span-id"
+
 export class BackgroundTracing extends Context.Service<
   BackgroundTracing,
   BackgroundTracingService
@@ -85,6 +87,7 @@ export function localSpanLogAnnotations(
 
 const currentSpanContext = Effect.fn("background.tracing.currentSpanContext")(function* () {
   const fiberContext = yield* CurrentLocalSpanContext
+
   return Option.match(fiberContext, {
     onNone: () => Option.none<LocalSpanContext>(),
     onSome: (context) =>
@@ -116,16 +119,18 @@ export function makeBackgroundTracingLayer(options: BackgroundTracingLayerOption
 export type BackgroundTracingLayer = ReturnType<typeof makeBackgroundTracingLayer>
 
 export function localSpanHeaders(context: LocalSpanContext): Record<string, string> {
-  return {
-    [LOCAL_TRACE_ID_HEADER]: context.traceId,
-    [LOCAL_PARENT_SPAN_ID_HEADER]: context.spanId,
-  }
+  let headers: Record<string, string> = {}
+  headers[LOCAL_TRACE_ID_HEADER] = context.traceId
+  headers[LOCAL_PARENT_SPAN_ID_HEADER] = context.spanId
+
+  return headers
 }
 
 // oxlint-disable-next-line s0-lint/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
 export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext | undefined {
   const traceId = headers.get(LOCAL_TRACE_ID_HEADER)?.trim().toLowerCase()
   const spanId = headers.get(LOCAL_PARENT_SPAN_ID_HEADER)?.trim().toLowerCase()
+
   return Option.getOrUndefined(
     Option.all({
       traceId: Option.fromNullishOr(traceId).pipe(
@@ -146,24 +151,30 @@ const runBackgroundSpan = <A, E, R>(
   Effect.gen(function* () {
     const currentContext = yield* Effect.context<R>()
     const fiberContext = yield* CurrentLocalSpanContext
+
     const parentContext = Option.fromNullishOr(
       options.parentContext ?? Option.getOrUndefined(fiberContext),
     )
+
     const traceId = Option.match(parentContext, {
       onNone: () => randomHex(16),
       onSome: (context) => context.traceId,
     })
+
     const parentSpanId = Option.match(parentContext, {
       onNone: (): Record<string, never> => ({}),
       onSome: (context) => ({ parentSpanId: context.spanId }),
     })
+
     const localContext: ActiveLocalSpanContext = {
       traceId,
       spanId: randomHex(8),
       ...parentSpanId,
     }
+
     const spanAttributes = toSpanAttributes(attributes)
     const localSpanAttributes = localSpanLogAnnotations(localContext)
+
     const logAnnotations = {
       ...spanAttributes,
       ...localSpanAttributes,
@@ -193,6 +204,7 @@ export function aiTelemetrySettings(
   metadata: SpanAttributeInput,
 ): TelemetryOptions & { readonly metadata: Record<string, string | number | boolean> } {
   const attributes = toSpanAttributes(metadata)
+
   return {
     functionId,
     isEnabled: true,
@@ -208,5 +220,6 @@ export function aiTelemetrySettings(
 function randomHex(byteLength: number): string {
   const bytes = new Uint8Array(byteLength)
   crypto.getRandomValues(bytes)
+
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }

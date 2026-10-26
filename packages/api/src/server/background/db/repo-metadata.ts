@@ -38,7 +38,12 @@ function normalizeRepoKey(owner: string, name: string): string {
 function parseStringArrayOption(value: string | null): Option.Option<string[]> {
   return Option.fromNullishOr(value).pipe(
     Option.filter((raw) => raw.length > 0),
-    Option.map((raw) => parseJson(raw) as string[]),
+    Option.map(
+      (raw) =>
+        /* SAFETY: parseJson(raw) was stored by this service in the string[] shape. */ parseJson(
+          raw,
+        ) as string[],
+    ),
   )
 }
 
@@ -71,10 +76,12 @@ export class RepoMetadataStore {
     const owner = repoOwner.toLowerCase()
     const name = repoName.toLowerCase()
     const existing = yield* this.getRow(owner, name)
+
     const createdAt = Option.getOrElse(
       Option.map(existing, (row) => row.createdAt),
       () => now,
     )
+
     const aliases = Option.getOrNull(stringifyOption(metadata.aliases))
     const channelAssociations = Option.getOrNull(stringifyOption(metadata.channelAssociations))
     const keywords = Option.getOrNull(stringifyOption(metadata.keywords))
@@ -114,6 +121,7 @@ export class RepoMetadataStore {
     repoName: string,
   ) {
     const row = yield* this.getRow(repoOwner.toLowerCase(), repoName.toLowerCase())
+
     return Option.map(row, toMetadata)
   })
 
@@ -177,6 +185,7 @@ export class RepoMetadataStore {
           .limit(1),
       catch: d1Error("db.repoMetadata.get"),
     })
+
     return Option.fromNullishOr(rows[0])
   })
 }

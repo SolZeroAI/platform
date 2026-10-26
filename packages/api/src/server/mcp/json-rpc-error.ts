@@ -3,12 +3,14 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 
 const parseRequestJson = Effect.fn("mcp.jsonRpc.parseRequestJson")(function* (request: Request) {
+  // SAFETY: Request.json() is untyped. The body is parsed as unknown before the JSON-RPC id is read.
   return yield* Effect.tryPromise({
     try: () => request.clone().json() as Promise<unknown>,
     catch: () => null,
   }).pipe(Effect.catch(() => Effect.succeed<unknown>(null)))
 })
 
+// SAFETY: the true arm runs only when Array.isArray(body) is true, so the first element is the batched JSON-RPC message.
 const messageFromBody = (body: unknown): unknown =>
   Match.value(Array.isArray(body)).pipe(
     Match.when(true, () => (body as unknown[])[0]),
@@ -25,10 +27,12 @@ const idFromMessage = (message: unknown): Option.Option<string | number> =>
 /** Best-effort extraction of the JSON-RPC request id, `None` when absent/null/unparseable. */
 export const getJsonRpcRequestId = Effect.fn("mcp.jsonRpc.requestId")(function* (request: Request) {
   const isJson = Boolean(request.headers.get("content-type")?.includes("application/json"))
+
   const body = yield* Match.value(isJson).pipe(
     Match.when(true, () => parseRequestJson(request)),
     Match.orElse(() => Effect.succeed<unknown>(null)),
   )
+
   return idFromMessage(messageFromBody(body))
 })
 
@@ -42,10 +46,12 @@ export const createJsonRpcErrorResponse = Effect.fn("mcp.jsonRpc.errorResponse")
   },
 ) {
   const requestId = yield* getJsonRpcRequestId(request)
+
   const dataFields = Option.match(Option.fromNullishOr(input.data), {
     onNone: () => ({}),
     onSome: (data) => ({ data }),
   })
+
   return Response.json(
     {
       jsonrpc: "2.0",

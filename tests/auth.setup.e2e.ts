@@ -14,6 +14,7 @@ for (const name of ["admin", "peer"] as const) {
         service: `${testDeploymentConfig.deployment.appName}-agent-control-plane`,
       })
       const key = name.toUpperCase()
+
       const response = await fetch("http://localhost:3100/api/auth/sign-in/email", {
         method: "POST",
         headers: { "Content-Type": "application/json", Origin: "http://localhost:3000" },
@@ -22,16 +23,20 @@ for (const name of ["admin", "peer"] as const) {
           password: process.env[`E2E_USER_${key}_PASSWORD`],
         }),
       })
+
       expect(response.status, "isolated configured administrator signs in").toBe(200)
+
       const cookies = response.headers.getSetCookie().map((cookie) => {
         const first = cookie.split(";")[0]!
         const index = first.indexOf("=")
+
         return {
           name: first.slice(0, index),
           value: first.slice(index + 1),
           url: "http://localhost:3000",
         }
       })
+
       expect(cookies.length).toBeGreaterThan(0)
       await browser.setCookies(cookies)
       await app.open("/settings?category=agents&tab=runtimes")

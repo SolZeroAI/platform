@@ -29,6 +29,13 @@ import { useSessionReplay } from "@/lib/use-session-replay"
 import { SessionContent } from "./content"
 import { getErrorMessage } from "./event-items"
 
+type SessionToolsPatchBody = {
+  tools: SessionToolSpec[]
+  customMcpServers: OpenCodeMcpServers
+  isolateStepLimit: number
+  subagents?: SubagentMode
+}
+
 export function SessionPage({
   search,
   sessionId,
@@ -40,6 +47,7 @@ export function SessionPage({
 }) {
   const { data: authSession, status: authStatus } = useAuthSession()
   const isAdmin = authSession?.isAdmin === true
+
   const {
     boot,
     tools: toolsSearch,
@@ -48,18 +56,23 @@ export function SessionPage({
     error: oktaReconnectErrorCode,
     error_description: oktaReconnectErrorDescription,
   } = search
+
   const oktaReconnectError = resolveOAuthCallbackError(
     oktaReconnectErrorCode,
     oktaReconnectErrorDescription,
   )
+
   const navigate = useNavigate({ from: "/session/$id" })
+
   const { catalog: providerCatalog, loading: providerLoading } = useProviderSettings({
     initialData: initialProviderSettings,
   })
+
   const rawModelOptions = useMemo(
     () => providerCatalog?.modelOptions ?? [],
     [providerCatalog?.modelOptions],
   )
+
   const providerDefaultModelConfigured = Boolean(providerCatalog?.defaultModel)
 
   const {
@@ -83,10 +96,12 @@ export function SessionPage({
     reconnect,
     loadOlderEvents,
   } = useSessionSocket(sessionId)
+
   const agentRuntime = resolveAgentRuntime({
     agentRuntime: sessionState?.agentRuntime ?? sessionState?.capabilities?.agentRuntime,
     sessionKind: sessionState?.sessionKind,
   })
+
   const modelOptions = useMemo(
     () =>
       rawModelOptions
@@ -99,6 +114,7 @@ export function SessionPage({
         .filter((group) => group.models.length > 0),
     [agentRuntime, rawModelOptions],
   )
+
   const allModels = useMemo(() => modelOptions.flatMap((group) => group.models), [modelOptions])
   const replay = useSessionReplay(events)
 
@@ -107,6 +123,7 @@ export function SessionPage({
       const response = await fetch(`/api/sessions/${sessionId}/archive`, {
         method: "POST",
       })
+
       if (!response.ok) {
         throw new Error(`Failed to archive session: ${response.status}`)
       }
@@ -120,6 +137,7 @@ export function SessionPage({
       const response = await fetch(`/api/sessions/${sessionId}/unarchive`, {
         method: "POST",
       })
+
       if (!response.ok) {
         throw new Error(`Failed to unarchive session: ${response.status}`)
       }
@@ -149,19 +167,24 @@ export function SessionPage({
     () => allModels.find((model) => model.id === selectedModel) ?? null,
     [allModels, selectedModel],
   )
+
   const resolvedModelId =
     selectedModel || sessionState?.model || providerCatalog?.defaultModel || ""
+
   const selectedModelLabel = selectedModelOption?.name || "select model"
   const sessionRepoTool = getGitHubRepoTool(sessionState?.tools)
+
   const sessionRepoFullName = sessionRepoTool
     ? `${sessionRepoTool.repoOwner}/${sessionRepoTool.repoName}`
     : sessionState?.repoOwner && sessionState.repoName
       ? `${sessionState.repoOwner}/${sessionState.repoName}`
       : null
+
   const sessionToolCount = sessionState
     ? (sessionState.tools?.filter((tool) => tool.kind !== "github_repo").length ?? 0) +
       Object.keys(sessionState.customMcpServers ?? {}).length
     : 0
+
   const runtimeStatus = sessionState?.runtimeStatus ?? sessionState?.sandboxStatus
 
   const handleModelChange = useCallback(
@@ -182,19 +205,18 @@ export function SessionPage({
     }) => {
       setIsSavingTools(true)
       setToolsError(null)
+
       try {
         const response = await fetch(`/api/sessions/${sessionId}/tools`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            tools: value.tools,
-            customMcpServers: value.customMcpServers,
-            isolateStepLimit: value.isolateStepLimit,
-            ...(sessionState?.agentRuntime === "isolate" ? { subagents: value.subagents } : {}),
-          }),
+          body: JSON.stringify(
+            buildSessionToolsPatchBody(value, sessionState?.agentRuntime === "isolate"),
+          ),
         })
+
         if (!response.ok) {
           const data = await response.json().catch(() => null)
           throw new Error(
@@ -217,6 +239,7 @@ export function SessionPage({
 
   const handleCloseToolsDialog = useCallback(() => {
     setToolsDialogOpen(false)
+
     if (toolsSearch === "step-limit") {
       void navigate({
         to: "/session/$id",
@@ -233,6 +256,7 @@ export function SessionPage({
       const defaultModel = allModels.find((model) => model.id === providerCatalog?.defaultModel)
       setSelectedModel(matchingModel?.id ?? defaultModel?.id ?? sessionState.model)
       setReasoningEffort(sessionState.reasoningEffort ?? matchingModel?.reasoning?.default)
+
       return
     }
 
@@ -248,6 +272,7 @@ export function SessionPage({
   useEffect(() => {
     if (!selectedModelOption?.reasoning) {
       setReasoningEffort(undefined)
+
       return
     }
 
@@ -271,6 +296,7 @@ export function SessionPage({
       const timeout = setTimeout(() => {
         setStreamedAssistantText("")
       }, 150)
+
       return () => clearTimeout(timeout)
     }
   }, [isProcessing, isSubmittingPrompt, streamedAssistantText])
@@ -315,9 +341,11 @@ export function SessionPage({
     if (!homeBootThinking) {
       return
     }
+
     const hasTerminalEvent = events.some(
       (event) => event.type === "error" || event.type === "execution_complete",
     )
+
     if (isIdleRuntimeStatus(runtimeStatus) || sessionState?.runtimeError || hasTerminalEvent) {
       setHomeBootThinking(false)
     }
@@ -327,12 +355,15 @@ export function SessionPage({
     if (!homeBootThinking) {
       return
     }
+
     const id = window.setTimeout(() => setHomeBootThinking(false), 120_000)
+
     return () => window.clearTimeout(id)
   }, [homeBootThinking])
 
   useEffect(() => {
     const msg = takeSessionPromptError(sessionId)
+
     if (msg) {
       setPromptError(msg)
       setHomeBootThinking(false)
@@ -343,9 +374,11 @@ export function SessionPage({
     const reconnectKey = `${oktaReconnect ?? "none"}:${resumeMessageId ?? ""}:${
       oktaReconnectError ?? ""
     }`
+
     if (!oktaReconnect || handledOktaReconnectRef.current === reconnectKey) {
       return
     }
+
     handledOktaReconnectRef.current = reconnectKey
 
     if (oktaReconnect === "complete") {
@@ -359,6 +392,7 @@ export function SessionPage({
             messageId: resumeMessageId,
             reason: "okta_reconnect",
           })
+
           if (!response.ok) {
             const data = await response.json().catch(() => null)
             throw new Error(
@@ -413,6 +447,7 @@ export function SessionPage({
       sessionKind: sessionState?.sessionKind,
       connected,
     })
+
     setPrompt("")
     setIsSubmittingPrompt(true)
 
@@ -441,9 +476,11 @@ export function SessionPage({
 
         while (true) {
           const { value, done } = await reader.read()
+
           if (done) {
             break
           }
+
           if (!value) {
             continue
           }
@@ -496,6 +533,7 @@ export function SessionPage({
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
     }
+
     typingTimeoutRef.current = setTimeout(() => {
       sendTyping()
     }, 300)
@@ -578,4 +616,26 @@ export function SessionPage({
       />
     </SidebarLayout>
   )
+}
+
+function buildSessionToolsPatchBody(
+  value: {
+    tools: SessionToolSpec[]
+    customMcpServers: OpenCodeMcpServers
+    isolateStepLimit: number
+    subagents: SubagentMode
+  },
+  includeSubagents: boolean,
+): SessionToolsPatchBody {
+  const body: SessionToolsPatchBody = {
+    tools: value.tools,
+    customMcpServers: value.customMcpServers,
+    isolateStepLimit: value.isolateStepLimit,
+  }
+
+  if (includeSubagents) {
+    body.subagents = value.subagents
+  }
+
+  return body
 }

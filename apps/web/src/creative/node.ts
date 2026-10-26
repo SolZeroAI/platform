@@ -16,6 +16,7 @@ import {
 const MANROPE_REGULAR_PATH = fileURLToPath(
   import.meta.resolve("@fontsource/manrope/files/manrope-latin-400-normal.woff2"),
 )
+
 const MANROPE_BOLD_PATH = fileURLToPath(
   import.meta.resolve("@fontsource/manrope/files/manrope-latin-700-normal.woff2"),
 )
@@ -52,11 +53,13 @@ export const renderReleaseNotesCard = Effect.fn("releaseCard.render")(function* 
 }) {
   const fs = yield* FileSystem.FileSystem
   const renderer = new Renderer()
+
   const [regular, bold, logoSvg] = yield* Effect.all([
     fs.readFile(MANROPE_REGULAR_PATH),
     fs.readFile(MANROPE_BOLD_PATH),
     fs.readFileString(join(options.repoRoot, "apps/web/public/images/solzero-logo.svg")),
   ])
+
   const logoColor = options.input.layout === "dark-columns" ? "#fff" : "#000"
 
   yield* rendererEffect("register-fonts", () =>
@@ -68,6 +71,7 @@ export const renderReleaseNotesCard = Effect.fn("releaseCard.render")(function* 
 
   const element = createElement(ReleaseNotesCard, { input: options.input })
   const { node, stylesheets } = yield* rendererEffect("compile-template", () => fromJsx(element))
+
   return yield* rendererEffect("render-image", () =>
     renderer.render(node, {
       width: RELEASE_CARD_WIDTH,
@@ -95,6 +99,7 @@ export const renderReleaseNotesCardToFile = Effect.fn("releaseCard.renderToFile"
     const outputPath = resolve(options.repoRoot, options.outputPath ?? DEFAULT_RELEASE_CARD_PATH)
     const image = yield* renderReleaseNotesCard(options)
     yield* fs.writeFile(outputPath, image)
+
     return outputPath
   },
 )

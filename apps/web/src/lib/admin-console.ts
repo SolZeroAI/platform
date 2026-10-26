@@ -58,6 +58,7 @@ export {
   workflowSearchPatch,
   workflowStateFromSearch,
 } from "./admin-console-search"
+
 export type {
   AdminConsoleSearchUpdate,
   AdminConsoleSearchUpdater,
@@ -103,6 +104,7 @@ export function useAdminConsole({
   updateSearch: AdminConsoleSearchUpdater
 }) {
   const view = search.view
+
   const {
     sessionsKind,
     sessionsPage,
@@ -123,32 +125,42 @@ export function useAdminConsole({
     workflowsStatus,
     workflowsUserId,
   } = search
+
   const [sessions, setSessions] = useState<readonly AdminSessionRecord[]>([])
   const [workflows, setWorkflows] = useState<readonly AdminWorkflowRecord[]>([])
+
   const [mcpcf, setMcpcf] = useState<AdminMcpcfResponse | null>(
     initialAdminIntegrations?.mcpcf ?? null,
   )
+
   const [aiProviders, setAiProviders] = useState<AdminAiProvidersResponse | null>(
     initialAdminIntegrations?.aiProviders ?? null,
   )
+
   const [aiSearch, setAiSearch] = useState<AdminAiSearchResponse | null>(
     initialAdminAiSearch?.aiSearch ?? null,
   )
+
   const [sessionTotal, setSessionTotal] = useState(0)
   const [workflowTotal, setWorkflowTotal] = useState(0)
   const [sessionDetail, setSessionDetail] = useState<AdminSessionDetailResponse | null>(null)
   const [runDetail, setRunDetail] = useState<WorkflowRunDetail | null>(null)
+
   const [loading, setLoading] = useState(
     !(
       (view === "integrations" && initialAdminIntegrations !== null) ||
       (view === "ai-search" && initialAdminAiSearch !== null)
     ),
   )
+
   const [actionBusy, setActionBusy] = useState<string | null>(null)
+
   const [error, setError] = useState(
     initialAdminAiSearch?.error ?? initialAdminIntegrations?.error ?? "",
   )
+
   const [notice, setNotice] = useState("")
+
   const [mcpcfRefresh, setMcpcfRefresh] = useState<McpcfRefreshState>({
     open: false,
     phase: "validating",
@@ -184,6 +196,7 @@ export function useAdminConsole({
       sessionsUserId,
     ],
   )
+
   const workflowTableState = useMemo(
     () => ({
       q: workflowsQ ?? "",
@@ -204,21 +217,26 @@ export function useAdminConsole({
       workflowsUserId,
     ],
   )
+
   const fetchSequenceRef = useRef(0)
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
       if (!isAdmin) {
         setLoading(false)
+
         return
       }
+
       const sequence = fetchSequenceRef.current + 1
       fetchSequenceRef.current = sequence
       setLoading(true)
       setError("")
+
       try {
         const sessionParams = sessionQueryParams(sessionTableState)
         const workflowParams = workflowQueryParams(workflowTableState)
+
         const [sessionData, workflowData, aiSearchData, mcpcfData, aiProvidersData] =
           await Promise.all([
             view === "sessions"
@@ -243,23 +261,29 @@ export function useAdminConsole({
               ? requestJson<AdminAiProvidersResponse>("/api/admin/ai-providers", { signal })
               : Promise.resolve(null),
           ])
+
         if (fetchSequenceRef.current !== sequence) {
           return
         }
+
         if (sessionData) {
           setSessions(sessionData.sessions)
           setSessionTotal(sessionData.total)
         }
+
         if (workflowData) {
           setWorkflows(workflowData.workflows)
           setWorkflowTotal(workflowData.total)
         }
+
         if (aiSearchData) {
           setAiSearch(aiSearchData)
         }
+
         if (mcpcfData) {
           setMcpcf(mcpcfData)
         }
+
         if (aiProvidersData) {
           setAiProviders(aiProvidersData)
         }
@@ -267,6 +291,7 @@ export function useAdminConsole({
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         setError(getErrorMessage(errorValue))
       } finally {
         if (fetchSequenceRef.current === sequence) {
@@ -281,6 +306,7 @@ export function useAdminConsole({
     if (view !== "integrations" || initialAdminIntegrations === null) {
       return
     }
+
     setMcpcf(initialAdminIntegrations.mcpcf)
     setAiProviders(initialAdminIntegrations.aiProviders)
     setError(initialAdminIntegrations.error)
@@ -291,6 +317,7 @@ export function useAdminConsole({
     if (view !== "ai-search" || initialAdminAiSearch === null) {
       return
     }
+
     setAiSearch(initialAdminAiSearch.aiSearch)
     setError(initialAdminAiSearch.error)
     setLoading(false)
@@ -300,13 +327,17 @@ export function useAdminConsole({
     if (view === "ai-search" && initialAdminAiSearch !== null) {
       return
     }
+
     if (view === "integrations" && initialAdminIntegrations !== null) {
       return
     }
+
     const controller = new AbortController()
+
     const timeoutId = setTimeout(() => {
       void load(controller.signal)
     }, 200)
+
     return () => {
       clearTimeout(timeoutId)
       controller.abort()
@@ -317,16 +348,20 @@ export function useAdminConsole({
     if (!isAdmin || view !== "workflows") {
       return
     }
+
     const hasActiveRuns = workflows.some(
       (workflow) =>
         workflow.latestRun?.status === "queued" || workflow.latestRun?.status === "running",
     )
+
     if (!hasActiveRuns) {
       return
     }
+
     const interval = setInterval(() => {
       void load()
     }, 7_500)
+
     return () => clearInterval(interval)
   }, [isAdmin, load, view, workflows])
 
@@ -335,12 +370,15 @@ export function useAdminConsole({
       setActionBusy(key)
       setError("")
       setNotice("")
+
       try {
         await action()
         await load()
+
         return true
       } catch (errorValue) {
         setError(getErrorMessage(errorValue))
+
         return false
       } finally {
         setActionBusy(null)
@@ -357,6 +395,7 @@ export function useAdminConsole({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
+
         setMcpcf(next)
         setNotice("MCP Context Forge configuration saved.")
       })
@@ -375,6 +414,7 @@ export function useAdminConsole({
             body: JSON.stringify(payload),
           },
         )
+
         setAiProviders(next)
         setNotice("LiteLLM configuration saved.")
       })
@@ -393,6 +433,7 @@ export function useAdminConsole({
             body: JSON.stringify(payload),
           },
         )
+
         setAiProviders(next)
         setNotice("Cloudflare AI Gateway provider keys saved.")
       })
@@ -407,11 +448,13 @@ export function useAdminConsole({
           mode === "create"
             ? "/api/admin/ai-search/sources"
             : `/api/admin/ai-search/sources/${encodeURIComponent(payload.id)}`
+
         const next = await requestJson<AdminAiSearchResponse>(endpoint, {
           method: mode === "create" ? "POST" : "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
+
         setAiSearch(next)
         setNotice(`AI Search source ${mode === "create" ? "created" : "saved"}.`)
       })
@@ -426,6 +469,7 @@ export function useAdminConsole({
           `/api/admin/ai-search/sources/${encodeURIComponent(sourceId)}`,
           { method: "DELETE" },
         )
+
         setAiSearch(next)
         setNotice("AI Search source deleted.")
       })
@@ -437,13 +481,16 @@ export function useAdminConsole({
     setActionBusy("ai-search-export")
     setError("")
     setNotice("")
+
     try {
       const result = await requestJson<AdminAiSearchExportResponse>("/api/admin/ai-search/export", {
         method: "POST",
       })
+
       return result.dotenv
     } catch (errorValue) {
       setError(getErrorMessage(errorValue))
+
       return null
     } finally {
       setActionBusy(null)
@@ -456,14 +503,19 @@ export function useAdminConsole({
         "/api/admin/ai-providers/litellm/sync",
         { method: "POST" },
       )
+
       setAiProviders(await requestJson<AdminAiProvidersResponse>("/api/admin/ai-providers"))
+
       if (result.status === "failure") {
         return
       }
+
       if (result.status === "skipped") {
         setNotice(`LiteLLM sync skipped: ${result.reason ?? "disabled"}`)
+
         return
       }
+
       setNotice(`LiteLLM model registry refreshed (${result.models} models).`)
     })
   }, [runAction])
@@ -473,6 +525,7 @@ export function useAdminConsole({
       const next = await requestJson<AdminAiProvidersResponse>("/api/admin/ai-providers/litellm", {
         method: "DELETE",
       })
+
       setAiProviders(next)
       setNotice("LiteLLM KV configuration reset.")
     })
@@ -482,17 +535,21 @@ export function useAdminConsole({
     setActionBusy("litellm-export")
     setError("")
     setNotice("")
+
     try {
       const result = await requestJson<AdminLitellmExportResponse>(
         "/api/admin/ai-providers/litellm/export",
         { method: "POST" },
       )
+
       if (result.variableCount === 0) {
         setNotice("No LiteLLM KV configuration values to export.")
       }
+
       return result.dotenv
     } catch (errorValue) {
       setError(getErrorMessage(errorValue))
+
       return null
     } finally {
       setActionBusy(null)
@@ -504,6 +561,7 @@ export function useAdminConsole({
       const next = await requestJson<AdminMcpcfResponse>("/api/admin/mcpcf/config", {
         method: "DELETE",
       })
+
       setMcpcf(next)
       setNotice("MCP Context Forge KV configuration reset.")
     })
@@ -513,16 +571,20 @@ export function useAdminConsole({
     setActionBusy("mcpcf-export")
     setError("")
     setNotice("")
+
     try {
       const result = await requestJson<AdminMcpcfExportResponse>("/api/admin/mcpcf/config/export", {
         method: "POST",
       })
+
       if (result.variableCount === 0) {
         setNotice("No MCP Context Forge KV configuration values to export.")
       }
+
       return result.dotenv
     } catch (errorValue) {
       setError(getErrorMessage(errorValue))
+
       return null
     } finally {
       setActionBusy(null)
@@ -534,12 +596,15 @@ export function useAdminConsole({
     setActionBusy("mcpcf-refresh")
     setError("")
     setNotice("")
+
     try {
       await delay(150)
       setMcpcfRefresh({ open: true, phase: "fetching", result: null, error: "" })
+
       const result = await requestJson<AdminMcpcfRefreshResponse>("/api/admin/mcpcf/refresh", {
         method: "POST",
       })
+
       setMcpcfRefresh({ open: true, phase: "applying", result, error: "" })
       setMcpcf(await requestJson<AdminMcpcfResponse>("/api/admin/mcpcf"))
       setMcpcfRefresh({ open: true, phase: "complete", result, error: "" })
@@ -565,6 +630,7 @@ export function useAdminConsole({
     (id: string, action: "stop" | "archive" | "unarchive" | "delete") =>
       void runAction(`session-${action}-${id}`, async () => {
         await runSessionAction(id, action)
+
         if (sessionDetail?.session.id === id) {
           setSessionDetail(
             await requestJson<AdminSessionDetailResponse>(`/api/admin/sessions/${id}`),
@@ -580,12 +646,15 @@ export function useAdminConsole({
         const runs = await requestJson<AdminWorkflowRunsResponse>(
           `/api/admin/workflows/${workflow.id}/runs`,
         )
+
         const selectedRunId = runs.runs[0]?.id ?? null
+
         const events = selectedRunId
           ? await requestJson<AdminWorkflowRunEventsResponse>(
               `/api/admin/workflows/${workflow.id}/runs/${selectedRunId}/events`,
             )
           : { events: [] }
+
         setRunDetail({
           workflow,
           runs: runs.runs,
@@ -600,10 +669,12 @@ export function useAdminConsole({
     (workflow: AdminWorkflowRecord, action: "run" | "archive" | "unarchive") =>
       void runAction(`workflow-${action}-${workflow.id}`, async () => {
         await runWorkflowAction(workflow, action)
+
         if (runDetail?.workflow.id === workflow.id) {
           const runs = await requestJson<AdminWorkflowRunsResponse>(
             `/api/admin/workflows/${workflow.id}/runs`,
           )
+
           setRunDetail({ ...runDetail, runs: runs.runs })
         }
       }),
@@ -616,9 +687,11 @@ export function useAdminConsole({
         if (!runDetail) {
           return
         }
+
         const events = await requestJson<AdminWorkflowRunEventsResponse>(
           `/api/admin/workflows/${runDetail.workflow.id}/runs/${runId}/events`,
         )
+
         setRunDetail({ ...runDetail, selectedRunId: runId, events: events.events })
       }),
     [runAction, runDetail],
@@ -630,10 +703,13 @@ export function useAdminConsole({
         if (!runDetail) {
           return
         }
+
         await retryWorkflowRun(runDetail.workflow.id, runId)
+
         const runs = await requestJson<AdminWorkflowRunsResponse>(
           `/api/admin/workflows/${runDetail.workflow.id}/runs`,
         )
+
         setRunDetail({ ...runDetail, runs: runs.runs })
         await load()
       }),

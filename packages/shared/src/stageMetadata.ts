@@ -7,6 +7,7 @@ import * as Schema from "effect/Schema"
 import type { S0ApplicationConfig, S0DeploymentConfig } from "./s0-config"
 
 const DEFAULT_SANDBOX_INACTIVITY_TIMEOUT_MS = 600_000
+
 /** Local HTTP listen port for the Alchemy API Worker (`nub run dev`). */
 export const LOCAL_API_PORT = 3100
 const INTERNAL_MCP_LOCAL_ORIGIN = `http://host.docker.internal:${LOCAL_API_PORT}`
@@ -184,13 +185,16 @@ const StageMetadataBindingFields = {
   app: AppStagePropsSchema,
   infra: InfraStagePropsSchema,
 }
+
 const StageMetadataBindingSchema = Schema.Union([
   Schema.Struct({ _tag: Schema.Literal("dev"), ...StageMetadataBindingFields }),
   Schema.Struct({ _tag: Schema.Literal("test"), ...StageMetadataBindingFields }),
   Schema.Struct({ _tag: Schema.Literal("pre"), ...StageMetadataBindingFields }),
   Schema.Struct({ _tag: Schema.Literal("prod"), ...StageMetadataBindingFields }),
 ])
+
 const decodeStageMetadataBinding = Schema.decodeUnknownSync(StageMetadataBindingSchema)
+
 type StageMetadataBinding = typeof StageMetadataBindingSchema.Type
 
 function configuredAppStageProps(config: S0ApplicationConfig): AppStageProps {
@@ -255,12 +259,15 @@ export function getAppStageMetadataFromStr(stageStr: string) {
 export function getAppStageMetadataSync(input: string | StageMetadataEnv) {
   if (typeof input !== "string" && input.S0_STAGE_METADATA !== undefined) {
     const metadata = decodeStageMetadataBinding(input.S0_STAGE_METADATA)
+
     return { name: metadata.name, app: metadata.app } satisfies AppStageMetadata
   }
+
   const stage = Match.value(input).pipe(
     Match.when(Match.string, (value) => value),
     Match.orElse((env) => env.STAGE),
   )
+
   // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for browser/runtime feature flags; app metadata is deterministic and does not resolve infra.
   return Effect.runSync(getAppStageMetadataFromStr(stage))
 }
@@ -333,11 +340,13 @@ function deployedInfraStageProps(input: {
 }): InfraStageProps {
   const { config } = input
   const zone = requireDeployedInfraZone(config)
+
   const defaultWebFqdn = defaultDeployedWebFqdn({
     stageName: input.stageName,
     zone,
     prod: input.prod,
   })
+
   const webFqdn = Option.getOrElse(config.webFqdn, () => defaultWebFqdn)
   const defaultApiFqdn = `api.${webFqdn}`
   const apiFqdn = Option.getOrElse(config.apiFqdn, () => defaultApiFqdn)
@@ -500,6 +509,7 @@ export function getStageMetadataFromStr(
 
 function stageMetadataFromBinding(binding: StageMetadataBinding): StageMetadata {
   const props = { name: binding.name, app: binding.app, infra: binding.infra }
+
   return Match.value(binding._tag).pipe(
     Match.when("dev", () => new Dev(props)),
     Match.when("test", () => new Test(props)),
@@ -533,9 +543,11 @@ export function withWorkersDevOrigins(
 ): StageMetadata {
   const applicable =
     metadata.infra.alchemyStateStore === "cloudflare" && metadata.infra.zone === "localhost"
+
   if (!applicable) return metadata
 
   const subdomain = input.subdomain.trim().toLowerCase()
+
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomain)) {
     throw new Error(
       `Invalid workers.dev subdomain "${input.subdomain}". Set CLOUDFLARE_WORKERS_SUBDOMAIN to the account label.`,
@@ -544,6 +556,7 @@ export function withWorkersDevOrigins(
 
   const serverUrl = `https://${deployedApiWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
   const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
+
   return stageMetadataFromBinding({
     _tag: metadata._tag,
     name: metadata.name,

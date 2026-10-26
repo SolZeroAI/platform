@@ -26,6 +26,7 @@ export function PageHeader({
   const label = isOpen ? "Close sidebar" : "Open sidebar"
   const hasHeaderContent = Boolean(children || actions)
   const useGhostToggle = isOpen || border || hasHeaderContent
+
   const toggleVariantClassName = useGhostToggle
     ? "text-kumo-subtle transition-[background-color,color,transform] hover:bg-kumo-tint hover:text-kumo-default active:scale-[0.96]"
     : "bg-kumo-elevated text-kumo-subtle shadow-lg ring-1 ring-kumo-hairline transition-[background-color,color,box-shadow,transform] hover:bg-kumo-tint hover:text-kumo-default active:scale-[0.96]"

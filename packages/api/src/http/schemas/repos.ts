@@ -10,6 +10,7 @@ export const ReposListQuery = {
   page: Schema.optionalKey(Schema.String),
   perPage: Schema.optionalKey(Schema.String),
 }
+
 export type ReposListQuery = {
   q?: string
   owner?: string
@@ -24,6 +25,7 @@ export const RepoParams = {
   owner: Schema.String,
   name: Schema.String,
 }
+
 export type RepoParams = { owner: string; name: string }
 
 export const RepoMetadataPayload = Schema.Struct({
@@ -32,6 +34,7 @@ export const RepoMetadataPayload = Schema.Struct({
   channelAssociations: Schema.optionalKey(Schema.Array(Schema.String)),
   keywords: Schema.optionalKey(Schema.Array(Schema.String)),
 })
+
 export type RepoMetadataPayload = typeof RepoMetadataPayload.Type
 
 export const RepoOwnerSummary = Schema.Struct({

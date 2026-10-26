@@ -14,6 +14,7 @@ export function wsToken({ params, payload }: { params: IdParams; payload: WsToke
       const access = yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, "http://internal/internal/ws-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

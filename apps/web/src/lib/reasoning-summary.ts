@@ -1,9 +1,12 @@
-export function parseReasoningSummary(text: string): {
+export type ReasoningSummary = {
   title: string | null
   body: string
-} {
+}
+
+export function parseReasoningSummary(text: string): ReasoningSummary {
   const content = text.trim()
   const match = content.match(/^\*\*([^*\n]+)\*\*(?:\r?\n\r?\n|$)/)
+
   if (!match) {
     return { title: null, body: content }
   }

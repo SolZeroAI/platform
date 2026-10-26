@@ -43,28 +43,49 @@ interface CodingAgentRuntime {
   currentSession(): string | null
 }
 
+function readErrorField<Value extends object>(
+  value: Value,
+  key: "message" | "data" | "name",
+): unknown {
+  if (key === "message" && "message" in value) return value.message
+
+  if (key === "data" && "data" in value) return value.data
+
+  if (key === "name" && "name" in value) return value.name
+
+  return undefined
+}
+
 function stringifyError(error: unknown): string {
   if (error instanceof Error) {
     return error.message
   }
+
   if (error && typeof error === "object") {
-    const message = Reflect.get(error, "message")
+    const message = readErrorField(error, "message")
+
     if (typeof message === "string" && message.length > 0) {
       return message
     }
+
     // OpenCode's typed session errors store their safe display message in data.
-    const data = Reflect.get(error, "data")
+    const data = readErrorField(error, "data")
+
     if (data && typeof data === "object") {
-      const detail = Reflect.get(data, "message")
+      const detail = readErrorField(data, "message")
+
       if (typeof detail === "string" && detail.length > 0) {
         return detail
       }
     }
-    const name = Reflect.get(error, "name")
+
+    const name = readErrorField(error, "name")
+
     if (typeof name === "string" && name.length > 0) {
       return name
     }
   }
+
   return String(error)
 }
 
@@ -136,6 +157,7 @@ function harnessAdapterSettings(
           },
         }
       }
+
       if (model.kind === "openai-responses") {
         return {
           runtime,
@@ -154,6 +176,7 @@ function harnessAdapterSettings(
           },
         }
       }
+
       return {
         runtime,
         settings: {
@@ -190,9 +213,11 @@ function harnessAdapterSettings(
           },
         }
       }
+
       if (model.kind !== "openai-compatible" || model.providerId !== "litellm") {
         throw new Error("Codex harness requires an OpenAI Responses or LiteLLM model")
       }
+
       return {
         runtime,
         settings: {
@@ -212,6 +237,7 @@ function harnessAdapterSettings(
       if (model.kind !== "anthropic") {
         throw new Error("Claude Code harness requires an Anthropic Messages model")
       }
+
       return {
         runtime,
         settings: {
@@ -234,6 +260,7 @@ function makeHarness(
   reasoning: string | null | undefined,
 ): HarnessV1 {
   const adapter = harnessAdapterSettings(runtime, model, reasoning)
+
   switch (adapter.runtime) {
     case "opencode":
       return createOpenCode(adapter.settings)
@@ -255,6 +282,7 @@ function buildHarnessInstructions(input: {
     provider: input.model.providerId,
     model: input.model.modelId,
   })
+
   const sections = [
     [
       "# SolZero agent instructions",
@@ -321,16 +349,19 @@ function runtimeConfigurationSignature(input: RuntimeSendRequest): string {
 
 function partText(part: Record<string, unknown>): string {
   const value = part.text ?? part.delta
+
   return typeof value === "string" ? value : ""
 }
 
 function partToolCallId(part: Record<string, unknown>): string {
   const value = part.toolCallId ?? part.toolCallID ?? part.id
+
   return typeof value === "string" ? value : "tool-call"
 }
 
 function partToolName(part: Record<string, unknown>): string {
   const value = part.toolName ?? part.tool ?? part.nativeName
+
   return typeof value === "string" ? value : "tool"
 }
 
@@ -342,18 +373,22 @@ function fileChangeEvent(
   if (part.toolName !== "fileChange" || typeof part.input !== "object" || part.input === null) {
     return null
   }
-  const input = part.input as Record<string, unknown>
+
+  const event = "event" in part.input ? part.input.event : undefined
+  const path = "path" in part.input ? part.input.path : undefined
+
   if (
-    (input.event !== "create" && input.event !== "modify" && input.event !== "delete") ||
-    typeof input.path !== "string"
+    (event !== "create" && event !== "modify" && event !== "delete") ||
+    typeof path !== "string"
   ) {
     return null
   }
+
   return {
     type: "file-change",
     messageId,
-    event: input.event,
-    path: input.path,
+    event,
+    path,
     timestamp,
   }
 }
@@ -362,8 +397,11 @@ function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
   if (typeof part !== "object" || part === null || !("type" in part)) {
     return null
   }
+
+  // SAFETY: the guard established a non-null object with a type tag, and stream parts are open records of that shape.
   const value = part as Record<string, unknown>
   const timestamp = Date.now()
+
   switch (value.type) {
     case "text-delta":
       return {
@@ -396,6 +434,7 @@ function mapStreamPart(part: unknown, messageId: string): RuntimeEvent | null {
       if (value.toolName === "fileChange") {
         return null
       }
+
       return {
         type: "tool-result",
         messageId,
@@ -475,11 +514,14 @@ export function createCodingAgentRuntime(runtime: HarnessRuntimeName): CodingAge
   async function ensureSession(input: RuntimeSendRequest): Promise<RuntimeState> {
     const signature = runtimeConfigurationSignature(input)
     const nextSessionId = requestedSessionId ?? input.sessionId
+
     if (current && current.sessionId === nextSessionId && current.modelSignature === signature) {
       return current
     }
+
     await destroyCurrent()
     const mcpTools = await createMcpTools(input.mcpServers)
+
     try {
       const agent = new HarnessAgent({
         harness: makeHarness(runtime, input.model, input.reasoningEffort),
@@ -500,6 +542,7 @@ export function createCodingAgentRuntime(runtime: HarnessRuntimeName): CodingAge
         skills: harnessSkills(input.skills),
         tools: mcpTools.tools,
       })
+
       const session = await agent.createSession({ sessionId: nextSessionId })
       current = {
         sessionId: nextSessionId,
@@ -508,6 +551,7 @@ export function createCodingAgentRuntime(runtime: HarnessRuntimeName): CodingAge
         session,
         mcpTools,
       }
+
       return current
     } catch (error) {
       await mcpTools.close()
@@ -520,25 +564,33 @@ export function createCodingAgentRuntime(runtime: HarnessRuntimeName): CodingAge
     runningAbortController = abortController
     let emittedFinish = false
     let emittedError: string | null = null
+
     try {
       const state = await ensureSession(input)
+
+      // SAFETY: this runtime calls stream with the session, prompt, and abort signal that HarnessAgent.stream accepts for these harness tools.
       const result = await state.agent.stream({
         session: state.session,
         prompt: input.content,
         abortSignal: abortController.signal,
       } as Parameters<HarnessAgent["stream"]>[0])
+
       for await (const part of result.fullStream) {
         const event = mapStreamPart(part, input.messageId)
+
         if (!event) {
           continue
         }
+
         if (event.type === "finish") {
           emittedFinish = true
         } else if (event.type === "error") {
           emittedError = event.error
         }
+
         events.push(event)
       }
+
       if (!emittedFinish) {
         events.push({
           type: "finish",

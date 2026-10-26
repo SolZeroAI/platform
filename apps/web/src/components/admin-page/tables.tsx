@@ -169,6 +169,7 @@ export function SessionsTable({
     ],
     [busy, onAction, onView],
   )
+
   const table = useAdminTable({
     data: sessions,
     columns,
@@ -320,6 +321,7 @@ export function WorkflowsTable({
     ],
     [busy, onAction, onViewRuns],
   )
+
   const table = useAdminTable({
     data: workflows,
     columns,
@@ -357,6 +359,7 @@ export function useAdminTable<TData>({
   onTableStateChange: (patch: Partial<SharedTableState>) => void
 }): Table<TData> {
   const tableData = useMemo(() => [...data], [data])
+
   return useReactTable({
     data: tableData,
     columns,

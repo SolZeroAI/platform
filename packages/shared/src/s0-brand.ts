@@ -28,11 +28,13 @@ export function hasCustomS0Logo(brand: S0BrandConfig): boolean {
 
 function nonEmpty(value: string | undefined): string | undefined {
   const normalized = value?.trim()
+
   return normalized ? normalized : undefined
 }
 
 export function resolveS0Brand(env: S0BrandEnvironment): S0BrandConfig {
   const sharedLogoPath = nonEmpty(env.VITE_S0_BRAND_LOGO_PATH)
+
   return {
     name: nonEmpty(env.VITE_S0_BRAND_NAME) ?? DEFAULT_SOLZERO_BRAND.name,
     logoLightPath:

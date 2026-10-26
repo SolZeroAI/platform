@@ -28,5 +28,6 @@ export function getControlPlaneHeaders(init?: HeadersInit): Headers {
   headers.delete("x-api-key")
   headers.delete("x-user-id")
   headers.delete("x-okta-user-id")
+
   return headers
 }

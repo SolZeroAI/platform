@@ -39,6 +39,7 @@ export function planPlanetscaleCutoverEdits(input: {
 }): CutoverEdits {
   const nextJsonc = applyJsoncCutoverComments(input.jsonc)
   const nextEnv = applyPlanetscaleEnvAssignments(input.envFile)
+
   return {
     jsoncPath: input.jsoncPath,
     envPath: input.envPath,
@@ -54,12 +55,16 @@ function publicCutoverEnv(contents: string): string {
     ENV_ASSIGNMENTS.map((assignment) => {
       const key = assignment.slice(0, assignment.indexOf("="))
       const line = contents.split("\n").find((candidate) => envLineKey(candidate) === key)
+
       if (line === undefined) return `${key}=<unset>`
       const value = envLineValue(line).trim()
+
       if (key === DATABASE_ENV && ["d1", "planetscale", ""].includes(value))
         return `${key}=${value}`
+
       if (key === APP_DB_MODE_ENV && ["local", "remote", ""].includes(value))
         return `${key}=${value}`
+
       return `${key}=${value ? "<set; value omitted>" : "<required>"}`
     }).join("\n") + "\n"
   )
@@ -67,28 +72,36 @@ function publicCutoverEnv(contents: string): string {
 
 export function applyJsoncCutoverComments(jsonc: string): string {
   const alreadyAnnotated = CUTOVER_JSONC_COMMENT_LINES.every((line) => jsonc.includes(line))
+
   if (alreadyAnnotated) return jsonc.endsWith("\n") ? jsonc : `${jsonc}\n`
   const prefix = `${CUTOVER_JSONC_COMMENT_LINES.join("\n")}\n`
   const body = jsonc.startsWith("\uFEFF") ? jsonc.slice(1) : jsonc
+
   return `${prefix}${body.endsWith("\n") ? body : `${body}\n`}`
 }
 
 export function applyPlanetscaleEnvAssignments(envFile: string): string {
   const lines = envFile.length === 0 ? [] : envFile.split("\n")
+
   const withoutTrailingEmpty =
     lines.length > 0 && lines[lines.length - 1] === "" ? lines.slice(0, -1) : lines
+
   const next = [...withoutTrailingEmpty]
+
   for (const assignment of ENV_ASSIGNMENTS) {
     const key = assignment.slice(0, assignment.indexOf("="))
     const value = assignment.slice(assignment.indexOf("=") + 1)
     const index = next.findIndex((line) => envLineKey(line) === key)
+
     if (index === -1) {
       next.push(assignment)
       continue
     }
+
     if (value === "" && envLineValue(next[index] ?? "") !== "") continue
     next[index] = assignment
   }
+
   return `${next.join("\n")}\n`
 }
 
@@ -96,9 +109,11 @@ export function unifiedDiff(path: string, before: string, after: string): string
   if (before === after) {
     return `--- ${path}\n+++ ${path}\n`
   }
+
   const oldLines = splitLines(before)
   const newLines = splitLines(after)
   let prefix = 0
+
   while (
     prefix < oldLines.length &&
     prefix < newLines.length &&
@@ -106,8 +121,10 @@ export function unifiedDiff(path: string, before: string, after: string): string
   ) {
     prefix += 1
   }
+
   let oldSuffix = oldLines.length
   let newSuffix = newLines.length
+
   while (
     oldSuffix > prefix &&
     newSuffix > prefix &&
@@ -116,37 +133,48 @@ export function unifiedDiff(path: string, before: string, after: string): string
     oldSuffix -= 1
     newSuffix -= 1
   }
+
   const oldCount = Math.max(oldSuffix - prefix, 0)
   const newCount = Math.max(newSuffix - prefix, 0)
+
   const hunk: string[] = [
     `--- ${path}`,
     `+++ ${path}`,
     `@@ -${prefix + 1},${oldCount} +${prefix + 1},${newCount} @@`,
   ]
+
   for (let index = prefix; index < oldSuffix; index += 1) {
     hunk.push(`-${oldLines[index]}`)
   }
+
   for (let index = prefix; index < newSuffix; index += 1) {
     hunk.push(`+${newLines[index]}`)
   }
+
   return `${hunk.join("\n")}\n`
 }
 
 function splitLines(text: string): string[] {
   if (text.length === 0) return []
+
   return text.endsWith("\n") ? text.slice(0, -1).split("\n") : text.split("\n")
 }
 
 function envLineKey(line: string): string | undefined {
   const trimmed = line.trim()
+
   if (trimmed === "" || trimmed.startsWith("#")) return undefined
   const eq = trimmed.indexOf("=")
+
   if (eq === -1) return undefined
+
   return trimmed.slice(0, eq)
 }
 
 function envLineValue(line: string): string {
   const eq = line.indexOf("=")
+
   if (eq === -1) return ""
+
   return line.slice(eq + 1)
 }

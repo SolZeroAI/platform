@@ -8,6 +8,7 @@ export const ISOLATE_SUBAGENT_MAX_STEPS = ISOLATE_SUBAGENT_STEP_LIMIT + 1
 
 const MAX_OPSGENIE_LIST_ALERTS = 25
 const OPSGENIE_LIST_ALERTS_TOOL_SUFFIX = "opsgenie-broker-mcp-list-alerts"
+
 const SUBAGENT_FINALIZATION_PROMPT = [
   "The delegated tool-call budget is exhausted.",
   "Do not call more tools.",

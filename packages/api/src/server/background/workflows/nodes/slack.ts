@@ -28,7 +28,10 @@ function asArray(value: unknown): unknown[] {
       (candidate: unknown): candidate is unknown[] => Array.isArray(candidate),
       (array) => array,
     ),
-    Match.orElse(() => [] as unknown[]),
+    Match.orElse(
+      () =>
+        /* SAFETY: This branch has no unknown[] elements, so the array is empty. */ [] as unknown[],
+    ),
   )
 }
 
@@ -60,15 +63,18 @@ const resolveWorkflowSlackToken = Effect.fn("workflows.resolveSlackToken")(funct
   input: WorkflowSlackNodeExecutionInput,
 ) {
   const context = createNodeContext(input)
+
   const token = Option.match(getString(input.inputs.token), {
     onNone: () => null,
     onSome: (template) => renderTemplate(template, context),
   })
+
   const resolvedToken = resolveWorkflowSlackBotToken({
     env: input.env,
     workflowId: input.workflowId,
     token,
   })
+
   return yield* Effect.catch(resolvedToken, (error) =>
     Match.value(token !== null && token.length > 0).pipe(
       Match.when(true, () => Effect.fail(error)),
@@ -100,10 +106,18 @@ const callSlackApi = Effect.fn("workflows.callSlackApi")(function* (
       }),
     catch: toError,
   })
-  const result = (yield* Effect.tryPromise({
-    try: () => response.json().catch(() => ({})) as Promise<SlackApiResponse>,
-    catch: toError,
-  })) as SlackApiResponse
+
+  const result =
+    /* SAFETY: The JSON body is the SlackApiResponse shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
+      {
+        try: () =>
+          /* SAFETY: The JSON body is the Promise<SlackApiResponse> shape read by this caller after the response arrives. */ response
+            .json()
+            .catch(() => ({})) as Promise<SlackApiResponse>,
+        catch: toError,
+      },
+    )) as SlackApiResponse
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () =>
       workflowNodeFail(`Slack API ${method} failed with HTTP ${response.status}`),
@@ -131,10 +145,13 @@ function appendSlackQueryParam(params: URLSearchParams, key: string, value: unkn
 function slackApiUrl(method: string, query: Record<string, unknown>) {
   const url = new URL(`https://slack.com/api/${method}`)
   const params = new URLSearchParams()
+
   for (const [key, value] of Object.entries(query)) {
     appendSlackQueryParam(params, key, value)
   }
+
   url.search = params.toString()
+
   return url
 }
 
@@ -144,6 +161,7 @@ const callSlackApiGet = Effect.fn("workflows.callSlackApiGet")(function* (
   query: Record<string, unknown>,
 ) {
   const url = slackApiUrl(method, query)
+
   const response = yield* Effect.tryPromise({
     try: () =>
       // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (Slack Web API) inside a workflow node executor; native fetch is required at this external API edge.
@@ -155,10 +173,18 @@ const callSlackApiGet = Effect.fn("workflows.callSlackApiGet")(function* (
       }),
     catch: toError,
   })
-  const result = (yield* Effect.tryPromise({
-    try: () => response.json().catch(() => ({})) as Promise<SlackApiResponse>,
-    catch: toError,
-  })) as SlackApiResponse
+
+  const result =
+    /* SAFETY: The JSON body is the SlackApiResponse shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
+      {
+        try: () =>
+          /* SAFETY: The JSON body is the Promise<SlackApiResponse> shape read by this caller after the response arrives. */ response
+            .json()
+            .catch(() => ({})) as Promise<SlackApiResponse>,
+        catch: toError,
+      },
+    )) as SlackApiResponse
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () =>
       workflowNodeFail(`Slack API ${method} failed with HTTP ${response.status}`),
@@ -184,8 +210,14 @@ function isMatchingChannel(normalized: string) {
   return (item: unknown): boolean =>
     typeof item === "object" &&
     item !== null &&
-    (item as Record<string, unknown>).name === normalized &&
-    typeof (item as Record<string, unknown>).id === "string"
+    /* SAFETY: item was checked to be a non-array object before it is read as Record<string, unknown>. */ (
+      item as Record<string, unknown>
+    ).name === normalized &&
+    typeof (
+      /* SAFETY: item was checked to be a non-array object before it is read as Record<string, unknown>. */ (
+        item as Record<string, unknown>
+      ).id
+    ) === "string"
 }
 
 const searchSlackChannelsPage = Effect.fn("workflows.searchSlackChannelsPage")(function* (
@@ -197,20 +229,27 @@ const searchSlackChannelsPage = Effect.fn("workflows.searchSlackChannelsPage")(f
     onNone: () => ({}),
     onSome: (cursor) => ({ cursor }),
   })
+
   const result = yield* callSlackApi(token, "conversations.list", {
     exclude_archived: true,
     limit: 200,
     types: "public_channel,private_channel",
     ...cursorParams,
   })
+
   const channels = asArray(result.channels)
+
   const foundId = Option.map(
     Arr.findFirst(channels, isMatchingChannel(normalized)),
-    (item) => (item as Record<string, unknown>).id as string,
+    (item) =>
+      /* SAFETY: The channel item was checked to be a non-array object, and its id is a string. */
+      (item as Record<string, unknown>).id as string,
   )
+
   const nextCursor = Option.flatMap(getRecord(result.response_metadata), (metadata) =>
     getString(metadata.next_cursor),
   )
+
   return {
     cursor: nextCursor,
     found: foundId,
@@ -227,6 +266,7 @@ const findSlackChannelIdByName = Effect.fn("workflows.findSlackChannelId")(funct
     found: Option.none<string>(),
     exhausted: false,
   }
+
   yield* Effect.whileLoop({
     while: () => Option.isNone(state.found) && !state.exhausted,
     body: () => searchSlackChannelsPage(token, normalized, state),
@@ -234,6 +274,7 @@ const findSlackChannelIdByName = Effect.fn("workflows.findSlackChannelId")(funct
       state = next
     },
   })
+
   return state.found
 })
 
@@ -243,6 +284,7 @@ const resolveNamedChannel = Effect.fn("workflows.resolveNamedChannel")(function*
   channel: string,
 ) {
   const found = yield* findSlackChannelIdByName(token, normalized)
+
   return yield* Option.match(found, {
     onNone: () => workflowNodeFail(`Slack channel '${channel}' was not found`),
     onSome: (channelId) => Effect.succeed(channelId),
@@ -254,6 +296,7 @@ const resolveChannelIdForJoin = Effect.fn("workflows.resolveChannelIdForJoin")(f
   channel: string,
 ) {
   const normalized = channel.trim().replace(/^#/, "")
+
   return yield* Match.value(normalized.length === 0 || /^[CGD][A-Z0-9]+$/.test(normalized)).pipe(
     Match.when(true, () => Effect.succeed(channel)),
     Match.orElse(() => resolveNamedChannel(token, normalized, channel)),
@@ -262,8 +305,15 @@ const resolveChannelIdForJoin = Effect.fn("workflows.resolveChannelIdForJoin")(f
 
 const parseSlackBlocks = Effect.fn("workflows.parseSlackBlocks")(function* (rendered: string) {
   const parsed = parseJson(rendered)
+
   return yield* Match.value(Array.isArray(parsed)).pipe(
-    Match.when(true, () => Effect.succeed(Option.some(parsed as unknown[]))),
+    Match.when(true, () =>
+      Effect.succeed(
+        Option.some(
+          /* SAFETY: parsed contains only unknown[] values established by the surrounding filter or writer. */ parsed as unknown[],
+        ),
+      ),
+    ),
     Match.orElse(() => workflowNodeFail("Slack blocks must be a JSON array")),
   )
 })
@@ -276,6 +326,7 @@ const renderBlocksFromString = Effect.fn("workflows.renderSlackBlocksFromString"
     Match.when(true, () => renderJsonTemplate(stringValue, createNodeContext(input)).trim()),
     Match.orElse(() => ""),
   )
+
   return yield* Match.value(rendered.length > 0).pipe(
     Match.when(false, () => Effect.succeed(Option.none<unknown[]>())),
     Match.orElse(() => parseSlackBlocks(rendered)),
@@ -286,6 +337,7 @@ const renderBlocks = Effect.fn("workflows.renderSlackBlocks")(function* (
   input: WorkflowSlackNodeExecutionInput,
 ) {
   const value = input.inputs.blocks ?? input.node.options?.blocks
+
   return yield* Match.value(value).pipe(
     Match.when(
       (candidate: unknown): candidate is unknown[] => Array.isArray(candidate),
@@ -303,25 +355,31 @@ const sendSlackMessage = Effect.fn("workflows.sendSlackMessage")(function* (
   channelTemplate: string,
 ) {
   const options = input.node.options ?? {}
+
   const textTemplate = Option.getOrElse(
     Option.orElse(getString(input.inputs.text), () => getString(options.text)),
     () => "{{inputs}}",
   )
+
   const threadTs = Option.map(
     Option.orElse(getString(input.inputs.threadTs), () => getString(options.threadTs)),
     (template) => renderTemplate(template, context),
   )
+
   const channel = renderTemplate(channelTemplate, context)
   const text = renderTemplate(textTemplate, context)
   const blocks = yield* renderBlocks(input)
+
   const threadParams = Option.match(threadTs, {
     onNone: () => ({}),
     onSome: (ts) => ({ thread_ts: ts }),
   })
+
   const blocksParams = Option.match(blocks, {
     onNone: () => ({}),
     onSome: (resolved) => ({ blocks: resolved }),
   })
+
   const result = yield* callSlackApi(token, "chat.postMessage", {
     channel,
     text,
@@ -330,8 +388,10 @@ const sendSlackMessage = Effect.fn("workflows.sendSlackMessage")(function* (
     unfurl_links: false,
     unfurl_media: false,
   })
+
   const resultChannel = Option.getOrElse(getString(result.channel), () => channel)
   const resultTs = Option.getOrNull(getString(result.ts))
+
   return {
     outputs: {
       ok: true,
@@ -348,9 +408,11 @@ const runSlackSendMessageNode = Effect.fn("workflows.runSlackSendMessageNode")(f
   const options = input.node.options ?? {}
   const context = createNodeContext(input)
   const token = yield* resolveWorkflowSlackToken(input)
+
   const channelTemplate = Option.orElse(getString(input.inputs.channel), () =>
     getString(options.channel),
   )
+
   return yield* Option.match(channelTemplate, {
     onNone: () => workflowNodeFail("Slack channel is required"),
     onSome: (resolvedChannelTemplate) =>
@@ -365,10 +427,12 @@ const joinSlackChannel = Effect.fn("workflows.joinSlackChannel")(function* (
 ) {
   const channel = yield* resolveChannelIdForJoin(token, renderTemplate(channelTemplate, context))
   const result = yield* callSlackApi(token, "conversations.join", { channel })
+
   const joinedChannelId = Option.getOrElse(
     Option.flatMap(getRecord(result.channel), (record) => getString(record.id)),
     () => channel,
   )
+
   return {
     outputs: {
       ok: true,
@@ -383,9 +447,11 @@ const runSlackJoinChannelNode = Effect.fn("workflows.runSlackJoinChannelNode")(f
   const options = input.node.options ?? {}
   const context = createNodeContext(input)
   const token = yield* resolveWorkflowSlackToken(input)
+
   const channelTemplate = Option.orElse(getString(input.inputs.channel), () =>
     getString(options.channel),
   )
+
   return yield* Option.match(channelTemplate, {
     onNone: () => workflowNodeFail("Slack channel is required"),
     onSome: (resolvedChannelTemplate) => joinSlackChannel(token, context, resolvedChannelTemplate),
@@ -400,7 +466,9 @@ function formatSlackMessageLine(record: Record<string, unknown>): string {
     ),
     () => "unknown",
   )
+
   const text = Option.getOrElse(getString(record.text), () => "")
+
   return Match.value(text.length > 0).pipe(
     Match.when(true, () => `- ${author}: ${text.replace(/\s+/g, " ")}`),
     Match.orElse(() => ""),
@@ -409,7 +477,14 @@ function formatSlackMessageLine(record: Record<string, unknown>): string {
 
 function formatOptionalSlackMessage(message: unknown): string {
   return Match.value(typeof message === "object" && message !== null).pipe(
-    Match.when(true, () => formatSlackMessageLine(message as Record<string, unknown>)),
+    Match.when(true, () =>
+      formatSlackMessageLine(
+        /* SAFETY: message was checked to be a non-array object before it is read as Record<string, unknown>. */ message as Record<
+          string,
+          unknown
+        >,
+      ),
+    ),
     Match.orElse(() => ""),
   )
 }
@@ -434,6 +509,7 @@ const fetchSlackThread = Effect.fn("workflows.fetchSlackThread")(function* (
   const options = input.node.options ?? {}
   const channel = renderTemplate(channelTemplate, context)
   const threadTs = renderTemplate(threadTsTemplate, context)
+
   const limit = Math.max(
     1,
     Math.min(
@@ -446,13 +522,16 @@ const fetchSlackThread = Effect.fn("workflows.fetchSlackThread")(function* (
       ),
     ),
   )
+
   const result = yield* callSlackApiGet(token, "conversations.replies", {
     channel,
     ts: threadTs,
     limit,
     inclusive: true,
   })
+
   const messages = asArray(result.messages)
+
   return {
     outputs: {
       ok: true,
@@ -470,15 +549,19 @@ const runSlackFetchThreadNode = Effect.fn("workflows.runSlackFetchThreadNode")(f
   const options = input.node.options ?? {}
   const context = createNodeContext(input)
   const token = yield* resolveWorkflowSlackToken(input)
+
   const channelTemplate = Option.orElse(getString(input.inputs.channel), () =>
     getString(options.channel),
   )
+
   const threadTsTemplate = Option.orElse(getString(input.inputs.threadTs), () =>
     getString(options.threadTs),
   )
+
   const fallbackChannel = Option.getOrNull(
     Option.map(channelTemplate, (template) => renderTemplate(template, context)),
   )
+
   return yield* Option.match(Option.all([channelTemplate, threadTsTemplate]), {
     onNone: () =>
       Effect.succeed({
@@ -510,6 +593,7 @@ const updateSlackReaction = Effect.fn("workflows.updateSlackReaction")(function*
     timestamp,
     name,
   })
+
   return {
     outputs: {
       ok: true,
@@ -527,13 +611,17 @@ const runSlackReactionNode = Effect.fn("workflows.runSlackReactionNode")(functio
   const options = input.node.options ?? {}
   const context = createNodeContext(input)
   const token = yield* resolveWorkflowSlackToken(input)
+
   const channelTemplate = Option.orElse(getString(input.inputs.channel), () =>
     getString(options.channel),
   )
+
   const timestampTemplate = Option.orElse(getString(input.inputs.timestamp), () =>
     getString(options.timestamp),
   )
+
   const nameTemplate = Option.orElse(getString(input.inputs.name), () => getString(options.name))
+
   return yield* Option.match(Option.all([channelTemplate, timestampTemplate, nameTemplate]), {
     onNone: () => workflowNodeFail("Slack channel, timestamp, and reaction name are required"),
     onSome: ([channel, timestamp, name]) =>

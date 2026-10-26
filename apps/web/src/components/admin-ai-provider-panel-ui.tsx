@@ -30,20 +30,24 @@ function scrollAdminSectionIntoView(sectionSelector: string) {
     resetAdminDocumentScroll()
 
     const section = document.querySelector(sectionSelector)
+
     if (!section) {
       return
     }
 
     const scrollContainer = findNearestScrollableAncestor(section)
+
     if (!scrollContainer) {
       section.scrollIntoView({ behavior: "smooth", block: "start" })
       scheduleAdminDocumentScrollReset()
+
       return
     }
 
     const sectionRect = section.getBoundingClientRect()
     const containerRect = scrollContainer.getBoundingClientRect()
     const sectionScrollMarginTop = parseFloat(getComputedStyle(section).scrollMarginTop) || 0
+
     const nextScrollTop =
       scrollContainer.scrollTop + sectionRect.top - containerRect.top - sectionScrollMarginTop
 
@@ -54,13 +58,17 @@ function scrollAdminSectionIntoView(sectionSelector: string) {
 
 function findNearestScrollableAncestor(element: Element): HTMLElement | null {
   let current = element.parentElement
+
   while (current && current !== document.body) {
     const style = getComputedStyle(current)
+
     if (current.scrollHeight > current.clientHeight + 1 && isScrollableOverflow(style.overflowY)) {
       return current
     }
+
     current = current.parentElement
   }
+
   return null
 }
 
@@ -138,6 +146,7 @@ export function DocsSectionHeading({
     level === "h2"
       ? "group relative scroll-mt-24 tracking-tight text-2xl font-semibold text-kumo-default"
       : "group relative scroll-mt-24 tracking-tight text-xl font-semibold text-kumo-default"
+
   const content = (
     <a
       href={`#${id}`}
@@ -194,6 +203,7 @@ export function ModelAdapterRow({
 }) {
   const reasoningLabel =
     model.reasoningEfforts.length > 0 ? model.reasoningEfforts.join(", ") : "none"
+
   const reasoningNeedsEllipsis = reasoningLabel.length > 24
 
   return (
@@ -267,15 +277,19 @@ function resolveLitellmSyncOutcome({
   if (latestRun?.status === "failure") {
     return { kind: "failure", run: latestFailure ?? latestRun }
   }
+
   if (latestRun?.status === "success") {
     return { kind: "success", run: latestSuccess ?? latestRun }
   }
+
   if (latestFailure && (!latestSuccess || latestFailure.finishedAt > latestSuccess.finishedAt)) {
     return { kind: "failure", run: latestFailure }
   }
+
   if (latestSuccess) {
     return { kind: "success", run: latestSuccess }
   }
+
   return null
 }
 
@@ -298,12 +312,14 @@ export function LitellmSyncStatusIndicator({
   if (outcome.kind === "failure") {
     const failure = outcome.run
     const errorMessage = failure.errorMessage ?? "No error message was recorded for this sync run."
+
     return (
       <>
         <Tooltip content={`Latest sync failed ${formatRelativeRunTime(failure)}.`} delay={250}>
           <Button
             type="button"
             variant="ghost"
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="square"
             size="sm"
             onClick={() => setFailureDialogOpen(true)}
@@ -341,6 +357,7 @@ export function LitellmSyncStatusIndicator({
   }
 
   const success = outcome.run
+
   return (
     <Tooltip content={`Last successful sync ${formatRelativeRunTime(success)}.`} delay={250}>
       <span
@@ -362,11 +379,14 @@ export function EnvLockIcon({
   envVarNames?: Array<string | null | undefined>
 }) {
   const envVars = envVarNames ? uniqueEnvVars(envVarNames) : uniqueEnvVars([envVarName])
+
   if (envVars.length === 0) {
     return null
   }
+
   const configurationSourceLabel = envVars.join(", ")
   const plural = envVars.length > 1
+
   return (
     <Tooltip
       content={`Managed by ${configurationSourceLabel}. Remove ${
@@ -409,6 +429,7 @@ export function Field({
   const envVarName = disabled ? disabledEnvVarName : null
   const labelNode = <LockedLabel label={label} helpText={helpText} envVarName={envVarName} />
   const hasExternalLabel = Boolean(helpText || envVarName)
+
   const inputGroup = (
     <InputGroup
       label={hasExternalLabel ? undefined : labelNode}
@@ -472,6 +493,7 @@ export function SelectField({
   const envVarName = disabled ? disabledEnvVarName : null
   const labelNode = <LockedLabel label={label} helpText={helpText} envVarName={envVarName} />
   const hasExternalLabel = Boolean(helpText || envVarName)
+
   const select = (
     <KumoSelect
       label={hasExternalLabel ? undefined : labelNode}
@@ -484,6 +506,7 @@ export function SelectField({
         if (nextValue === EMPTY_SELECT_VALUE) {
           return placeholder
         }
+
         return options.find((option) => option.value === nextValue)?.label ?? String(nextValue)
       }}
       disabled={disabled}
@@ -534,8 +557,10 @@ export function ModelThinkingField({
   onClick: () => void
 }) {
   const hasValue = Boolean(modelLabel)
+
   const displayValue =
     hasValue && reasoningLabel ? `${modelLabel} — ${reasoningLabel}` : modelLabel || placeholder
+
   return (
     <div className="grid gap-1.5">
       <LockedLabel label={label} envVarName={disabled ? disabledEnvVarName : null} />
@@ -585,6 +610,7 @@ function HelpTooltip({ content }: { content?: string }) {
   if (!content) {
     return null
   }
+
   return (
     <Tooltip
       content={content}

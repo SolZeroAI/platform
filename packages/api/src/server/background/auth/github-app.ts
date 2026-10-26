@@ -111,6 +111,7 @@ function fetchWithTimeout(
 ) {
   // oxlint-disable-next-line s0-lint/warn-effect-sync-wrapper -- Resource acquisition for the AbortController timeout used by fetchWithTimeout.
   const acquireAbortState = Effect.sync(() => createGitHubAbortState(timeoutMs))
+
   return Effect.acquireUseRelease(
     acquireAbortState,
     ({ controller }) =>
@@ -132,6 +133,7 @@ function ensureSuccessfulResponse(response: Response, errorPrefix: string) {
       try: () => responseErrorBody(response),
       catch: githubAppError(`${errorPrefix}: failed to read error response`),
     })
+
     yield* Effect.succeed(body).pipe(
       Effect.filterOrFail(
         (value) => value === null,
@@ -150,9 +152,12 @@ function fetchJson<T>(url: string, accessToken: string, errorPrefix: string) {
       method: "GET",
       headers: githubHeaders(accessToken),
     })
+
     yield* ensureSuccessfulResponse(response, errorPrefix)
+
     return yield* Effect.tryPromise({
-      try: () => response.json() as Promise<T>,
+      try: () =>
+        /* SAFETY: The JSON body is the Promise<T> shape read by this caller after the response arrives. */ response.json() as Promise<T>,
       catch: githubAppError(`${errorPrefix}: failed to decode JSON response`),
     })
   })
@@ -162,10 +167,12 @@ export const createGitHubAppJwt = Effect.fn("githubApp.createJwt")(function* (
   config: GitHubAppConfig,
 ) {
   const now = Math.floor(Date.now() / 1000)
+
   const key = yield* Effect.tryPromise({
     try: () => importPKCS8(normalizePrivateKeyForJose(config.privateKey), "RS256"),
     catch: githubAppError("Failed to import GitHub App private key"),
   })
+
   return yield* Effect.tryPromise({
     try: () =>
       new SignJWT({})
@@ -185,11 +192,13 @@ const listUserInstallationsPage: (
 ) => GitHubEffect<GitHubInstallation[]> = Effect.fn("githubApp.listUserInstallationsPage")(
   function* (userAccessToken: string, page: number, accumulated: readonly GitHubInstallation[]) {
     const perPage = 100
+
     const installationPage = yield* fetchJson<GitHubInstallationResponse>(
       `${GITHUB_API_BASE}/user/installations?per_page=${perPage}&page=${page}`,
       userAccessToken,
       "Failed to list GitHub App installations for user",
     )
+
     const installations = [...accumulated, ...installationPage.installations]
 
     return yield* Match.value(installationPage.installations.length < perPage).pipe(
@@ -241,12 +250,14 @@ const listAllInstallationRepositoriesPage: (
   accumulated: ReadonlyMap<number, GitHubAppRepository>,
 ) {
   const perPage = 100
+
   const repoResult = yield* listInstallationRepositories(
     userAccessToken,
     installation.id,
     perPage,
     repoPage,
   )
+
   const repositories = new Map<number, GitHubAppRepository>([
     ...accumulated,
     ...repoResult.repositories.map(
@@ -286,12 +297,14 @@ const listAllInstallationRepositories: (
 export const listAccessibleRepositories = Effect.fn("githubApp.listAccessibleRepositories")(
   function* (userAccessToken: string) {
     const installations = yield* listUserInstallations(userAccessToken)
+
     const perInstallation = yield* Effect.all(
       filterInstallationsByOwner(installations, null).map((installation) =>
         listAllInstallationRepositories(userAccessToken, installation),
       ),
       { concurrency: "unbounded" },
     )
+
     const repositoriesById = new Map<number, GitHubAppRepository>(
       perInstallation.flatMap((repositories) => [...repositories.entries()]),
     )
@@ -321,6 +334,7 @@ const collectInstallationPageRepositories: (input: {
 }) {
   const shouldStop =
     input.repositories.length >= input.perPage || input.localIndex >= input.firstPage.total_count
+
   return yield* Match.value(shouldStop).pipe(
     Match.when(true, () => Effect.succeed(input.repositories)),
     Match.orElse(() => collectInstallationPageRepositoriesNext(input)),
@@ -339,6 +353,7 @@ const collectInstallationPageAccumulator = Effect.fn(
   totalCount: number
 }) {
   const repositories = yield* collectInstallationPageRepositories(input)
+
   return { repositories, skipped: 0, totalCount: input.totalCount }
 })
 
@@ -360,19 +375,23 @@ const collectInstallationPageRepositoriesNext: (input: {
   localIndex: number
 }) {
   const repoPage = Math.floor(input.localIndex / 100) + 1
+
   const repoResult = yield* Match.value(repoPage === 1).pipe(
     Match.when(true, () => Effect.succeed(input.firstPage)),
     Match.orElse(() =>
       listInstallationRepositories(input.userAccessToken, input.installation.id, 100, repoPage),
     ),
   )
+
   const pageStartIndex = (repoPage - 1) * 100
   const sliceStart = Math.max(0, input.localIndex - pageStartIndex)
   const capacity = input.perPage - input.repositories.length
+
   const taken = repoResult.repositories
     .slice(sliceStart)
     .slice(0, capacity)
     .map((repo) => toRepository(repo, input.installation.id, input.installation.permissions))
+
   const repositories = [...input.repositories, ...taken]
   const advancedLocalIndex = input.localIndex + taken.length
   const shouldStop = repositories.length >= input.perPage || repoResult.repositories.length < 100
@@ -436,6 +455,7 @@ export const listAccessibleRepositoriesPage = Effect.fn("githubApp.listAccessibl
       skipped: (page - 1) * perPage,
       totalCount: 0,
     })
+
     const collected = yield* matchingInstallations.reduce(
       (acc, installation) =>
         acc.pipe(
@@ -488,6 +508,7 @@ const collectSearchPages: (
 ) {
   const shouldStop =
     acc.done || searchPage > context.maxSearchPages || acc.authorized.size > context.targetCount
+
   return yield* Match.value(shouldStop).pipe(
     Match.when(true, () => Effect.succeed(acc)),
     Match.orElse(() =>
@@ -515,7 +536,9 @@ const collectSearchPagesNext: (
     context.options,
     searchPage,
   )
+
   const queryHasMore = searchPage * 100 < searchResult.total_count && searchResult.items.length > 0
+
   const afterItems = applySearchItems(
     context,
     installedRepositories,
@@ -551,10 +574,12 @@ const accumulateSearchInstallationForOwner = Effect.fn(
   owner: string,
 ) {
   const query = buildRepositorySearchQuery(context.options, context.owners, owner)
+
   const installedRepositories = yield* listAllInstallationRepositories(
     context.userAccessToken,
     installation,
   )
+
   return yield* collectSearchPages(context, query, installedRepositories, acc, 1)
 })
 
@@ -565,6 +590,7 @@ export const searchAccessibleRepositories = Effect.fn("githubApp.searchAccessibl
     const installations = yield* listUserInstallations(userAccessToken)
     const owners = toRepositoryOwners(installations)
     const matchingInstallations = filterInstallationsByOwner(installations, options.owner)
+
     const context: SearchInstallationContext = {
       userAccessToken,
       options,
@@ -578,6 +604,7 @@ export const searchAccessibleRepositories = Effect.fn("githubApp.searchAccessibl
       githubHasMore: false,
       done: false,
     })
+
     const collected = yield* matchingInstallations.reduce(
       (acc, installation) =>
         acc.pipe(
@@ -616,6 +643,7 @@ export const getAccessibleRepository = Effect.fn("githubApp.getAccessibleReposit
   const normalizedOwner = owner.toLowerCase()
   const normalizedRepo = repo.toLowerCase()
   const repositories = yield* listAccessibleRepositories(userAccessToken)
+
   return Option.fromNullishOr(
     repositories.find(
       (candidate) => candidate.owner === normalizedOwner && candidate.name === normalizedRepo,
@@ -632,6 +660,7 @@ export const requireAccessibleRepository = Effect.fn("githubApp.requireAccessibl
     message: string,
   ) {
     const repository = yield* getAccessibleRepository(userAccessToken, owner, repo)
+
     return Option.getOrThrowWith(
       repository.pipe(Option.filter(predicate)),
       () => new GitHubAppError({ message }),
@@ -647,6 +676,7 @@ export const getGitHubUserProfile = Effect.fn("githubApp.getUserProfile")(functi
     userAccessToken,
     "Failed to fetch GitHub App user profile",
   )
+
   return toGitHubUserProfile(user)
 })
 
@@ -664,6 +694,7 @@ export const createInstallationAccessToken = Effect.fn("githubApp.createInstalla
     },
   ) {
     const jwt = yield* createGitHubAppJwt(config)
+
     const response = yield* fetchWithTimeout(
       `${GITHUB_API_BASE}/app/installations/${input.installationId}/access_tokens`,
       {
@@ -681,10 +712,13 @@ export const createInstallationAccessToken = Effect.fn("githubApp.createInstalla
     )
 
     yield* ensureSuccessfulResponse(response, "Failed to create GitHub App installation token")
+
     const data = yield* Effect.tryPromise({
-      try: () => response.json() as Promise<InstallationTokenResponse>,
+      try: () =>
+        /* SAFETY: The JSON body is the Promise<InstallationTokenResponse> shape read by this caller after the response arrives. */ response.json() as Promise<InstallationTokenResponse>,
       catch: githubAppError("Failed to decode GitHub App installation token response"),
     })
+
     return toInstallationAccessToken(data)
   },
 )
@@ -702,20 +736,25 @@ export const createPullRequestWithInstallationToken = Effect.fn(
   )
 
   yield* ensureSuccessfulResponse(response, "Failed to create GitHub pull request")
+
   const data = yield* Effect.tryPromise({
-    try: () => response.json() as Promise<GitHubPullRequestResponse>,
+    try: () =>
+      /* SAFETY: The JSON body is the Promise<GitHubPullRequestResponse> shape read by this caller after the response arrives. */ response.json() as Promise<GitHubPullRequestResponse>,
     catch: githubAppError("Failed to decode GitHub pull request response"),
   })
+
   return toPullRequest(data)
 })
 
 export const verifyGitHubWebhookSignature = Effect.fn("githubApp.verifyWebhookSignature")(
   function* (input: { secret: string; signatureHeader: string | null; body: ArrayBuffer }) {
     const signature = input.signatureHeader?.trim() ?? ""
+
     const verified = yield* Match.value(signature.startsWith("sha256=")).pipe(
       Match.when(false, () => Effect.succeed(false)),
       Match.orElse(() => verifyGitHubWebhookSignatureBytes(input, signature)),
     )
+
     return verified
   },
 )
@@ -723,6 +762,7 @@ export const verifyGitHubWebhookSignature = Effect.fn("githubApp.verifyWebhookSi
 const verifyGitHubWebhookSignatureBytes = Effect.fn("githubApp.verifyWebhookSignatureBytes")(
   function* (input: { secret: string; body: ArrayBuffer }, signature: string) {
     const signatureBytes = Option.fromNullishOr(hexToBytes(signature.slice("sha256=".length)))
+
     return yield* Option.match(signatureBytes, {
       onNone: () => Effect.succeed(false),
       onSome: (bytes) => verifyGitHubWebhookSignatureBuffer(input, bytes),
@@ -736,6 +776,7 @@ const verifyGitHubWebhookSignatureBuffer = Effect.fn("githubApp.verifyWebhookSig
     new Uint8Array(signatureBuffer).set(signatureBytes)
 
     const encoder = new TextEncoder()
+
     const key = yield* Effect.tryPromise({
       try: () =>
         crypto.subtle.importKey(

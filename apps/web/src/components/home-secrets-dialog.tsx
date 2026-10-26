@@ -41,6 +41,7 @@ export function HomeSecretsDialog({
   selectedSecretKeysRef.current = selectedSecretKeys
   const isSearchDebouncing = keySearch !== debouncedKeySearch
   const hasActiveFilters = debouncedKeySearch.trim().length > 0 || selectedSecretTags.length > 0
+
   const {
     secrets,
     tags: allTags,
@@ -50,10 +51,12 @@ export function HomeSecretsDialog({
     tags: selectedSecretTags,
     enabled: open,
   })
+
   const searchLoading = isSearchDebouncing || (loadingSecrets && hasActiveFilters)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeySearch(keySearch), SECRETS_SEARCH_DEBOUNCE_MS)
+
     return () => clearTimeout(timer)
   }, [keySearch])
 
@@ -81,6 +84,7 @@ export function HomeSecretsDialog({
     }
 
     document.addEventListener("keydown", handleKeyDown)
+
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [onClose, open])
 

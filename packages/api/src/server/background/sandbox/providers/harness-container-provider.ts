@@ -9,6 +9,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { toError } from "../../../lib/effect-errors"
 import { compileOpenCodeConfigForModel } from "../../provider-catalog"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the harness container provider resolves skill packages.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { resolveRuntimeSkillPackages } from "../../skills/catalog"
 import type { Env, SandboxEvent } from "../../types"
@@ -110,9 +111,11 @@ function runtimeForConfig(config: CreateSandboxConfig | { agentRuntime?: AgentRu
     agentRuntime: config.agentRuntime,
     sessionKind: "sandbox",
   })
+
   if (agentRuntime === "isolate") {
     throw new Error("Harness container provider cannot run isolate sessions")
   }
+
   return agentRuntime
 }
 
@@ -120,24 +123,28 @@ function harnessRuntime(agentRuntime: AgentRuntime): AgentContainerRuntime {
   if (agentRuntime === "isolate") {
     throw new Error("Harness container provider cannot run isolate sessions")
   }
+
   return agentRuntime
 }
 
 function namespaceForRuntime(env: Env, runtime: AgentContainerRuntime): DurableObjectNamespace {
   const binding = Match.value(runtime).pipe(
-    Match.when("opencode", () => Reflect.get(env, "OPENCODE_AGENT")),
-    Match.when("codex", () => Reflect.get(env, "CODEX_AGENT")),
-    Match.when("claude-code", () => Reflect.get(env, "CLAUDE_CODE_AGENT")),
+    Match.when("opencode", () => env.OPENCODE_AGENT),
+    Match.when("codex", () => env.CODEX_AGENT),
+    Match.when("claude-code", () => env.CLAUDE_CODE_AGENT),
     Match.exhaustive,
   )
+
   if (!binding) {
     throw new Error(`Agent runtime '${runtime}' is not bound to the API Worker`)
   }
-  return binding as DurableObjectNamespace
+
+  return binding
 }
 
 function agentStub(env: Env, runtime: AgentContainerRuntime, runtimeId: string): DurableObjectStub {
   const namespace = namespaceForRuntime(env, runtime)
+
   return namespace.get(namespace.idFromName(runtimeId))
 }
 
@@ -161,6 +168,7 @@ async function requireOk(response: Response, action: string): Promise<void> {
   if (response.ok) {
     return
   }
+
   const body = await response.text().catch(() => "")
   throw new Error(`${action} failed (${response.status}): ${body}`)
 }
@@ -171,9 +179,11 @@ function requireProviderOption(
   optionName: string,
 ): string {
   const value = config.provider[providerId]?.options?.[optionName]
+
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`Provider '${providerId}' is missing '${optionName}'`)
   }
+
   return value
 }
 
@@ -185,8 +195,10 @@ function runtimeProviderConfig(input: {
 }): RuntimeProviderConfig {
   const apiKey = requireProviderOption(input.config, input.providerId, "apiKey")
   const baseUrl = requireProviderOption(input.config, input.providerId, "baseURL")
+
   const providerApi =
     input.config.provider[input.providerId]?.models?.[input.modelId]?.provider?.api
+
   return Match.value(input.providerId).pipe(
     Match.when("litellm", () => ({
       kind: "openai-compatible" as const,
@@ -268,6 +280,7 @@ function assertRuntimeProviderCompatibility(
     Match.when("claude-code", () => provider.kind === "anthropic"),
     Match.exhaustive,
   )
+
   if (!ok) {
     throw new Error(
       `Model '${provider.providerId}/${provider.modelId}' is not compatible with ${runtime}`,
@@ -283,6 +296,7 @@ function stringifyOutput(value: unknown): string {
   if (typeof value === "string") {
     return value
   }
+
   try {
     return JSON.stringify(value)
   } catch {
@@ -298,6 +312,7 @@ export function mapRuntimeEvent(
   switch (event.type) {
     case "text-delta": {
       state.text += event.text
+
       return {
         type: "token",
         content: state.text,
@@ -306,9 +321,11 @@ export function mapRuntimeEvent(
         timestamp: timestampSeconds(event),
       }
     }
+
     case "reasoning-delta": {
       const next = `${state.reasoningById.get(event.id) ?? ""}${event.text}`
       state.reasoningById.set(event.id, next)
+
       return {
         type: "reasoning",
         content: next,
@@ -318,7 +335,9 @@ export function mapRuntimeEvent(
         timestamp: timestampSeconds(event),
       }
     }
+
     case "tool-call":
+      // SAFETY: event.input was checked to be a non-null object before it is read as a string-keyed record.
       return {
         type: "tool_call",
         messageId: event.messageId,
@@ -410,6 +429,7 @@ export class HarnessContainerProvider implements SandboxProvider {
   ) {
     return Effect.gen({ self: this }, function* () {
       const runtime = harnessRuntime(request.agentRuntime)
+
       const compiledConfig = yield* Effect.tryPromise({
         try: () =>
           compileOpenCodeConfigForModel(this.env, request.author.userId, request.model, {
@@ -417,13 +437,16 @@ export class HarnessContainerProvider implements SandboxProvider {
           }),
         catch: toError,
       })
+
       const model = runtimeProviderConfig({
         runtime,
         providerId: compiledConfig.providerId,
         modelId: compiledConfig.modelId,
         config: compiledConfig.config,
       })
+
       assertRuntimeProviderCompatibility(runtime, model)
+
       const skills = yield* Effect.tryPromise({
         try: () =>
           resolveRuntimeSkillPackages({
@@ -437,6 +460,7 @@ export class HarnessContainerProvider implements SandboxProvider {
       })
 
       const stub = agentStub(this.env, runtime, sandboxId)
+
       const cursor = yield* Effect.tryPromise({
         try: async () => {
           const response = await postJson(stub, "/send", {
@@ -449,11 +473,16 @@ export class HarnessContainerProvider implements SandboxProvider {
             secretEnv: request.secretEnv ?? {},
             skills,
           })
+
           await requireOk(response, "send prompt")
-          const body = (await response.json()) as RuntimeSendResponse
+
+          const body =
+            /* SAFETY: The JSON body is the RuntimeSendResponse shape read by this caller after the response arrives. */ (await response.json()) as RuntimeSendResponse
+
           if (!Number.isInteger(body.cursor) || body.cursor < 0) {
             throw new Error("Agent runtime returned an invalid event cursor")
           }
+
           return body.cursor
         },
         catch: toError,
@@ -503,6 +532,7 @@ export class HarnessContainerProvider implements SandboxProvider {
           }).then((response) => requireOk(response, "initialize agent runtime")),
         catch: toError,
       })
+
       return {
         sandboxId: config.sandboxId,
         status: "ready" as const,
@@ -519,29 +549,37 @@ export class HarnessContainerProvider implements SandboxProvider {
   ) {
     return Effect.gen(function* () {
       let cursor = initialCursor
+
       const state: RuntimeSessionState = {
         text: "",
         reasoningById: new Map(),
       }
+
       for (;;) {
         const payload = yield* Effect.tryPromise({
           try: async () => {
             const response = await fetchContainer(stub, `/poll?cursor=${cursor}`)
             await requireOk(response, "poll events")
-            return (await response.json()) as RuntimePollResponse
+
+            return /* SAFETY: The JSON body is the RuntimePollResponse shape read by this caller after the response arrives. */ (await response.json()) as RuntimePollResponse
           },
           catch: toError,
         })
+
         cursor = payload.cursor
+
         for (const runtimeEvent of payload.events) {
           const event = mapRuntimeEvent(runtimeEvent, sandboxId, state)
+
           if (event) {
             yield* Effect.tryPromise({ try: () => onEvent(event), catch: toError })
           }
+
           if (runtimeEvent.type === "finish") {
             return { success: runtimeEvent.success, error: runtimeEvent.error }
           }
         }
+
         yield* Effect.sleep("500 millis")
       }
     })
@@ -554,6 +592,7 @@ export class HarnessContainerProvider implements SandboxProvider {
     onEvent: (event: SandboxEvent) => Promise<void>,
   ) {
     const error = errorValue instanceof Error ? errorValue.message : String(errorValue)
+
     return Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: () =>
@@ -578,6 +617,7 @@ export class HarnessContainerProvider implements SandboxProvider {
           }),
         catch: toError,
       })
+
       return { success: false, error }
     })
   }

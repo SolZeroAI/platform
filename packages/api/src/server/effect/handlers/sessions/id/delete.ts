@@ -17,6 +17,7 @@ export function deleteSession({ params }: { params: IdParams }) {
       })
       const store = new SessionIndexStore(db)
       yield* store.delete(params.id)
+
       return json({ status: "deleted", sessionId: params.id })
     }),
   )

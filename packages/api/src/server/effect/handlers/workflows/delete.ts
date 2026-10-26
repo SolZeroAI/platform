@@ -10,6 +10,7 @@ export function deleteWorkflow({ params }: { params: { id: string } }) {
       yield* new WorkflowLifecycle(context.env)
         .archiveWorkflow({ workflow })
         .pipe(Effect.mapError(lifecycleFailure))
+
       return json({ status: "archived", workflowId: params.id })
     }),
   )

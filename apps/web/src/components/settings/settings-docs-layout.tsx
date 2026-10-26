@@ -1,6 +1,7 @@
 "use client"
 
 import { Select as KumoSelect } from "@cloudflare/kumo/components/select"
+import * as Match from "effect/Match"
 import { TableOfContents } from "@cloudflare/kumo/components/table-of-contents"
 import { Link as LinkIcon } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react"
@@ -37,6 +38,7 @@ function groupTocItems(items: readonly SettingsDocsTocItem[]): TocGroup[] {
       groups[groups.length - 1]?.children.push(item)
       continue
     }
+
     groups.push({ parent: { ...item, depth: 0 }, children: [] })
   }
 
@@ -45,9 +47,11 @@ function groupTocItems(items: readonly SettingsDocsTocItem[]): TocGroup[] {
 
 function getInitialTocValue(items: readonly SettingsDocsTocItem[]): string {
   const values = items.map(toTocValue)
+
   if (typeof window !== "undefined" && values.includes(window.location.hash)) {
     return window.location.hash
   }
+
   return values[0] ?? ""
 }
 
@@ -59,11 +63,13 @@ export function SettingsDocsLayout({
   children,
 }: SettingsDocsLayoutProps) {
   const [selectedTocValue, setSelectedTocValue] = useState(() => getInitialTocValue(tocItems))
+
   const [stickySelectPortalContainer, setStickySelectPortalContainer] =
     useState<HTMLElement | null>(null)
 
   const tocValues = useMemo(() => tocItems.map(toTocValue), [tocItems])
   const tocGroups = useMemo(() => groupTocItems(tocItems), [tocItems])
+
   const selectedValue = tocValues.includes(selectedTocValue)
     ? selectedTocValue
     : (tocValues[0] ?? "")
@@ -89,12 +95,15 @@ export function SettingsDocsLayout({
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = 0
         let activeValue = tocValues[0] ?? ""
+
         for (const value of tocValues) {
           const section = document.getElementById(value.slice(1))
+
           if (section && section.getBoundingClientRect().top <= 128) {
             activeValue = value
           }
         }
+
         setSelectedTocValue(activeValue)
       })
     }
@@ -104,10 +113,12 @@ export function SettingsDocsLayout({
     window.addEventListener("hashchange", updateFromHash)
     window.addEventListener("resize", updateFromScroll)
     window.addEventListener("scroll", updateFromScroll, true)
+
     return () => {
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame)
       }
+
       window.removeEventListener("hashchange", updateFromHash)
       window.removeEventListener("resize", updateFromScroll)
       window.removeEventListener("scroll", updateFromScroll, true)
@@ -138,6 +149,7 @@ export function SettingsDocsLayout({
           container={stickySelectPortalContainer ?? undefined}
           onValueChange={(value) => {
             const nextValue = String(value ?? "")
+
             if (tocValues.includes(nextValue)) {
               setSelectedTocValue(nextValue)
               navigateToSection(nextValue)
@@ -164,6 +176,7 @@ export function SettingsDocsLayout({
           <TableOfContents.List>
             {tocGroups.map((group) => {
               const parentValue = toTocValue(group.parent)
+
               if (group.children.length > 0) {
                 return (
                   <TableOfContents.Group
@@ -174,6 +187,7 @@ export function SettingsDocsLayout({
                   >
                     {group.children.map((child) => {
                       const childValue = toTocValue(child)
+
                       return (
                         <TableOfContents.Item
                           key={child.id}
@@ -222,12 +236,20 @@ export function SettingsDocsSectionHeading({
   title: string
   trailing?: ReactNode
 }) {
-  const className =
-    level === "h1"
-      ? "group relative scroll-mt-24 tracking-tight text-4xl font-bold text-kumo-default"
-      : level === "h2"
-        ? "group relative scroll-mt-24 tracking-tight text-2xl font-semibold text-kumo-default"
-        : "group relative scroll-mt-24 tracking-tight text-xl font-semibold text-kumo-default"
+  const className = Match.value(level).pipe(
+    Match.when(
+      "h1",
+      () => "group relative scroll-mt-24 tracking-tight text-4xl font-bold text-kumo-default",
+    ),
+    Match.when(
+      "h2",
+      () => "group relative scroll-mt-24 tracking-tight text-2xl font-semibold text-kumo-default",
+    ),
+    Match.orElse(
+      () => "group relative scroll-mt-24 tracking-tight text-xl font-semibold text-kumo-default",
+    ),
+  )
+
   const content = (
     <a
       href={`#${id}`}
@@ -248,18 +270,22 @@ export function SettingsDocsSectionHeading({
   return (
     <div className="space-y-1">
       <div className={`flex items-center gap-3 ${trailing ? "justify-between" : ""}`}>
-        {level === "h1" ? (
-          <h1 id={id} className={className}>
-            {content}
-          </h1>
-        ) : level === "h2" ? (
-          <h2 id={id} className={className}>
-            {content}
-          </h2>
-        ) : (
-          <h3 id={id} className={className}>
-            {content}
-          </h3>
+        {Match.value(level).pipe(
+          Match.when("h1", () => (
+            <h1 id={id} className={className}>
+              {content}
+            </h1>
+          )),
+          Match.when("h2", () => (
+            <h2 id={id} className={className}>
+              {content}
+            </h2>
+          )),
+          Match.orElse(() => (
+            <h3 id={id} className={className}>
+              {content}
+            </h3>
+          )),
         )}
         {trailing}
       </div>

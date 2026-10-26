@@ -67,8 +67,16 @@ export class IsolateSessionRuntime {
 
   private getAgent(sessionId: string) {
     return Effect.gen({ self: this }, function* () {
-      const rawNamespace = (this.env as { ISOLATE_SESSION?: unknown }).ISOLATE_SESSION
-      const namespace = rawNamespace as IsolateSessionNamespace | undefined
+      const rawNamespace =
+        /* SAFETY: this.env has the { ISOLATE_SESSION?: unknown } shape established by the check or writer around this read. */ (
+          this.env as { ISOLATE_SESSION?: unknown }
+        ).ISOLATE_SESSION
+
+      const namespace =
+        /* SAFETY: rawNamespace has the IsolateSessionNamespace | undefined shape established by the check or writer around this read. */ rawNamespace as
+          | IsolateSessionNamespace
+          | undefined
+
       const resolvedNamespace = yield* Option.match(Option.fromNullishOr(namespace), {
         onNone: () =>
           Effect.die(
@@ -78,8 +86,14 @@ export class IsolateSessionRuntime {
           ),
         onSome: (resolved) => Effect.succeed(resolved),
       })
+
       const id = resolvedNamespace.idFromName(sessionId)
-      const stub = resolvedNamespace.get(id) as IsolateSessionAgentStub
+
+      const stub =
+        /* SAFETY: resolvedNamespace.get(id) has the IsolateSessionAgentStub shape established by the check or writer around this read. */ resolvedNamespace.get(
+          id,
+        ) as IsolateSessionAgentStub
+
       yield* Option.match(
         Option.fromNullishOr(stub.setName).pipe(
           Option.filter((setName) => typeof setName === "function"),
@@ -93,6 +107,7 @@ export class IsolateSessionRuntime {
             }),
         },
       )
+
       return stub
     })
   }
@@ -100,6 +115,7 @@ export class IsolateSessionRuntime {
   initializeSession(config: IsolateSessionConfig) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(config.sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.initializeSession(config),
         catch: (cause) => cause,
@@ -110,6 +126,7 @@ export class IsolateSessionRuntime {
   updateSessionConfig(config: Omit<IsolateSessionConfig, "userId">) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(config.sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.updateSessionConfig(config),
         catch: (cause) => cause,
@@ -120,6 +137,7 @@ export class IsolateSessionRuntime {
   warm(sessionId: string, auth?: IsolateCloneAuth) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.warm(auth),
         catch: (cause) => cause,
@@ -134,6 +152,7 @@ export class IsolateSessionRuntime {
   ) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.runPrompt(request, callback),
         catch: (cause) => cause,
@@ -144,6 +163,7 @@ export class IsolateSessionRuntime {
   runPrompt(sessionId: string, request: IsolatePromptRequest, callback?: StreamCallback) {
     return Effect.gen({ self: this }, function* () {
       const backgroundTracing = yield* BackgroundTracing
+
       return yield* backgroundTracing.withSpan(
         "isolate.agent.rpc.run_prompt",
         {
@@ -161,6 +181,7 @@ export class IsolateSessionRuntime {
   stopPrompt(sessionId: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.stopPrompt(),
         catch: (cause) => cause,
@@ -171,6 +192,7 @@ export class IsolateSessionRuntime {
   clearSubagentRuns(sessionId: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.clearSubagentRuns(),
         catch: (cause) => cause,
@@ -186,6 +208,7 @@ export class IsolateSessionRuntime {
     agentRuntime: string | null | undefined
   }) {
     const isIsolateSession = Effect.succeed(input.agentRuntime === "isolate")
+
     return new IsolateSessionRuntime(input.env, input.tracing)
       .clearSubagentRuns(input.sessionId)
       .pipe(Effect.when(isIsolateSession))
@@ -194,6 +217,7 @@ export class IsolateSessionRuntime {
   readWorkspaceFile(sessionId: string, path: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.readWorkspaceFile(path),
         catch: (cause) => cause,
@@ -204,6 +228,7 @@ export class IsolateSessionRuntime {
   writeWorkspaceFile(sessionId: string, path: string, content: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.writeWorkspaceFile(path, content),
         catch: (cause) => cause,
@@ -214,6 +239,7 @@ export class IsolateSessionRuntime {
   globWorkspace(sessionId: string, pattern?: string, limit?: number) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.globWorkspace(pattern, limit),
         catch: (cause) => cause,
@@ -224,6 +250,7 @@ export class IsolateSessionRuntime {
   searchWorkspace(sessionId: string, query: string, pattern?: string, limit?: number) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.searchWorkspace(query, pattern, limit),
         catch: (cause) => cause,
@@ -234,6 +261,7 @@ export class IsolateSessionRuntime {
   gitStatus(sessionId: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.gitStatus(),
         catch: (cause) => cause,
@@ -244,6 +272,7 @@ export class IsolateSessionRuntime {
   gitDiff(sessionId: string) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.gitDiff(),
         catch: (cause) => cause,
@@ -254,6 +283,7 @@ export class IsolateSessionRuntime {
   gitLog(sessionId: string, depth?: number) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.gitLog(depth),
         catch: (cause) => cause,
@@ -271,6 +301,7 @@ export class IsolateSessionRuntime {
   ) {
     return Effect.gen({ self: this }, function* () {
       const agent = yield* this.getAgent(sessionId)
+
       return yield* Effect.tryPromise({
         try: () => agent.gitCreatePullRequest(input),
         catch: (cause) => cause,

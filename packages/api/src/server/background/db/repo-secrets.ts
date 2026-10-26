@@ -5,6 +5,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Order from "effect/Order"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the repo-secrets database from the Worker env at the store composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   controlPlaneSql,
@@ -22,7 +23,10 @@ const LIKE_ESCAPE_CHAR = "\\"
 
 // Locale-aware string ordering preserves the existing `localeCompare`-based tag sorting exactly.
 const localeStringOrder: Order.Order<string> = (left, right) =>
-  Math.sign(left.localeCompare(right)) as -1 | 0 | 1
+  /* SAFETY: Math.sign returns only -1, 0, or 1. */ Math.sign(left.localeCompare(right)) as
+    | -1
+    | 0
+    | 1
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `${LIKE_ESCAPE_CHAR}${char}`)
@@ -60,6 +64,7 @@ function parseTags(value: string | null | undefined): string[] {
 
 function normalizeTags(tags: readonly string[] | undefined): string[] {
   const normalized = new Set((tags ?? []).map((tag) => tag.trim()).filter(Boolean))
+
   return [...normalized].sort()
 }
 
@@ -84,6 +89,7 @@ export function rankPopularTags(secrets: readonly SecretMetadata[], limit = 5): 
       })
     }),
   )
+
   return [...counts.entries()]
     .sort(popularTagOrder)
     .slice(0, limit)
@@ -97,6 +103,7 @@ export function filterSecretMetadata(
   const query = options?.q?.trim().toLowerCase()
   const selectedTags = normalizeTags(options?.tags)
   const selected = new Set(selectedTags)
+
   return secrets.filter(
     (secret) =>
       (!query || secret.key.toLowerCase().includes(query)) &&
@@ -143,6 +150,8 @@ export class GlobalSecretsStore {
     options?: { userId?: string },
   ) {
     const now = Date.now()
+
+    // SAFETY: Array.isArray selects the SecretWriteEntry list. The other branch is a string map of secret values.
     const entries: SecretWriteEntry[] = Match.value(Array.isArray(secrets)).pipe(
       Match.when(true, () => [...(secrets as readonly SecretWriteEntry[])]),
       Match.orElse(() =>
@@ -172,6 +181,7 @@ export class GlobalSecretsStore {
     const scopedKey = this.getSecretKey(entry.key, options)
     const existing = yield* this.getGlobalSecret(scopedKey)
     const skip = entry.value === undefined && Option.isNone(existing)
+
     return yield* Match.value(skip).pipe(
       Match.when(true, () => Effect.succeed<SecretWriteOutcome>("skipped")),
       Match.orElse(() => this.persistSecretEntry(scopedKey, entry, now, existing)),
@@ -188,6 +198,7 @@ export class GlobalSecretsStore {
     const existingEncrypted = Option.getOrUndefined(
       Option.map(existing, (row) => row.encryptedValue),
     )
+
     const encrypted = yield* Option.match(Option.fromNullishOr(entry.value), {
       onNone: () => Effect.succeed(existingEncrypted),
       onSome: (plaintext) =>
@@ -195,6 +206,7 @@ export class GlobalSecretsStore {
           Effect.mapError(d1Error("db.globalSecrets.setSecrets")),
         ),
     })
+
     const tagsJson = Option.match(Option.fromNullishOr(entry.tags), {
       onNone: () =>
         Option.getOrElse(
@@ -242,9 +254,11 @@ export class GlobalSecretsStore {
     const prefix = this.resolvePrefix(options)
     const counts = yield* this.aggregateTags(prefix, options)
     const limit = options?.popularLimit ?? 5
+
     const popularTags = Arr.sort(counts, tagStatOrder)
       .slice(0, limit)
       .map((row) => row.tag)
+
     return {
       tags: counts.map((row) => row.tag),
       popularTags,
@@ -258,6 +272,7 @@ export class GlobalSecretsStore {
     const prefix = this.resolvePrefix(options)
     const secrets = yield* this.querySecrets(options)
     const tagRows = yield* this.aggregateTags(prefix, options)
+
     return {
       secrets,
       tags: tagRows.map((row) => row.tag),
@@ -269,6 +284,7 @@ export class GlobalSecretsStore {
     options?: SecretScopeOptions,
   ) {
     const secrets = yield* this.querySecrets(options)
+
     return secrets.map((item) => item.key)
   })
 
@@ -286,12 +302,18 @@ export class GlobalSecretsStore {
       onNone: () => "",
       onSome: escapeLikePattern,
     })
+
     const prefixConditions = Option.match(prefix, {
-      onNone: () => [] as SQL[],
+      onNone: () =>
+        /* SAFETY: This branch has no SQL[] elements, so the array is empty. */ [] as SQL[],
       onSome: () => [keyLike(this.schema.globalSecrets.key, `${escapedPrefix}%`)],
     })
+
     const mcpcfExclusion = Match.value(options?.includeMcpcfManaged === true).pipe(
-      Match.when(true, () => [] as SQL[]),
+      Match.when(
+        true,
+        () => /* SAFETY: This branch has no SQL[] elements, so the array is empty. */ [] as SQL[],
+      ),
       Match.orElse(() => [
         keyNotLike(
           this.schema.globalSecrets.key,
@@ -299,6 +321,7 @@ export class GlobalSecretsStore {
         ),
       ]),
     )
+
     return [...prefixConditions, ...mcpcfExclusion]
   }
 
@@ -344,6 +367,7 @@ export class GlobalSecretsStore {
     options?: Pick<SecretScopeOptions, "includeMcpcfManaged">,
   ) {
     const where = and(...this.buildScopeConditions(prefix, options))
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle.all<{ tag: string; count: unknown }>(sql`
@@ -355,6 +379,7 @@ export class GlobalSecretsStore {
     `),
       catch: d1Error("db.globalSecrets.listSecrets"),
     })
+
     return Arr.map(rows, (row) => ({
       tag: row.tag,
       count: this.sql.asFiniteNumber(row.count),
@@ -374,6 +399,7 @@ export class GlobalSecretsStore {
           .returning({ key: this.schema.globalSecrets.key }),
       catch: d1Error("db.globalSecrets.deleteSecret"),
     })
+
     return deleted.length > 0
   })
 
@@ -382,11 +408,13 @@ export class GlobalSecretsStore {
     options?: { userId?: string },
   ) {
     const prefix = this.resolvePrefix(options)
+
     const where = Option.match(prefix, {
       onNone: () => undefined,
       onSome: (resolved) =>
         keyLike(this.schema.globalSecrets.key, `${escapeLikePattern(resolved)}%`),
     })
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -398,6 +426,7 @@ export class GlobalSecretsStore {
           .where(where),
       catch: d1Error("db.globalSecrets.getDecryptedSecrets"),
     })
+
     const entries = yield* Effect.forEach(
       rows,
       (row) =>
@@ -410,6 +439,7 @@ export class GlobalSecretsStore {
         ),
       { concurrency: "unbounded" },
     )
+
     return Object.fromEntries(entries)
   })
 
@@ -426,6 +456,7 @@ export class GlobalSecretsStore {
           .limit(1),
       catch: d1Error("db.globalSecrets.setSecrets"),
     })
+
     return Option.fromNullishOr(rows[0])
   })
 }
@@ -462,6 +493,7 @@ export function createGlobalSecretsStoreFromD1(
     ),
     encryptionKey,
   )
+
   return {
     setSecrets: (secrets, options) => runGlobalSecretsEffect(store.setSecrets(secrets, options)),
     listSecretKeys: (options) => runGlobalSecretsEffect(store.listSecretKeys(options)),

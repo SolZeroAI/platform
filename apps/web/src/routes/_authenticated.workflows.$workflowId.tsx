@@ -8,5 +8,6 @@ export const Route = createFileRoute("/_authenticated/workflows/$workflowId")({
 function WorkflowDetailPage() {
   const { workflowId } = Route.useParams()
   const { pathname } = useLocation()
+
   return <WorkflowsPage pathname={pathname} routeWorkflowId={workflowId} />
 }

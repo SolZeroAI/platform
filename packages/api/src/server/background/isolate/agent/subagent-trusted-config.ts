@@ -52,17 +52,24 @@ export function readSubagentTrustedConfig(
   runId: string,
 ): IsolateSubagentTrustedConfig | null {
   ensureTrustedConfigTable(sql)
-  const rows = sql
-    .exec(
-      `SELECT config_json
+
+  const rows =
+    /* SAFETY: sql .exec( `SELECT config_json FROM s0_isolate_subagent_trusted_config WHERE run_id = ?1 LIMIT 1`, runId, ) .toArray() contains only TrustedConfigRow[] values established by the surrounding filter or writer. */ sql
+      .exec(
+        `SELECT config_json
        FROM s0_isolate_subagent_trusted_config
        WHERE run_id = ?1
        LIMIT 1`,
-      runId,
-    )
-    .toArray() as TrustedConfigRow[]
+        runId,
+      )
+      .toArray() as TrustedConfigRow[]
+
   const row = rows[0]
-  return row ? (parseJson(row.config_json) as IsolateSubagentTrustedConfig) : null
+
+  // SAFETY: config_json was stored as IsolateSubagentTrustedConfig.
+  const config = parseJson(row.config_json) as IsolateSubagentTrustedConfig
+
+  return row ? config : null
 }
 
 export function releaseSubagentTrustedConfig(sql: SubagentTrustedConfigSql, runId: string): void {

@@ -1,4 +1,5 @@
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
+import * as Match from "effect/Match"
 import { Link } from "@tanstack/react-router"
 import {
   DEFAULT_ISOLATE_STEP_LIMIT,
@@ -69,6 +70,7 @@ export function EventItem({
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const time = new Date(event.timestamp * 1000).toLocaleTimeString()
+
   const isFinalLikeAssistantResponse =
     event.type === "token" && (isFinalAssistantResponse || isActiveAssistantResponse)
 
@@ -82,14 +84,17 @@ export function EventItem({
 
   const handleCopyContent = useCallback(async (content: string) => {
     const success = await copyToClipboard(content)
+
     if (!success) {
       return
     }
 
     setCopied(true)
+
     if (copyTimeoutRef.current) {
       clearTimeout(copyTimeoutRef.current)
     }
+
     copyTimeoutRef.current = setTimeout(() => {
       setCopied(false)
       copyTimeoutRef.current = null
@@ -114,6 +119,7 @@ export function EventItem({
   const renderErrorCard = useCallback(
     (title: string, detail: string) => {
       const diagnostic = buildErrorDiagnostic(title, detail)
+
       return (
         <div className="group rounded-lg bg-kumo-danger-tint p-4 ring-1 ring-kumo-danger">
           <div className="flex items-start justify-between gap-3 mb-2">
@@ -151,6 +157,7 @@ export function EventItem({
       if (!event.content) {
         return null
       }
+
       const messageContent = event.content
 
       const isCurrentUser =
@@ -197,7 +204,9 @@ export function EventItem({
       if (!event.content) {
         return null
       }
+
       const messageContent = event.content
+
       if (isFinalLikeAssistantResponse) {
         return (
           <FinalAssistantMessageItem
@@ -224,7 +233,9 @@ export function EventItem({
       if (!event.content) {
         return null
       }
+
       const messageContent = event.content
+
       return (
         <ReasoningMessageItem
           content={messageContent}
@@ -279,6 +290,7 @@ export function EventItem({
       if (!event.error) {
         return null
       }
+
       return renderErrorCard("Tool failed", event.error)
 
     case "git_sync":
@@ -297,6 +309,7 @@ export function EventItem({
       if (event.success === false) {
         return renderErrorCard("Execution failed", event.error || "Unknown error")
       }
+
       return (
         <ExecutionCompleteDivider
           durationMs={executionDurationMs}
@@ -403,18 +416,23 @@ export function McpDiscoveryErrorItem({
   isProcessing: boolean
 }) {
   const contentId = useId()
+
   const isTerminal = Boolean(
     event.terminal ?? (typeof event.metadata?.terminal === "boolean" && event.metadata.terminal),
   )
+
   const [isExpanded, setIsExpanded] = useState(autoExpand)
   const [reconnectingOkta, setReconnectingOkta] = useState(false)
   const [reconnectError, setReconnectError] = useState<string | null>(null)
   const userToggledRef = useRef(false)
+
   const serverName =
     event.serverName ??
     (typeof event.metadata?.serverName === "string" ? event.metadata.serverName : "MCP")
+
   const error = event.error || "Discovery failed"
   const tokenSettingsTarget = getMcpTokenSettingsTarget(error)
+
   const canReconnectOkta =
     Boolean(sessionId) && isTerminal && isOktaReconnectMcpDiscoveryError(event)
 
@@ -440,8 +458,10 @@ export function McpDiscoveryErrorItem({
     if (!sessionId) {
       return
     }
+
     setReconnectError(null)
     setReconnectingOkta(true)
+
     try {
       await reconnectOkta(
         buildOktaReconnectSessionPath(sessionId, "complete", {
@@ -498,33 +518,35 @@ export function McpDiscoveryErrorItem({
           <div>
             <div className="mb-1 font-medium text-kumo-danger">Error:</div>
             <pre className="max-h-48 overflow-x-auto whitespace-pre-wrap text-kumo-default">
-              {tokenSettingsTarget?.type === "contextforge" ? (
-                <>
-                  Configure your ContextForge API token in{" "}
-                  <Link
-                    to="/settings"
-                    search={buildContextForgeTokenSettingsSearch()}
-                    hash="contextforge-api-token"
-                    className="font-medium text-kumo-danger underline underline-offset-2 transition hover:text-kumo-danger"
-                  >
-                    Accounts
-                  </Link>
-                  .
-                </>
-              ) : tokenSettingsTarget?.type === "server" ? (
-                <>
-                  Configure your token for {tokenSettingsTarget.serverLabel} in{" "}
-                  <Link
-                    to="/settings"
-                    search={buildMcpSettingsSearchForServer(tokenSettingsTarget.serverLabel)}
-                    className="font-medium text-kumo-danger underline underline-offset-2 transition hover:text-kumo-danger"
-                  >
-                    MCP settings
-                  </Link>
-                  .
-                </>
-              ) : (
-                error
+              {Match.value(tokenSettingsTarget).pipe(
+                Match.when({ type: "contextforge" }, () => (
+                  <>
+                    Configure your ContextForge API token in{" "}
+                    <Link
+                      to="/settings"
+                      search={buildContextForgeTokenSettingsSearch()}
+                      hash="contextforge-api-token"
+                      className="font-medium text-kumo-danger underline underline-offset-2 transition hover:text-kumo-danger"
+                    >
+                      Accounts
+                    </Link>
+                    .
+                  </>
+                )),
+                Match.when({ type: "server" }, (target) => (
+                  <>
+                    Configure your token for {target.serverLabel} in{" "}
+                    <Link
+                      to="/settings"
+                      search={buildMcpSettingsSearchForServer(target.serverLabel)}
+                      className="font-medium text-kumo-danger underline underline-offset-2 transition hover:text-kumo-danger"
+                    >
+                      MCP settings
+                    </Link>
+                    .
+                  </>
+                )),
+                Match.orElse(() => error),
               )}
             </pre>
             {reconnectError && (
@@ -563,9 +585,11 @@ export function StepLimitWarningItem({
 }) {
   const stepLimit =
     typeof event.stepLimit === "number" ? event.stepLimit : DEFAULT_ISOLATE_STEP_LIMIT
+
   const message =
     event.content ||
     `The agent reached the ${stepLimit}-step call limit and finished without more tool calls.`
+
   const linkClass =
     "inline-flex items-center gap-1 rounded-md bg-kumo-warning-tint/10 px-2.5 py-1.5 text-xs font-medium text-kumo-warning ring-1 ring-kumo-warning transition hover:bg-kumo-warning-tint/20 text-kumo-warning"
 
@@ -625,8 +649,10 @@ export function AssistantMessageItem({
     if (isLatest) {
       userToggledRef.current = false
       setIsExpanded(true)
+
       return
     }
+
     if (!userToggledRef.current) {
       setIsExpanded(false)
     }
@@ -719,6 +745,7 @@ export function ReasoningMessageItem({
     if (userToggledRef.current) {
       return
     }
+
     setIsExpanded(isStreamingFocus)
   }, [isStreamingFocus])
 

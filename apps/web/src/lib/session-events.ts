@@ -3,16 +3,20 @@ import { toolMatchesMcpDiscoveryServer } from "./tool-formatters"
 import type { SubagentRunView } from "./subagent-events"
 
 export type McpDiscoveryErrorEvent = Extract<SandboxEvent, { type: "mcp_discovery_error" }>
+
 type AssistantTimelineEvent = Extract<SandboxEvent, { type: "token" | "reasoning" }>
+
 type FinalAssistantTimelineEvent = Extract<SandboxEvent, { type: "token" }>
 
 export function getAssistantTimelineKey(event: SandboxEvent): string | null {
   if (!isAssistantTimelineEvent(event) || !event.content) {
     return null
   }
+
   if (event.type === "token") {
     return getAssistantTokenTimelineKey(event)
   }
+
   return event.assistantMessageId ?? `${event.messageId ?? "message"}:${event.timestamp}`
 }
 
@@ -20,11 +24,13 @@ function getFinalAssistantTimelineKey(event: SandboxEvent): string | null {
   if (!isFinalAssistantTimelineEvent(event) || !event.content) {
     return null
   }
+
   return getAssistantTokenTimelineKey(event)
 }
 
 function getAssistantTokenTimelineKey(event: FinalAssistantTimelineEvent): string {
   const baseKey = event.assistantMessageId ?? event.messageId ?? "message"
+
   return `${baseKey}:${event.timestamp}:${event.content.length}`
 }
 
@@ -32,6 +38,7 @@ function getReasoningStreamingEventKey(event: SandboxEvent): string | null {
   if (event.type !== "reasoning") {
     return null
   }
+
   return event.assistantMessageId ?? null
 }
 
@@ -39,9 +46,11 @@ function isStreamingTokenUpdate(previousEvent: SandboxEvent | null, event: Sandb
   if (event.type !== "token" || previousEvent?.type !== "token") {
     return false
   }
+
   if (event.assistantMessageId) {
     return previousEvent.assistantMessageId === event.assistantMessageId
   }
+
   return (
     !previousEvent.assistantMessageId &&
     Boolean(event.messageId) &&
@@ -78,6 +87,7 @@ export function collapseTimelineEvents(events: SandboxEvent[]): SandboxEvent[] {
   for (const event of events) {
     if (event.type === "tool_call" && event.callId) {
       const existingIdx = seenToolCalls.get(event.callId)
+
       if (existingIdx !== undefined) {
         const existingEvent = filteredEvents[existingIdx]
         filteredEvents[existingIdx] =
@@ -125,15 +135,19 @@ export function collapseTimelineEvents(events: SandboxEvent[]): SandboxEvent[] {
       }
     } else {
       const reasoningStreamingEventKey = getReasoningStreamingEventKey(event)
+
       if (reasoningStreamingEventKey) {
         const existingIdx = seenReasoning.get(reasoningStreamingEventKey)
+
         if (existingIdx !== undefined) {
           filteredEvents[existingIdx] = null
         }
+
         seenReasoning.set(reasoningStreamingEventKey, filteredEvents.length)
       } else if (isStreamingTokenUpdate(filteredEvents.at(-1) ?? null, event)) {
         filteredEvents[filteredEvents.length - 1] = null
       }
+
       filteredEvents.push(event)
     }
   }
@@ -147,12 +161,14 @@ export function getFinalAssistantTimelineKeys(events: SandboxEvent[]): Set<strin
 
   for (const event of events) {
     const assistantKey = getFinalAssistantTimelineKey(event)
+
     if (assistantKey && event.messageId) {
       latestAssistantKeyByMessageId.set(event.messageId, assistantKey)
     }
 
     if (event.type === "execution_complete" && event.messageId) {
       const finalAssistantKey = latestAssistantKeyByMessageId.get(event.messageId)
+
       if (finalAssistantKey) {
         finalAssistantKeys.add(finalAssistantKey)
       }
@@ -187,6 +203,7 @@ export function getExecutionDurationMsByMessageId(events: SandboxEvent[]): Map<s
     const startTimestamp =
       userMessageTimestampByMessageId.get(event.messageId) ??
       (resumeMessageIds.has(event.messageId) ? latestUserMessageTimestamp : undefined)
+
     if (startTimestamp == null) {
       continue
     }
@@ -202,28 +219,33 @@ export function getExecutionDurationMsByMessageId(events: SandboxEvent[]): Map<s
 
 export function formatExecutionDuration(durationMs: number): string {
   const elapsedMs = Math.max(0, Math.round(durationMs))
+
   if (elapsedMs < 1000) {
     return "less than 1s"
   }
 
   const seconds = Math.round(elapsedMs / 1000)
+
   if (seconds < 60) {
     return `${seconds}s`
   }
 
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
+
   if (minutes < 60) {
     return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
   }
 
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
+
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
 
 export function getActiveAssistantTimelineKey(events: SandboxEvent[]): string | null {
   const latestEvent = events.at(-1)
+
   if (!latestEvent) {
     return null
   }
@@ -235,13 +257,16 @@ export function getMcpDiscoveryErrorDisplayKey(event: McpDiscoveryErrorEvent): s
   return `${event.messageId ?? "message"}:${event.serverName ?? "mcp"}:${event.timestamp}`
 }
 
-export function buildToolCallDiscoveryErrorMap(events: SandboxEvent[]): {
+export type ToolCallDiscoveryErrorMap = {
   discoveryErrorsByCallId: Map<string, McpDiscoveryErrorEvent>
   hiddenDiscoveryErrorKeys: Set<string>
-} {
+}
+
+export function buildToolCallDiscoveryErrorMap(events: SandboxEvent[]): ToolCallDiscoveryErrorMap {
   const discoveryErrors = events.filter(
     (event): event is McpDiscoveryErrorEvent => event.type === "mcp_discovery_error",
   )
+
   const discoveryErrorsByCallId = new Map<string, McpDiscoveryErrorEvent>()
   const hiddenDiscoveryErrorKeys = new Set<string>()
 
@@ -255,6 +280,7 @@ export function buildToolCallDiscoveryErrorMap(events: SandboxEvent[]): {
         discoveryError.messageId === event.messageId &&
         toolMatchesMcpDiscoveryServer(event.tool, discoveryError.serverName ?? ""),
     )
+
     if (!match) {
       continue
     }
@@ -307,6 +333,7 @@ export function getStreamingExpandedGroupId(
   }
 
   const lastGroup = groups[groups.length - 1]!
+
   if (lastGroup.type === "tool_group") {
     return lastGroup.id
   }
@@ -339,6 +366,7 @@ export function getAutoExpandedMcpDiscoveryErrorKey(
   }
 
   const latestEvent = events.at(-1)
+
   if (latestEvent?.type !== "mcp_discovery_error") {
     return null
   }
@@ -347,5 +375,6 @@ export function getAutoExpandedMcpDiscoveryErrorKey(
     latestEvent.terminal ??
     (typeof latestEvent.metadata?.terminal === "boolean" && latestEvent.metadata.terminal),
   )
+
   return isTerminal ? getMcpDiscoveryErrorTimelineKey(latestEvent) : null
 }

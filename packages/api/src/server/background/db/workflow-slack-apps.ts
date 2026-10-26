@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens Slack app tables from the Worker env at the store composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
@@ -14,6 +15,7 @@ import {
 import { d1Error, WorkflowSlackDeliveryError, type D1Error } from "./errors"
 
 export type WorkflowSlackTriggerSurface = "event" | "command" | "interaction"
+
 export type WorkflowSlackDeliveryStatus = "received" | "started" | "ignored" | "failed"
 
 export interface WorkflowSlackAppRecord {
@@ -115,7 +117,8 @@ export class WorkflowSlackAppStore {
       workflow_id: row.workflowId,
       workflow_version: row.workflowVersion,
       node_id: row.nodeId,
-      surface: row.surface as WorkflowSlackTriggerSurface,
+      surface:
+        /* SAFETY: row.surface is persisted only as WorkflowSlackTriggerSurface by the writer for that column. */ row.surface as WorkflowSlackTriggerSurface,
       command_name: row.commandName,
       event_types_json: row.eventTypesJson,
       channel_name_pattern: row.channelNamePattern,
@@ -138,9 +141,11 @@ export class WorkflowSlackAppStore {
       workflow_id: row.workflowId,
       node_id: row.nodeId,
       delivery_key: row.deliveryKey,
-      surface: row.surface as WorkflowSlackTriggerSurface,
+      surface:
+        /* SAFETY: row.surface is persisted only as WorkflowSlackTriggerSurface by the writer for that column. */ row.surface as WorkflowSlackTriggerSurface,
       run_id: row.runId,
-      status: row.status as WorkflowSlackDeliveryStatus,
+      status:
+        /* SAFETY: row.status is persisted only as WorkflowSlackDeliveryStatus by the writer for that column. */ row.status as WorkflowSlackDeliveryStatus,
       error: row.error,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
@@ -176,6 +181,7 @@ export class WorkflowSlackAppStore {
           .returning(),
       catch: d1Error("db.workflowSlack.createApp"),
     })
+
     return this.toAppRecord(rows[0])
   })
 
@@ -192,6 +198,7 @@ export class WorkflowSlackAppStore {
           .limit(1),
       catch: d1Error("db.workflowSlack.getAppById"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toAppRecord(row))
   })
 
@@ -208,6 +215,7 @@ export class WorkflowSlackAppStore {
           .limit(1),
       catch: d1Error("db.workflowSlack.getAppByWorkflowId"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toAppRecord(row))
   })
 
@@ -226,6 +234,7 @@ export class WorkflowSlackAppStore {
         onSome: (appName) => ({ appName }),
       },
     )
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -235,6 +244,7 @@ export class WorkflowSlackAppStore {
           .returning(),
       catch: d1Error("db.workflowSlack.updateAppMetadata"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toAppRecord(row))
   })
 
@@ -318,7 +328,9 @@ export class WorkflowSlackAppStore {
       try: () => this.drizzle.batch([disableStatement, ...upsertStatements]),
       catch: d1Error("db.workflowSlack.upsertTriggerRegistrations"),
     })
+
     const [, ...upsertResults] = results
+
     return upsertResults.map((rows) => this.toTriggerRegistrationRecord(rows[0]))
   })
 
@@ -344,6 +356,7 @@ export class WorkflowSlackAppStore {
             ),
         catch: d1Error("db.workflowSlack.listEnabledRegistrationsForApp"),
       })
+
       return rows.map((row) => this.toTriggerRegistrationRecord(row))
     },
   )
@@ -364,6 +377,7 @@ export class WorkflowSlackAppStore {
           ),
       catch: d1Error("db.workflowSlack.listEnabledRegistrationsForWorkflow"),
     })
+
     return rows.map((row) => this.toTriggerRegistrationRecord(row))
   })
 
@@ -377,6 +391,7 @@ export class WorkflowSlackAppStore {
             .where(eq(this.schema.workflowSlackTriggerRegistrations.workflowId, workflowId)),
         catch: d1Error("db.workflowSlack.listRegistrationsForWorkflow"),
       })
+
       return rows.map((row) => this.toTriggerRegistrationRecord(row))
     },
   )
@@ -468,7 +483,9 @@ export class WorkflowSlackAppStore {
           Effect.fail(new WorkflowSlackDeliveryError({ message: DELIVERY_DEDUPE_MISSING_MESSAGE })),
         onSome: (row) => Effect.succeed(row),
       })
+
       const existing = this.toDeliveryRecord(existingRow)
+
       const duplicateWindowActive =
         input.dedupeWindowSeconds > 0 &&
         existing.created_at >= input.now - input.dedupeWindowSeconds * 1000
@@ -540,7 +557,9 @@ export class WorkflowSlackAppStore {
           .limit(1),
       catch: d1Error("db.workflowSlack.createDeliveryIfAbsent"),
     })
+
     const row = Option.getOrElse(Option.fromNullishOr(currentRows[0]), () => existingRow)
+
     return {
       created: false,
       delivery: this.toDeliveryRecord(row),
@@ -584,12 +603,14 @@ export class WorkflowSlackAppStore {
     const excludeCondition = Option.match(
       Option.fromNullishOr(input.excludeDeliveryId).pipe(Option.filter(Boolean)),
       {
-        onNone: () => [] as SQL[],
+        onNone: () =>
+          /* SAFETY: This branch has no SQL[] elements, so the array is empty. */ [] as SQL[],
         onSome: (excludeDeliveryId) => [
           ne(this.schema.workflowSlackDeliveries.id, excludeDeliveryId),
         ],
       },
     )
+
     const rows = yield* Effect.tryPromise({
       try: () =>
         this.drizzle
@@ -607,6 +628,7 @@ export class WorkflowSlackAppStore {
           .limit(1),
       catch: d1Error("db.workflowSlack.getRecentDeliveryForNode"),
     })
+
     return Option.map(Option.fromNullishOr(rows[0]), (row) => this.toDeliveryRecord(row))
   })
 }
@@ -700,6 +722,7 @@ export function createWorkflowSlackAppStoreFromD1(
       Match.orElse((d1) => makeD1Drizzle(d1)),
     ),
   )
+
   return {
     createApp: (input) => runSlackAppStoreEffect(store.createApp(input)),
     getAppById: (id) => runSlackAppStoreOption(store.getAppById(id)),

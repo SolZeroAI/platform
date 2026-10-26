@@ -8,6 +8,7 @@ import {
 import { parseJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env so storage nodes can read repo secrets outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { Env } from "../../types"
 import { prefixStorageKeyWithUserId } from "../../../lib/better-auth"
@@ -39,13 +40,17 @@ const workflowStorageNodeTypes = new Set([
 const workflowR2BucketIds = new Set<string>(
   WORKFLOW_R2_BUCKET_OPTIONS.map((bucket) => bucket.binding),
 )
+
 const workflowKvNamespaceIds = new Set<string>(
   WORKFLOW_KV_NAMESPACE_OPTIONS.map((namespace) => namespace.binding),
 )
+
 const workflowResponseTypes = new Set(["auto", "json", "text"])
+
 const workflowStorageEncodings = new Set<string>(
   WORKFLOW_STORAGE_ENCODING_OPTIONS.map((encoding) => encoding.value),
 )
+
 const R2_CONTENT_ENCODING_MANIFEST_VERSION = 2
 
 export function isWorkflowStorageNodeType(nodeType: string): boolean {
@@ -113,7 +118,7 @@ type SerializedStorageContent = {
 function serializeStorageContent(content: unknown): { body: string; contentType: string } {
   return Match.value(typeof content === "string").pipe(
     Match.when(true, () => ({
-      body: content as string,
+      body: /* SAFETY: The preceding check established that content is string. */ content as string,
       contentType: "text/plain; charset=utf-8",
     })),
     Match.orElse(() => ({
@@ -126,11 +131,15 @@ function serializeStorageContent(content: unknown): { body: string; contentType:
 
 function resolveR2Encoding(options: WorkflowNodeOptions): WorkflowStorageEncoding {
   const encoding = Option.getOrElse(getString(options.encoding), () => "text")
+
   return Match.value(workflowStorageEncodings.has(encoding)).pipe(
     Match.when(false, () => {
       throw new Error(`Unsupported R2 content encoding '${encoding}'`)
     }),
-    Match.orElse(() => encoding as WorkflowStorageEncoding),
+    Match.orElse(
+      () =>
+        /* SAFETY: encoding has the WorkflowStorageEncoding shape established by the check or writer around this read. */ encoding as WorkflowStorageEncoding,
+    ),
   )
 }
 
@@ -141,7 +150,11 @@ function getR2ContentEncoding(
   return Match.value(
     !manifestVersion || manifestVersion < R2_CONTENT_ENCODING_MANIFEST_VERSION,
   ).pipe(
-    Match.when(true, () => "text" as WorkflowStorageEncoding),
+    Match.when(
+      true,
+      () =>
+        /* SAFETY: "text" has the WorkflowStorageEncoding shape established by the check or writer around this read. */ "text" as WorkflowStorageEncoding,
+    ),
     Match.orElse(() => resolveR2Encoding(options)),
   )
 }
@@ -149,11 +162,13 @@ function getR2ContentEncoding(
 function readBase64Payload(value: string): string {
   const trimmed = value.trim()
   const dataUrlMatch = /^data:[^,]*;base64,(.*)$/is.exec(trimmed)
+
   return (dataUrlMatch?.[1] ?? trimmed).replaceAll(/\s/g, "")
 }
 
 function decodeBase64Content(value: string): Uint8Array {
   const encoded = readBase64Payload(value)
+
   return Result.match(
     Result.try(() => atob(encoded)),
     {
@@ -169,7 +184,9 @@ function decodeBase64Content(value: string): Uint8Array {
 function serializeBase64Content(content: unknown): SerializedStorageContent {
   return Match.value(typeof content === "string").pipe(
     Match.when(true, () => ({
-      body: decodeBase64Content(content as string),
+      body: decodeBase64Content(
+        /* SAFETY: The preceding check established that content is string. */ content as string,
+      ),
       contentType: "application/octet-stream",
     })),
     Match.orElse(() => {
@@ -190,6 +207,7 @@ function serializeR2StorageContent(
 
 function looksLikeJsonDocument(value: string): boolean {
   const trimmed = value.trim()
+
   return trimmed.startsWith("{") || trimmed.startsWith("[")
 }
 
@@ -227,6 +245,7 @@ function parseStoredTextBody(
     responseType === "json" ||
     (responseType === "auto" && (contentType ?? "").toLowerCase().includes("json")) ||
     (responseType === "auto" && looksLikeJsonDocument(text))
+
   return Match.value(shouldParseJson).pipe(
     Match.when(false, () => ({ body: text, json: null, text })),
     Match.orElse(() => parseStoredJsonOrText(text, responseType)),
@@ -253,25 +272,31 @@ const runR2PutObjectNode = Effect.fn("workflows.runR2PutObjectNode")(function* (
   const bucketBinding = Option.getOrElse(getString(options.bucket), () => "WORKFLOW_BUCKET")
   const bucket = getR2BucketBinding(input.env, bucketBinding)
   const defaultKey = `workflow-outputs/${input.workflowId}/${input.runId}/${input.node.id}.json`
+
   const keyTemplate = Option.getOrElse(
     Option.orElse(getString(input.inputs.key), () => getString(options.key)),
     () => defaultKey,
   )
+
   const renderedKey = renderTemplate(keyTemplate, createNodeContext(input)).trim()
   yield* workflowNodeFailWhen(renderedKey.length === 0, "R2 object key is required")
   const userId = getActionUserId(input)
   const storageKey = prefixStorageKeyWithUserId(userId, renderedKey)
+
   const content = Match.value("content" in input.inputs).pipe(
     Match.when(true, () => input.inputs.content),
     Match.orElse(() => input.inputs),
   )
+
   const encoding = getR2ContentEncoding(options, input.manifestVersion)
   const serialized = serializeR2StorageContent(content, encoding)
   const contentType = Option.getOrElse(getString(options.contentType), () => serialized.contentType)
+
   const result = yield* Effect.tryPromise({
     try: () => bucket.put(storageKey, serialized.body, { httpMetadata: { contentType } }),
     catch: toError,
   })
+
   return {
     outputs: {
       bucket: bucketBinding,
@@ -292,9 +317,11 @@ const readR2Object = Effect.fn("workflows.readR2Object")(function* (params: {
     try: () => params.object.text(),
     catch: toError,
   })
+
   const contentType = params.object.httpMetadata?.contentType ?? null
   const responseType = Option.getOrElse(getString(params.options.responseType), () => "auto")
   const parsed = parseStoredText(text, responseType, contentType)
+
   return {
     outputs: {
       found: true,
@@ -315,18 +342,22 @@ const runR2GetObjectNode = Effect.fn("workflows.runR2GetObjectNode")(function* (
   const options = input.node.options ?? {}
   const bucketBinding = Option.getOrElse(getString(options.bucket), () => "WORKFLOW_BUCKET")
   const bucket = getR2BucketBinding(input.env, bucketBinding)
+
   const keyTemplate = yield* requireString(
     Option.orElse(getString(input.inputs.key), () => getString(options.key)),
     "R2 object key is required",
   )
+
   const renderedKey = renderTemplate(keyTemplate, createNodeContext(input)).trim()
   yield* workflowNodeFailWhen(renderedKey.length === 0, "R2 object key is required")
   const userId = getActionUserId(input)
   const storageKey = prefixStorageKeyWithUserId(userId, renderedKey)
+
   const object = yield* Effect.tryPromise({
     try: () => bucket.get(storageKey),
     catch: toError,
   })
+
   return yield* Match.value(object).pipe(
     Match.when(Match.null, () =>
       Effect.succeed({
@@ -355,32 +386,40 @@ const runKvPutNode = Effect.fn("workflows.runKvPutNode")(function* (
   const namespaceBinding = Option.getOrElse(getString(options.namespace), () => "USER_WORKFLOW_KV")
   const namespace = getKvNamespaceBinding(input.env, namespaceBinding)
   const defaultKey = `workflow-outputs/${input.workflowId}/${input.runId}/${input.node.id}.json`
+
   const keyTemplate = Option.getOrElse(
     Option.orElse(getString(input.inputs.key), () => getString(options.key)),
     () => defaultKey,
   )
+
   const renderedKey = renderTemplate(keyTemplate, createNodeContext(input)).trim()
   yield* workflowNodeFailWhen(renderedKey.length === 0, "KV key is required")
   const userId = getActionUserId(input)
   const storageKey = prefixStorageKeyWithUserId(userId, renderedKey)
+
   const value = Match.value("value" in input.inputs).pipe(
     Match.when(true, () => input.inputs.value),
     Match.orElse(() => input.inputs),
   )
+
   const serialized = serializeStorageContent(value)
+
   const expirationTtl = Option.getOrUndefined(
     Option.orElse(getPositiveInteger(input.inputs.expirationTtl), () =>
       getPositiveInteger(options.expirationTtl),
     ),
   )
+
   const putOptions = Option.match(Option.fromNullishOr(expirationTtl), {
     onNone: () => undefined,
     onSome: (ttl) => ({ expirationTtl: ttl }),
   })
+
   yield* Effect.tryPromise({
     try: () => namespace.put(storageKey, serialized.body, putOptions),
     catch: toError,
   })
+
   return {
     outputs: {
       namespace: namespaceBinding,
@@ -398,6 +437,7 @@ function buildKvGetResult(
 ) {
   const responseType = Option.getOrElse(getString(options.responseType), () => "auto")
   const parsed = parseStoredText(text, responseType)
+
   return {
     outputs: {
       found: true,
@@ -416,18 +456,22 @@ const runKvGetNode = Effect.fn("workflows.runKvGetNode")(function* (
   const options = input.node.options ?? {}
   const namespaceBinding = Option.getOrElse(getString(options.namespace), () => "USER_WORKFLOW_KV")
   const namespace = getKvNamespaceBinding(input.env, namespaceBinding)
+
   const keyTemplate = yield* requireString(
     Option.orElse(getString(input.inputs.key), () => getString(options.key)),
     "KV key is required",
   )
+
   const renderedKey = renderTemplate(keyTemplate, createNodeContext(input)).trim()
   yield* workflowNodeFailWhen(renderedKey.length === 0, "KV key is required")
   const userId = getActionUserId(input)
   const storageKey = prefixStorageKeyWithUserId(userId, renderedKey)
+
   const text = yield* Effect.tryPromise({
     try: () => namespace.get(storageKey),
     catch: toError,
   })
+
   return Match.value(text).pipe(
     Match.when(Match.null, () => ({
       outputs: {
@@ -455,14 +499,18 @@ const runGetSecretNode = Effect.fn("workflows.runGetSecretNode")(function* (
       onSome: (resolved) => Effect.succeed(resolved),
     },
   )
+
   const options = input.node.options ?? {}
+
   const keyTemplate = yield* requireString(
     Option.orElse(getString(input.inputs.key), () => getString(options.key)),
     "Secret key is required",
   )
+
   const key = renderTemplate(keyTemplate, createNodeContext(input)).trim()
   yield* workflowNodeFailWhen(key.length === 0, "Secret key is required")
   const userId = getActionUserId(input)
+
   const secrets = yield* Effect.tryPromise({
     try: () =>
       createGlobalSecretsStoreFromD1(
@@ -471,17 +519,21 @@ const runGetSecretNode = Effect.fn("workflows.runGetSecretNode")(function* (
       ).getDecryptedSecrets({ userId }),
     catch: toError,
   })
+
   const value = secrets[key]
   const found = typeof value === "string"
+
   const secretMessage = Match.value(found).pipe(
     Match.when(true, () => "read a secret"),
     Match.orElse(() => "could not find a secret"),
   )
+
   yield* recordWorkflowNodeRunEvent(input, {
     eventType: "secret_accessed",
     message: `${input.node.label} ${secretMessage}`,
     data: { key, found },
   })
+
   return {
     outputs: {
       found,

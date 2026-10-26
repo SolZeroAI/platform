@@ -15,11 +15,14 @@ const handleWorkflowBuilderMcpRequestEffect = Effect.fn("mcp.workflowBuilder.han
   ctx: ExecutionContext,
 ) {
   const normalized = normalizeWorkflowBuilderMcpRequest(request)
+
   const context = yield* Effect.tryPromise({
     try: () => resolveWorkflowBuilderContext(normalized, env),
     catch: toError,
   })
+
   const server = createWorkflowBuilderMcpServer(context)
+
   return yield* Effect.tryPromise({
     try: () =>
       createMcpHandler(server, {

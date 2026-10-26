@@ -1,4 +1,5 @@
 export type CodeLanguage = "json" | "javascript" | "text"
+
 export type CodeSurfaceMode = "readonly" | "editable"
 
 export interface JsonFormatResult {
@@ -27,7 +28,7 @@ export function formatJsonValue(value: unknown): string {
 
 function parseJsonText(value: string): JsonParseResult {
   try {
-    return { ok: true, value: JSON.parse(value) as unknown }
+    return { ok: true, value: JSON.parse(value) }
   } catch (errorValue) {
     return {
       ok: false,
@@ -38,6 +39,7 @@ function parseJsonText(value: string): JsonParseResult {
 
 export function formatJsonText(value: string): JsonFormatResult {
   const result = parseJsonText(value)
+
   if (!result.ok) {
     return {
       ok: false,
@@ -56,9 +58,11 @@ export function getCodeLanguageForValue(
   if (preferredLanguage) {
     return preferredLanguage
   }
+
   if (typeof value === "string") {
     return parseJsonText(value).ok ? "json" : "text"
   }
+
   return "json"
 }
 
@@ -69,12 +73,14 @@ export function getCodeTextForValue(value: unknown, preferredLanguage?: CodeLang
     }
 
     const result = parseJsonText(value)
+
     if (result.ok) {
       return formatJsonValue(result.value)
     }
 
     return value
   }
+
   return formatJsonValue(value)
 }
 

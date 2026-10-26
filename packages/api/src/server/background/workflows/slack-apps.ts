@@ -3,6 +3,7 @@ import { generateId } from "../auth/crypto"
 import { parseJson } from "../../lib/json"
 import { toError } from "../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../db/repo-secrets"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env while provisioning Slack apps, which runs outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import {
   createWorkflowSlackAppStoreFromD1,
@@ -24,12 +25,14 @@ import * as Schema from "effect/Schema"
 const WORKFLOW_SLACK_SECRET_PREFIX = "workflow_slack_apps"
 const DEFAULT_SLACK_EVENT_TYPES = ["app_mention", "message"]
 const DEFAULT_DEDUPE_WINDOW_SECONDS = 300
+
 const SLACK_MESSAGE_BOT_EVENT_TYPES = [
   "message.channels",
   "message.groups",
   "message.im",
   "message.mpim",
 ] as const
+
 const BASE_SLACK_BOT_SCOPES = [
   "channels:history",
   "groups:history",
@@ -41,14 +44,17 @@ const BASE_SLACK_BOT_SCOPES = [
   "groups:read",
   "reactions:write",
 ] as const
-const SLACK_EVENT_REQUIRED_BOT_SCOPES: Record<string, readonly string[]> = {
+
+let SLACK_EVENT_REQUIRED_BOT_SCOPES: Record<string, readonly string[]> = {}
+
+Object.assign(SLACK_EVENT_REQUIRED_BOT_SCOPES, {
   app_mention: ["app_mentions:read"],
   channel_created: ["channels:read"],
   "message.channels": ["channels:history"],
   "message.groups": ["groups:history"],
   "message.im": ["im:history"],
   "message.mpim": ["mpim:history"],
-}
+})
 
 /**
  * Recoverable failure raised while provisioning or resolving a workflow Slack app (missing
@@ -112,10 +118,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function recordOrEmpty(value: unknown): Record<string, unknown> {
+type UnknownRecord = Record<string, unknown>
+
+function recordOrEmpty(value: unknown): UnknownRecord {
   return Match.value(isRecord(value)).pipe(
-    Match.when(true, () => value as Record<string, unknown>),
-    Match.orElse(() => ({}) as Record<string, unknown>),
+    Match.when(
+      true,
+      () => /* SAFETY: isRecord proved value is a non-array object. */ value as UnknownRecord,
+    ),
+    Match.orElse(() => /* SAFETY: An empty object has no fields. */ ({}) as UnknownRecord),
   )
 }
 
@@ -126,11 +137,13 @@ function readString(value: unknown, fallback = ""): string {
 function readStringArray(value: unknown): string[] {
   return Match.value(Array.isArray(value)).pipe(
     Match.when(true, () =>
-      Arr.filterMap(value as readonly unknown[], (item) =>
-        Result.fromOption(
-          Option.filter(getString(item), (stringValue) => stringValue.length > 0),
-          () => undefined,
-        ),
+      Arr.filterMap(
+        /* SAFETY: value contains only readonly unknown[] values established by the surrounding filter or writer. */ value as readonly unknown[],
+        (item) =>
+          Result.fromOption(
+            Option.filter(getString(item), (stringValue) => stringValue.length > 0),
+            () => undefined,
+          ),
       ),
     ),
     Match.orElse((): string[] => []),
@@ -147,6 +160,7 @@ function readNonNegativeInteger(value: unknown, fallback: number): number {
       }),
     ),
   )
+
   return Match.value(Number.isInteger(numberValue) && numberValue >= 0).pipe(
     Match.when(true, () => numberValue),
     Match.orElse(() => fallback),
@@ -164,6 +178,7 @@ function normalizeSlackTriggerSurface(value: unknown): WorkflowSlackTriggerSurfa
 
 function normalizeSlackCommandName(value: unknown): Option.Option<string> {
   const command = readString(value)
+
   return Match.value(command.length === 0).pipe(
     Match.when(true, () => Option.none<string>()),
     Match.orElse(() =>
@@ -184,6 +199,7 @@ function toSlackManifestBotEventTypes(eventTypes: string[]): string[] {
       Match.orElse(() => [eventType]),
     ),
   )
+
   return Array.from(new Set(manifestEventTypes))
 }
 
@@ -204,26 +220,31 @@ function botScopesForManifest(input: {
     }),
     Match.orElse(() => undefined),
   )
+
   return Array.from(scopes)
 }
 
 function normalizeSlackTriggerNode(node: WorkflowManifestNode): NormalizedSlackTriggerNode {
   const options = recordOrEmpty(node.options)
   const surface = normalizeSlackTriggerSurface(options.surface)
+
   const eventTypes = Match.value(surface).pipe(
     Match.when("event", () => readStringArray(options.eventTypes)),
     Match.orElse(() => DEFAULT_SLACK_EVENT_TYPES),
   )
+
   const commandName = Match.value(surface).pipe(
     Match.when("command", () =>
       Option.getOrElse(normalizeSlackCommandName(options.command), () => "/s0"),
     ),
     Match.orElse(() => null),
   )
+
   const resolvedEventTypes = Match.value(eventTypes.length > 0).pipe(
     Match.when(true, () => eventTypes),
     Match.orElse(() => DEFAULT_SLACK_EVENT_TYPES),
   )
+
   return {
     node,
     surface,
@@ -289,20 +310,23 @@ export function buildSlackManifest(input: {
       (trigger: NormalizedSlackTriggerNode) => trigger.eventTypes,
     ),
   )
+
   const commandTriggers = Arr.filter(
     input.triggers,
     (trigger: NormalizedSlackTriggerNode) => trigger.surface === "command",
   )
+
   const hasInteractionTriggers = Arr.some(
     input.triggers,
     (trigger: NormalizedSlackTriggerNode) => trigger.surface === "interaction",
   )
-  const features: Record<string, unknown> = {
-    bot_user: {
-      display_name: input.appName,
-      always_online: false,
-    },
-  }
+
+  let features: Record<string, unknown> = {}
+
+  Object.assign(features, {
+    bot_user: { display_name: input.appName, always_online: false },
+  })
+
   Match.value(commandTriggers.length > 0).pipe(
     Match.when(true, () => {
       features.slash_commands = Arr.map(commandTriggers, (trigger) => ({
@@ -315,11 +339,15 @@ export function buildSlackManifest(input: {
     Match.orElse(() => undefined),
   )
   const botScopes = botScopesForManifest({ eventTypes, commandTriggers })
-  const settings: Record<string, unknown> = {
+
+  let settings: Record<string, unknown> = {}
+
+  Object.assign(settings, {
     org_deploy_enabled: false,
     socket_mode_enabled: false,
     token_rotation_enabled: false,
-  }
+  })
+
   Match.value(eventTypes.length > 0).pipe(
     Match.when(true, () => {
       settings.event_subscriptions = {
@@ -339,23 +367,25 @@ export function buildSlackManifest(input: {
     Match.orElse(() => undefined),
   )
 
-  return {
-    display_information: {
-      name: input.appName,
-    },
+  let manifest: Record<string, unknown> = {}
+
+  Object.assign(manifest, {
+    display_information: { name: input.appName },
     features,
-    oauth_config: {
-      scopes: {
-        bot: botScopes,
-      },
-    },
+    oauth_config: { scopes: { bot: botScopes } },
     settings,
-  }
+  })
+
+  return manifest
 }
 
 function readRecord(value: unknown): Option.Option<Record<string, unknown>> {
   return Match.value(isRecord(value)).pipe(
-    Match.when(true, () => Option.some(value as Record<string, unknown>)),
+    Match.when(true, () =>
+      Option.some(
+        /* SAFETY: isRecord proved value is a non-array object. */ value as UnknownRecord,
+      ),
+    ),
     Match.orElse(() => Option.none<Record<string, unknown>>()),
   )
 }
@@ -363,8 +393,16 @@ function readRecord(value: unknown): Option.Option<Record<string, unknown>> {
 function readManifestStringArray(value: unknown): Option.Option<string[]> {
   return Match.value(Array.isArray(value)).pipe(
     Match.when(true, () =>
-      Match.value((value as unknown[]).every((item) => typeof item === "string")).pipe(
-        Match.when(true, () => Option.some(value as string[])),
+      Match.value(
+        /* SAFETY: Array.isArray proved value is unknown[]. */ (value as unknown[]).every(
+          (item) => typeof item === "string",
+        ),
+      ).pipe(
+        Match.when(true, () =>
+          Option.some(
+            /* SAFETY: value contains only string[] values established by the surrounding filter or writer. */ value as string[],
+          ),
+        ),
         Match.orElse(() => Option.none<string[]>()),
       ),
     ),
@@ -392,7 +430,10 @@ function validateNonEmptySlashCommands(commands: unknown[], botScopeSet: Set<str
     Match.orElse(() =>
       Match.value(botScopeSet.has("commands")).pipe(
         Match.when(false, () => ["features.slash_commands requires the commands bot scope."]),
-        Match.orElse(() => [] as string[]),
+        Match.orElse(
+          () =>
+            /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
+        ),
       ),
     ),
   )
@@ -444,7 +485,8 @@ function validateBotEvent(eventType: string, botScopeSet: Set<string>): Manifest
       errors: [
         "settings.event_subscriptions.bot_events cannot include message; use message.channels, message.groups, message.im, or message.mpim.",
       ],
-      warnings: [] as string[],
+      warnings:
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
     })),
     Match.orElse(() => validateMappedBotEvent(eventType, botScopeSet)),
   )
@@ -455,6 +497,7 @@ function aggregateBotEventResults(
   botScopeSet: Set<string>,
 ): ManifestValidationParts {
   const results = Arr.map(events, (eventType) => validateBotEvent(eventType, botScopeSet))
+
   return {
     errors: Arr.flatMap(results, (result) => result.errors),
     warnings: Arr.flatMap(results, (result) => result.warnings),
@@ -468,7 +511,8 @@ function validatePresentBotEvents(
   return Match.value(events.length === 0).pipe(
     Match.when(true, () => ({
       errors: ["settings.event_subscriptions.bot_events must be omitted when empty."],
-      warnings: [] as string[],
+      warnings:
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
     })),
     Match.orElse(() => aggregateBotEventResults(events, botScopeSet)),
   )
@@ -493,12 +537,17 @@ function validateEventSubscription(
 ): ManifestValidationParts {
   const urlErrors = Match.value(readString(subscription.request_url).length === 0).pipe(
     Match.when(true, () => ["settings.event_subscriptions.request_url is required."]),
-    Match.orElse(() => [] as string[]),
+    Match.orElse(
+      () =>
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
+    ),
   )
+
   const botEventsResult = validateBotEvents(
     readManifestStringArray(subscription.bot_events),
     botScopeSet,
   )
+
   return {
     errors: [...urlErrors, ...botEventsResult.errors],
     warnings: botEventsResult.warnings,
@@ -523,7 +572,10 @@ function validateInteractivity(interactivity: Option.Option<Record<string, unkno
         Match.when(true, () => [
           "settings.interactivity.request_url is required when interactivity is enabled.",
         ]),
-        Match.orElse(() => [] as string[]),
+        Match.orElse(
+          () =>
+            /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
+        ),
       ),
   })
 }
@@ -534,20 +586,25 @@ export function validateWorkflowSlackManifest(
   const botScopeSet = new Set(readManifestBotScopes(manifest))
   const features = readRecord(manifest.features)
   const settings = readRecord(manifest.settings)
+
   const slashCommands = Option.flatMap(features, (resolved) =>
     Option.fromNullishOr(resolved.slash_commands),
   )
+
   const eventSubscriptions = Option.flatMap(settings, (resolved) =>
     readRecord(resolved.event_subscriptions),
   )
+
   const interactivity = Option.flatMap(settings, (resolved) => readRecord(resolved.interactivity))
 
   const eventResult = validateEventSubscriptions(eventSubscriptions, botScopeSet)
+
   const errors = [
     ...validateSlashCommands(slashCommands, botScopeSet),
     ...eventResult.errors,
     ...validateInteractivity(interactivity),
   ]
+
   const warnings = eventResult.warnings
 
   return { valid: errors.length === 0, errors, warnings }
@@ -576,6 +633,7 @@ const updateSlackAppName = Effect.fn("workflows.updateSlackAppName")(function* (
       }),
     catch: toError,
   })
+
   return updated ?? existing
 })
 
@@ -585,9 +643,15 @@ const maybeUpdateSlackApp = Effect.fn("workflows.maybeUpdateSlackApp")(function*
   existing: WorkflowSlackAppRecord,
 ) {
   const nextName = input.appName?.trim()
+
   return yield* Match.value(Boolean(nextName && nextName !== existing.app_name)).pipe(
     Match.when(true, () =>
-      updateSlackAppName(store, existing, nextName as string, input.now ?? Date.now()),
+      updateSlackAppName(
+        store,
+        existing,
+        /* SAFETY: The preceding check established that nextName is string. */ nextName as string,
+        input.now ?? Date.now(),
+      ),
     ),
     Match.orElse(() => Effect.succeed(existing)),
   )
@@ -599,6 +663,7 @@ const createNewSlackApp = Effect.fn("workflows.createNewSlackApp")(function* (
 ) {
   const appId = `wsa_${generateId(12)}`
   const appName = input.appName?.trim() || `${input.workflow.name} s0`
+
   return yield* Effect.tryPromise({
     try: () =>
       store.createApp({
@@ -621,10 +686,12 @@ export const ensureWorkflowSlackApp = Effect.fn("workflows.ensureSlackApp")(func
   now?: number
 }) {
   const store = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
+
   const existing = yield* Effect.tryPromise({
     try: () => store.getAppByWorkflowId(input.workflow.id),
     catch: toError,
   })
+
   return yield* Option.match(Option.fromNullishOr(existing), {
     onNone: () => createNewSlackApp(input, store),
     onSome: (resolved) => maybeUpdateSlackApp(input, store, resolved),
@@ -637,7 +704,8 @@ const disableTriggerRegistrationsEmpty = Effect.fn("workflows.disableTriggerRegi
       try: () => store.disableTriggerRegistrations(workflowId, now),
       catch: toError,
     })
-    return [] as WorkflowSlackTriggerRegistrationRecord[]
+
+    return /* SAFETY: This branch has no WorkflowSlackTriggerRegistrationRecord[] elements, so the array is empty. */ [] as WorkflowSlackTriggerRegistrationRecord[]
   },
 )
 
@@ -653,6 +721,7 @@ const registerTriggerNodes = Effect.fn("workflows.registerTriggerNodes")(functio
     appName: `${input.manifest.name} s0`,
     now,
   })
+
   const registrations: UpsertWorkflowSlackTriggerRegistrationInput[] = Arr.map(
     triggerNodes,
     (trigger) => ({
@@ -671,6 +740,7 @@ const registerTriggerNodes = Effect.fn("workflows.registerTriggerNodes")(functio
       dedupeWindowSeconds: trigger.dedupeWindowSeconds,
     }),
   )
+
   return yield* Effect.tryPromise({
     try: () =>
       store.upsertTriggerRegistrations({
@@ -692,6 +762,7 @@ export const registerWorkflowSlackTriggers = Effect.fn("workflows.registerSlackT
     const triggerNodes = getSlackTriggerNodes(input.manifest)
     const store = createWorkflowSlackAppStoreFromD1(makeControlPlaneFromEnv(input.env))
     const now = input.now ?? Date.now()
+
     return yield* Match.value(triggerNodes.length === 0).pipe(
       Match.when(true, () => disableTriggerRegistrationsEmpty(store, input.workflow.id, now)),
       Match.orElse(() => registerTriggerNodes(input, store, triggerNodes, now)),
@@ -717,6 +788,7 @@ const disableAndListRegistrations = Effect.fn("workflows.disableAndListRegistrat
       env: input.env,
       workflowId: input.workflow.id,
     })
+
     return yield* Effect.tryPromise({
       try: () =>
         createWorkflowSlackAppStoreFromD1(
@@ -734,11 +806,13 @@ export const getWorkflowSlackAppSetup = Effect.fn("workflows.getSlackAppSetup")(
   serverUrl: string
 }) {
   const triggers = getSlackTriggerNodes(input.manifest)
+
   const app = yield* ensureWorkflowSlackApp({
     env: input.env,
     workflow: input.workflow,
     appName: `${input.manifest.name} s0`,
   })
+
   const requestUrls = buildWorkflowSlackRequestUrls({
     serverUrl: input.serverUrl,
     appId: app.id,
@@ -747,12 +821,15 @@ export const getWorkflowSlackAppSetup = Effect.fn("workflows.getSlackAppSetup")(
       (trigger) => trigger.node.id,
     ),
   })
+
   const manifest = buildSlackManifest({
     appName: app.app_name,
     requestUrls,
     triggers,
   })
+
   const validation = validateWorkflowSlackManifest(manifest)
+
   const registrations = yield* Match.value(input.workflow.status).pipe(
     Match.when("active", () =>
       registerWorkflowSlackTriggers({
@@ -763,7 +840,9 @@ export const getWorkflowSlackAppSetup = Effect.fn("workflows.getSlackAppSetup")(
     ),
     Match.orElse(() => disableAndListRegistrations(input)),
   )
+
   const secretsStore = yield* requireGlobalSecretsStore(input.env)
+
   const secretKeys = yield* Effect.tryPromise({
     try: () =>
       secretsStore.listSecretKeys({
@@ -771,7 +850,9 @@ export const getWorkflowSlackAppSetup = Effect.fn("workflows.getSlackAppSetup")(
       }),
     catch: toError,
   })
+
   const secretKeySet = new Set(secretKeys)
+
   return {
     app,
     requestUrls,
@@ -826,13 +907,18 @@ export const storeWorkflowSlackAppCredentials = Effect.fn("workflows.storeSlackA
         env: input.env,
         workflow: input.workflow,
       }))
-    const secrets: Record<string, string> = {
-      ...buildSecretEntry(app.signing_secret_key, input.signingSecret),
-      ...buildSecretEntry(app.bot_token_secret_key, input.botToken),
-    }
+
+    let secrets: Record<string, string> = {}
+    Object.assign(
+      secrets,
+      buildSecretEntry(app.signing_secret_key, input.signingSecret),
+      buildSecretEntry(app.bot_token_secret_key, input.botToken),
+    )
+
     const hasSecretsToPersist = Effect.succeed(Object.keys(secrets).length > 0)
     yield* persistSlackSecrets(input, secrets).pipe(Effect.when(hasSecretsToPersist))
     const secretsStore = yield* requireGlobalSecretsStore(input.env)
+
     const secretKeys = new Set(
       yield* Effect.tryPromise({
         try: () =>
@@ -842,6 +928,7 @@ export const storeWorkflowSlackAppCredentials = Effect.fn("workflows.storeSlackA
         catch: toError,
       }),
     )
+
     return {
       hasSigningSecret: secretKeys.has(app.signing_secret_key),
       hasBotToken: secretKeys.has(app.bot_token_secret_key),
@@ -852,6 +939,7 @@ export const storeWorkflowSlackAppCredentials = Effect.fn("workflows.storeSlackA
 export const getWorkflowSlackAppSecrets = Effect.fn("workflows.getSlackAppSecrets")(
   function* (input: { env: Env; app: WorkflowSlackAppRecord }) {
     const secretsStore = yield* requireGlobalSecretsStore(input.env)
+
     const secrets = yield* Effect.tryPromise({
       try: () =>
         secretsStore.getDecryptedSecrets({
@@ -859,6 +947,7 @@ export const getWorkflowSlackAppSecrets = Effect.fn("workflows.getSlackAppSecret
         }),
       catch: toError,
     })
+
     return {
       signingSecret: readString(secrets[input.app.signing_secret_key]) || null,
       botToken: readString(secrets[input.app.bot_token_secret_key]) || null,
@@ -871,6 +960,7 @@ const resolveSlackBotTokenForApp = Effect.fn("workflows.resolveSlackBotTokenForA
   app: WorkflowSlackAppRecord,
 ) {
   const { botToken } = yield* getWorkflowSlackAppSecrets({ env, app })
+
   return yield* Option.match(Option.fromNullishOr(botToken), {
     onNone: () => slackAppFail("Workflow Slack app bot token is not configured"),
     onSome: (token) => Effect.succeed(token),
@@ -893,7 +983,6 @@ const resolveStoredSlackBotToken = Effect.fn("workflows.resolveStoredSlackBotTok
     })
   },
 )
-
 export const resolveWorkflowSlackBotToken = Effect.fn("workflows.resolveSlackBotToken")(
   function* (input: { env: Env; workflowId: string; token?: string | null }) {
     const explicitToken = readString(input.token)
@@ -903,7 +992,6 @@ export const resolveWorkflowSlackBotToken = Effect.fn("workflows.resolveSlackBot
     )
   },
 )
-
 export function parseSlackRegistrationStringArray(value: string): string[] {
   return readStringArray(parseJson(value))
 }

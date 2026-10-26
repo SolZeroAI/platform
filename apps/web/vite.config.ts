@@ -9,6 +9,7 @@ export default defineConfig(async () => {
     import("@vitejs/plugin-react"),
     import("@tanstack/react-start/plugin/vite"),
   ])
+
   const { default: tailwindcss } = await import("@tailwindcss/vite")
 
   return {

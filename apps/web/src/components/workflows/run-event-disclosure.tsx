@@ -23,11 +23,13 @@ export function RunEventDisclosure({
   onSubmitApproval: (runId: string, nodeId: string, approved: boolean) => void | Promise<void>
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
+
   const canSubmitApproval =
     event.eventType === "approval_requested" &&
     event.nodeId !== null &&
     run.status === "running" &&
     !approvalSubmitted
+
   const subtitleRows = getRunEventSubtitleRows(event, durationLabel)
 
   return (

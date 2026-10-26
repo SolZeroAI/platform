@@ -42,6 +42,7 @@ function controlPlaneFailureStatus(failure: unknown): number {
 }
 
 function isErrorPayload(value: unknown): value is { error: string } {
+  // SAFETY: the && object and "error" in value checks run before this property read, so value is a non-null object with an error field.
   return (
     typeof value === "object" &&
     value !== null &&
@@ -68,7 +69,9 @@ const readResponseMessage = Effect.fn("admin.readResponseMessage")(function* (re
   const text = yield* Effect.tryPromise(() => response.clone().text()).pipe(
     Effect.orElseSucceed(() => ""),
   )
+
   const message = text || response.statusText
+
   return Option.fromNullishOr(message).pipe(Option.filter((value) => value.length > 0))
 })
 
@@ -88,8 +91,10 @@ export const requireAdmin = Effect.fn("admin.requireAdmin")(function* (
     context.principal,
     context.identityProvider,
   )
+
   const email = yield* requireOption(Option.fromNullishOr(identity.email), "Forbidden", 403)
   yield* failUnless(yield* isAdminEmailForEnv(context.env, email), "Forbidden", 403)
+
   return { userId: identity.userId, email } satisfies AdminIdentity
 })
 
@@ -102,6 +107,7 @@ export const resolveAdminAccess = Effect.fn("admin.resolveAdminAccess")(function
     context.principal,
     context.identityProvider,
   )
+
   return yield* isAdminEmailForEnv(context.env, identity.email)
 })
 
@@ -163,6 +169,7 @@ export const withAudit = <R>(
 ) =>
   Effect.gen(function* () {
     const store = new AdminStore(input.context.db)
+
     return yield* perform.pipe(
       Effect.tap((response) => auditSuccess(store, input, response)),
       Effect.tapError((failure) => auditFailure(store, input, failure)),

@@ -13,9 +13,11 @@ function applyControlPlaneHeaders(
   },
 ) {
   let nextRequest = request
+
   if (options.bearerToken !== undefined) {
     nextRequest = HttpClientRequest.bearerToken(nextRequest, options.bearerToken)
   }
+
   return nextRequest
 }
 
@@ -34,9 +36,11 @@ export function makeS0ApiClient(options: {
   }).pipe(Effect.provide(FetchHttpClient.layer))
 
   if (options.bearerToken === undefined) {
+    // SAFETY: HttpApiClient.make(S0Api) produces the generated S0ApiClient. No auth middleware is required when the bearer token is absent.
     return client as Effect.Effect<S0ApiClient>
   }
 
+  // SAFETY: providing ControlPlaneAuth satisfies the client middleware channel and yields the same S0ApiClient.
   return client.pipe(
     Effect.provide(controlPlaneAuthClient({ bearerToken: options.bearerToken })),
   ) as Effect.Effect<S0ApiClient>

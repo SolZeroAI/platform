@@ -21,6 +21,7 @@ export interface WorkflowRuntimeTriggerPayload {
 }
 
 export type WorkflowNodeOutputs = Record<string, unknown>
+
 export type WorkflowRuntimeOutputs = Record<string, WorkflowNodeOutputs>
 
 export interface WorkflowActionResult {
@@ -53,8 +54,15 @@ function recordOptionFromUnknown(value: unknown): Option.Option<Record<string, u
   )
 }
 
+function toRecord<Fields extends object>(fields: Fields): Record<string, unknown> {
+  let record: Record<string, unknown> = {}
+  Object.assign(record, fields)
+
+  return record
+}
+
 function cloneRecord(record: unknown): Record<string, unknown> {
-  return { ...Option.getOrElse(recordOptionFromUnknown(record), () => ({})) }
+  return toRecord(Option.getOrElse(recordOptionFromUnknown(record), () => ({})))
 }
 
 function redactSecretValue(value: unknown): unknown {
@@ -73,7 +81,11 @@ export function normalizeActionResult(result: unknown): WorkflowActionResult {
     onNone: () => wrapPrimitiveActionResult(result),
     onSome: (record) =>
       Match.value("outputs" in record).pipe(
-        Match.when(true, () => record as WorkflowActionResult),
+        Match.when(
+          true,
+          () =>
+            /* SAFETY: record has the WorkflowActionResult shape established by the check or writer around this read. */ record as WorkflowActionResult,
+        ),
         Match.orElse(() => wrapPrimitiveActionResult(result)),
       ),
   })
@@ -127,44 +139,42 @@ function getTriggerOutputs(
   eventTimestamp: string | null,
 ): WorkflowNodeOutputs {
   const payload = triggerPayloadRecord(trigger)
+
   return Match.value(node.type).pipe(
-    Match.when(
-      "manual-trigger",
-      (): WorkflowNodeOutputs => ({
+    Match.when("manual-trigger", () =>
+      toRecord({
         payload: trigger?.payload ?? {},
       }),
     ),
-    Match.when(
-      "webhook-trigger",
-      (): WorkflowNodeOutputs => ({
+    Match.when("webhook-trigger", () =>
+      toRecord({
         body: payload.body ?? trigger?.payload ?? null,
         headers: payload.headers ?? {},
         query: payload.query ?? {},
       }),
     ),
-    Match.when(
-      "datetime-trigger",
-      (): WorkflowNodeOutputs => ({
+    Match.when("datetime-trigger", () =>
+      toRecord({
         scheduledAt: trigger?.scheduledAt ?? node.options.scheduledAt ?? null,
         firedAt: trigger?.firedAt ?? eventTimestamp,
       }),
     ),
-    Match.when(
-      "cron-trigger",
-      (): WorkflowNodeOutputs => ({
+    Match.when("cron-trigger", () =>
+      toRecord({
         cron: trigger?.cron ?? node.options.cron ?? null,
         scheduledAt: trigger?.scheduledAt ?? null,
         firedAt: trigger?.firedAt ?? eventTimestamp,
       }),
     ),
     Match.when("slack-trigger", () => slackTriggerOutputs(payload)),
-    Match.orElse(() => ({})),
+    Match.orElse(() => toRecord({})),
   )
 }
 
 function slackTriggerOutputs(payload: Record<string, unknown>): WorkflowNodeOutputs {
   const rawPayload = Option.getOrElse(recordOptionFromUnknown(payload.rawPayload), () => payload)
-  return {
+
+  return toRecord({
     teamId: payload.teamId ?? null,
     channelId: payload.channelId ?? null,
     channelName: payload.channelName ?? null,
@@ -178,7 +188,7 @@ function slackTriggerOutputs(payload: Record<string, unknown>): WorkflowNodeOutp
     actionId: payload.actionId ?? null,
     responseUrl: payload.responseUrl ?? null,
     rawPayload,
-  }
+  })
 }
 
 function getManualInputValues(node: WorkflowManifestNode | undefined): Record<string, unknown> {
@@ -206,6 +216,7 @@ function redactJsonObjectSecrets(
   secretHandles: Set<string>,
 ): Record<string, unknown> {
   const object = recordOptionFromUnknown(record.object)
+
   const redactedObject = Object.fromEntries(
     Object.entries(Option.getOrElse(object, () => ({}))).map(([handle, value]) => [
       handle,
@@ -215,6 +226,7 @@ function redactJsonObjectSecrets(
       ),
     ]),
   )
+
   return Match.value(node.type === "json-object" && Option.isSome(object)).pipe(
     Match.when(true, () => ({ ...record, object: redactedObject })),
     Match.orElse(() => record),
@@ -229,11 +241,13 @@ function assignConnectedInput(
   const sourceOutputs = outputs[edge.source] ?? {}
   const targetKey = edge.targetHandle || "input"
   const sourceKey = edge.sourceHandle || "result"
+
   const assigned = Match.value(recordHasHandle(sourceOutputs, sourceKey)).pipe(
     Match.when(true, () => sourceOutputs[sourceKey]),
     Match.orElse(() => sourceOutputs),
   )
-  return { ...inputs, [targetKey]: assigned }
+
+  return toRecord({ ...inputs, [targetKey]: assigned })
 }
 
 function redactInputFromEdge(
@@ -244,10 +258,12 @@ function redactInputFromEdge(
 ): Record<string, unknown> {
   const sourceHandle = edge.sourceHandle || "result"
   const targetHandle = edge.targetHandle || "input"
+
   const withSecret = Match.value(source?.type === "get-secret" && sourceHandle === "value").pipe(
     Match.when(true, () => ({ ...redacted, [targetHandle]: "[redacted]" })),
     Match.orElse(() => redacted),
   )
+
   return Match.value(
     source?.type === "json-object" && sourceHandle === "object" && secretHandles.size > 0,
   ).pipe(
@@ -262,6 +278,7 @@ export function createWorkflowRuntimeKernel(manifest: WorkflowManifest): Workflo
   function isBranchGateEdge(edge: WorkflowManifestEdge): boolean {
     const source = nodeById.get(edge.source)
     const sourceHandle = edge.sourceHandle || "result"
+
     return source?.type === "if-else" && (sourceHandle === "true" || sourceHandle === "false")
   }
 
@@ -283,11 +300,13 @@ export function createWorkflowRuntimeKernel(manifest: WorkflowManifest): Workflo
     outputs: unknown,
   ): WorkflowNodeOutputs {
     const withSecret = redactOwnedField(cloneRecord(outputs), "value", node.type === "get-secret")
+
     const withResponseUrl = redactOwnedField(
       withSecret,
       "responseUrl",
       node.type === "slack-trigger",
     )
+
     return redactJsonObjectSecrets(node, withResponseUrl, getSecretInputHandles(node.id))
   }
 
@@ -306,18 +325,22 @@ export function createWorkflowRuntimeKernel(manifest: WorkflowManifest): Workflo
     skippedNodeIds: Set<string>,
   ): boolean {
     const incomingEdges = manifest.edges.filter((edge) => edge.target === nodeId)
+
     const triggerEdges = incomingEdges.filter((edge) =>
       Option.exists(Option.fromNullishOr(nodeById.get(edge.source)), (source) =>
         isWorkflowTriggerNodeType(source.type),
       ),
     )
+
     const branchEdges = incomingEdges.filter(isBranchGateEdge)
+
     const gated =
       (!triggerEdges.length || triggerEdges.some((edge) => edge.source in outputs)) &&
       (!branchEdges.length ||
         branchEdges.some((edge) =>
           recordHasHandle(outputs[edge.source] ?? {}, edge.sourceHandle || "result"),
         ))
+
     return Match.value(incomingEdges.some((edge) => skippedNodeIds.has(edge.source))).pipe(
       Match.when(true, () => false),
       Match.orElse(() => gated),
