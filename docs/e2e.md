@@ -69,10 +69,9 @@ The workflow rename action question adds one sentence: choose the button named
 Save workflow name, and choose done when that button is not offered. The completion
 question for that task adds one sentence: the save holds when that button was
 activated and is now absent. A conditional action sentence still activated the
-selected Overview tab. The Agent tools editor question chooses the Tools button,
-then Edit, and chooses a button rather than a textbox. The skill question
-chooses the checked Enable switch for the supplied skill, then done when Use
-admin default is visible. Creating a bot, searching MCPs, and setting
+selected Overview tab. The skill question chooses the checked Enable switch
+for the supplied skill, then done when Use admin default is visible. Creating
+a bot, deleting its routine, searching MCPs, opening Agent tools, and setting
 Sub-agents use the named controls directly.
 A failed test runs once more. The model sometimes spends the output budget
 before the JSON answer, and the new attempt has a new page, so the gateway

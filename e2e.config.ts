@@ -60,15 +60,6 @@ const cloudflare = createOpenAICompatible({
             insert: true,
           },
           {
-            mark: "Goal of this step: Open the Agent tools editor",
-            text: 'Choose the button named "Tools". When the menu is open, choose the button named "Edit". When the Agent tools dialog is open, choose done. Choose a button, not a textbox.',
-          },
-          {
-            mark: "Task of this step: Open the Agent tools editor",
-            text: "Answer holds when the Agent tools dialog is open. Answer fails when the screen shows an error.",
-            insert: true,
-          },
-          {
             mark: "Goal of this step: Turn off the Enable switch for the supplied skill.",
             text: 'Choose the checked switch whose name is Enable followed by the supplied skill name. When the button named "Use admin default" is visible beside that skill, choose done, and leave that button untouched.',
           },

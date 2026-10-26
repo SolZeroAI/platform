@@ -1,11 +1,11 @@
 import { test } from "@e2e-dev/web"
-import { expect, unique } from "e2e"
+import { expect } from "e2e"
 import { api, uniqueName } from "./support/api"
 
 test(
   "create a bot and manage a temporary routine through the UI",
   { session: "admin" },
-  async ({ app, browser, screen, agent }) => {
+  async ({ app, browser, screen }) => {
     const name = uniqueName("e2e-bot")
     await app.open("/bots")
     await expect(screen.getByLabel("Bot name")).toBeVisible()
@@ -33,10 +33,8 @@ test(
     try {
       await browser.reload()
       await expect(screen.getByText(routineName, { exact: true })).toBeVisible()
-      await agent.act(
-        "Delete the supplied routine. Finish when the No routines heading is visible.",
-        { params: { name: unique(routineName) } },
-      )
+      await screen.getByRole("button", `Delete ${routineName}`, { exact: true }).tap()
+      await expect(screen.getByRole("heading", "No routines")).toBeVisible()
       await expect(screen.getByText(routineName, { exact: true })).not.toBeVisible()
       const list = await api<{ routines: object[] }>(browser, `/bots/${botId}/routines`)
       expect(list.routines).toEqual([])
