@@ -19,5 +19,5 @@
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "js/ts.experimental.useTsgo": true,
-  "js/ts.tsdk.path": ".vscode/tsrs"
+  "js/ts.tsdk.path": "./node_modules/tsrs/tsdk"
 }
