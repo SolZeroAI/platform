@@ -1,0 +1,140 @@
+<!-- source: https://alchemy.run/getting-started
+     upstream: website/src/content/docs/getting-started.mdx
+     alchemy 2.0.0-beta.79 @ e354a45 -->
+
+# Getting started
+
+> Install Alchemy and create your first Stack in under two minutes.
+
+:::tip
+Want the idea before the install? [What is Alchemy?](/what-is-alchemy)
+explains the model in a few minutes. Otherwise, read on and it's the
+next page.
+:::
+
+## Prerequisites
+
+- [Bun](https://bun.sh) or Node.js 22+
+- A [Cloudflare](https://dash.cloudflare.com/sign-up) account
+
+## Create a project
+
+```sh
+mkdir my-app && cd my-app && bun init -y
+```
+
+## Install
+
+```sh
+bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
+```
+
+## Create your Stack
+
+Every Alchemy program starts with a Stack — create `alchemy.run.ts`:
+
+```typescript
+// alchemy.run.ts
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Effect from "effect/Effect";
+
+export default Alchemy.Stack(
+  "MyApp",
+  {
+    providers: Cloudflare.providers(),
+    state: Cloudflare.state(),
+  },
+  Effect.gen(function* () {
+    const bucket = yield* Cloudflare.R2.Bucket("Bucket");
+
+    return {
+      bucketName: bucket.bucketName,
+    };
+  }),
+);
+```
+
+## Deploy
+
+Run `alchemy deploy` to create the Bucket on Cloudflare:
+
+```sh
+bun alchemy deploy
+```
+
+Connect Cloudflare first with `alchemy profile edit --add Cloudflare`.
+Sign in with OAuth in the browser or paste an API token. The
+credentials are saved to your **`default`**
+[profile](/environments/profiles) at `~/.alchemy/profiles.json`. No
+environment variables required. Logging in only ever happens through the
+`profile` command; a deploy with nothing configured fails with the exact
+command to run.
+
+Once you're authenticated, Alchemy shows a plan, asks for
+confirmation, and provisions the resource:
+
+```text
+Plan: 1 to create
++ Bucket (Cloudflare.R2.Bucket)
+
+Proceed?
+◉ Yes ○ No
+✓ Bucket (Cloudflare.R2.Bucket) created
+{
+  bucketName: "myapp-bucket-a1b2c3d4e5",
+}
+```
+
+That's it — you have a live R2 Bucket on Cloudflare.
+
+Full command reference: [CLI](/cli).
+
+:::tip
+To re-run the credential prompt later (e.g. to switch from OAuth to
+an API token), use `alchemy profile edit --reconfigure Cloudflare`.
+For a separate profile, run `alchemy profile create prod` followed by
+`alchemy profile edit --profile prod`.
+See [Profiles](/environments/profiles) for the full picture.
+:::
+
+## Where next
+
+You have a live Stack. [What is Alchemy?](/what-is-alchemy) explains
+what just happened and the model the rest of the docs build on. The
+[tutorial](/cloudflare/tutorial/part-1) then builds a full app on
+Cloudflare, starting from this exact Stack.
+
+<div class="next-steps">
+
+<a href="/what-is-alchemy" class="next-card next-card--recommended">
+  <strong>What is Alchemy?</strong>
+  <span>Infrastructure as Code built in Effect, with Infrastructure as Effects on top.</span>
+</a>
+
+<a href="/cloudflare/tutorial/part-1" class="next-card">
+  <strong>Tutorial</strong>
+  <span>Build a full app on Cloudflare starting from this Stack: a Worker, bindings, tests, local dev, CI, and telemetry.</span>
+</a>
+
+<a href="/infrastructure-as-effects/runtime" class="next-card">
+  <strong>Infrastructure as Effects</strong>
+  <span>The model the rest of the docs build on: Runtimes, Bindings, Layers, and the Construction and Runtime phases.</span>
+</a>
+
+<a href="/cloudflare" class="next-card">
+  <strong>Cloudflare</strong>
+  <span>Workers, Durable Objects, R2, KV, D1, Queues, Workflows, and Containers, with a tutorial and a guide for each.</span>
+</a>
+
+<a href="/aws" class="next-card">
+  <strong>AWS</strong>
+  <span>Lambda, S3, SQS, DynamoDB, EC2, ECS, and EKS, with a tutorial and a guide for each.</span>
+</a>
+
+<a href="/cli" class="next-card">
+  <strong>CLI</strong>
+  <span>Every command and its flags: deploy, plan, destroy, dev, tail, logs, and state.</span>
+</a>
+
+</div>
