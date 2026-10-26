@@ -219,6 +219,7 @@ function runIsolateTool<A, E>(
 ) {
   return Effect.gen(function* () {
     const backgroundTracing = yield* BackgroundTracing
+
     return yield* backgroundTracing.withSpan(
       `isolate.tool.${toolName}`,
       {
@@ -245,11 +246,13 @@ function aiSearchSourceSearchEffect(
       const sources = yield* new AiSearchRegistryStore(context.env).listAvailableSourcesByIds([
         aiSearchTool.sourceId,
       ])
+
       const source = yield* Effect.fromOption(Option.fromNullishOr(sources[0])).pipe(
         Effect.catch(() =>
           Effect.fail(new AiSearchSourceUnavailableError({ sourceIds: [aiSearchTool.sourceId] })),
         ),
       )
+
       const result = yield* runAiSearchMcpTool(
         context.env,
         source,
@@ -257,6 +260,7 @@ function aiSearchSourceSearchEffect(
         context.docsRuntimeContext,
         "search",
       )
+
       return { sourceId: source.id, result }
     }),
   )

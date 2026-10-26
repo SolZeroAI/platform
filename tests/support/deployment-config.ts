@@ -29,17 +29,21 @@ export function withConfigFixture(
   const configDirectory = join(directory, "config")
   mkdirSync(configDirectory)
   const contents = JSON.stringify(config)
+
   for (const stage of ["dev", "test", "pre", "prod"]) {
     writeFileSync(join(configDirectory, `fixture-${stage}.config.jsonc`), contents)
   }
+
   writeFileSync(join(configDirectory, "example.config.jsonc"), contents)
   writeFileSync(
     join(configDirectory, "s0.config.schema.json"),
     readFileSync(resolve(repoRoot, "config/s0.config.schema.json")),
   )
+
   const emptySecrets = Object.fromEntries(
     s0ActiveSecretReferences(config).map((reference) => [reference.env, ""]),
   )
+
   try {
     run({
       varsPath: join(configDirectory, ".pre.vars"),

@@ -10,7 +10,8 @@ const effectHandlerMethods = new Set([
   "tryPromise",
 ])
 
-export function isNode(value: unknown): value is NodeLike {
+export function isNode<Value>(value: Value): value is Value & NodeLike {
+  // SAFETY: a non-null object is the only remaining shape, and type is read only to confirm a string node tag.
   return (
     typeof value === "object" &&
     value !== null &&
@@ -18,7 +19,7 @@ export function isNode(value: unknown): value is NodeLike {
   )
 }
 
-export function isNodeType(node: unknown, type: string): node is NodeLike {
+export function isNodeType(node: NodeLike | undefined, type: string): node is NodeLike {
   return isNode(node) && node.type === type
 }
 
@@ -28,16 +29,19 @@ function nodeValue(node: NodeLike, key: string): unknown {
 
 export function nodeChild(node: NodeLike, key: string): NodeLike | undefined {
   const value = nodeValue(node, key)
+
   return isNode(value) ? value : undefined
 }
 
 export function nodeChildren(node: NodeLike, key: string): NodeLike[] {
   const value = nodeValue(node, key)
+
   return Array.isArray(value) ? value.filter(isNode) : []
 }
 
 function parentNode(node: NodeLike): NodeLike | undefined {
   const parent = nodeValue(node, "parent")
+
   return isNode(parent) ? parent : undefined
 }
 
@@ -49,6 +53,7 @@ export function literalValue(node: NodeLike | undefined): unknown {
   if (!node) {
     return undefined
   }
+
   return nodeValue(node, "value")
 }
 
@@ -56,13 +61,16 @@ function identifierName(node: NodeLike | undefined): string | undefined {
   if (!node) {
     return undefined
   }
+
   return readString(nodeValue(node, "name")) ?? readString(nodeValue(node, "value"))
 }
 
 function unwrapExpression(node: NodeLike | undefined): NodeLike | undefined {
   let current = node
+
   while (current) {
     const expression = nodeChild(current, "expression")
+
     if (
       current.type === "ChainExpression" ||
       current.type === "ParenthesizedExpression" ||
@@ -75,17 +83,21 @@ function unwrapExpression(node: NodeLike | undefined): NodeLike | undefined {
       current = expression
       continue
     }
+
     return current
   }
+
   return undefined
 }
 
 function childNodes(node: NodeLike): NodeLike[] {
   const children: NodeLike[] = []
+
   for (const [key, value] of Object.entries(node)) {
     if (key === "parent" || key === "loc" || key === "range" || key === "start" || key === "end") {
       continue
     }
+
     if (isNode(value)) {
       children.push(value)
     } else if (Array.isArray(value)) {
@@ -96,6 +108,7 @@ function childNodes(node: NodeLike): NodeLike[] {
       }
     }
   }
+
   return children
 }
 
@@ -107,19 +120,26 @@ export function findDescendant(
   if (!node) {
     return undefined
   }
+
   const stack = options.skipRoot ? childNodes(node) : [node]
   const seen = new Set<NodeLike>()
+
   while (stack.length > 0) {
     const current = stack.pop()
+
     if (!current || seen.has(current)) {
       continue
     }
+
     seen.add(current)
+
     if (predicate(current)) {
       return current
     }
+
     stack.push(...childNodes(current))
   }
+
   return undefined
 }
 
@@ -131,20 +151,27 @@ function matchingDescendants(
   if (!node) {
     return []
   }
+
   const matches: NodeLike[] = []
   const stack = options.skipRoot ? childNodes(node) : [node]
   const seen = new Set<NodeLike>()
+
   while (stack.length > 0) {
     const current = stack.pop()
+
     if (!current || seen.has(current)) {
       continue
     }
+
     seen.add(current)
+
     if (predicate(current)) {
       matches.push(current)
     }
+
     stack.push(...childNodes(current))
   }
+
   return matches
 }
 
@@ -157,18 +184,24 @@ export function containsNode(
 
 export function memberParts(node: NodeLike | undefined): string[] | undefined {
   const current = unwrapExpression(node)
+
   if (!current) {
     return undefined
   }
+
+  // SAFETY: oxlint node tags include IdentifierReference and IdentifierName beyond the ESTree union stored on NodeLike.
   const currentType = current.type as string
+
   if (
     currentType === "Identifier" ||
     currentType === "IdentifierReference" ||
     currentType === "IdentifierName"
   ) {
     const name = identifierName(current)
+
     return name ? [name] : undefined
   }
+
   if (
     currentType !== "MemberExpression" &&
     currentType !== "StaticMemberExpression" &&
@@ -176,12 +209,15 @@ export function memberParts(node: NodeLike | undefined): string[] | undefined {
   ) {
     return undefined
   }
+
   const objectParts = memberParts(nodeChild(current, "object"))
   const property = nodeChild(current, "property") ?? nodeChild(current, "expression")
   const propertyName = identifierName(property)
+
   if (!objectParts || !propertyName) {
     return undefined
   }
+
   return [...objectParts, propertyName]
 }
 
@@ -203,33 +239,43 @@ export function isCallTo(
   methodName?: string,
 ): boolean {
   const call = unwrapExpression(node)
+
   if (!isCallExpression(call)) {
     return false
   }
+
   const parts = memberParts(callee(call))
+
   if (!parts || parts[0] !== objectName) {
     return false
   }
+
   return methodName === undefined || parts.at(-1) === methodName
 }
 
 function isIdentifierCall(node: NodeLike | undefined, name: string): boolean {
   const call = unwrapExpression(node)
+
   if (!isCallExpression(call)) {
     return false
   }
+
   return identifierName(unwrapExpression(callee(call))) === name
 }
 
 export function isPipeCall(node: NodeLike | undefined): boolean {
   const call = unwrapExpression(node)
+
   if (!isCallExpression(call)) {
     return false
   }
+
   if (identifierName(unwrapExpression(callee(call))) === "pipe") {
     return true
   }
+
   const parts = memberParts(callee(call))
+
   return parts?.at(-1) === "pipe"
 }
 
@@ -239,15 +285,19 @@ export function isEffectCall(node: NodeLike | undefined, methodName?: string): b
 
 export function effectCallMethod(node: NodeLike | undefined): string | undefined {
   const call = unwrapExpression(node)
+
   if (!isCallExpression(call)) {
     return undefined
   }
+
   const parts = memberParts(callee(call))
+
   return parts?.[0] === "Effect" ? parts.at(-1) : undefined
 }
 
 export function isEffectMember(node: NodeLike | undefined, methodName: string): boolean {
   const parts = memberParts(node)
+
   return parts?.[0] === "Effect" && parts.at(-1) === methodName
 }
 
@@ -267,6 +317,7 @@ export function firstNestedEffectCall(node: NodeLike): NodeLike | undefined {
 
 function isInlineFunction(node: NodeLike | undefined): boolean {
   const current = unwrapExpression(node)
+
   return (
     current?.type === "ArrowFunctionExpression" ||
     current?.type === "FunctionExpression" ||
@@ -276,11 +327,13 @@ function isInlineFunction(node: NodeLike | undefined): boolean {
 
 export function isIife(node: NodeLike | undefined): boolean {
   const call = unwrapExpression(node)
+
   return isCallExpression(call) && isInlineFunction(callee(call))
 }
 
 export function functionBody(node: NodeLike | undefined): NodeLike | undefined {
   const current = unwrapExpression(node)
+
   return current ? nodeChild(current, "body") : undefined
 }
 
@@ -290,19 +343,24 @@ export function returnStatements(node: NodeLike | undefined): NodeLike[] {
     if (candidate.type === "ReturnStatement") {
       statements.push(candidate)
     }
+
     return false
   })
+
   return statements
 }
 
 export function parentCall(node: NodeLike): NodeLike | undefined {
   let current: NodeLike | undefined = node
+
   while (current) {
     current = parentNode(current)
+
     if (current?.type === "CallExpression") {
       return current
     }
   }
+
   return undefined
 }
 
@@ -310,6 +368,7 @@ export function isSchemaFilterCall(node: NodeLike | undefined): boolean {
   if (!isCallExpression(node)) {
     return false
   }
+
   return isCallTo(node, "S", "filter") || isCallTo(node, "Schema", "filter")
 }
 
@@ -317,15 +376,20 @@ function isSideEffectCall(node: NodeLike): boolean {
   if (!isCallExpression(node)) {
     return false
   }
+
   if (isIdentifierCall(node, "setState") || isIdentifierCall(node, "invalidate")) {
     return true
   }
+
   const parts = memberParts(callee(node))
+
   if (!parts) {
     return false
   }
+
   const method = parts.at(-1)
   const object = parts.at(-2) ?? parts[0]
+
   return (
     (object === "Atom" && method === "set") ||
     (object === "Ref" && method === "set") ||
@@ -345,14 +409,19 @@ function isSequencingCall(node: NodeLike): boolean {
   if (!isCallExpression(node)) {
     return false
   }
+
   if (isPipeCall(node)) {
     return true
   }
+
   const parts = memberParts(callee(node))
+
   if (!parts) {
     return false
   }
+
   const method = parts.at(-1)
+
   return (
     (parts[0] === "Effect" &&
       (method === "flatMap" ||
@@ -368,9 +437,11 @@ export function hasSequencingCall(node: NodeLike | undefined): boolean {
   if (containsNode(node, isSequencingCall)) {
     return true
   }
+
   if (!isInlineFunction(node)) {
     return false
   }
+
   return hasCallbackReturning(node, (body) => containsNode(body, isSequencingCall))
 }
 
@@ -382,12 +453,16 @@ export function isBranchCall(node: NodeLike | undefined): boolean {
 
 export function isMatchValuePipe(node: NodeLike | undefined): boolean {
   const call = unwrapExpression(node)
+
   if (!call || !isPipeCall(call)) {
     return false
   }
+
   const callCallee = callee(call)
+
   const target =
     (callCallee ? nodeChild(callCallee, "object") : undefined) ?? callArguments(call)[0]
+
   return isCallTo(target, "Match", "value")
 }
 
@@ -400,33 +475,44 @@ export function hasCallbackReturning(
   predicate: (body: NodeLike) => boolean,
 ): boolean {
   const body = functionBody(node)
+
   if (!body) {
     return false
   }
+
   if (body.type === "BlockStatement") {
     return returnStatements(body).some((statement) => {
       const argument = nodeChild(statement, "argument")
+
       return argument ? predicate(argument) : false
     })
   }
+
   return predicate(body)
 }
 
 export function typeNameText(node: NodeLike | undefined): string | undefined {
   const current = unwrapExpression(node)
+
   if (!current) {
     return undefined
   }
+
   const directName = identifierName(current)
+
   if (directName) {
     return directName
   }
+
   if (current.type === "TSQualifiedName") {
     const left = typeNameText(nodeChild(current, "left"))
     const right = typeNameText(nodeChild(current, "right"))
+
     return left && right ? `${left}.${right}` : (left ?? right)
   }
+
   const parts = memberParts(current)
+
   return parts?.join(".")
 }
 
@@ -434,7 +520,9 @@ export function propertyKeyName(node: NodeLike | undefined): string | undefined 
   if (!node) {
     return undefined
   }
+
   const key = nodeChild(node, "key")
+
   return identifierName(key) ?? readString(literalValue(key))
 }
 
@@ -444,9 +532,11 @@ export function propertyValue(node: NodeLike | undefined): NodeLike | undefined 
 
 function isBareErrorConstructor(node: NodeLike): boolean {
   const current = unwrapExpression(node)
+
   if (!current || (current.type !== "NewExpression" && current.type !== "CallExpression")) {
     return false
   }
+
   return identifierName(unwrapExpression(callee(current))) === "Error"
 }
 
@@ -456,17 +546,20 @@ export function bareErrorConstructors(node: NodeLike | undefined): NodeLike[] {
 
 function isEffectHandlerFunction(node: NodeLike | undefined): boolean {
   const functionNode = unwrapExpression(node)
+
   if (!functionNode || !isInlineFunction(functionNode)) {
     return false
   }
 
   const directParent = parentNode(functionNode)
+
   if (!directParent) {
     return false
   }
 
   if (isCallExpression(directParent)) {
     const method = effectCallMethod(directParent)
+
     return (
       method !== undefined &&
       effectHandlerMethods.has(method) &&
@@ -475,15 +568,19 @@ function isEffectHandlerFunction(node: NodeLike | undefined): boolean {
   }
 
   const objectExpression = parentNode(directParent)
+
   if (!objectExpression) {
     return false
   }
+
   const effectCall = parentNode(objectExpression)
+
   if (!isCallExpression(effectCall)) {
     return false
   }
 
   const method = effectCallMethod(effectCall)
+
   return (
     (method === "try" || method === "tryPromise") &&
     callArguments(effectCall).some((argument) => argument === objectExpression) &&
@@ -494,12 +591,15 @@ function isEffectHandlerFunction(node: NodeLike | undefined): boolean {
 
 export function isInsideEffectHandler(node: NodeLike): boolean {
   let current: NodeLike | undefined = parentNode(node)
+
   while (current) {
     if (isEffectHandlerFunction(current)) {
       return true
     }
+
     current = parentNode(current)
   }
+
   return false
 }
 
@@ -507,6 +607,7 @@ export function hasNullishUnionMember(node: NodeLike): boolean {
   if (node.type !== "TSUnionType") {
     return false
   }
+
   return nodeChildren(node, "types").some(
     (typeNode) => typeNode.type === "TSNullKeyword" || typeNode.type === "TSUndefinedKeyword",
   )
@@ -522,16 +623,21 @@ function isFunctionNode(node: NodeLike | undefined): boolean {
 
 export function isNullableLocalOrReturnType(node: NodeLike): boolean {
   const annotation = parentNode(node)
+
   if (annotation?.type !== "TSTypeAnnotation") {
     return false
   }
+
   const owner = parentNode(annotation)
+
   if (isFunctionNode(owner)) {
     return true
   }
+
   if (!owner) {
     return false
   }
+
   return owner.type === "Identifier" && parentNode(owner)?.type === "VariableDeclarator"
 }
 
@@ -539,5 +645,6 @@ export function isConsoleCall(node: NodeLike): boolean {
   if (!isCallExpression(node)) {
     return false
   }
+
   return isConsoleAccess(callee(node))
 }

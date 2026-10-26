@@ -28,8 +28,10 @@ async function encryptContainerCredential(env: Env, apiKey: string): Promise<str
     nonEmptyString(env.TOKEN_ENCRYPTION_KEY),
     () => new Error("TOKEN_ENCRYPTION_KEY not configured"),
   )
+
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for OpenCode config compilation.
   const encrypted = await Effect.runPromise(encryptSecret(apiKey, encryptionKey))
+
   return `${CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX}${encrypted}`
 }
 
@@ -51,7 +53,9 @@ async function compileSelectedProviderOptions(
         `Cloudflare AI Gateway provider-native URL is unavailable for '${input.selectedModelId}'`,
       ),
   )
+
   const apiKey = Option.fromNullishOr(input.providerKeys?.[provider.id])
+
   const credential = await Match.value(input.credentialMode).pipe(
     Match.when("direct", () =>
       Promise.resolve(Option.getOrElse(apiKey, () => CLOUDFLARE_AI_GATEWAY_STORED_KEY_PLACEHOLDER)),
@@ -63,6 +67,7 @@ async function compileSelectedProviderOptions(
       }),
     ),
   )
+
   return Option.some({
     ...input.providerOptions,
     apiKey: credential,
@@ -90,6 +95,7 @@ export async function compileCloudflareAiGatewayProviderOptions(input: {
         input.providerId === input.selectedProviderId,
     ),
   )
+
   return await Option.match(byokProvider, {
     onNone: () => Promise.resolve(Option.none<Record<string, unknown>>()),
     onSome: (provider) => compileSelectedProviderOptions(input, provider),

@@ -42,7 +42,8 @@ function errorMessageHead(record: Record<string, unknown>): string[] {
       Option.filter((message): message is string => typeof message === "string"),
     ),
     {
-      onNone: () => [] as string[],
+      onNone: () =>
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
       onSome: (message) => [message],
     },
   )
@@ -54,8 +55,17 @@ function collectErrorChainMessages(current: unknown): string[] {
     {
       onNone: () => [],
       onSome: (value) => [
-        ...errorMessageHead(value as Record<string, unknown>),
-        ...collectErrorChainMessages((value as Record<string, unknown>).cause),
+        ...errorMessageHead(
+          /* SAFETY: value was checked to be a non-array object before it is read as Record<string, unknown>. */ value as Record<
+            string,
+            unknown
+          >,
+        ),
+        ...collectErrorChainMessages(
+          /* SAFETY: value was checked to be a non-array object before it is read as Record<string, unknown>. */ (
+            value as Record<string, unknown>
+          ).cause,
+        ),
       ],
     },
   )
@@ -64,8 +74,12 @@ function collectErrorChainMessages(current: unknown): string[] {
 /** Messages on a value and its `cause` chain, including plain objects such as `D1FailureCause`. */
 export function getErrorMessages(errorValue: unknown): string[] {
   const chainMessages = collectErrorChainMessages(errorValue)
+
   return Match.value(typeof errorValue === "string").pipe(
-    Match.when(true, () => [...chainMessages, errorValue as string]),
+    Match.when(true, () => [
+      ...chainMessages,
+      /* SAFETY: The preceding check established that errorValue is string. */ errorValue as string,
+    ]),
     Match.orElse(() => chainMessages),
   )
 }

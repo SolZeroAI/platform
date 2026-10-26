@@ -15,6 +15,7 @@ export const ReasoningEffortSchema = Schema.Literals([
   "max",
   "minimal",
 ])
+
 export type ReasoningEffort = typeof ReasoningEffortSchema.Type
 
 export interface ModelReasoningConfig {
@@ -29,6 +30,7 @@ export const OpenCodeInterleavedReasoningSchema = Schema.Union([
     field: Schema.Literals(["reasoning_content", "reasoning_details"]),
   }),
 ])
+
 export type OpenCodeInterleavedReasoning = typeof OpenCodeInterleavedReasoningSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -42,6 +44,7 @@ export const ModelProviderOverrideSchema = Schema.Struct({
   npm: Schema.optional(Schema.String),
   api: Schema.optional(Schema.String),
 })
+
 export type ModelProviderOverride = typeof ModelProviderOverrideSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -49,6 +52,7 @@ export const ProviderSecretRefSchema = Schema.Struct({
   kind: Schema.Literal("env"),
   name: Schema.String,
 })
+
 export type ProviderSecretRef = typeof ProviderSecretRefSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -56,6 +60,7 @@ export const ProviderModelLimitSchema = Schema.Struct({
   context: Schema.Number,
   output: Schema.Number,
 })
+
 export type ProviderModelLimit = typeof ProviderModelLimitSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -67,6 +72,7 @@ export const ProviderModelDefinitionSchema = Schema.Struct({
   interleaved: Schema.optional(OpenCodeInterleavedReasoningSchema),
   provider: Schema.optional(ModelProviderOverrideSchema),
 })
+
 export type ProviderModelDefinition = typeof ProviderModelDefinitionSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -78,9 +84,11 @@ export const SharedProviderDefinitionSchema = Schema.Struct({
   apiKey: Schema.optional(ProviderSecretRefSchema),
   models: Schema.Record(Schema.String, ProviderModelDefinitionSchema),
 })
+
 export type SharedProviderDefinition = typeof SharedProviderDefinitionSchema.Type
 
 export const SharedProviderCatalogSchema = Schema.Array(SharedProviderDefinitionSchema)
+
 export type SharedProviderCatalog = typeof SharedProviderCatalogSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -92,6 +100,7 @@ export const CompiledOpenCodeProviderModelSchema = Schema.Struct({
   reasoning: Schema.optional(Schema.Boolean),
   interleaved: Schema.optional(OpenCodeInterleavedReasoningSchema),
 })
+
 export type CompiledOpenCodeProviderModel = typeof CompiledOpenCodeProviderModelSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -101,9 +110,11 @@ export const CompiledOpenCodeProviderSchema = Schema.Struct({
   options: Schema.optional(JsonObjectSchema),
   models: Schema.optional(Schema.Record(Schema.String, CompiledOpenCodeProviderModelSchema)),
 })
+
 export type CompiledOpenCodeProvider = typeof CompiledOpenCodeProviderSchema.Type
 
 export const OpenCodeMcpHeadersSchema = Schema.Record(Schema.String, Schema.String)
+
 export type OpenCodeMcpHeaders = typeof OpenCodeMcpHeadersSchema.Type
 
 export const OpenCodeMcpOAuthSchema = Schema.Union([
@@ -115,6 +126,7 @@ export const OpenCodeMcpOAuthSchema = Schema.Union([
     scope: Schema.optional(Schema.String),
   }),
 ])
+
 export type OpenCodeMcpOAuth = typeof OpenCodeMcpOAuthSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -126,6 +138,7 @@ export const OpenCodeRemoteMcpServerSchema = Schema.Struct({
   oauth: Schema.optional(OpenCodeMcpOAuthSchema),
   timeout: Schema.optional(Schema.Number),
 })
+
 export type OpenCodeRemoteMcpServer = typeof OpenCodeRemoteMcpServerSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- plain-data DTO consumed structurally (spread/satisfies/JSON config) across @solzero/api; a Schema.Class instance type would break those consumers
@@ -136,18 +149,22 @@ export const OpenCodeLocalMcpServerSchema = Schema.Struct({
   environment: Schema.optional(OpenCodeMcpHeadersSchema),
   timeout: Schema.optional(Schema.Number),
 })
+
 export type OpenCodeLocalMcpServer = typeof OpenCodeLocalMcpServerSchema.Type
 
 export const OpenCodeMcpServerSchema = Schema.Union([
   OpenCodeRemoteMcpServerSchema,
   OpenCodeLocalMcpServerSchema,
 ])
+
 export type OpenCodeMcpServer = typeof OpenCodeMcpServerSchema.Type
 
 export const OpenCodeMcpServersSchema = Schema.Record(Schema.String, OpenCodeMcpServerSchema)
+
 export type OpenCodeMcpServers = typeof OpenCodeMcpServersSchema.Type
 
 export const OpenCodePermissionActionSchema = Schema.Literals(["allow", "ask", "deny"])
+
 export type OpenCodePermissionAction = typeof OpenCodePermissionActionSchema.Type
 
 /**
@@ -159,6 +176,7 @@ export const OpenCodePermissionSchema = Schema.Union([
   OpenCodePermissionActionSchema,
   JsonObjectSchema,
 ])
+
 export type OpenCodePermission = typeof OpenCodePermissionSchema.Type
 
 export type DefaultOpenCodePermission = {
@@ -204,6 +222,7 @@ export const CompiledOpenCodeConfigSchema = Schema.Struct({
   mcp: Schema.optional(OpenCodeMcpServersSchema),
   permission: Schema.optional(OpenCodePermissionSchema),
 })
+
 export type CompiledOpenCodeConfig = typeof CompiledOpenCodeConfigSchema.Type
 
 function failMcpServerConfig(message: string): never {
@@ -221,6 +240,7 @@ const requireMcpServerCommand = (command: readonly string[], message: string): r
 
 export function normalizeOpenCodeMcpServers(input: unknown): OpenCodeMcpServers {
   const decoded = Schema.decodeUnknownSync(OpenCodeMcpServersSchema)(input ?? {})
+
   const normalizedEntries = Object.entries(decoded)
     .map(([rawName, server]) =>
       pipe(requireMcpServerText(rawName.trim(), "MCP server names must be non-empty"), (name) =>
@@ -438,6 +458,7 @@ export function splitModelId(modelId: string): {
   modelId: string
 } {
   const [providerId, ...rest] = modelId.split("/")
+
   return Match.value(Boolean(providerId) && rest.length > 0).pipe(
     Match.when(true, () => ({
       providerId,

@@ -37,6 +37,7 @@ import * as Option from "effect/Option"
 import { generateId } from "../../../../background/auth/crypto"
 import { McpcfRegistryStore } from "../../../../background/db/mcpcf"
 import { AiSearchRegistryStore } from "../../../../background/db/ai-search"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- sessions.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because session handlers construct the session index store.
 import { makeControlPlaneFromEnv } from "../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../background/db/session-index"
 import {
@@ -64,8 +65,8 @@ import type {
 import { stringifyJson } from "../../../../lib/json"
 import {
   providerServicesForEnv,
-  type GitHubProviderShape,
-  type IdentityProviderShape,
+  type GitHubProviderService,
+  type IdentityProviderService,
 } from "../../../services/providers"
 import {
   failMessage,
@@ -85,6 +86,7 @@ import {
 } from "../control-plane"
 
 export function getSessionStub(env: ApiEnv, sessionId: string): DurableObjectStub {
+  // SAFETY: SESSION is the session Durable Object namespace binding on the Worker env.
   const sessionNamespace = env.SESSION as DurableObjectNamespace
   const doId = sessionNamespace.idFromName(sessionId)
   return sessionNamespace.get(doId)
@@ -98,6 +100,7 @@ export function resolveRequestedSessionTools(
     tools?: unknown
   },
 ): SessionToolSpec[] {
+  // SAFETY: the true arm runs only when body.tools is an array. resolveSessionTools reads that stored tool list.
   const tools = Match.value(Array.isArray(body.tools)).pipe(
     Match.when(true, () => body.tools as SessionToolSpec[]),
     Match.orElse(() => undefined),
@@ -113,6 +116,7 @@ export function resolveRequestedSessionTools(
 export function resolveRequestedCustomMcpServers(body: {
   customMcpServers?: unknown
 }): OpenCodeMcpServers {
+  // SAFETY: customMcpServers is request JSON. normalizeOpenCodeMcpServers accepts the stored OpenCode MCP server map.
   return normalizeOpenCodeMcpServers(body.customMcpServers as OpenCodeMcpServers | undefined)
 }
 
@@ -365,7 +369,7 @@ function getProviderApiForModel(
 const resolveSessionRepo = Effect.fn("controlPlane.resolveSessionRepo")(function* (input: {
   env: ApiEnv
   identity: ResolvedUserIdentity
-  githubProvider: GitHubProviderShape
+  githubProvider: GitHubProviderService
   requestedTools: SessionToolSpec[]
 }) {
   const requestedRepo = getGitHubRepoTool(input.requestedTools)
@@ -380,7 +384,7 @@ const resolveSessionRepoForRequest = Effect.fn("controlPlane.resolveSessionRepoF
     input: {
       env: ApiEnv
       identity: ResolvedUserIdentity
-      githubProvider: GitHubProviderShape
+      githubProvider: GitHubProviderService
     },
     requestedRepo: { repoOwner: string; repoName: string },
   ) {
@@ -454,7 +458,7 @@ const resolveSessionModel = Effect.fn("controlPlane.resolveSessionModel")(functi
 
 const resolveGithubAuthor = Effect.fn("controlPlane.resolveGithubAuthor")(function* (input: {
   identity: ResolvedUserIdentity
-  githubProvider: GitHubProviderShape
+  githubProvider: GitHubProviderService
   resolvedRepo: Option.Option<ResolvedAuthorizedRepo>
 }) {
   return yield* Option.match(Option.fromNullishOr(input.identity.githubAppUserAccessToken), {
@@ -471,7 +475,7 @@ const resolveGithubAuthor = Effect.fn("controlPlane.resolveGithubAuthor")(functi
 })
 
 const resolveGithubAuthorProfile = Effect.fn("controlPlane.resolveGithubAuthorProfile")(function* (
-  githubProvider: GitHubProviderShape,
+  githubProvider: GitHubProviderService,
   accessToken: string,
 ) {
   const profile = yield* githubProvider.getGitHubUserProfile(accessToken).pipe(
@@ -490,7 +494,7 @@ export const createSessionWithIdentity = Effect.fn("controlPlane.createSessionWi
   function* (input: {
     env: ApiEnv
     identity: ResolvedUserIdentity
-    githubProvider: GitHubProviderShape
+    githubProvider: GitHubProviderService
     requestedTools: SessionToolSpec[]
     requestedCustomMcpServers: OpenCodeMcpServers
     requestedSecretKeys?: string[]
@@ -748,6 +752,7 @@ const summarizePromptEvents = Effect.fn("controlPlane.summarizePromptEvents")(fu
   eventsResponse: Response,
   messageId: string,
 ) {
+  // SAFETY: the internal events route returns JSON events whose data fields are SandboxEvent values.
   const payload = yield* Effect.tryPromise(
     () =>
       eventsResponse.json() as Promise<{
@@ -936,7 +941,7 @@ export const resolveSlackLinkedUserId = Effect.fn("controlPlane.resolveSlackLink
   function* (
     env: ApiEnv,
     slackUserId: string,
-    identityProvider: IdentityProviderShape = providerServicesForEnv(env).identityProvider,
+    identityProvider: IdentityProviderService = providerServicesForEnv(env).identityProvider,
   ) {
     const linkedUserId = yield* Option.match(
       Option.fromNullishOr(

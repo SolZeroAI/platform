@@ -172,6 +172,7 @@ export function getWorkflowNodeConfigErrorDetails(
   for (const node of nodes) {
     const manifestNode = node.data.node
     const errors = errorsByNode[manifestNode.id] ?? []
+
     for (const error of errors) {
       details.push({ ...error, nodeLabel: manifestNode.label })
     }
@@ -200,6 +201,7 @@ export function groupWorkflowNodeConfigErrors(errors: WorkflowNodeConfigErrorDet
       nodeLabel: error.nodeLabel,
       errors: [],
     }
+
     group.errors.push(error)
     groups.set(error.nodeId, group)
   }
@@ -210,15 +212,17 @@ export function groupWorkflowNodeConfigErrors(errors: WorkflowNodeConfigErrorDet
 export function getWorkflowNodeConfigErrorsByNode(
   nodes: WorkflowCanvasNode[],
   headerDraftsByNode: Record<string, WorkflowHeaderDraftRow[]>,
-): Record<string, WorkflowNodeConfigError[]> {
+) {
   const errorsByNode: Record<string, WorkflowNodeConfigError[]> = {}
 
   for (const node of nodes) {
     const manifestNode = node.data.node
+
     const errors = getWorkflowNodeConfigErrors(
       manifestNode,
       headerDraftsByNode[manifestNode.id] ?? null,
     )
+
     if (errors.length > 0) {
       errorsByNode[manifestNode.id] = errors
     }
@@ -238,6 +242,7 @@ export function getWorkflowNodeConfigErrors(
   const validation = headerDraftRows
     ? parseWorkflowHeaderDraftRows(headerDraftRows)
     : parseWorkflowHeaderOption(node.options.headers)
+
   if (validation.ok) {
     return []
   }
@@ -304,6 +309,7 @@ export type TriggerRunRequest =
     }
 
 export type WebhookTestPayload = Extract<TriggerRunRequest, { kind: "webhook" }>["payload"]
+
 export type SlackTestTrigger = Extract<TriggerRunRequest, { kind: "slack" }>
 
 export interface RunTriggerOptions {
@@ -618,6 +624,7 @@ const WORKFLOW_NODE_CATALOG_DISABLED_REASONS: Partial<Record<WorkflowNodeType, s
 export const WORKFLOW_NODE_CATALOG_ITEMS: WorkflowNodeCatalogItem[] = WORKFLOW_NODE_CATALOG.map(
   (definition) => {
     const disabledReason = WORKFLOW_NODE_CATALOG_DISABLED_REASONS[definition.type]
+
     return {
       id: definition.type,
       category: definition.category,
@@ -664,10 +671,11 @@ export const WORKFLOW_TEMPLATE_COMPLEXITY_GROUPS = [
   { complexity: "complex", label: "Complex" },
 ] as const
 
-export const GROUPED_WORKFLOW_NODE_CATALOG = WORKFLOW_NODE_CATEGORY_ORDER.map((category) => ({
-  category,
-  items: WORKFLOW_NODE_CATALOG_ITEMS.filter((item) => item.category === category),
-})).filter((group) => group.items.length > 0)
+export const GROUPED_WORKFLOW_NODE_CATALOG = WORKFLOW_NODE_CATEGORY_ORDER.flatMap((category) => {
+  const items = WORKFLOW_NODE_CATALOG_ITEMS.filter((item) => item.category === category)
+
+  return items.length > 0 ? [{ category, items }] : []
+})
 
 export const CATALOG_PREVIEW_VIEWPORT_MARGIN = 12
 
@@ -695,11 +703,14 @@ export function getCatalogPreviewTop(
   previewHeight: number,
 ) {
   const minTop = CATALOG_PREVIEW_VIEWPORT_MARGIN
+
   const maxTop = Math.max(
     minTop,
     window.innerHeight - previewHeight - CATALOG_PREVIEW_VIEWPORT_MARGIN,
   )
+
   const centeredTop = anchorTop + anchorHeight / 2 - previewHeight / 2
+
   return Math.min(Math.max(centeredTop, minTop), maxTop)
 }
 
@@ -709,6 +720,7 @@ export function hasWorkflowNodeDragData(dataTransfer: DataTransfer) {
 
 export function getWorkflowNodeDragType(dataTransfer: DataTransfer): WorkflowNodeType | null {
   const type = dataTransfer.getData(WORKFLOW_NODE_DRAG_MIME_TYPE)
+
   return isWorkflowNodeType(type) ? type : null
 }
 
@@ -726,6 +738,7 @@ export function getWorkflowNodePositionCenter(position: WorkflowManifestNode["po
 export function getWorkflowCanvasNodeCenter(node: WorkflowCanvasNode) {
   const width = node.measured?.width ?? node.width ?? WORKFLOW_NODE_ESTIMATED_SIZE.width
   const height = node.measured?.height ?? node.height ?? WORKFLOW_NODE_ESTIMATED_SIZE.height
+
   return {
     x: node.position.x + width / 2,
     y: node.position.y + height / 2,
@@ -753,6 +766,7 @@ export function useDeleteConfirmationShortcut(onConfirm: () => void) {
 
       event.preventDefault()
       event.stopPropagation()
+
       if (confirmedRef.current) {
         return
       }
@@ -762,11 +776,13 @@ export function useDeleteConfirmationShortcut(onConfirm: () => void) {
     }
 
     window.addEventListener("keydown", handleKeyDown, true)
+
     return () => window.removeEventListener("keydown", handleKeyDown, true)
   }, [onConfirm])
 }
 
 export function getRouteWorkflowId(pathname: string) {
   const match = WORKFLOW_DETAIL_PATH_PATTERN.exec(pathname)
+
   return match ? decodeURIComponent(match[1]) : undefined
 }

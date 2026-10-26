@@ -14,6 +14,7 @@ export function events({ params }: { params: IdParams }) {
       const url = new URL(request.url)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, `http://internal/internal/events${url.search}`)
     }),
   )

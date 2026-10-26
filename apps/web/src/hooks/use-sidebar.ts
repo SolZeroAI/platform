@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 const SIDEBAR_STORAGE_KEY = "s0-agent-sidebar-open"
+
 // Matches Tailwind `max-md` (width < 48rem).
 const MOBILE_SIDEBAR_MEDIA_QUERY = "(max-width: 767px)"
 
@@ -10,8 +11,10 @@ function readStoredSidebarOpen(): boolean | null {
   if (typeof window === "undefined") {
     return null
   }
+
   try {
     const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+
     return stored === null ? null : stored === "true"
   } catch {
     return null
@@ -52,13 +55,16 @@ export function useSidebar() {
 
     const handleViewportChange = () => {
       const isNarrow = mediaQuery.matches
+
       if (isNarrow && !wasNarrow) {
         setIsOpen(false)
       }
+
       wasNarrow = isNarrow
     }
 
     mediaQuery.addEventListener("change", handleViewportChange)
+
     return () => mediaQuery.removeEventListener("change", handleViewportChange)
   }, [isHydrated])
 

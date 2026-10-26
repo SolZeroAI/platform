@@ -64,20 +64,25 @@ const noopCtx: ExecutionContext = {
   props: {},
   tracing,
 }
+
 const INTERNAL_MCP_OUTBOUND_HANDLER = "internalMcp"
 
 async function credentialRateLimitKey(request: Request): Promise<string> {
   const clientAddress =
     request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "unknown"
+
   const body: { email?: unknown } = await request
     .clone()
     .json<{ email?: unknown }>()
     .catch(() => ({}))
+
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "unknown"
+
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(`${clientAddress}\u0000${email}`),
   )
+
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
@@ -92,6 +97,7 @@ function tracedExecutionContext(ctx: ExecutionContext): ExecutionContext {
 
 const internalMcpOutbound: OutboundHandler<ApiEnv> = (request, env) => {
   const observer = createApiRequestObserver(request, env, noopCtx)
+
   return observer.run(async ({ observability, setRouteBranch, log }) => {
     return dispatchMcpRequest(request, env, noopCtx, observability, setRouteBranch, log)
   })
@@ -99,10 +105,12 @@ const internalMcpOutbound: OutboundHandler<ApiEnv> = (request, env) => {
 
 const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
   const observer = createApiRequestObserver(request, env, noopCtx)
+
   return observer.run(async ({ setRouteBranch, log }) => {
     setRouteBranch("agent-container-ai-provider-outbound")
     const url = new URL(request.url)
     const credential = resolveSharedProviderCredential(env, url)
+
     const apiKeyOption = credential.pipe(
       Option.flatMap(({ secretName }) => resolveSharedProviderApiKey(env, secretName)),
     )
@@ -129,10 +137,12 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
         : response
     }
     const requestedModel = await sharedProviderRequestModel(request)
+
     const providerCredential = Option.match(credential, {
       onNone: () => null,
       onSome: ({ secretName }) => secretName,
     })
+
     log.set({
       outboundHost: url.hostname,
       providerCredential,
@@ -158,11 +168,13 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
               if (error instanceof Error && error.message.startsWith("Workers AI")) return error
               throw error
             })
+
             if (prepared instanceof Error)
               return Response.json(
                 { error: { message: prepared.message, type: "invalid_request_error" } },
                 { status: 400 },
               )
+
             const providerApiKey =
               kind === "cloudflare-provider-native"
                 ? await Effect.runPromise(
@@ -172,16 +184,21 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
                     ),
                   )
                 : Option.none<string>()
+
             const authenticatedRequest =
               kind === "cloudflare-provider-native"
                 ? requestWithCloudflareProviderNativeCredential(request, apiKey, providerApiKey)
                 : requestWithSharedProviderCredential(prepared.request, apiKey, headers)
+
             // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
             const upstream = await fetch(authenticatedRequest)
+
             const response = prepared.streaming
               ? await streamWorkersAiResponse(upstream, prepared.functionNames)
               : upstream
+
             log.set({ upstreamStatus: response.status })
+
             return sharedProviderPathClass(url) === "cloudflare-ai-gateway"
               ? normalizeCloudflareAiGatewayResponse(response)
               : response
@@ -201,6 +218,7 @@ abstract class AgentContainerBase extends Container<ApiEnv> {
     super(ctx, env)
 
     const outboundHost = getStageMetadataSync(env).infra.internalMcpOutboundHost
+
     const outboundByHost: Record<string, string> = outboundHost
       ? {
           [outboundHost]: INTERNAL_MCP_OUTBOUND_HANDLER,
@@ -211,6 +229,7 @@ abstract class AgentContainerBase extends Container<ApiEnv> {
       const sharedProviderOutboundHosts = await Effect.runPromise(
         resolveSharedProviderOutboundHosts(env),
       )
+
       await this.setOutboundByHosts({
         ...outboundByHost,
         ...Object.fromEntries(
@@ -222,7 +241,9 @@ abstract class AgentContainerBase extends Container<ApiEnv> {
 }
 
 export class OpenCodeAgentContainer extends AgentContainerBase {}
+
 export class CodexAgentContainer extends AgentContainerBase {}
+
 export class ClaudeCodeAgentContainer extends AgentContainerBase {}
 
 const agentContainerOutboundHandlers = {
@@ -231,7 +252,9 @@ const agentContainerOutboundHandlers = {
 }
 
 OpenCodeAgentContainer.outboundHandlers = agentContainerOutboundHandlers
+
 CodexAgentContainer.outboundHandlers = agentContainerOutboundHandlers
+
 ClaudeCodeAgentContainer.outboundHandlers = agentContainerOutboundHandlers
 
 export class WorkflowActions extends WorkerEntrypoint<ApiEnv> {
@@ -252,6 +275,7 @@ export class WorkflowActions extends WorkerEntrypoint<ApiEnv> {
           ...workflowActionBaseContext(input),
           outputKeys: Object.keys(result.outputs ?? {}).sort(),
         })
+
         return result
       },
     )
@@ -272,6 +296,7 @@ export class WorkflowActions extends WorkerEntrypoint<ApiEnv> {
           level: input.level ?? "info",
           messageLength: input.message.length,
         })
+
         return new WorkflowActionExecutor(this.env, log).recordWorkflowEvent(input)
       },
     )
@@ -291,6 +316,7 @@ export class WorkflowActions extends WorkerEntrypoint<ApiEnv> {
           hasOutput: Boolean(input.output),
           hasError: Boolean(input.error),
         })
+
         return new WorkflowActionExecutor(this.env, log).completeWorkflowRun(input)
       },
     )
@@ -305,15 +331,19 @@ async function observeWorkflowAction<T>(
   handler: (log: ReturnType<typeof createApiRequestObserver>["log"]) => Promise<T>,
 ): Promise<T> {
   const tracedCtx = tracedExecutionContext(ctx)
+
   const observer = createApiRequestObserver(
     new Request(`http://workflow-actions.internal${path}`, { method: "POST" }),
     env,
     tracedCtx,
   )
+
   observer.setRouteBranch("workflow-action")
+
   if (input.userId) {
     observer.setUserIdentity({ userId: input.userId, oktaUserId: input.oktaUserId })
   }
+
   observer.log.set({
     workflowId: input.workflowId,
     runId: input.runId,
@@ -322,8 +352,11 @@ async function observeWorkflowAction<T>(
   let result: T | undefined
   await observer.run(async () => {
     result = await handler(observer.log)
+
     return new Response(null, { status: 200 })
   })
+
+  // SAFETY: handler assigns result before observer.run resolves, and a thrown handler rejects the run before this return.
   return result as T
 }
 
@@ -347,6 +380,7 @@ export default class Api extends WorkerEntrypoint {
     const stageMetadata = getStageMetadataSync(env)
 
     const observer = createApiRequestObserver(request, env, tracedCtx)
+
     return observer.run(async ({ setRouteBranch, setUserIdentity, observability, log }) => {
       if (isMcpPath(url.pathname)) {
         const shouldDispatchMcp = await shouldDispatchMcpRequest({
@@ -354,11 +388,13 @@ export default class Api extends WorkerEntrypoint {
           mcpcfProxySigningSecret: env.MCPCF_PROXY_SIGNING_SECRET,
           workerRouteEnabled: stageMetadata.infra.internalMcpWorkerRouteEnabled,
         })
+
         if (shouldDispatchMcp) {
           return dispatchMcpRequest(request, env, tracedCtx, observability, setRouteBranch, log)
         }
 
         setRouteBranch("internal-mcp-not-found")
+
         return withApiSurfaceSpan(observability, "internal_mcp_not_found", () =>
           Promise.resolve(new Response(null, { status: 404 })),
         )
@@ -366,8 +402,10 @@ export default class Api extends WorkerEntrypoint {
 
       if (url.pathname === "/api/auth/config" && request.method === "GET") {
         setRouteBranch("auth-provider-config")
+
         return withApiSurfaceSpan(observability, "auth_provider_config", async () => {
           const config = await Effect.runPromise(getPublicAuthProviderRegistry(env))
+
           if (
             config.providers.some(
               (provider) => provider.kind === "credential" && provider.capabilities.signIn,
@@ -375,32 +413,39 @@ export default class Api extends WorkerEntrypoint {
           ) {
             await reconcileManagedAdminCredentials(env)
           }
+
           return Response.json(config)
         })
       }
 
       if (url.pathname.startsWith("/api/auth")) {
         setRouteBranch("better-auth")
+
         return withApiSurfaceSpan(observability, "better_auth", async () => {
           const authConfig = await Effect.runPromise(getAuthProviderRegistry(env))
           const credentialProvider = authConfig.providers.credential
+
           if (credentialProvider?.enabled && credentialProvider.capabilities.signIn) {
             if (url.pathname === "/api/auth/sign-in/email") {
               const { success } = await env.AUTH_SIGN_IN_RATE_LIMIT.limit({
                 key: await credentialRateLimitKey(request),
               })
+
               if (!success) {
                 return Response.json({ message: "Too many sign-in attempts" }, { status: 429 })
               }
             }
+
             await reconcileManagedAdminCredentials(env)
           }
+
           return createBetterAuth(env, authConfig).handler(request)
         })
       }
 
       if (url.pathname === "/github/webhook" || url.pathname === "/api/github/webhook") {
         setRouteBranch("github-app-webhook")
+
         return withApiSurfaceSpan(observability, "github_app_webhook", () =>
           handleGitHubAppWebhookRequest(request, env),
         )
@@ -420,8 +465,10 @@ export default class Api extends WorkerEntrypoint {
           response: (response) => response,
         },
       )
+
       if (workflowPublicResponse) {
         setRouteBranch("workflow-public")
+
         return workflowPublicResponse
       }
 
@@ -434,12 +481,15 @@ export default class Api extends WorkerEntrypoint {
           response: (response) => response,
         },
       )
+
       if (sessionWebSocketResponse) {
         setRouteBranch("session-websocket")
+
         return sessionWebSocketResponse
       }
 
       setRouteBranch("effect-http-api")
+
       return effectApiHandler(request, makeCloudflareContext(env, tracedCtx, observability))
     })
   }
@@ -458,11 +508,13 @@ function dispatchMcpRequest(
   log: ReturnType<typeof createApiRequestObserver>["log"],
 ): Promise<Response> {
   const pathname = new URL(request.url).pathname
+
   if (
     pathname === INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE ||
     pathname === `${INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE}/`
   ) {
     setRouteBranch("workflow-builder-mcp")
+
     return withApiSurfaceSpan(observability, "workflow_builder_mcp", () =>
       handleWorkflowBuilderMcpRequest(request, env, ctx),
     )
@@ -470,12 +522,14 @@ function dispatchMcpRequest(
 
   if (pathname === MCPCF_PROXY_MCP_ROUTE || pathname === `${MCPCF_PROXY_MCP_ROUTE}/`) {
     setRouteBranch("mcpcf-mcp")
+
     return withApiSurfaceSpan(observability, "mcpcf_mcp", () =>
       handleMcpcfMcpRequest(request, env, ctx, { log }),
     )
   }
 
   setRouteBranch("ai-search-mcp")
+
   return withApiSurfaceSpan(observability, "ai_search_mcp", () =>
     handleAiSearchMcpRequest(request, env, ctx, { log }),
   )

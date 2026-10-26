@@ -50,8 +50,13 @@ function stringArrayValue(value: unknown): string[] {
 function exportConfigValue(value: unknown) {
   const record = Option.getOrElse(
     Option.filter(Option.some(value), isRecord),
-    () => ({}) as Record<string, unknown>,
+    () =>
+      /* SAFETY: An empty object has no fields, so it satisfies Record<string, unknown>. */ ({}) as Record<
+        string,
+        unknown
+      >,
   )
+
   return {
     enabled: booleanValue(record.enabled),
     baseUrl: Option.getOrElse(stringValue(record.baseUrl), () => ""),
@@ -64,6 +69,7 @@ function exportConfigValue(value: unknown) {
 
 export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env: Env) {
   const store = getStore(env)
+
   const [configValue, adminApiTokenConfigured] = yield* Effect.all(
     [
       store.getJson(S0_CONFIG_KEYS.mcpcf.config),
@@ -71,12 +77,15 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
     ],
     { concurrency: "unbounded" },
   )
+
   const adminApiToken = yield* Match.value(adminApiTokenConfigured).pipe(
     Match.when(true, () => store.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken)),
     Match.orElse(() => Effect.succeed(Option.none<string>())),
   )
+
   const tokenEnvironmentVariable = "S0_MCPCF_ADMIN_API_TOKEN"
   const adminApiTokenValue = Option.filter(adminApiToken, (value) => value.length > 0)
+
   const configLines = Option.match(configValue, {
     onNone: () => ["// No KV-backed MCP Context Forge configuration is configured."],
     onSome: (resolved) => [
@@ -92,15 +101,19 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
       }),
     ],
   })
+
   const tokenAssignment = yield* Effect.forEach(Option.toArray(adminApiTokenValue), (resolved) =>
     dotenvAssignment(tokenEnvironmentVariable, resolved),
   )
+
   const tokenLines = tokenAssignment.flatMap((assignment) => [
     "",
     "# Configure this secret in the stage environment.",
     assignment,
   ])
+
   const lines = [...configLines, ...tokenLines]
+
   const variableCount =
     Number(Option.isSome(configValue)) + Number(Option.isSome(adminApiTokenValue))
 
@@ -116,19 +129,24 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
 export const resetMcpcfConfig = Effect.fn("mcpcf.resetConfig")(function* (env: Env) {
   const store = getStore(env)
   const serverIndexValue = yield* store.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
+
   const serverIds = Option.match(serverIndexValue, {
-    onNone: () => [] as string[],
+    onNone: () =>
+      /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
     onSome: stringArrayValue,
   })
+
   const deletedKeys = [
     S0_CONFIG_KEYS.mcpcf.config,
     S0_CONFIG_KEYS.mcpcf.adminApiToken,
     S0_CONFIG_KEYS.mcpcf.serverIndex,
     ...serverIds.map((serverId) => S0_CONFIG_KEYS.mcpcf.server(serverId)),
   ]
+
   yield* Effect.all(
     deletedKeys.map((key) => store.delete(key)),
     { concurrency: "unbounded" },
   )
+
   return { deletedKeys }
 })

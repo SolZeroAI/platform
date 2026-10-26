@@ -18,7 +18,7 @@ import {
   validateRequestedAiSearchSessionTools,
   validateRequestedMcpcfSessionTools,
 } from "../../shared/control-plane"
-import type { GitHubProviderShape, IdentityProviderShape } from "../../../services/providers"
+import type { GitHubProviderService, IdentityProviderService } from "../../../services/providers"
 
 export interface CreatedSlackSessionResult {
   session: {
@@ -41,8 +41,8 @@ export const createSlackSessionForPayload = Effect.fn("sessions.slack.createForP
   function* (input: {
     request: Request
     env: ApiEnv
-    identityProvider: IdentityProviderShape
-    githubProvider: GitHubProviderShape
+    identityProvider: IdentityProviderService
+    githubProvider: GitHubProviderService
     principal: AuthPrincipal | null
     payload: SlackCreateSessionPayload
   }) {
@@ -62,6 +62,7 @@ export const createSlackSessionForPayload = Effect.fn("sessions.slack.createForP
       input.payload.slackUserId,
       input.identityProvider,
     )
+
     yield* failUnless(linkedUserId === principalUserId, "Unauthorized", 403)
 
     const identity = yield* resolveUserIdentity(
@@ -70,6 +71,7 @@ export const createSlackSessionForPayload = Effect.fn("sessions.slack.createForP
       input.principal,
       input.identityProvider,
     )
+
     yield* validateRequestedAiSearchSessionTools(input.env, resolved.requestedTools)
     yield* validateRequestedMcpcfSessionTools(input.env, resolved.requestedTools, {
       userId: identity.userId,
@@ -79,7 +81,9 @@ export const createSlackSessionForPayload = Effect.fn("sessions.slack.createForP
       agentRuntime: input.payload.agentRuntime,
       sessionKind: input.payload.sessionKind ?? "isolate",
     })
+
     const sessionKind = sessionKindForAgentRuntime(agentRuntime)
+
     const sessionId = yield* createSessionWithIdentity({
       env: input.env,
       identity,

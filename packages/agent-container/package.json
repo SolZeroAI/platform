@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "^7.0.2"
   }
 }

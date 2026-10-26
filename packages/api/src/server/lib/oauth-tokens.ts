@@ -145,6 +145,7 @@ function normalizeIssuerProtocol(trimmed: string): string {
     Match.when(true, () => trimmed),
     Match.orElse(() => `https://${trimmed}`),
   )
+
   return new URL(withProtocol).toString().replace(/\/+$/, "")
 }
 
@@ -181,6 +182,7 @@ function getOktaRefreshCredentials(
 function normalizeOktaIssuerUrl(issuer: string): string {
   const url = new URL(issuer)
   const path = url.pathname.replace(/\/+$/, "")
+
   return Match.value(url.hostname.endsWith(".okta.com") && (path === "" || path === "/")).pipe(
     Match.when(true, () => normalizeDefaultOktaIssuerUrl(url)),
     Match.orElse(() => issuer),
@@ -189,6 +191,7 @@ function normalizeOktaIssuerUrl(issuer: string): string {
 
 function normalizeDefaultOktaIssuerUrl(url: URL): string {
   url.pathname = "/oauth2/default"
+
   return url.toString().replace(/\/+$/, "")
 }
 
@@ -266,6 +269,7 @@ function redactAuthSecret(value: string | undefined, secret: string | null | und
 
 function postUrlEncodedForm(url: string, body: Record<string, string>) {
   const fetch = globalThis.fetch
+
   return HttpClient.execute(
     HttpClientRequest.post(url, {
       headers: { Accept: "application/json" },
@@ -288,6 +292,7 @@ function logOktaRefreshRequestFailure(
     phase: "request",
     userId: input.userId,
   })
+
   return Option.none<HttpClientResponse.HttpClientResponse>()
 }
 
@@ -308,6 +313,7 @@ function logOktaRefreshParseFailure(
     userId: input.userId,
     status: input.response.status,
   })
+
   return Option.none<OktaRefreshTokenResponse>()
 }
 
@@ -339,6 +345,7 @@ function logInvalidOktaRefreshResponse(
     ),
     errorDescription: redactAuthSecret(tokenData.error_description, input.row.refreshToken),
   })
+
   return Option.none<OAuthAccessTokenResult>()
 }
 
@@ -366,6 +373,7 @@ function logOktaRefreshFailure(
     ),
     Match.orElse((resolved) => new Error(String(resolved))),
   )
+
   log.error(error, {
     event: "auth.okta.token.refresh_failed",
     boundary: "auth.okta.refresh",
@@ -447,11 +455,13 @@ function buildOktaReconnectContextFromRow(
 ): OktaReconnectContext {
   const hasAccessToken = Boolean(row.accessToken)
   const hasRefreshToken = Boolean(row.refreshToken)
+
   const refreshTokenUsable = isFutureTokenExpiry(
     row.refreshTokenExpiresAt,
     Date.now(),
     OKTA_TOKEN_REFRESH_BUFFER_MS,
   )
+
   const reason = Option.getOrElse(Option.fromNullishOr(issue?.reason), () =>
     Match.value({ hasAccessToken, hasRefreshToken, refreshTokenUsable }).pipe(
       Match.when({ hasAccessToken: false }, () => "missing_access_token" as const),
@@ -567,11 +577,13 @@ const refreshOktaAccessTokenFromResponse = Effect.fn(
     response: HttpClientResponse.HttpClientResponse
   },
 ) {
+  // SAFETY: HttpClientResponse.json is untyped. An Okta token refresh body is an OktaRefreshTokenResponse.
   const tokenDataOption = yield* input.response.json.pipe(
     Effect.map((tokenData) => Option.some(tokenData as OktaRefreshTokenResponse)),
     Effect.catch((errorValue) => Effect.succeed(logOktaRefreshParseFailure(input, errorValue))),
   )
 
+  // SAFETY: the filter below rejected Okta responses without access_token, so the remaining token is a string.
   return yield* Effect.succeed(tokenDataOption).pipe(
     Effect.filterOrFail(Option.isSome, () => ({ kind: "missing_token_data" as const })),
     Effect.map(({ value }) => value),
@@ -617,6 +629,7 @@ const persistOktaAccessTokenRefresh = Effect.fn("auth.oauthTokens.persistOktaAcc
   ) {
     const accessTokenExpiresAt = Option.getOrNull(expiresAtFromSecondsOption(tokenData.expires_in))
     const refreshToken = tokenData.refresh_token ?? row.refreshToken
+
     const refreshTokenExpiresAt =
       Option.getOrNull(expiresAtFromSecondsOption(tokenData.refresh_token_expires_in)) ??
       row.refreshTokenExpiresAt
@@ -663,6 +676,7 @@ export const getOktaAccessTokenForUserId = Effect.fn(
   },
 ) {
   const rowOption = yield* getOAuthAccountTokenRow(env, OKTA_PROVIDER_ID, userId)
+
   const row = yield* Effect.fromOption(rowOption).pipe(
     Effect.catch(() =>
       Effect.fail(
@@ -673,8 +687,10 @@ export const getOktaAccessTokenForUserId = Effect.fn(
       ),
     ),
   )
+
   const authConfig = yield* getAuthProviderRegistry(env)
   const refreshCredentials = getOktaRefreshCredentials(authConfig.providers[OKTA_PROVIDER_ID])
+
   const expectedIssuer = Option.getOrNull(
     Match.value("expectedIssuer" in options).pipe(
       Match.when(true, () =>
@@ -685,8 +701,11 @@ export const getOktaAccessTokenForUserId = Effect.fn(
       Match.orElse(() => Option.map(refreshCredentials, (credentials) => credentials.issuer)),
     ),
   )
+
   const tokenIssuer = getOktaAccessTokenIssuer(row.accessToken)
   const hasIssuerMismatch = Boolean(expectedIssuer && tokenIssuer && tokenIssuer !== expectedIssuer)
+
+  // SAFETY: the predicate requires a non-empty accessToken, so the remaining account token is a string.
   const currentToken = Option.liftPredicate(
     row,
     (resolved) =>
@@ -701,6 +720,7 @@ export const getOktaAccessTokenForUserId = Effect.fn(
     })),
   )
 
+  // SAFETY: refreshOktaAccessToken resolves to Option<OAuthAccessTokenResult>. Effect.fn erases that success channel at this catch boundary.
   const resolvedToken = yield* Effect.succeed(currentToken).pipe(
     Effect.filterOrFail(Option.isSome, () => "missing_current_token" as const),
     Effect.map(({ value }) => Option.some(value)),
@@ -793,9 +813,12 @@ const getStoredLinkedOAuthAccessToken = Effect.fn(
 ) {
   const row = yield* getOAuthAccountTokenRow(env, input.providerId, input.userId)
   const tokenIssuer = getOktaAccessTokenIssuer(Option.getOrNull(row)?.accessToken)
+
   const hasIssuerMismatch = Boolean(
     input.expectedIssuer && tokenIssuer && tokenIssuer !== input.expectedIssuer,
   )
+
+  // SAFETY: the predicate requires a Some row with a non-empty accessToken, so the remaining account token is a string.
   const linkedToken = Option.liftPredicate(
     row,
     (rowOption): rowOption is Option.Option<OAuthAccountTokenRow> & { _tag: "Some" } =>

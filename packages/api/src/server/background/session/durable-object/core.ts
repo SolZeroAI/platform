@@ -110,6 +110,7 @@ import {
   type UpdateToolsBody,
   type WsTokenBody,
 } from "../durable-object"
+
 type SessionDODelegate = any
 
 export function createInternalRequestObserver(
@@ -127,7 +128,9 @@ export function createInternalRequestObserver(
       tracing: workerTracing,
     },
   )
+
   observer.setRouteBranch(routeBranch)
+
   return observer
 }
 
@@ -313,6 +316,7 @@ export function initializeStorage(host: SessionDODelegate): void {
 
 export function wsManager(host: SessionDODelegate): SessionWebSocketManager {
   host._wsManager ??= new SessionWebSocketManagerImpl(host.ctx, host.repository, WS_AUTH_TIMEOUT_MS)
+
   return host._wsManager
 }
 
@@ -325,11 +329,13 @@ export function lifecycleManager(host: SessionDODelegate): SandboxLifecycleManag
     onEvent: (event) => host.processSandboxEvent(event),
     getGitHubCloneCredentials: () => host.getSandboxCloneCredentials(),
   })
+
   return host._lifecycleManager
 }
 
 export function isolateRuntime(host: SessionDODelegate): IsolateSessionRuntime {
   host._isolateRuntime ??= new IsolateSessionRuntime(host.env, workerTracing)
+
   return host._isolateRuntime
 }
 
@@ -340,6 +346,7 @@ export function routeRequest(
 ): Promise<Response> | Response {
   const isWebSocketUpgrade = request.headers.get("Upgrade") === "websocket"
   const routeKey = `${request.method} ${url.pathname}`
+
   const routes: ReadonlyArray<{
     match: boolean
     run: () => Promise<Response> | Response
@@ -409,6 +416,7 @@ export function routeRequest(
       run: () => host.handleUnarchive(request),
     },
   ]
+
   return Option.match(
     Arr.findFirst(routes, (route) => route.match),
     {
@@ -433,6 +441,7 @@ export async function handleIsolateInactivityAlarm(host: SessionDODelegate): Pro
     .pipe(
       Option.filter((current) => current.status !== "running" && Boolean(current.last_activity)),
     )
+
   Option.match(isActiveOrIdle, {
     onNone: () => undefined,
     onSome: (current) => host.maybeStopInactiveSandbox(current.last_activity),

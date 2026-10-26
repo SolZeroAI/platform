@@ -20,11 +20,13 @@ test("PR helper branding keeps both persisted built-in skill identities usable",
   expect(isCreatePullRequestSkillId("skill_c0_create_pr")).toBe(true)
   expect(isCreatePullRequestSkillId("skill_s0_create_pr")).toBe(true)
   expect(isCreatePullRequestSkillId("user-owned-skill")).toBe(false)
+
   const markdown = createPullRequestSkillMarkdown({
     skillName: "c0-create-pr",
     brandName: "Example Fork",
     command: "example-create-pr",
   })
+
   expect(markdown).toContain("name: c0-create-pr")
   expect(markdown).toContain('example-create-pr "PR title" "PR body"')
   expect(markdown).toContain("Example Fork-managed branch")
@@ -32,20 +34,24 @@ test("PR helper branding keeps both persisted built-in skill identities usable",
 
 test("a complete stage brand overrides environment branding and normalizes its values", async () => {
   const source = exampleDeploymentConfig()
+
   const configured = resolveS0Config(
     { ...source, brand: { ...source.brand, name: "  Example Fork  " } },
     { VITE_S0_BRAND_NAME: "Unselected environment brand" },
   )
+
   expect(configured.brand.name).toBe("Example Fork")
   expect(configured.brand.logoLightPath).toBe(source.brand.logoLightPath)
 })
 
 test("existing brand environment overrides work when the stage file omits brand", async () => {
   const { brand: _brand, ...legacy } = exampleDeploymentConfig()
+
   const configured = resolveS0Config(legacy, {
     VITE_S0_BRAND_NAME: "Environment Fork",
     VITE_S0_BRAND_LOGO_PATH: "/brands/shared.svg",
   })
+
   expect(configured.brand.name).toBe("Environment Fork")
   expect(configured.brand.logoLightPath).toBe("/brands/shared.svg")
   expect(configured.brand.logoDarkPath).toBe("/brands/shared.svg")
@@ -54,6 +60,7 @@ test("existing brand environment overrides work when the stage file omits brand"
 
 test("resolved configuration compiles into narrow server identity inputs", async () => {
   const source = exampleDeploymentConfig()
+
   const configured = resolveS0Config({
     ...source,
     brand: { ...source.brand, name: "Example Fork" },
@@ -66,12 +73,14 @@ test("resolved configuration compiles into narrow server identity inputs", async
       },
     },
   })
+
   const secrets = Object.fromEntries(
     s0ActiveSecretReferences(configured).map((reference) => [
       reference.env,
       randomBytes(48).toString("base64url"),
     ]),
   )
+
   const inputs = getApiInfraEnv(configured, "config/fixture-pre.config.jsonc", "digest", secrets)
   expect(inputs.S0_BRAND_NAME).toBe("Example Fork")
   expect(inputs.S0_SERVICE_NAME).toBe("example-fork-agent-control-plane")
@@ -107,16 +116,20 @@ test("profile validation and stage URLs select the same complete named file", as
 
 test("the stage secret writer includes only active references without printing their values", async () => {
   const source = exampleDeploymentConfig()
+
   const configured = {
     ...source,
     security: { ...source.security, tokenEncryptionKey: { env: "FORK_TOKEN_KEY" } },
   }
+
   withConfigFixture(configured, (fixture) => {
     const value = randomBytes(48).toString("base64url")
+
     const written = fixture.run(["write-stage-vars", "pre", fixture.varsPath], {
       FORK_TOKEN_KEY: value,
       UNREFERENCED_TOKEN: randomBytes(48).toString("base64url"),
     })
+
     expect(written.status).toBe(0)
     const values = dotenv.parse(readFileSync(fixture.varsPath))
     expect(values.FORK_TOKEN_KEY === value).toBe(true)
@@ -151,6 +164,7 @@ test("the CLI rejects incomplete branding and unsafe executable names before dep
 test("PlanetScale provisioning is optional, configurable, and rejects invalid capacity inputs", async () => {
   const source = exampleDeploymentConfig()
   expect(DEFAULT_PLANETSCALE_CONFIG).toEqual({ clusterSize: "PS_10", logicalDatabaseName: "s0" })
+
   const planetscale = {
     clusterSize: "PS_20",
     logicalDatabaseName: "example_fork",
@@ -159,6 +173,7 @@ test("PlanetScale provisioning is optional, configurable, and rejects invalid ca
     replicas: 2,
     majorVersion: "17",
   }
+
   expect(
     resolveS0Config({ ...source, deployment: { ...source.deployment, planetscale } }).deployment
       .planetscale,

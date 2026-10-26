@@ -14,7 +14,9 @@ export function buildOktaReconnectSettingsPath(
     category: "api-access",
     oktaReconnect: status,
   })
+
   const path = `/settings?${params.toString()}`
+
   return options.hash === false ? path : `${path}#${OKTA_RECONNECT_SETTINGS_HASH}`
 }
 
@@ -26,10 +28,13 @@ export function buildOktaReconnectSessionPath(
   const params = new URLSearchParams({
     oktaReconnect: status,
   })
+
   const resumeMessageId = options.resumeMessageId?.trim()
+
   if (resumeMessageId) {
     params.set("resumeMessageId", resumeMessageId)
   }
+
   return `/session/${encodeURIComponent(sessionId)}?${params.toString()}`
 }
 
@@ -38,16 +43,19 @@ export function resolveOAuthCallbackError(
   errorDescription?: string | null | undefined,
 ): string | undefined {
   const description = errorDescription?.trim()
+
   if (description) {
     return description
   }
 
   const code = error?.trim()
+
   return code || undefined
 }
 
 export function formatOktaReconnectError(statusError: string | null | undefined): string {
   const normalizedError = statusError?.trim()
+
   return normalizedError
     ? `Okta authentication did not complete: ${normalizedError}.`
     : "Okta authentication did not complete."

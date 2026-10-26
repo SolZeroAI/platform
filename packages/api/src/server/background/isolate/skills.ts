@@ -79,9 +79,11 @@ export function buildIsolateSkillSources(input: {
   globalSkillNames?: readonly string[]
 }): SkillSource[] {
   const sources: SkillSource[] = []
+
   if (hasWorkflowBuilderTool(input.tools)) {
     sources.push(builtInSkillSource(input.brandName))
   }
+
   if (input.skillsBucket && (input.globalSkillNames?.length ?? 0) > 0) {
     sources.push(
       skills.r2(input.skillsBucket, {
@@ -91,7 +93,9 @@ export function buildIsolateSkillSources(input: {
       }),
     )
   }
+
   const userSkillsPrefix = getUserSkillsPrefix(input.userId)
+
   if (input.skillsBucket && userSkillsPrefix) {
     sources.push(
       skills.r2(input.skillsBucket, {
@@ -100,6 +104,7 @@ export function buildIsolateSkillSources(input: {
       }),
     )
   }
+
   return sources
 }
 
@@ -114,14 +119,17 @@ export async function buildResolvedIsolateSkillSources(input: {
     db: input.db,
     userId: input.userId ?? "",
   })
+
   return buildIsolateSkillSources({ ...input, globalSkillNames })
 }
 
 function getUserSkillsPrefix(userId: string | null | undefined): string | null {
   const normalized = userId?.trim()
+
   if (!normalized) {
     return null
   }
+
   return `${USER_SKILLS_PREFIX}/${encodeSkillPrefixSegment(normalized)}/`
 }
 

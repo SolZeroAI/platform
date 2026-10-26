@@ -150,6 +150,7 @@ export type SubagentSessionEvent = SubagentSessionEventBase &
   )
 
 type OpenCodeInteractionKind = "permission" | "question"
+
 type OpenCodePermissionReply = "once" | "always" | "reject"
 
 export interface OpenCodeInteractionTool {
@@ -360,6 +361,7 @@ type SessionEventPayload =
   | SubagentSessionEvent
 
 export type SessionEvent = SessionEventPayload & SessionEventCommon
+
 export type SandboxEvent = SessionEvent
 
 export type ClientMessage =

@@ -41,6 +41,7 @@ const getStoredAuthProviderRegistry = Effect.fn("authConfig.getStoredRegistry")(
       onSome: Effect.succeed,
     }),
   )
+
   return normalizeAuthProviderRegistry(value)
 })
 
@@ -68,10 +69,13 @@ const resolveProvider = Effect.fn("authConfig.resolveProvider")(function* (
   if (provider.kind === "credential") {
     return provider
   }
+
   if (!provider.enabled) {
     return { ...provider, clientSecret: "" }
   }
+
   const clientSecret = yield* resolveProviderClientSecret(env, providerId, provider)
+
   return { ...provider, clientSecret }
 })
 
@@ -79,6 +83,7 @@ export const getAuthProviderRegistry = Effect.fn("authConfig.getAuthProviderRegi
   env: Env,
 ) {
   const registry = yield* getStoredAuthProviderRegistry(env)
+
   const providerEntries = yield* Effect.forEach(
     Object.entries(registry.providers),
     ([providerId, provider]) =>
@@ -87,6 +92,7 @@ export const getAuthProviderRegistry = Effect.fn("authConfig.getAuthProviderRegi
       ),
     { concurrency: "unbounded" },
   )
+
   return {
     defaultSignInProviderId: registry.defaultSignInProviderId,
     providers: Object.fromEntries(providerEntries),
@@ -96,6 +102,7 @@ export const getAuthProviderRegistry = Effect.fn("authConfig.getAuthProviderRegi
 export const getPublicAuthProviderRegistry = Effect.fn("authConfig.getPublicAuthProviderRegistry")(
   function* (env: Env) {
     const registry = yield* getStoredAuthProviderRegistry(env)
+
     return publicAuthProviderRegistry(
       registry,
       env.S0_CONFIG_FILE,

@@ -20,23 +20,27 @@ export function createPlanetscaleAppDatabase(input: CreatePlanetscaleAppDatabase
   return Effect.gen(function* () {
     const { logicalDatabaseName, region, ...provisioning } =
       input.config ?? DEFAULT_PLANETSCALE_CONFIG
+
     const database = yield* Planetscale.PostgresDatabase("postgres", {
       ...provisioning,
       region: region ? { slug: region } : undefined,
       name: `${input.appName}-postgres-${input.stageName}`,
     })
+
     const adminRole = yield* Planetscale.PostgresRole("postgres-admin", {
       branch: "main",
       database,
       inheritedRoles: ["postgres"],
       successor: "postgres",
     })
+
     const appRole = yield* Planetscale.PostgresRole("postgres-app", {
       branch: "main",
       database,
       inheritedRoles: [],
       successor: "postgres",
     })
+
     const logicalDatabase = yield* PlanetscaleLogicalDb.PostgresLogicalDatabase("app-database", {
       adminOrigin: adminRole.origin,
       appRoleName: Output.map(appRole.username, PlanetscaleLogicalDb.postgresRoleNameFromUsername),
@@ -44,6 +48,7 @@ export function createPlanetscaleAppDatabase(input: CreatePlanetscaleAppDatabase
       migrationsDir: pgMigrationsDir(),
       name: logicalDatabaseName,
     })
+
     return { database, adminRole, appRole, logicalDatabase }
   })
 }

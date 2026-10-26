@@ -23,11 +23,13 @@ export function HomeToolbarIconButton({
 }) {
   const tooltipId = useId()
   const buttonRef = useRef<HTMLButtonElement>(null)
+
   const [tooltipAnchor, setTooltipAnchor] = useState<{
     left: number
     top: number
     width: number
   } | null>(null)
+
   const tooltipDescriptionId = tooltipHidden ? undefined : tooltipId
   const tooltipVisible = !tooltipHidden && tooltipAnchor
 

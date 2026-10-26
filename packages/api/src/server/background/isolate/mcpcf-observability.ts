@@ -46,8 +46,10 @@ export function getSelectedMcpcfLogContext(
   mcpcfServers: readonly McpcfServerDefinition[] = [],
 ) {
   const serversById = new Map(mcpcfServers.map((server) => [server.id, server]))
+
   const servers = getSelectedMcpcfServerIds(tools).map((serverId) => {
     const server = serversById.get(serverId)
+
     return {
       id: serverId,
       slug: server?.slug ?? null,
@@ -74,6 +76,7 @@ export function getMcpcfMcpToolExposures(input: {
     .filter((server) => selectedIds.has(server.id))
     .flatMap((server) => {
       const serverName = getMcpcfMcpServerName(server)
+
       if (!connectedServerNames.has(serverName)) {
         return []
       }
@@ -108,6 +111,7 @@ export function logMcpcfMcpToolExposure(input: {
   exposures: readonly McpcfMcpToolExposure[]
 }): void {
   const mcpcf = getSelectedMcpcfLogContext(input.selectedTools, input.mcpcfServers)
+
   if (mcpcf.serverCount === 0) {
     return
   }
@@ -200,6 +204,7 @@ export function logMcpcfMcpSyncFailure(input: {
 }): void {
   const error =
     input.errorValue instanceof Error ? input.errorValue : new Error(String(input.errorValue))
+
   const mcpcf = getSelectedMcpcfLogContext(input.selectedTools, input.mcpcfServers)
   const observer = input.createObserver("mcpcf_mcp_sync", "isolate-mcpcf-mcp-sync")
   observer.log.error(error, {

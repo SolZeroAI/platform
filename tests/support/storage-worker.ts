@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers"
 import operator from "../../scripts/migration/worker"
 import { durableMigration } from "../../packages/api/src/migration/durable-state"
+
 type FixtureEnv = Parameters<typeof operator.fetch>[1]
 
 export class MigrationFixture extends DurableObject<FixtureEnv> {
@@ -25,9 +26,11 @@ export class MigrationFixture extends DurableObject<FixtureEnv> {
       tags: new Set(["retained"]),
       created: new Date("2026-01-01T00:00:00Z"),
     })
+
     for (let index = 0; index < 105; index++)
       this.ctx.storage.kv.put(`entry-${String(index).padStart(3, "0")}`, index)
     await this.ctx.storage.setAlarm(Date.now() + 3600000)
+
     return new Response(null, { status: 201 })
   }
   migrationState(request: unknown) {
@@ -40,6 +43,7 @@ export class MigrationFixture extends DurableObject<FixtureEnv> {
     })
   }
 }
+
 export default {
   async fetch(request: Request, env: FixtureEnv): Promise<Response> {
     if (
@@ -47,6 +51,7 @@ export default {
       request.headers.get("Authorization") === `Bearer ${env.MIGRATION_TOKEN}`
     )
       return env.OBJECTS.get(env.OBJECTS.idFromName("original-session")).fetch(request)
+
     return operator.fetch(request, env)
   },
 }

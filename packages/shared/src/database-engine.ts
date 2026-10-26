@@ -1,11 +1,14 @@
 export const S0_DATABASE_ENGINES = ["d1", "planetscale"] as const
+
 export type S0DatabaseEngine = (typeof S0_DATABASE_ENGINES)[number]
+
 export const DEFAULT_S0_DATABASE_ENGINE: S0DatabaseEngine = "d1"
 
 /** alchemy.new contract: select parameter and Worker/process env. Missing or empty is `d1`. */
 export const DATABASE_ENV = "DATABASE"
 
 export const APP_DB_MODES = ["local", "remote"] as const
+
 export type AppDbMode = (typeof APP_DB_MODES)[number]
 
 /** Local PGLite socket used as the Hyperdrive `dev` origin for the PlanetScale flavor. */
@@ -39,6 +42,7 @@ export function isAppDbMode(value: unknown): value is AppDbMode {
 
 export function parseS0DatabaseEngine(value: unknown): S0DatabaseEngine {
   if (isS0DatabaseEngine(value)) return value
+
   if (value === undefined || value === null || value === "") return DEFAULT_S0_DATABASE_ENGINE
   throw new Error(
     `Invalid ${DATABASE_ENV} '${String(value)}'. Expected ${S0_DATABASE_ENGINES.join(" | ")}`,
@@ -47,12 +51,20 @@ export function parseS0DatabaseEngine(value: unknown): S0DatabaseEngine {
 
 export function parseAppDbMode(value: unknown, fallback: AppDbMode): AppDbMode {
   if (value === undefined || value === null || value === "") return fallback
+
   if (isAppDbMode(value)) return value
   throw new Error(
     `Invalid ${APP_DB_MODE_ENV} '${String(value)}'. Expected ${APP_DB_MODES.join(" | ")}`,
   )
 }
 
-export function databaseEngineFromRecord(env: object): S0DatabaseEngine {
-  return parseS0DatabaseEngine(Reflect.get(env, DATABASE_ENV))
+type DatabaseEngineSource = {
+  readonly [DATABASE_ENV]?: unknown
+}
+
+export function databaseEngineFromRecord<Env extends object>(env: Env): S0DatabaseEngine {
+  // SAFETY: Worker and process env objects may carry DATABASE; a missing field stays undefined and parses as the default engine.
+  const source = env as DatabaseEngineSource
+
+  return parseS0DatabaseEngine(source[DATABASE_ENV])
 }

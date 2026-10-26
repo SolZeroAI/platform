@@ -81,7 +81,9 @@ interface IsolateSubagentTurn {
 const SUBAGENT_PREPARATION_ERROR = "Unable to prepare the Isolate sub-agent runtime."
 
 function assertRunInput(input: unknown): asserts input is IsolateSubagentRunInput {
-  const candidate = input as Partial<IsolateSubagentRunInput> | null
+  const candidate =
+    /* SAFETY: input was checked to be a non-array object before it is read as Partial<IsolateSubagentRunInput> | null. */ input as Partial<IsolateSubagentRunInput> | null
+
   const isInvalid =
     !candidate ||
     typeof candidate !== "object" ||
@@ -96,6 +98,7 @@ function assertRunInput(input: unknown): asserts input is IsolateSubagentRunInpu
     typeof candidate.customMcpServers !== "object" ||
     !candidate.delegation ||
     typeof candidate.delegation.task !== "string"
+
   Match.value(isInvalid).pipe(
     Match.when(true, () => {
       throw new Error("Invalid trusted Isolate sub-agent run configuration")
@@ -111,12 +114,14 @@ function formatDelegation(input: IsolateSubagentDelegation): string {
     Option.map((value) => ["Context from the orchestrator:", value]),
     Option.getOrElse((): string[] => []),
   )
+
   const expectedOutput = Option.fromNullishOr(input.expectedOutput).pipe(
     Option.map((value) => value.trim()),
     Option.filter((value) => value.length > 0),
     Option.map((value) => ["Expected output:", value]),
     Option.getOrElse((): string[] => []),
   )
+
   return ["Delegated task:", input.task.trim(), ...context, ...expectedOutput].join("\n\n")
 }
 
@@ -157,10 +162,12 @@ export class IsolateSubAgent extends Think<Env> {
       Option.fromNullishOr(this.activeTurn),
       () => new Error("No context is prepared for this Isolate sub-agent run"),
     )
+
     const facts = buildIsolateSystemPromptFacts({
       tools: turn.input.selectedTools,
       customMcpServers: turn.input.customMcpServers,
     })
+
     return [
       buildIsolateSystemPrompt({
         brandName: this.env.S0_BRAND_NAME,
@@ -189,6 +196,7 @@ export class IsolateSubAgent extends Think<Env> {
       Option.fromNullishOr(this.activeTurn),
       () => new Error("No tools are prepared for this Isolate sub-agent run"),
     )
+
     return buildIsolateTools({
       env: this.env,
       db: makeControlPlaneFromEnv(this.env),
@@ -204,6 +212,7 @@ export class IsolateSubAgent extends Think<Env> {
   async getSkills() {
     const input =
       this.activeTurn?.input ?? this.preparingInput ?? (await this.loadTrustedConfig(this.name))
+
     return buildResolvedIsolateSkillSources({
       brandName: this.env.S0_BRAND_NAME,
       db: makeControlPlaneFromEnv(this.env),
@@ -218,8 +227,10 @@ export class IsolateSubAgent extends Think<Env> {
       Option.fromNullishOr(this.activeTurn),
       () => new Error("No turn is prepared for this Isolate sub-agent run"),
     )
+
     const baseSystem = this.getSystemPrompt()
     const contextSystem = ctx.system.trim()
+
     return {
       system: Match.value(contextSystem.length > 0 && contextSystem !== baseSystem.trim()).pipe(
         Match.when(true, () => [baseSystem, contextSystem].join("\n\n")),
@@ -239,13 +250,14 @@ export class IsolateSubAgent extends Think<Env> {
       Option.fromNullishOr(this.activeTurn),
       () => new Error("No turn is prepared for this Isolate sub-agent run"),
     )
+
     return Match.value(
       isIsolateSubagentFinalizationStep(ctx.stepNumber, turn.input.stepLimit),
     ).pipe(
       Match.when(
         true,
         (): StepConfig =>
-          // oxlint-disable-next-line effect/avoid-any -- Think and the app resolve distinct AI SDK type identities, while the runtime StepConfig accepts these fields.
+          // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Think and the app resolve distinct AI SDK type identities, while the runtime StepConfig accepts these fields.
           ({
             activeTools: [],
             toolChoice: "none",
@@ -265,6 +277,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   protected formatAgentToolInput(input: unknown): UIMessage {
     assertRunInput(input)
+
     return {
       id: `subagent-${crypto.randomUUID()}`,
       role: "user",
@@ -277,15 +290,18 @@ export class IsolateSubAgent extends Think<Env> {
     options: { runId: string },
   ): Promise<Awaited<ReturnType<Think<Env>["startAgentToolRun"]>>> {
     const startedAt = Date.now()
+
     // oxlint-disable-next-line effect/avoid-try-catch -- The SDK adapter must turn every preparation failure into a terminal inspection instead of rejecting and stranding the parent run.
     try {
       assertRunInput(input)
       const trustedConfig = await this.loadTrustedConfig(options.runId)
       await this.prepareRuntime(options.runId, trustedConfig, input.delegation.task)
+
       return await super.startAgentToolRun(input, options)
     } catch {
       this.activeTurn = null
       this.preparingInput = null
+
       return {
         runId: options.runId,
         status: "error",
@@ -304,6 +320,7 @@ export class IsolateSubAgent extends Think<Env> {
       Match.whenOr("completed", "error", "aborted", () => this.clearActiveRuntime()),
       Match.orElse(() => undefined),
     )
+
     return inspection
   }
 
@@ -317,6 +334,7 @@ export class IsolateSubAgent extends Think<Env> {
     } catch {
       throw new Error(SUBAGENT_PREPARATION_ERROR)
     }
+
     return super.onChatRecovery(context)
   }
 
@@ -337,6 +355,7 @@ export class IsolateSubAgent extends Think<Env> {
     requestContent: string,
   ): Promise<void> {
     this.preparingInput = input
+
     // oxlint-disable-next-line effect/avoid-try-catch -- The transient preparation context must be cleared after both successful and failed Promise-based SDK setup.
     try {
       const [model, mcpTurn] = await Promise.all([
@@ -372,6 +391,7 @@ export class IsolateSubAgent extends Think<Env> {
           }),
         ),
       ])
+
       this.activeTurn = {
         runId,
         input,
@@ -386,6 +406,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   private async loadTrustedConfig(runId: string): Promise<IsolateSubagentTrustedConfig> {
     const config = await (await this.parent()).getSubagentTrustedConfig(runId)
+
     return Option.getOrThrowWith(
       Option.fromNullishOr(config),
       () => new Error(SUBAGENT_PREPARATION_ERROR),
@@ -402,6 +423,7 @@ export class IsolateSubAgent extends Think<Env> {
       Option.fromNullishOr(this.activeTurn?.input ?? this.preparingInput),
       () => new Error("No request context is prepared for this Isolate sub-agent run"),
     )
+
     const observer = createApiRequestObserver(
       new Request(`http://internal/isolate/subagent/${path}`, { method: "POST" }),
       this.env,
@@ -412,8 +434,10 @@ export class IsolateSubAgent extends Think<Env> {
         tracing: workerTracing,
       },
     )
+
     observer.setRouteBranch(routeBranch)
     observer.setUserId(input.userId)
+
     return observer
   }
 

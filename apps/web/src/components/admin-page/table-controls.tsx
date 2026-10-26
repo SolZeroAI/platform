@@ -108,6 +108,7 @@ export function FilterSelect<TData>({
   formatOption?: (value: string) => string
 }) {
   const allLabel = `All ${label.toLowerCase()}`
+
   return (
     <Select
       value={getTableFilter(table, id) || FILTER_ALL}
@@ -116,9 +117,11 @@ export function FilterSelect<TData>({
       }
       renderValue={(value) => {
         const normalized = String(value ?? "")
+
         if (normalized === FILTER_ALL || normalized === "") {
           return allLabel
         }
+
         return formatOption ? formatOption(normalized) : normalized
       }}
       aria-label={label}
@@ -165,6 +168,7 @@ export function AdminDataTable<TData>({
 }) {
   const rows = table.getRowModel().rows
   const leafColumnCount = table.getAllLeafColumns().length
+
   return (
     <div className="space-y-2">
       <div className="overflow-auto rounded-xl bg-kumo-elevated/80 [container-type:inline-size]">
@@ -238,9 +242,11 @@ export function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
   if (direction === "asc") {
     return <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden />
   }
+
   if (direction === "desc") {
     return <ChevronDown className="h-3.5 w-3.5" aria-hidden />
   }
+
   return <ChevronsUpDown className="h-3.5 w-3.5 text-kumo-subtle" aria-hidden />
 }
 
@@ -252,6 +258,7 @@ export function TablePagination<TData>({
   loading: boolean
 }) {
   const { pageIndex, pageSize } = table.getState().pagination
+
   return (
     <Pagination
       page={pageIndex + 1}
@@ -325,6 +332,7 @@ export function IconButton({
       disabled={busy || disabled}
       title={title}
       aria-label={title}
+      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
       shape="circle"
       size="sm"
       variant={danger ? "secondary-destructive" : "secondary"}

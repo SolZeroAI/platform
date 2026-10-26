@@ -16,6 +16,7 @@ export function get({ params }: { params: IdParams }) {
       const internalRequests = yield* InternalRequests
       const response = yield* internalRequests.fetch(stub, "http://internal/internal/state")
       yield* failUnless(response.ok, "Session not found", 404)
+
       return response
     }),
   )

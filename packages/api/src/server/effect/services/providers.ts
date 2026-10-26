@@ -33,14 +33,14 @@ export interface GitHubAppUserToken {
 // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Service method signatures need the broad GitHub provider contract shared by live and mock implementations.
 type GitHubProviderEffect<A> = Effect.Effect<A, GitHubAppError>
 
-export interface IdentityProviderShape {
+export interface IdentityProviderService {
   readonly getBetterAuthUserProfile: typeof getBetterAuthUserProfile
   readonly getGitHubAppUserAccessTokenForUserId: typeof getGitHubAppUserAccessTokenForUserId
   readonly getLinkedUserIdByProviderAccountId: typeof getLinkedUserIdByProviderAccountId
   readonly resolveOktaUserId: typeof resolveOktaUserId
 }
 
-export interface GitHubProviderShape {
+export interface GitHubProviderService {
   readonly listAccessibleRepositoriesPage: (
     userAccessToken: string,
     options?: GitHubRepositoryPageOptions,
@@ -59,22 +59,22 @@ export interface GitHubProviderShape {
   ) => GitHubProviderEffect<GitHubUserProfile>
 }
 
-export class IdentityProvider extends Context.Service<IdentityProvider, IdentityProviderShape>()(
+export class IdentityProvider extends Context.Service<IdentityProvider, IdentityProviderService>()(
   "s0/api/IdentityProvider",
 ) {}
 
-export class GitHubProvider extends Context.Service<GitHubProvider, GitHubProviderShape>()(
+export class GitHubProvider extends Context.Service<GitHubProvider, GitHubProviderService>()(
   "s0/api/GitHubProvider",
 ) {}
 
-export const LiveIdentityProvider: IdentityProviderShape = {
+export const LiveIdentityProvider: IdentityProviderService = {
   getBetterAuthUserProfile,
   getGitHubAppUserAccessTokenForUserId,
   getLinkedUserIdByProviderAccountId,
   resolveOktaUserId,
 }
 
-export const LiveGitHubProvider: GitHubProviderShape = {
+export const LiveGitHubProvider: GitHubProviderService = {
   getAccessibleRepository,
   getGitHubUserProfile,
   listAccessibleRepositoriesPage,
@@ -123,10 +123,12 @@ function matchesMockRepositorySearch(
   visibility: GitHubRepositorySearchOptions["visibility"],
 ): boolean {
   const matchesQuery = !query || repo.fullName.includes(query) || repo.name.includes(query)
+
   const matchesVisibility =
     visibility === "all" ||
     (visibility === "private" && repo.private) ||
     (visibility === "public" && !repo.private)
+
   return matchesQuery && matchesVisibility
 }
 
@@ -136,6 +138,7 @@ function createMockRepositoryPage(options: GitHubRepositoryPageOptions = {}): Gi
   const perPage = Math.min(Math.max(options.perPage ?? 20, 1), 100)
   const filtered = mockRepositories.filter((repo) => !owner || repo.owner === owner)
   const offset = (page - 1) * perPage
+
   return {
     repositories: filtered.slice(offset, offset + perPage),
     owners: [{ login: "example-org", type: "Organization" }],
@@ -160,23 +163,27 @@ function searchMockAccessibleRepositories(
   const query = options.query?.trim().toLowerCase()
   const visibility = options.visibility ?? "all"
   const searched = createMockRepositoryPage(options)
+
   const repositories = searched.repositories.filter((repo) =>
     matchesMockRepositorySearch(repo, query, visibility),
   )
+
   return Effect.succeed({ ...searched, repositories, totalCount: null, hasMore: false })
 }
 
-export const MockIdentityProvider: IdentityProviderShape = {
+export const MockIdentityProvider: IdentityProviderService = {
   getBetterAuthUserProfile(_env, userId) {
-    const emailByUserId: Record<string, string> = {
-      admin_1: "admin@example.test",
-      user_1: "user.one@example.test",
-      user_2: "user.two@example.test",
-    }
+    const email = Match.value(userId).pipe(
+      Match.when("admin_1", () => "admin@example.test"),
+      Match.when("user_1", () => "user.one@example.test"),
+      Match.when("user_2", () => "user.two@example.test"),
+      Match.orElse(() => `${userId}@example.test`),
+    )
+
     return Effect.succeed({
       id: userId,
       name: `Mock ${userId}`,
-      email: emailByUserId[userId] ?? `${userId}@example.test`,
+      email,
       image: null,
     })
   },
@@ -193,12 +200,13 @@ export const MockIdentityProvider: IdentityProviderShape = {
   },
 }
 
-export const MockGitHubProvider: GitHubProviderShape = {
+export const MockGitHubProvider: GitHubProviderService = {
   listAccessibleRepositoriesPage: listMockAccessibleRepositoriesPage,
   searchAccessibleRepositories: searchMockAccessibleRepositories,
   getAccessibleRepository(_userAccessToken, owner, repo) {
     const normalizedOwner = owner.toLowerCase()
     const normalizedRepo = repo.toLowerCase()
+
     return Effect.succeed(
       Option.fromNullishOr(
         mockRepositories.find(

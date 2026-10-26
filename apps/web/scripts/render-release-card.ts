@@ -28,9 +28,12 @@ class ReleaseCardCliError extends Schema.TaggedError<ReleaseCardCliError>()("Rel
 
 function option(args: readonly string[], name: string): string | undefined {
   const index = args.indexOf(name)
+
   if (index < 0) return undefined
   const value = args[index + 1]
+
   if (!value || value.startsWith("--")) throw new Error(`${name} requires a value.`)
+
   return value
 }
 
@@ -44,9 +47,11 @@ interface CliOptions {
 
 function parseCliOptions(argv: readonly string[]): CliOptions {
   const [command, ...args] = argv
+
   if (command !== "render-release") {
     throw new Error("Usage: creative render-release [options]")
   }
+
   return {
     inputPath: option(args, "--input"),
     layout: option(args, "--layout"),
@@ -60,6 +65,7 @@ const decodeReleaseLayout = Schema.decodeUnknownEffect(ReleaseCardLayoutSchema)
 
 const releaseLayout = Effect.fn("releaseCard.decodeLayout")(function* (value: string | undefined) {
   if (!value) return undefined
+
   return yield* decodeReleaseLayout(value).pipe(
     Effect.mapError(
       (cause) =>
@@ -74,34 +80,43 @@ const releaseLayout = Effect.fn("releaseCard.decodeLayout")(function* (value: st
 const pendingReleaseEntries = Effect.fn("releaseCard.pendingEntries")(function* () {
   const fs = yield* FileSystem.FileSystem
   const directory = join(REPO_ROOT, ".tegami")
+
   const filenames = (yield* fs.readDirectory(directory))
     .filter((filename) => filename.endsWith(".md") && filename !== "README.md")
     .sort()
+
   const entries: ReleaseEntry[] = []
   const bumps: ReleaseBump[] = []
+
   for (const filename of filenames) {
     const markdown = yield* fs.readFileString(join(directory, filename))
     const bump = parseSolZeroReleaseBump(markdown)
+
     if (!bump) continue
     const entry = yield* parseTegamiReleaseEntry(markdown)
+
     if (entry.sections.length === 0) continue
     entries.push(entry)
     bumps.push(bump)
   }
+
   return { entries, bumps }
 })
 
 const releaseInput = Effect.fn("releaseCard.resolveInput")(function* (options: CliOptions) {
   const fs = yield* FileSystem.FileSystem
   const layout = yield* releaseLayout(options.layout)
+
   if (options.inputPath) {
     const json = yield* fs.readFileString(resolve(REPO_ROOT, options.inputPath))
     const input = yield* decodeReleaseCardInputJson(json)
+
     return layout ? { ...input, layout } : input
   }
 
   const pending = yield* pendingReleaseEntries()
   const currentVersion = (yield* fs.readFileString(join(REPO_ROOT, "VERSION"))).trim()
+
   const version = yield* Effect.try({
     try: () => options.version ?? nextReleaseVersion(currentVersion, pending.bumps),
     catch: (cause) =>
@@ -110,6 +125,7 @@ const releaseInput = Effect.fn("releaseCard.resolveInput")(function* (options: C
         cause,
       }),
   })
+
   return yield* createReleaseCardInput({
     version,
     entries: pending.entries,
@@ -127,12 +143,15 @@ const main = Effect.fn("releaseCard.cli")(function* (argv: readonly string[]) {
         cause,
       }),
   })
+
   const input = yield* releaseInput(options)
+
   const outputPath = yield* renderReleaseNotesCardToFile({
     input,
     repoRoot: REPO_ROOT,
     outputPath: options.outputPath,
   })
+
   yield* Console.log(outputPath)
 })
 

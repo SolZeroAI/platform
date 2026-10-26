@@ -52,6 +52,7 @@ function isJsonRecord(value: unknown): value is JsonRecord {
 function parseSubagentChunk(body: string): JsonRecord | null {
   try {
     const value: unknown = JSON.parse(body)
+
     return isJsonRecord(value) && typeof value.type === "string" ? value : null
   } catch {
     return null
@@ -62,6 +63,7 @@ function toDisplayText(value: unknown): string {
   if (typeof value === "string") {
     return value
   }
+
   try {
     return JSON.stringify(value, null, 2) ?? String(value)
   } catch {
@@ -84,6 +86,7 @@ function upsertSubagentToolCall(
 ): void {
   const toolCallId = typeof chunk.toolCallId === "string" ? chunk.toolCallId : null
   const toolName = typeof chunk.toolName === "string" ? chunk.toolName : null
+
   if (!toolCallId || !toolName) {
     return
   }
@@ -91,9 +94,9 @@ function upsertSubagentToolCall(
   const callId = `${run.runId}:${toolCallId}`
   const existingIndex = findToolEventIndex(run, callId)
   const existing = existingIndex >= 0 ? run.toolEvents[existingIndex] : undefined
-  const next: SandboxEvent = {
-    ...(existing?.type === "tool_call" ? existing : {}),
-    type: "tool_call",
+
+  const toolCall = {
+    type: "tool_call" as const,
     tool: toolName,
     args: toToolArgs(chunk.input),
     callId,
@@ -101,6 +104,9 @@ function upsertSubagentToolCall(
     sandboxId: event.sandboxId,
     timestamp: event.timestamp,
   }
+
+  const next: SandboxEvent =
+    existing?.type === "tool_call" ? { ...existing, ...toolCall } : toolCall
 
   if (chunk.type === "tool-input-error" && typeof chunk.errorText === "string") {
     next.error = chunk.errorText
@@ -120,6 +126,7 @@ function applySubagentToolOutput(
   isError: boolean,
 ): void {
   const toolCallId = typeof chunk.toolCallId === "string" ? chunk.toolCallId : null
+
   if (!toolCallId) {
     return
   }
@@ -127,6 +134,7 @@ function applySubagentToolOutput(
   const callId = `${run.runId}:${toolCallId}`
   const existingIndex = findToolEventIndex(run, callId)
   const existing = existingIndex >= 0 ? run.toolEvents[existingIndex] : undefined
+
   if (existing?.type !== "tool_call") {
     return
   }
@@ -147,14 +155,25 @@ function applySubagentProgress(
   timestamp: number,
 ): void {
   const data = isJsonRecord(chunk.data) ? chunk.data : {}
+
   const fraction =
     typeof data.fraction === "number" ? Math.min(1, Math.max(0, data.fraction)) : null
-  run.progress = {
-    ...(fraction === null ? {} : { fraction }),
-    ...(typeof data.message === "string" ? { message: data.message } : {}),
-    ...(typeof data.phase === "string" ? { phase: data.phase } : {}),
-    at: timestamp * 1000,
+
+  const progress: SubagentProgress = { at: timestamp * 1000 }
+
+  if (fraction !== null) {
+    progress.fraction = fraction
   }
+
+  if (typeof data.message === "string") {
+    progress.message = data.message
+  }
+
+  if (typeof data.phase === "string") {
+    progress.phase = data.phase
+  }
+
+  run.progress = progress
 }
 
 function applySubagentMilestone(
@@ -163,12 +182,14 @@ function applySubagentMilestone(
   timestamp: number,
 ): void {
   const data = isJsonRecord(chunk.data) ? chunk.data : {}
+
   if (typeof data.name !== "string") {
     return
   }
 
   const sequence = typeof data.sequence === "number" ? data.sequence : 0
   const at = typeof data.at === "number" ? data.at : timestamp * 1000
+
   if (!run.milestones.some((milestone) => milestone.sequence === sequence)) {
     run.milestones.push({ name: data.name, sequence, at })
     run.milestones.sort((left, right) => left.sequence - right.sequence)
@@ -176,20 +197,31 @@ function applySubagentMilestone(
 
   const fraction =
     typeof data.fraction === "number" ? Math.min(1, Math.max(0, data.fraction)) : null
-  run.progress = {
-    ...(fraction === null ? {} : { fraction }),
-    ...(typeof data.message === "string" ? { message: data.message } : {}),
-    ...(typeof data.phase === "string" ? { phase: data.phase } : {}),
-    milestone: data.name,
-    at,
+
+  const progress: SubagentProgress = { milestone: data.name, at }
+
+  if (fraction !== null) {
+    progress.fraction = fraction
   }
+
+  if (typeof data.message === "string") {
+    progress.message = data.message
+  }
+
+  if (typeof data.phase === "string") {
+    progress.phase = data.phase
+  }
+
+  run.progress = progress
 }
 
 function applySubagentChunk(run: MutableSubagentRun, event: SubagentSessionEvent): void {
   if (event.kind !== "chunk") {
     return
   }
+
   const chunk = parseSubagentChunk(event.body)
+
   if (!chunk) {
     return
   }
@@ -199,27 +231,34 @@ function applySubagentChunk(run: MutableSubagentRun, event: SubagentSessionEvent
       if (typeof chunk.delta === "string") {
         run.text += chunk.delta
       }
+
       return
     case "reasoning-delta":
       if (typeof chunk.delta === "string") {
         run.reasoning += chunk.delta
       }
+
       return
     case "tool-input-available":
     case "tool-input-error":
       upsertSubagentToolCall(run, event, chunk)
+
       return
     case "tool-output-available":
       applySubagentToolOutput(run, chunk, false)
+
       return
     case "tool-output-error":
       applySubagentToolOutput(run, chunk, true)
+
       return
     case "data-agent-progress":
       applySubagentProgress(run, chunk, event.timestamp)
+
       return
     case "data-agent-milestone":
       applySubagentMilestone(run, chunk, event.timestamp)
+
       return
     default:
       // The AI SDK adds chunk variants over time. Unknown chunks are retained in
@@ -243,25 +282,30 @@ function applySubagentLifecycle(run: MutableSubagentRun, event: SubagentSessionE
         run.displayName = event.displayName
         run.order = event.order
       }
+
       return
     case "chunk":
       applySubagentChunk(run, event)
+
       return
     case "finished":
       run.status = "completed"
       run.summary = event.summary
       run.error = undefined
       run.completedAt = event.timestamp
+
       return
     case "error":
       run.status = "error"
       run.error = event.error
       run.completedAt = event.timestamp
+
       return
     case "aborted":
       run.status = "aborted"
       run.error = event.reason
       run.completedAt = event.timestamp
+
       return
     case "interrupted":
       run.status = "interrupted"
@@ -269,6 +313,7 @@ function applySubagentLifecycle(run: MutableSubagentRun, event: SubagentSessionE
       run.reason = event.reason
       run.childStillRunning = event.childStillRunning
       run.completedAt = event.timestamp
+
       return
   }
 }
@@ -281,6 +326,7 @@ function toSubagentRunView(run: MutableSubagentRun): SubagentRunView {
       ),
     ),
   ]
+
   return {
     runId: run.runId,
     parentToolCallId: run.parentToolCallId,
@@ -318,10 +364,13 @@ export function reduceSubagentEvents(events: readonly SandboxEvent[]): SubagentE
     if (event.type !== "subagent_event") {
       continue
     }
+
     const dedupeKey = `${event.runId}:${event.sequence}`
+
     if (seen.has(dedupeKey)) {
       continue
     }
+
     seen.add(dedupeKey)
     const runEvents = eventsByRunId.get(event.runId) ?? []
     runEvents.push(event)
@@ -330,13 +379,17 @@ export function reduceSubagentEvents(events: readonly SandboxEvent[]): SubagentE
 
   const runs: SubagentRunView[] = []
   let fallbackOrder = 0
+
   for (const runEvents of eventsByRunId.values()) {
     runEvents.sort((left, right) => left.sequence - right.sequence)
+
     const started = runEvents.find(
       (event): event is Extract<SubagentSessionEvent, { kind: "started" }> =>
         event.kind === "started",
     )
+
     const firstEvent = runEvents[0]
+
     if (!firstEvent) continue
 
     const run: MutableSubagentRun = {
@@ -357,20 +410,25 @@ export function reduceSubagentEvents(events: readonly SandboxEvent[]): SubagentE
       reasoning: "",
       toolEvents: [],
     }
+
     fallbackOrder += 1
+
     for (const event of runEvents) {
       applySubagentLifecycle(run, event)
     }
+
     runs.push(toSubagentRunView(run))
   }
 
   runs.sort((left, right) => left.order - right.order || left.runId.localeCompare(right.runId))
   const runsById = new Map(runs.map((run) => [run.runId, run]))
   const runsByParentToolCallId = new Map<string, SubagentRunView[]>()
+
   for (const run of runs) {
     if (!run.parentToolCallId) {
       continue
     }
+
     const parentRuns = runsByParentToolCallId.get(run.parentToolCallId) ?? []
     parentRuns.push(run)
     runsByParentToolCallId.set(run.parentToolCallId, parentRuns)

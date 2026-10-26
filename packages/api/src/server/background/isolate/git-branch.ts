@@ -48,6 +48,7 @@ function createIsolateBranch(
         dir: input.repoRoot,
       }),
     )
+
     const headCommit = yield* Option.match(Arr.head(commits), {
       onNone: () =>
         Effect.fail(
@@ -91,6 +92,7 @@ export function checkoutIsolateBranch(input: CheckoutIsolateBranchInput) {
       Match.when("checkout", () => checkoutExistingBranch(input)),
       Match.orElse(() => createIsolateBranch(input, currentBranch)),
     )
+
     const shouldChangeBranch = Effect.succeed(action !== "noop")
     yield* Effect.when(branchAction, shouldChangeBranch)
   })
@@ -132,6 +134,7 @@ export function hasBranchCommitsBeyondBase(input: {
     const branchCommits = yield* attempt(() =>
       input.git.log({ depth: 1, ref: input.branchName, dir: input.repoRoot }),
     )
+
     return yield* Option.match(Arr.head(branchCommits), {
       onNone: () => Effect.succeed(false),
       onSome: (branchHead) => compareBaseHead(input, branchHead.oid),

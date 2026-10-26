@@ -57,7 +57,9 @@ export function WorkflowViewTabs({
         if (value !== "overview" && value !== "builder") {
           return
         }
+
         onChange(value)
+
         if (value === "builder") {
           close()
         }
@@ -162,7 +164,12 @@ export function WorkflowVersionToolbar({
         <div
           className="relative"
           onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) {
+            const relatedTarget = event.relatedTarget
+
+            if (
+              !(relatedTarget instanceof globalThis.Node) ||
+              !event.currentTarget.contains(relatedTarget)
+            ) {
               setMenuOpen(false)
             }
           }}
@@ -202,6 +209,7 @@ export function WorkflowVersionToolbar({
                   if (!workflow) {
                     return
                   }
+
                   setMenuOpen(false)
                   onSetWorkflowEnabled(workflow, workflowDisabled)
                 }}
@@ -218,6 +226,7 @@ export function WorkflowVersionToolbar({
                   if (!workflow) {
                     return
                   }
+
                   setMenuOpen(false)
                   onRequestDeleteWorkflow(workflow)
                 }}
@@ -413,6 +422,7 @@ export function WorkflowDialogFrame({
                   type="button"
                   onClick={onClose}
                   disabled={closeDisabled}
+                  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                   shape="circle"
                   variant="ghost"
                   aria-label={closeLabel}

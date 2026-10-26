@@ -32,6 +32,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env while resolving the runtime provider catalog, which has no Layer context.
 import { hasControlPlane, makeControlPlaneFromEnv } from "../effect/db/control-plane-db"
 import type { Env } from "./types"
 import {
@@ -86,6 +87,7 @@ const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/
 export const OPENCODE_SHARED_PROVIDER_CREDENTIAL_PROXY_API_KEY = "s0-shared-provider-outbound-proxy"
 
 type SharedProviderCatalogEntry = (typeof SHARED_PROVIDER_CATALOG)[number]
+
 type SharedProviderCredentialMode = "direct" | "opencode_proxy"
 
 interface ResolvedProviderRecord {
@@ -128,6 +130,7 @@ function trimmedNonEmpty(value: unknown): Option.Option<string> {
 
 export function parseProviderSettingsUpdate(value: unknown): UserProviderSettingsUpdate {
   const parsed = Schema.decodeUnknownSync(ProviderSettingsUpdateSchema)(value)
+
   const sharedProviderIds = new Set([
     ...SHARED_PROVIDER_CATALOG.map((provider) => provider.providerId),
     CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
@@ -135,11 +138,13 @@ export function parseProviderSettingsUpdate(value: unknown): UserProviderSetting
   ])
 
   const seenSharedProviderIds = new Set<string>()
+
   const sharedOverrides = Arr.map(parsed.sharedOverrides, (rawOverride) =>
     normalizeSharedOverride(rawOverride, sharedProviderIds, seenSharedProviderIds),
   )
 
   const seenCustomProviderIds = new Set<string>()
+
   const customProviders = Arr.map(parsed.customProviders, (rawProvider) =>
     normalizeCustomProvider(rawProvider, sharedProviderIds, seenCustomProviderIds),
   )
@@ -174,6 +179,7 @@ function normalizeSharedOverride(
     `Duplicate shared provider override '${providerId}'`,
   )
   seenSharedProviderIds.add(providerId)
+
   return {
     providerId,
     displayName: rawOverride.displayName.trim() || providerId,
@@ -222,6 +228,7 @@ export async function buildProviderSettingsResponse(
 ): Promise<ProviderSettingsResponse> {
   const settings = await getUserProviderSettingsSnapshot(env, userId)
   const catalog = await buildRuntimeProviderCatalog(env, userId)
+
   return {
     catalog,
     settings,
@@ -236,14 +243,17 @@ export async function buildRuntimeProviderCatalog(
   const mergedProviders = mergedSnapshot.providers
   const availableProviders = mergedProviders.filter(isProviderAvailable)
   const modelOptions = buildRuntimeModelOptions(availableProviders)
+
   const globalModelIds = buildRuntimeModelOptions(
     mergedProviders.filter(
       (provider) => provider.source === "shared" && provider.globalCredentialConfigured,
     ),
   ).flatMap((group) => group.models.map((model) => model.id))
+
   const globalDefaultModel = Option.getOrNull(
     resolveCatalogDefaultModel(globalModelIds, null, mergedSnapshot.configuredDefaultModel),
   )
+
   const defaultModel = Option.getOrNull(
     resolveCatalogDefaultModel(
       modelOptions.flatMap((group) => group.models.map((model) => model.id)),
@@ -289,6 +299,7 @@ export async function compileOpenCodeConfigForModel(
   const mergedProviders = (await getMergedProviderSnapshot(env, userId)).providers
   const credentialMode = options?.sharedProviderCredentialMode ?? "opencode_proxy"
   const availableProviders = mergedProviders.filter(isProviderAvailable)
+
   const visibleModelIds = availableProviders.flatMap((provider) =>
     Object.keys(provider.models).map((modelId) => buildModelId(provider.providerId, modelId)),
   )
@@ -310,9 +321,12 @@ export async function compileOpenCodeConfigForModel(
   const normalizedMcp = Option.getOrUndefined(
     Option.map(Option.fromNullishOr(options?.mcp), (mcp) => normalizeOpenCodeMcpServers(mcp)),
   )
+
   const hasAiSearchMcp =
     normalizedMcp !== undefined && INTERNAL_AI_SEARCH_MCP_SERVER_NAME in normalizedMcp
+
   const userOpenCodePermission = await getUserOpenCodePermission(env, userId)
+
   const permission = Option.getOrUndefined(
     buildOpenCodePermission({
       basePermission: userOpenCodePermission,
@@ -320,6 +334,7 @@ export async function compileOpenCodeConfigForModel(
       hasAiSearchMcp,
     }),
   )
+
   const compiledProviders = await Promise.all(
     availableProviders.map(
       async (currentProvider) =>
@@ -343,6 +358,7 @@ export async function compileOpenCodeConfigForModel(
         ] as const,
     ),
   )
+
   const config = Schema.decodeUnknownSync(CompiledOpenCodeConfigSchema)({
     model: runtimeModelId,
     small_model: runtimeModelId,
@@ -390,12 +406,14 @@ function buildOpenCodePermissionObject(input: {
     })),
     Match.orElse(() => ({})),
   )
+
   const aiSearchPermission = Match.value(input.hasAiSearchMcp).pipe(
     Match.when(true, () => ({
       task: "deny",
     })),
     Match.orElse(() => ({})),
   )
+
   const permission: NonNullable<CompiledOpenCodeConfig["permission"]> = {
     ...input.basePermission,
     ...mcpPermission,
@@ -413,6 +431,7 @@ function compileOpenCodeProviderModel(
   model: ProviderModelDefinition,
 ): CompiledOpenCodeProviderModel {
   const providerPackage = model.provider?.npm ?? provider.npm
+
   const reasoning = Option.match(Option.fromNullishOr(model.reasoning), {
     onNone: () => undefined,
     onSome: () => true,
@@ -475,6 +494,7 @@ async function compiledProviderOptions(
     credentialMode: sharedProviderCredentialMode,
     storedProxyCredential: OPENCODE_SHARED_PROVIDER_CREDENTIAL_PROXY_API_KEY,
   })
+
   return Option.getOrElse(cloudflareOptions, () =>
     defaultCompiledProviderOptions(provider, sharedProviderCredentialMode),
   )
@@ -498,6 +518,7 @@ function defaultCompiledProviderOptions(
       apiKey: compiledProviderApiKey(provider, sharedProviderCredentialMode),
     })),
   )
+
   // oxlint-disable-next-line anti-slop/no-known-value-widening -- Provider catalog owner is open provider JSON. The compiled options bag stays open so live provider configs keep working.
   return {
     ...provider.options,
@@ -516,6 +537,7 @@ export async function isVisibleModelForUser(
 ): Promise<boolean> {
   const catalog = await buildRuntimeProviderCatalog(env, userId)
   const runtimeModelId = normalizeModelId(model)
+
   return catalog.modelOptions.some((group) =>
     group.models.some((item) => item.id === runtimeModelId),
   )
@@ -604,6 +626,7 @@ async function getMergedProviderSnapshot(
   userId: string,
 ): Promise<SharedProviderBuildResult> {
   const shared = await buildSharedProviders(env)
+
   return Option.match(getUserProviderConfigsStore(env), {
     onNone: () => Promise.resolve(shared),
     onSome: async (store) => ({
@@ -619,16 +642,20 @@ async function mergeUserProviders(
   sharedProviders: ResolvedProviderRecord[],
 ): Promise<ResolvedProviderRecord[]> {
   const userSettings = await store.listRuntimeConfigs(userId)
+
   const overrideByProviderId = new Map(
     Arr.getSomes(userSettings.providers.map(toSharedOverrideEntry)),
   )
+
   const mergedShared = sharedProviders.map((shared) =>
     applyCloudflareAiGatewayOverrides(
       applySharedOverride(shared, overrideByProviderId),
       overrideByProviderId,
     ),
   )
+
   const customProviders = Arr.getSomes(userSettings.providers.map(toCustomProviderRecord))
+
   return sortProviders([...mergedShared, ...customProviders])
 }
 
@@ -645,6 +672,7 @@ function applyCloudflareAiGatewayOverrides(
       ),
     ),
   )
+
   return Match.value(shared.providerId).pipe(
     Match.when(CLOUDFLARE_AI_GATEWAY_PROVIDER_ID, () => ({
       ...shared,
@@ -698,6 +726,7 @@ function toResolvedCustomProvider(userProvider: RuntimeUserProviderRecord): Reso
     onNone: () => "missing" as const,
     onSome: () => "user_custom" as const,
   })
+
   return {
     providerId: userProvider.providerId,
     name: userProvider.displayName,
@@ -733,12 +762,15 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
   const staticProviders = SHARED_PROVIDER_CATALOG.filter(
     (provider) => provider.providerId !== "litellm" && provider.providerId !== "litellm-anthropic",
   ).map((provider) => toSharedProviderRecord(env, provider))
+
   const cloudflareAiGateway = yieldCloudflareAiGatewayProvider(
     buildCloudflareAiGatewayCatalogProvider(env),
     await runProviderCatalogEffect(getCloudflareAiGatewayRuntimeProviderKeys(env)),
   )
+
   const deploymentProviders = [...staticProviders, ...cloudflareAiGateway.providers]
   const litellmConfig = await runProviderCatalogEffect(getLitellmConfigWithPresence(env))
+
   return Match.value(litellmConfig.configured).pipe(
     Match.when(false, () => ({
       providers: deploymentProviders,
@@ -746,6 +778,7 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
     })),
     Match.orElse(async () => {
       const dynamicLitellm = await runProviderCatalogEffect(buildLitellmCatalogProviders(env))
+
       // oxlint-disable-next-line s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Async Match branch returns the computed shared-provider snapshot.
       return Option.match(dynamicLitellm, {
         onNone: () => ({
@@ -771,7 +804,11 @@ function yieldCloudflareAiGatewayProvider(
   providerKeys: CloudflareAiGatewayByokKeyMap,
 ) {
   return Option.match(provider, {
-    onNone: () => ({ providers: [] as ResolvedProviderRecord[], defaultModel: null }),
+    onNone: () => ({
+      providers:
+        /* SAFETY: This branch has no ResolvedProviderRecord[] elements, so the array is empty. */ [] as ResolvedProviderRecord[],
+      defaultModel: null,
+    }),
     onSome: ({ provider: definition, defaultModel }) => ({
       providers: [toResolvedBindingProviderRecord(definition, providerKeys)],
       defaultModel,
@@ -810,6 +847,7 @@ function toResolvedLitellmProviderRecord(
   apiKey: string | null,
 ): ResolvedProviderRecord {
   const apiKeyOption = trimmedNonEmpty(apiKey)
+
   return {
     providerId: provider.providerId,
     name: provider.name,
@@ -831,10 +869,12 @@ function toSharedProviderRecord(
   provider: SharedProviderCatalogEntry,
 ): ResolvedProviderRecord {
   const apiKeyOption = resolveSharedProviderApiKeyForProvider(env, provider)
+
   const credentialSource = Option.match(apiKeyOption, {
     onNone: () => "missing" as const,
     onSome: () => "shared" as const,
   })
+
   return {
     providerId: provider.providerId,
     name: provider.name,
@@ -858,7 +898,10 @@ function resolveSharedProviderApiKeyForProvider(
 }
 
 function resolveSharedProviderApiKey(env: Env, secretName: string): Option.Option<string> {
-  return trimmedNonEmpty(Reflect.get(env, secretName))
+  // SAFETY: shared provider secret names are Worker binding keys on Env, which is a string-keyed binding bag.
+  const bindings = env as { readonly [bindingName: string]: unknown }
+
+  return trimmedNonEmpty(bindings[secretName])
 }
 
 function resolveCatalogDefaultModel(
@@ -883,16 +926,19 @@ function resolvePreferredVisibleModel(
     Option.map((model) => normalizeModelId(model)),
     Option.filter((model) => visibleModelIds.includes(model)),
   )
+
   const normalizedConfiguredDefault = Option.fromNullishOr(configuredDefaultModel).pipe(
     Option.map((model) => normalizeModelId(model)),
     Option.filter((model) => visibleModelIds.includes(model)),
   )
+
   return Option.orElse(normalizedUserDefault, () => normalizedConfiguredDefault)
 }
 
 function normalizeProviderId(value: string): string {
   const normalized = value.trim().toLowerCase()
   assertCondition(PROVIDER_ID_PATTERN.test(normalized), `Invalid provider id '${value}'`)
+
   return normalized
 }
 
@@ -910,11 +956,9 @@ function normalizeOptionalSecret(value: string | undefined): Option.Option<strin
   )
 }
 
-function splitRuntimeModelId(runtimeModelId: string): {
-  providerId: string
-  modelId: string
-} {
+function splitRuntimeModelId(runtimeModelId: string) {
   const [providerId, ...rest] = runtimeModelId.split("/")
+
   return {
     providerId,
     modelId: rest.join("/"),

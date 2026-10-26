@@ -8,11 +8,13 @@ type ProviderSettingsErrorPayload = {
 
 async function readResponseJson(response: Response): Promise<unknown> {
   const text = await response.text()
+
   if (!text.trim()) {
     return null
   }
+
   try {
-    return JSON.parse(text) as unknown
+    return JSON.parse(text)
   } catch {
     return text
   }
@@ -20,16 +22,20 @@ async function readResponseJson(response: Response): Promise<unknown> {
 
 function getResponseErrorMessage(payload: unknown, fallback: string): string {
   if (payload && typeof payload === "object") {
+    // SAFETY: payload was checked to be a non-null object, and only error, message, and detail are read.
     const record = payload as ProviderSettingsErrorPayload
+
     for (const value of [record.error, record.message, record.detail]) {
       if (typeof value === "string" && value.trim().length > 0) {
         return value
       }
     }
   }
+
   if (typeof payload === "string" && payload.trim().length > 0) {
     return payload
   }
+
   return fallback
 }
 
@@ -38,10 +44,14 @@ export async function fetchProviderSettings(init?: RequestInit): Promise<Provide
     credentials: "include",
     ...init,
   })
+
   const payload = await readResponseJson(response)
+
   if (!response.ok) {
     throw new Error(getResponseErrorMessage(payload, "Failed to load provider settings"))
   }
+
+  // SAFETY: GET /api/providers returns ProviderSettingsResponse after response.ok; error bodies are thrown above.
   return payload as ProviderSettingsResponse
 }
 
@@ -56,9 +66,13 @@ export async function saveProviderSettings(
     },
     body: JSON.stringify(input),
   })
+
   const payload = await readResponseJson(response)
+
   if (!response.ok) {
     throw new Error(getResponseErrorMessage(payload, "Failed to save provider settings"))
   }
+
+  // SAFETY: PUT /api/providers returns ProviderSettingsResponse after response.ok; error bodies are thrown above.
   return payload as ProviderSettingsResponse
 }

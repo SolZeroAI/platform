@@ -8,14 +8,17 @@ function promptErrorStorageKey(sessionId: string): string {
 
 function takeFallbackPromptError(key: string): string | null {
   const fallbackMsg = fallbackPromptErrors.get(key) ?? null
+
   if (fallbackMsg) {
     fallbackPromptErrors.delete(key)
   }
+
   return fallbackMsg
 }
 
 export function stashSessionPromptError(sessionId: string, message: string): void {
   const key = promptErrorStorageKey(sessionId)
+
   try {
     sessionStorage.setItem(key, message)
     fallbackPromptErrors.delete(key)
@@ -26,10 +29,13 @@ export function stashSessionPromptError(sessionId: string, message: string): voi
 
 export function takeSessionPromptError(sessionId: string): string | null {
   const key = promptErrorStorageKey(sessionId)
+
   try {
     const msg = sessionStorage.getItem(key)
+
     if (msg) {
       sessionStorage.removeItem(key)
+
       return msg
     }
   } catch {
@@ -63,6 +69,7 @@ export function shouldUsePromptHttpStream(input: {
 
 export async function submitSessionPrompt(input: SubmitSessionPromptInput): Promise<Response> {
   const searchParams = new URLSearchParams()
+
   if (input.stream) {
     searchParams.set("stream", "1")
   }

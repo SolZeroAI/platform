@@ -5,6 +5,7 @@ import { fork } from "node:child_process"
 import { once } from "node:events"
 import postgres from "postgres"
 import { drizzle } from "drizzle-orm/postgres-js"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeDrizzleCopyDestination builds the migration fixture destination, not an Effect service layer.
 import { makeDrizzleCopyDestination } from "../../packages/api/src/cli/d1-to-planetscale-copy"
 import { stopFixture } from "./fixture-process"
 
@@ -21,18 +22,23 @@ export async function withMigrationDatabases<T>(
   }) => Promise<T>,
 ): Promise<T> {
   const source = new DatabaseSync(":memory:")
+
   const child = fork(resolve("tests/support/postgres-fixture.ts"), [], {
     execArgv: ["--import", import.meta.resolve("tsx")],
     stdio: ["ignore", "ignore", "ignore", "ipc"],
   })
+
   const closed = once(child, "exit")
+
   const ready = new Promise<string>((accept, reject) => {
     const timeout = setTimeout(
       () => reject(new Error("Local Postgres fixture did not become ready")),
       30_000,
     )
+
     child.once("message", (message) => {
       clearTimeout(timeout)
+
       if (
         typeof message !== "object" ||
         message === null ||
@@ -51,10 +57,13 @@ export async function withMigrationDatabases<T>(
       reject(new Error("Postgres fixture exited before readiness"))
     })
   })
+
   let client: ReturnType<typeof postgres> | undefined
   const queryParameterCounts: number[] = []
+
   try {
     const sqliteDir = resolve("packages/infra/d1-migrations")
+
     for (const name of readdirSync(sqliteDir)
       .filter((name) => name.endsWith(".sql") && name < "0030")
       .sort())
@@ -68,6 +77,7 @@ export async function withMigrationDatabases<T>(
       connect_timeout: 10,
     })
     const connection = client
+
     const database = drizzle({
       client: connection,
       logger: {
@@ -76,6 +86,7 @@ export async function withMigrationDatabases<T>(
         },
       },
     })
+
     return await run({
       source,
       postgres: {

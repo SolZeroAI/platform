@@ -49,9 +49,11 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
   const isAdmin = authSession?.isAdmin === true
   const pathname = useLocation({ select: (location) => location.pathname })
   const locationHash = useLocation({ select: (location) => location.hash })
+
   const locationSearch = useLocation({
     select: (location) => parseSidebarLocationSearch(location.search),
   })
+
   const { isDark, toggle: toggleTheme } = useTheme()
 
   const activeNav =
@@ -66,6 +68,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
             : pathname?.startsWith("/settings")
               ? "settings"
               : null
+
   const activeSettingsCategory = getSettingsCategoryFromSearch(locationSearch)
   const activeAdminView = getAdminViewFromLocation(pathname, locationSearch)
   const isPreviousSessionsActive = pathname === "/" && isHomePreviousSessionsHash(locationHash)
@@ -97,6 +100,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
         ? "bg-kumo-tint text-kumo-default shadow-sm ring-1 ring-kumo-hairline"
         : "text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
     }`
+
   const settingsSubLinkClass = (isActive: boolean) =>
     `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
       isActive
@@ -226,6 +230,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
                     {ADMIN_SIDEBAR_ITEMS.map((item) => {
                       const Icon = getAdminSidebarIcon(item.id)
                       const isActive = activeNav === "admin" && activeAdminView === item.id
+
                       return (
                         <Link
                           key={item.id}
@@ -269,6 +274,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
                   {SETTINGS_NAV_ITEMS.map((item) => {
                     const Icon = item.icon
                     const isActive = activeNav === "settings" && activeSettingsCategory === item.id
+
                     return (
                       <Link
                         key={item.id}

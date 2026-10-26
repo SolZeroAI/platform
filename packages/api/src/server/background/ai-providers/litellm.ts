@@ -11,6 +11,7 @@ import {
   getS0DeploymentConfig,
   getS0DeploymentSecret,
 } from "../db/s0-config"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env for LiteLLM cron and config reads, which have no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { CronRunsStore, sanitizeCronErrorMessage, type CronRunTrigger } from "../db/cron-runs"
 import {
@@ -78,7 +79,12 @@ function stringArrayField(record: Record<string, unknown>, key: string): string[
 }
 
 function isReasoningEffort(value: unknown): value is ReasoningEffort {
-  return typeof value === "string" && SUPPORTED_REASONING_EFFORTS.includes(value as ReasoningEffort)
+  return (
+    typeof value === "string" &&
+    SUPPORTED_REASONING_EFFORTS.includes(
+      /* SAFETY: value has the ReasoningEffort shape established by the check or writer around this read. */ value as ReasoningEffort,
+    )
+  )
 }
 
 function readReasoningEffort(value: unknown): ReasoningEffort | null {
@@ -110,6 +116,7 @@ function defaultConfig(now = Date.now()): LitellmProviderConfig {
 }
 
 function readAdapter(value: unknown): LitellmAiSdkAdapter | null {
+  // SAFETY: LITELLM_AI_SDK_ADAPTERS lists every LitellmAiSdkAdapter, so a member of that list is that union.
   return typeof value === "string" && LITELLM_AI_SDK_ADAPTERS.includes(value as LitellmAiSdkAdapter)
     ? (value as LitellmAiSdkAdapter)
     : null

@@ -1,4 +1,5 @@
 /* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/avoid-direct-json -- JSONC compilation is a synchronous deployment boundary; explicit validation keeps configuration failures path-specific. */
+import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
 import { AdminConfigSchema, normalizeAdminConfig, type AdminConfig } from "./admin"
 import {
@@ -21,7 +22,9 @@ import {
 
 export const S0_CONFIG_SCHEMA_VERSION = 1 as const
 export const S0_CONFIG_STAGE_NAMES = ["dev", "test", "pre", "prod"] as const
+
 export type S0ConfigStageName = (typeof S0_CONFIG_STAGE_NAMES)[number]
+
 export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
@@ -34,6 +37,7 @@ export const S0BrandConfigSchema = Schema.Struct({
   faviconPath: Schema.String.check(Schema.isMinLength(1)),
   appleTouchIconPath: Schema.String.check(Schema.isMinLength(1)),
 })
+
 export type S0BrandConfig = typeof S0BrandConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- PlanetScale provisioning is a deployment JSON DTO, not Worker state.
@@ -50,6 +54,7 @@ export const S0PlanetscaleConfigSchema = Schema.Struct({
   ),
   majorVersion: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9]+$/))),
 })
+
 export type S0PlanetscaleConfig = typeof S0PlanetscaleConfigSchema.Type
 
 export const DEFAULT_PLANETSCALE_CONFIG: S0PlanetscaleConfig = {
@@ -78,6 +83,7 @@ export const S0DeploymentConfigSchema = Schema.Struct({
     tracesHeadSamplingRate: SamplingRateSchema,
   }),
 })
+
 export type S0DeploymentConfig = typeof S0DeploymentConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- application configuration is a plain JSON DTO
@@ -89,6 +95,7 @@ export const S0ApplicationConfigSchema = Schema.Struct({
   showTestErrorButton: Schema.Boolean,
   betterAuthSessionTransferEnabled: Schema.Boolean,
 })
+
 export type S0ApplicationConfig = typeof S0ApplicationConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- runtime bootstrap configuration mirrors the existing KV record without persistence metadata
@@ -100,6 +107,7 @@ export const S0LitellmConfigSchema = Schema.Struct({
   adapterOverrides: Schema.Record(Schema.String, Schema.String),
   apiKey: Schema.optional(SecretReferenceSchema),
 })
+
 export type S0LitellmConfig = typeof S0LitellmConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- deployment-managed AI Gateway configuration is a plain JSON DTO
@@ -120,6 +128,7 @@ export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
     }),
   ),
 })
+
 export type S0CloudflareAiGatewayConfig = typeof S0CloudflareAiGatewayConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- runtime bootstrap configuration mirrors the existing KV record without persistence metadata
@@ -132,6 +141,7 @@ export const S0McpcfConfigSchema = Schema.Struct({
   serverBlacklist: Schema.Array(Schema.String),
   adminApiToken: Schema.optional(SecretReferenceSchema),
 })
+
 export type S0McpcfConfig = typeof S0McpcfConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- integration configuration is a plain JSON DTO
@@ -147,6 +157,7 @@ export const S0GitHubAppConfigSchema = Schema.Struct({
   privateKey: SecretReferenceSchema,
   webhookSecret: Schema.optional(SecretReferenceSchema),
 })
+
 export type S0GitHubAppConfig = typeof S0GitHubAppConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- integration configuration is a plain JSON DTO
@@ -154,6 +165,7 @@ export const S0SlackConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   botToken: SecretReferenceSchema,
 })
+
 export type S0SlackConfig = typeof S0SlackConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- internal secret declarations are references, never secret values
@@ -163,6 +175,7 @@ export const S0SecurityConfigSchema = Schema.Struct({
   tokenEncryptionKey: SecretReferenceSchema,
   repositorySecretsEncryptionKey: SecretReferenceSchema,
 })
+
 export type S0SecurityConfig = typeof S0SecurityConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- auth deployment config combines the public provider registry with its credential secret declaration
@@ -171,6 +184,7 @@ export const S0AuthConfigSchema = Schema.Struct({
   providers: AuthProviderRegistrySchema.fields.providers,
   adminPassword: Schema.optional(SecretReferenceSchema),
 })
+
 export type S0AuthConfig = typeof S0AuthConfigSchema.Type
 
 const S0ResolvedConfigFields = {
@@ -201,6 +215,7 @@ export const S0ResolvedConfigSchema = Schema.Struct({
   ...S0ResolvedConfigFields,
   brand: S0BrandConfigSchema,
 })
+
 export type S0ResolvedConfig = typeof S0ResolvedConfigSchema.Type
 
 // oxlint-disable-next-line effect/prefer-schema-class -- external JSONC is decoded to a plain DTO used by infra and Worker bindings
@@ -209,6 +224,7 @@ export const S0ConfigFileSchema = Schema.Struct({
   ...S0ResolvedConfigFields,
   brand: Schema.optional(S0BrandConfigSchema),
 })
+
 export type S0ConfigFile = typeof S0ConfigFileSchema.Type
 
 /**
@@ -226,9 +242,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
   const normalized = stage.trim().toLowerCase()
+
   if (normalized === "prod") return "prod"
+
   if (normalized === "test") return "test"
+
   if (normalized === "pre" || normalized.startsWith("pre-")) return "pre"
+
   if (normalized === "dev") return "dev"
   throw new Error(
     `Invalid stage '${stage}' for s0 config file selection. Expected dev, test, pre, pre-*, or prod`,
@@ -237,12 +257,15 @@ export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
 
 function s0ConfigProfilePrefix(profile: string | undefined): string {
   const normalized = profile?.trim().toLowerCase() ?? ""
+
   if (!normalized) return ""
+
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
     throw new Error(
       `Invalid s0 config profile '${profile}'. Expected lowercase letters, numbers, and hyphens`,
     )
   }
+
   return `${normalized}-`
 }
 
@@ -255,12 +278,23 @@ export function s0ConfigPathForStage(stage: string, profile?: string): string {
 }
 
 function normalizeTextArray(values: readonly string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort()
+  return [
+    ...new Set(
+      values.flatMap((value) =>
+        Match.value(value.trim()).pipe(
+          Match.when("", () => []),
+          Match.orElse((trimmed) => [trimmed]),
+        ),
+      ),
+    ),
+  ].sort()
 }
 
 function normalizeOptionalUrl(value: string | null | undefined, path: string): string | null {
   const normalized = value?.trim() ?? ""
+
   if (!normalized) return null
+
   try {
     return new URL(normalized).toString().replace(/\/+$/, "")
   } catch {
@@ -278,18 +312,22 @@ function normalizeCloudflareAiGatewayConfig(
   }
 
   const models: Record<string, ProviderModelDefinition> = {}
+
   for (const [rawModelId, model] of Object.entries(config.models)) {
     const modelId = rawModelId.trim()
+
     if (!modelId) {
       throw new Error(
         "Invalid s0 configuration: aiProviders.cloudflareAiGateway model ids must be non-empty",
       )
     }
+
     if (models[modelId]) {
       throw new Error(
         `Invalid s0 configuration: duplicate aiProviders.cloudflareAiGateway model '${modelId}'`,
       )
     }
+
     models[modelId] = {
       ...model,
       name: model.name.trim(),
@@ -297,16 +335,19 @@ function normalizeCloudflareAiGatewayConfig(
   }
 
   const defaultModel = config.defaultModel.trim()
+
   if (config.enabled && Object.keys(models).length === 0) {
     throw new Error(
       "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires at least one model",
     )
   }
+
   if (config.enabled && !defaultModel) {
     throw new Error(
       "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires a defaultModel",
     )
   }
+
   if (defaultModel && !models[defaultModel]) {
     throw new Error(
       `Invalid s0 configuration: aiProviders.cloudflareAiGateway.defaultModel '${defaultModel}' is not in models`,
@@ -327,26 +368,31 @@ function validateGitHubAppAuthProvider(
   if (!githubApp.enabled) return
 
   const provider = auth.providers.github
+
   if (!provider) {
     throw new Error(
       "Invalid s0 configuration: enabled integrations.githubApp requires auth.providers.github",
     )
   }
+
   if (provider.kind !== "social" || !provider.enabled) {
     throw new Error(
       "Invalid s0 configuration: auth.providers.github must be an enabled social provider when integrations.githubApp is enabled",
     )
   }
+
   if (!provider.capabilities.link) {
     throw new Error(
       "Invalid s0 configuration: auth.providers.github must allow explicit account linking when integrations.githubApp is enabled",
     )
   }
+
   if (provider.clientId !== githubApp.clientId) {
     throw new Error(
       "Invalid s0 configuration: auth.providers.github.clientId must match integrations.githubApp.clientId",
     )
   }
+
   if (provider.clientSecret.env !== githubApp.clientSecret.env) {
     throw new Error(
       "Invalid s0 configuration: auth.providers.github.clientSecret.env must match integrations.githubApp.clientSecret.env",
@@ -356,6 +402,7 @@ function validateGitHubAppAuthProvider(
 
 function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
   const webhookSecret = decoded.integrations.githubApp.webhookSecret
+
   const githubAppBase = {
     ...decoded.integrations.githubApp,
     appId: decoded.integrations.githubApp.appId.trim(),
@@ -370,6 +417,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       "integrations.githubApp.privateKey",
     ),
   }
+
   const githubApp: S0GitHubAppConfig =
     webhookSecret === undefined
       ? githubAppBase
@@ -380,27 +428,34 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
             "integrations.githubApp.webhookSecret",
           ),
         }
+
   const slack = decoded.integrations.slack
+
   const cloudflareAiGateway = normalizeCloudflareAiGatewayConfig(
     decoded.aiProviders.cloudflareAiGateway,
   )
+
   const litellm = decoded.aiProviders.litellm
   const mcpcf = decoded.mcpcf
   const security = decoded.security
   const auth = normalizeAuthProviderRegistry(decoded.auth)
   validateGitHubAppAuthProvider(auth, githubApp)
+
   const credentialSignInEnabled = Object.values(auth.providers).some(
     (provider) =>
       provider.kind === "credential" && provider.enabled && provider.capabilities.signIn,
   )
+
   const adminPassword = decoded.auth.adminPassword
     ? normalizeSecretReference(decoded.auth.adminPassword, "auth.adminPassword")
     : undefined
+
   if (credentialSignInEnabled && !adminPassword) {
     throw new Error(
       "Invalid s0 configuration: auth.adminPassword is required when credential sign-in is enabled",
     )
   }
+
   const deployment = {
     ...decoded.deployment,
     appName: decoded.deployment.appName.trim(),
@@ -415,7 +470,9 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
       tracesDestinations: normalizeTextArray(decoded.deployment.observability.tracesDestinations),
     },
   }
+
   const normalizedAuth = adminPassword ? { ...auth, adminPassword } : { ...auth }
+
   const aiProviders: S0ResolvedConfig["aiProviders"] =
     litellm === undefined
       ? { cloudflareAiGateway }
@@ -430,6 +487,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
                 : normalizeSecretReference(litellm.apiKey, "aiProviders.litellm.apiKey"),
           },
         }
+
   const normalizedMcpcf =
     mcpcf === undefined
       ? undefined
@@ -446,6 +504,7 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
               ? undefined
               : normalizeSecretReference(mcpcf.adminApiToken, "mcpcf.adminApiToken"),
         }
+
   const normalized: S0ResolvedConfig = {
     ...decoded,
     brand: normalizeS0Brand(decoded.brand),
@@ -492,17 +551,21 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
         }
       : {},
   }
+
   if (!normalized.deployment.appName) {
     throw new Error("Invalid s0 configuration: deployment.appName must not be empty")
   }
+
   if (!normalized.deployment.zone) {
     throw new Error("Invalid s0 configuration: deployment.zone must not be empty")
   }
+
   if (normalized.application.sandboxInactivityTimeoutMs <= 0) {
     throw new Error(
       "Invalid s0 configuration: application.sandboxInactivityTimeoutMs must be positive",
     )
   }
+
   return normalized
 }
 
@@ -512,6 +575,7 @@ export function resolveS0Config(
 ): S0ResolvedConfig {
   const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
+
   return normalizeResolvedConfig(
     Schema.decodeUnknownSync(
       S0ResolvedConfigSchema,
@@ -525,7 +589,9 @@ export function resolveS0Config(
 
 function sortForCanonicalJson(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortForCanonicalJson)
+
   if (!isRecord(value)) return value
+
   return Object.fromEntries(
     Object.keys(value)
       .sort()
@@ -542,9 +608,11 @@ export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretRefer
     (provider) =>
       provider.kind === "credential" && provider.enabled && provider.capabilities.signIn,
   )
+
   const authProviderSecrets = Object.values(config.auth.providers).flatMap((provider) =>
     provider.kind !== "credential" && provider.enabled ? [provider.clientSecret] : [],
   )
+
   return [
     ...authProviderSecrets,
     ...(credentialSignInEnabled && config.auth.adminPassword ? [config.auth.adminPassword] : []),
@@ -557,9 +625,11 @@ export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretRefer
 
 export function s0ActiveSecretReferences(config: S0ResolvedConfig): SecretReference[] {
   const githubApp = config.integrations.githubApp
+
   const cloudflareAiGatewayProviderKeys = config.aiProviders.cloudflareAiGateway.enabled
     ? Object.values(config.aiProviders.cloudflareAiGateway.providerKeys ?? {})
     : []
+
   return [
     ...s0RuntimeSecretReferences(config),
     ...cloudflareAiGatewayProviderKeys,

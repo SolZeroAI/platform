@@ -45,16 +45,21 @@ export function useGitHubRepos(options: { enabled?: boolean } = {}) {
       page: String(activeQuery.page),
       perPage: String(activeQuery.perPage),
     })
+
     const trimmedQuery = activeQuery.q.trim()
+
     if (trimmedQuery) {
       params.set("q", trimmedQuery)
     }
+
     if (activeQuery.owner !== "all") {
       params.set("owner", activeQuery.owner)
     }
+
     if (activeQuery.visibility !== "all") {
       params.set("visibility", activeQuery.visibility)
     }
+
     if (activeQuery.sort !== "best-match") {
       params.set("sort", activeQuery.sort)
       params.set("order", activeQuery.order)
@@ -66,6 +71,8 @@ export function useGitHubRepos(options: { enabled?: boolean } = {}) {
 
     try {
       const res = await fetch(`/api/repos?${params.toString()}`)
+
+      // SAFETY: /api/repos returns the repository list and pagination for the current query.
       const data = (await res.json().catch(() => ({}))) as {
         repos?: GitHubRepo[]
         pagination?: GitHubRepoPagination
@@ -78,8 +85,10 @@ export function useGitHubRepos(options: { enabled?: boolean } = {}) {
           setNeedsGitHubLink(true)
           setRepos([])
           setRepoPagination(null)
+
           return
         }
+
         throw new Error(data.error ?? `Request failed with status ${res.status}`)
       }
 

@@ -41,6 +41,7 @@ function actionableErrorResponse(
   headers.delete("content-length")
   headers.delete("transfer-encoding")
   headers.set("content-type", "application/json")
+
   return Response.json(
     {
       error: {
@@ -62,6 +63,7 @@ async function normalizeCloudflareAiGatewayErrorResponse(response: Response): Pr
     .clone()
     .text()
     .catch(() => "")
+
   return Option.match(
     Option.fromNullishOr(getCloudflareAiGatewayErrorHelp(upstreamBody, response.status)),
     {
@@ -107,8 +109,11 @@ class CloudflareAiGatewayProviderKeyConfigError extends Schema.TaggedError<Cloud
   { message: Schema.String },
 ) {}
 
-function readStringBinding(env: Env, name: string): Option.Option<string> {
-  return Option.fromNullishOr(Reflect.get(env, name)).pipe(
+function readStringBinding(
+  env: Env,
+  name: "CLOUDFLARE_ACCOUNT_ID" | "AI_GATEWAY_ID" | "AI_GATEWAY_SECRETS_STORE_ID",
+): Option.Option<string> {
+  return Option.fromNullishOr(env[name]).pipe(
     Option.filter((value): value is string => typeof value === "string"),
     Option.map((value) => value.trim()),
     Option.filter((value) => value.length > 0),
@@ -129,6 +134,7 @@ export function cloudflareAiGatewayProviderNativeBaseUrl(
   modelId: string,
 ): Option.Option<string> {
   const provider = Option.fromNullishOr(cloudflareAiGatewayByokProviderForModel(modelId))
+
   return Option.all({
     accountId: readStringBinding(env, "CLOUDFLARE_ACCOUNT_ID"),
     gatewayId: readGatewayId(env),
@@ -150,10 +156,11 @@ function createCloudflareAiGatewaySnapshot(
   config: S0CloudflareAiGatewayConfig,
 ): CloudflareAiGatewaySnapshot {
   const gatewayId = readGatewayId(env)
+
   return {
     config,
     gatewayId,
-    bindingConfigured: Reflect.get(env, "AI_GATEWAY") !== undefined,
+    bindingConfigured: env.AI_GATEWAY !== undefined,
     secretsStoreConfigured: Option.isSome(readStringBinding(env, "AI_GATEWAY_SECRETS_STORE_ID")),
   }
 }
@@ -173,16 +180,20 @@ const getCloudflareAiGatewayProviderKeyStatus = Effect.fn(
   "aiProviders.cloudflareAiGateway.getProviderKeyStatus",
 )(function* (env: Env, provider: (typeof CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS)[number]) {
   const config = Option.map(getCloudflareAiGatewaySnapshot(env), (snapshot) => snapshot.config)
+
   const deploymentReference = Option.flatMap(config, (resolved) =>
     deploymentProviderKeyReference(resolved, provider.id),
   )
+
   const adminConfigured = yield* configStore(env).encryptedSecretConfigured(
     S0_CONFIG_KEYS.aiProviders.cloudflareAiGatewayProviderKey(provider.id),
   )
+
   const adminSource = Match.value(adminConfigured).pipe(
     Match.when(true, () => "admin" as const),
     Match.orElse(() => "none" as const),
   )
+
   const adminStatus = {
     providerId: provider.id,
     name: provider.name,
@@ -191,6 +202,7 @@ const getCloudflareAiGatewayProviderKeyStatus = Effect.fn(
     locked: false,
     envVarName: null,
   }
+
   return Option.getOrElse(
     Option.map(deploymentReference, (reference) => ({
       providerId: provider.id,
@@ -219,6 +231,7 @@ function readRuntimeProviderKey(
   status: CloudflareAiGatewayProviderKeyStatus,
 ) {
   const isAdminKey = Effect.succeed(status.source === "admin")
+
   return store
     .getEncryptedSecret(
       S0_CONFIG_KEYS.aiProviders.cloudflareAiGatewayProviderKey(status.providerId),
@@ -235,12 +248,16 @@ export const getCloudflareAiGatewayRuntimeProviderKeys = Effect.fn(
 )(function* (env: Env) {
   const statuses = yield* getCloudflareAiGatewayProviderKeyStatuses(env)
   const store = configStore(env)
+
   const entries = yield* Effect.forEach(
     statuses,
     (status) => readRuntimeProviderKey(store, status),
     { concurrency: "unbounded" },
   )
-  return Object.fromEntries(Arr.getSomes(entries)) as CloudflareAiGatewayByokKeyMap
+
+  return /* SAFETY: These entries are the CloudflareAiGatewayByokKeyMap pairs assembled for this map. */ Object.fromEntries(
+    Arr.getSomes(entries),
+  ) as CloudflareAiGatewayByokKeyMap
 })
 
 export const updateCloudflareAiGatewayProviderKeys = Effect.fn(
@@ -263,13 +280,16 @@ export const updateCloudflareAiGatewayProviderKeys = Effect.fn(
               }),
           ),
         )
+
         const apiKey = update.apiKey?.trim() ?? ""
         const mutation = apiKey.length > 0 || update.clearApiKey === true
+
         const rejectLockedMutation = Effect.fail(
           new CloudflareAiGatewayProviderKeyConfigError({
             message: `${status.name} API key is managed by ${status.envVarName ?? "deployment configuration"}`,
           }),
         )
+
         const isLockedMutation = Effect.succeed(status.locked && mutation)
         yield* rejectLockedMutation.pipe(Effect.when(isLockedMutation))
         const key = S0_CONFIG_KEYS.aiProviders.cloudflareAiGatewayProviderKey(update.providerId)
@@ -277,13 +297,16 @@ export const updateCloudflareAiGatewayProviderKeys = Effect.fn(
         const hasApiKey = Effect.succeed(apiKey.length > 0)
         yield* setApiKey.pipe(Effect.when(hasApiKey))
         const deleteApiKey = store.delete(key)
+
         const shouldDeleteApiKey = Effect.succeed(
           apiKey.length === 0 && update.clearApiKey === true,
         )
+
         yield* deleteApiKey.pipe(Effect.when(shouldDeleteApiKey))
       }),
     { concurrency: "unbounded" },
   )
+
   return yield* getCloudflareAiGatewayProviderKeyStatuses(env)
 })
 
@@ -292,6 +315,7 @@ function createCloudflareAiGatewayCatalogProvider(env: Env, config: S0Cloudflare
     onNone: () => undefined,
     onSome: (baseURL) => ({ baseURL }),
   })
+
   return {
     provider: {
       providerId: CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,

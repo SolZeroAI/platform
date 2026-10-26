@@ -42,6 +42,7 @@ const SubagentChunkSchema = Schema.Struct({
 })
 
 type SubagentChunk = typeof SubagentChunkSchema.Type
+
 type SubagentProgressData = typeof SubagentProgressDataSchema.Type
 
 function parseChunk(body: string): Option.Option<SubagentChunk> {
@@ -56,18 +57,23 @@ function progressFromData(data: SubagentProgressData, timestamp: number): Subage
   const progress: SubagentProgress = {
     at: data.at ?? timestamp * 1000,
   }
+
   if (data.fraction !== undefined) {
     progress.fraction = Math.min(1, Math.max(0, data.fraction))
   }
+
   if (data.message !== undefined) {
     progress.message = sanitizeSubagentCompactProgress(data.message)
   }
+
   if (data.phase !== undefined) {
     progress.phase = sanitizeSubagentCompactLabel(data.phase)
   }
+
   if (data.milestone !== undefined) {
     progress.milestone = sanitizeSubagentCompactLabel(data.milestone)
   }
+
   return progress
 }
 
@@ -78,6 +84,7 @@ function milestoneFromData(
   const name = Option.orElse(Option.fromNullishOr(data.name), () =>
     Option.fromNullishOr(data.milestone),
   )
+
   return Option.map(name, (value) => ({
     name: sanitizeSubagentCompactLabel(value),
     sequence: data.sequence ?? event.sequence,
@@ -96,13 +103,16 @@ function applyChunk(
         chunk.type === "tool-input-start" ||
         chunk.type === "tool-input-available" ||
         chunk.type === "tool-input-error"
+
       if (toolInput && chunk.toolCallId !== undefined) {
         run.toolCallIds.add(chunk.toolCallId)
       }
+
       if (toolInput && chunk.toolName !== undefined && !run.toolNames.includes(chunk.toolName)) {
         run.toolNames.push(chunk.toolName)
         run.toolNames.sort((left, right) => left.localeCompare(right))
       }
+
       if (
         (chunk.type === "data-agent-progress" || chunk.type === "data-agent-milestone") &&
         chunk.data !== undefined
@@ -119,6 +129,7 @@ function applyChunk(
           },
         })
       }
+
       run.toolCallCount = run.toolCallIds.size
     },
   })
@@ -130,6 +141,7 @@ function applyLifecycle(run: MutableRun, event: SubagentSessionEvent): void {
       return
     case "chunk":
       applyChunk(run, event)
+
       return
     case "finished":
       run.summary = sanitizeSubagentCompactSummary(event.summary)
@@ -143,16 +155,19 @@ function applyLifecycle(run: MutableRun, event: SubagentSessionEvent): void {
         }),
       )
       run.completedAt = event.timestamp
+
       return
     case "error":
       run.status = "error"
       run.error = sanitizeSubagentCompactError(event.error)
       run.completedAt = event.timestamp
+
       return
     case "aborted":
       run.status = "aborted"
       run.error = event.reason && sanitizeSubagentCompactError(event.reason)
       run.completedAt = event.timestamp
+
       return
     case "interrupted":
       run.status = "interrupted"
@@ -165,13 +180,16 @@ function applyLifecycle(run: MutableRun, event: SubagentSessionEvent): void {
 
 function finalizeRun(run: MutableRun): SubagentRunSummary {
   const { order: _order, toolCallIds: _toolCallIds, ...summary } = run
+
   const result: SubagentRunSummary = {
     ...summary,
     milestones: run.milestones?.length ? run.milestones : undefined,
   }
+
   if (run.completedAt !== undefined) {
     result.durationMs = Math.max(0, Math.round((run.completedAt - run.startedAt) * 1000))
   }
+
   return result
 }
 
@@ -179,14 +197,18 @@ function finalizeRun(run: MutableRun): SubagentRunSummary {
 export function summarizeSubagentRuns(events: readonly SandboxEvent[]): SubagentRunSummary[] {
   const seen = new Set<string>()
   const grouped = new Map<string, SubagentSessionEvent[]>()
+
   for (const event of events) {
     if (event.type !== "subagent_event") {
       continue
     }
+
     const identity = `${event.runId}:${event.sequence}`
+
     if (seen.has(identity)) {
       continue
     }
+
     seen.add(identity)
     const runEvents = grouped.get(event.runId) ?? []
     runEvents.push(event)
@@ -194,15 +216,19 @@ export function summarizeSubagentRuns(events: readonly SandboxEvent[]): Subagent
   }
 
   const runs: MutableRun[] = []
+
   for (const runEvents of grouped.values()) {
     runEvents.sort((left, right) => left.sequence - right.sequence)
+
     const started = runEvents.find(
       (event): event is Extract<SubagentSessionEvent, { kind: "started" }> =>
         event.kind === "started",
     )
+
     if (!started) {
       continue
     }
+
     const run: MutableRun = {
       runId: started.runId,
       parentToolCallId: started.parentToolCallId,
@@ -216,9 +242,11 @@ export function summarizeSubagentRuns(events: readonly SandboxEvent[]): Subagent
       order: started.order,
       toolCallIds: new Set<string>(),
     }
+
     for (const event of runEvents) {
       applyLifecycle(run, event)
     }
+
     runs.push(run)
   }
 

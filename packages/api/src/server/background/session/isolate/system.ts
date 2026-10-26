@@ -24,6 +24,7 @@ function selectProviderPrompt(modelId: string): string {
     if (normalized.includes("codex")) {
       return PROMPT_CODEX
     }
+
     return PROMPT_GPT
   }
 
@@ -52,11 +53,14 @@ function buildEnvironmentPrompt(input: {
   const hasRepoWorkspace = input.hasRepoWorkspace ?? true
   const hasDocs = input.hasDocs ?? true
   const hasWorkflowBuilder = input.hasWorkflowBuilder ?? false
+
   const customMcpServerNames = [...(input.customMcpServerNames ?? [])].sort((left, right) =>
     left.localeCompare(right),
   )
+
   const mcpcfMcpServers = input.mcpcfMcpServers ?? []
   const hasRemoteMcpTools = customMcpServerNames.length > 0 || mcpcfMcpServers.length > 0
+
   const repoLines = hasRepoWorkspace
     ? [
         `  Repository workspace root: ${REPO_ROOT}`,
@@ -70,15 +74,18 @@ function buildEnvironmentPrompt(input: {
         "  Structured git tools: unavailable because no repository is attached",
         "  Do not attempt repository paths such as /repo unless a repository is attached.",
       ]
+
   const docsLine = hasDocs
     ? "  Internal knowledge tool: docs_search available for configured knowledge sources"
     : "  Internal knowledge tool: unavailable because no knowledge sources are configured"
+
   const workflowBuilderLines = hasWorkflowBuilder
     ? [
         "  Workflow builder tools: get_workflow_node_catalog, validate_workflow_manifest, submit_workflow_draft",
         "  Workflow builder skill: activate s0.workflow-builder before building or editing workflow manifests",
       ]
     : ["  Workflow builder tools: unavailable"]
+
   const customMcpLines = customMcpServerNames.length
     ? [
         `  Remote MCP tools: available from configured MCP servers: ${customMcpServerNames.join(", ")}`,
@@ -87,7 +94,9 @@ function buildEnvironmentPrompt(input: {
     : mcpcfMcpServers.length
       ? ["  Remote MCP tools: available through the MCP Context Forge servers listed below"]
       : ["  Remote MCP tools: unavailable because no remote MCP servers are configured"]
+
   const mcpcfLines = buildMcpcfMcpLines(mcpcfMcpServers)
+
   const networkLine = hasRemoteMcpTools
     ? "  External network access: unavailable except through configured tools and remote MCP servers"
     : "  External network access: unavailable except for configured internal docs search"
@@ -127,6 +136,7 @@ export function buildIsolateSystemPromptFacts(input: {
   customMcpServers?: OpenCodeMcpServers | null
 }) {
   const promptFactTools = (input.tools ?? []).filter((tool) => tool.kind !== "mcpcf_server")
+
   return buildSessionToolRuntimePlan({
     tools: promptFactTools,
     customMcpServers: input.customMcpServers,
@@ -147,11 +157,14 @@ function buildMcpcfMcpLines(servers: readonly IsolateMcpcfMcpPromptServer[]): st
     .sort((left, right) => left.label.localeCompare(right.label))
     .flatMap((server) => {
       const summary = `    - ${server.label} (${server.serverName}): ${server.description}`
+
       if (server.toolNames.length === 0) {
         return [summary]
       }
+
       const displayedToolNames = server.toolNames.slice(0, MCPCF_PROMPT_TOOL_NAME_LIMIT)
       const overflow = server.toolNames.length - displayedToolNames.length
+
       return [
         summary,
         `      Exposed tool names: ${displayedToolNames.join(", ")}${overflow > 0 ? `, and ${overflow} more` : ""}`,
@@ -178,5 +191,6 @@ export function buildIsolateSystemPrompt(input: {
     "You are SolZero Agent",
     `You are ${input.brandName} Agent`,
   )
+
   return [providerPrompt, buildEnvironmentPrompt(input)].join("\n\n")
 }

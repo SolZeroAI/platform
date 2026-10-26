@@ -116,21 +116,26 @@ export function NodeInspector({
   const [headerRows, setHeaderRows] = useState<WorkflowHeaderDraftRow[]>([])
   const [headersValidationError, setHeadersValidationError] = useState<string | null>(null)
   const [headerRowErrors, setHeaderRowErrors] = useState<WorkflowHeaderDraftRowErrors>({})
+
   const pendingHeadersCommitRef = useRef<{
     nodeId: string
     value: Record<string, string>
   } | null>(null)
+
   const headerDraftSequenceRef = useRef(0)
   const [celHelpOpen, setCelHelpOpen] = useState(false)
   const selectedModelId = typeof node?.options.model === "string" ? node.options.model : ""
+
   const selectedTools = useMemo(
     () => getSessionNodeTools(node?.options.tools),
     [node?.options.tools],
   )
+
   const customMcpServers = useMemo(
     () => getSessionNodeCustomMcpServers(node?.options.customMcpServers),
     [node?.options.customMcpServers],
   )
+
   const selectedSecretKeys = useMemo(
     () =>
       Array.isArray(node?.options.secretKeys)
@@ -138,11 +143,14 @@ export function NodeInspector({
         : [],
     [node?.options.secretKeys],
   )
+
   const cacheKeyOption =
     typeof node?.options.cacheKey === "string" ? node.options.cacheKey.trim() : ""
+
   const cacheKeyInputConfigured = node
     ? hasWorkflowNodeInputConfigured(node, edges, "cacheKey")
     : false
+
   const cacheTtlEnabled = Boolean(cacheKeyOption || cacheKeyInputConfigured)
   const cacheTtlValue = getWorkflowSessionCacheTtlValue(node?.options.cacheTtlSeconds)
 
@@ -153,27 +161,35 @@ export function NodeInspector({
     },
     [],
   )
+
   const createHeaderDraftRow = useCallback((key = "", value = ""): WorkflowHeaderDraftRow => {
     const id = `header-${headerDraftSequenceRef.current.toString(36)}`
     headerDraftSequenceRef.current += 1
+
     return { id, key, value }
   }, [])
 
   useEffect(() => {
     const pendingCommit = pendingHeadersCommitRef.current
+
     if (
       pendingCommit &&
       pendingCommit.nodeId === node?.id &&
       node?.options.headers === pendingCommit.value
     ) {
       pendingHeadersCommitRef.current = null
+
       return
     }
+
     pendingHeadersCommitRef.current = null
+
     const { rows, validation } = headerDraftRows
       ? { rows: headerDraftRows, validation: parseWorkflowHeaderDraftRows(headerDraftRows) }
       : getWorkflowHeaderDraftRowsValidation(node?.options.headers, createHeaderDraftRow)
+
     setHeaderRows(rows)
+
     if (validation.ok) {
       updateHeadersValidation(null, validation.rowErrors)
     } else {
@@ -196,10 +212,13 @@ export function NodeInspector({
       const section = document.querySelector<HTMLElement>(
         `[data-workflow-config-section="${configFocusTarget.configLabel}"]`,
       )
+
       section?.scrollIntoView({ block: "center", behavior: "smooth" })
+
       const focusTarget =
         section?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
         section?.querySelector<HTMLElement>("input, textarea, select, button")
+
       focusTarget?.focus()
       onConfigFocusComplete()
     })
@@ -223,10 +242,13 @@ export function NodeInspector({
 
   const commitHeaderRows = (rows: WorkflowHeaderDraftRow[]): boolean => {
     const parsed = parseWorkflowHeaderDraftRows(rows)
+
     if (!parsed.ok) {
       updateHeadersValidation(parsed.message, parsed.rowErrors)
+
       return false
     }
+
     if (!node) {
       return false
     }
@@ -234,14 +256,17 @@ export function NodeInspector({
     updateHeadersValidation(null, parsed.rowErrors)
     pendingHeadersCommitRef.current = { nodeId: node.id, value: parsed.value }
     updateOption("headers", parsed.value)
+
     return true
   }
 
   const updateHeaderRows = (rows: WorkflowHeaderDraftRow[]) => {
     setHeaderRows(rows)
+
     if (node) {
       onHeaderDraftRowsChange(node.id, rows)
     }
+
     commitHeaderRows(rows)
   }
 
@@ -255,12 +280,15 @@ export function NodeInspector({
   }
 
   const jsonObjectFields = getWorkflowJsonObjectFields(node)
+
   const addJsonObjectField = () => {
     const nextField = getNextWorkflowJsonObjectFieldName(jsonObjectFields)
     updateOption("fields", [...jsonObjectFields, nextField])
   }
+
   const renameJsonObjectField = (previousField: string, nextField: string): boolean => {
     const trimmedField = nextField.trim()
+
     if (
       !trimmedField ||
       !validateWorkflowJsonObjectFieldName(trimmedField) ||
@@ -274,8 +302,10 @@ export function NodeInspector({
       jsonObjectFields.map((field) => (field === previousField ? trimmedField : field)),
     )
     onRenameInputHandle(previousField, trimmedField)
+
     return true
   }
+
   const removeJsonObjectField = (field: string) => {
     updateOption(
       "fields",
@@ -283,18 +313,22 @@ export function NodeInspector({
     )
     onRemoveInputHandle(field)
   }
+
   const updateManualInputValue = (handle: string, value: string) => {
     onChange((current) => setManualInputValue(current, handle, value))
   }
+
   const addHeaderRow = () => {
     updateHeaderRows([...headerRows, createHeaderDraftRow()])
   }
+
   const updateHeaderRow = (
     rowId: string,
     updates: Partial<Pick<WorkflowHeaderDraftRow, "key" | "value">>,
   ) => {
     updateHeaderRows(headerRows.map((row) => (row.id === rowId ? { ...row, ...updates } : row)))
   }
+
   const removeHeaderRow = (rowId: string) => {
     updateHeaderRows(headerRows.filter((row) => row.id !== rowId))
   }
@@ -377,6 +411,7 @@ export function NodeInspector({
                     />
                     <InputGroup.Addon align="end">
                       <InputGroup.Button
+                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                         shape="square"
                         icon={<Copy className="h-4 w-4" aria-hidden />}
                         aria-label="Copy webhook endpoint"

@@ -202,25 +202,32 @@ export class IsolateSubagentController {
     this.recordLifecycleEvent(startedAgentToolEventMessage(run), run.startedAt)
     const completedAtMs = this.completedAtForRun(run)
     await this.relayReconciledTerminal(run, result, completedAtMs)
+
     const summary = Option.fromNullishOr(
       this.summarizeCapturedRuns().find((candidate) => candidate.runId === run.runId),
     )
+
     const observer = this.host.createInternalRequestObserver(
       "subagent_finish",
       "isolate-subagent-lifecycle",
     )
+
     const model = Option.getOrElse(
       Option.flatMap(summary, (resolved) => Option.fromNullishOr(resolved.model)),
       () => "",
     )
+
     const toolCallCount = Option.match(summary, {
       onNone: () => 0,
       onSome: (resolved) => resolved.toolCallCount,
     })
+
     const toolNames = Option.match(summary, {
-      onNone: () => [] as string[],
+      onNone: () =>
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
       onSome: (resolved) => resolved.toolNames,
     })
+
     const fields = {
       sessionId: this.host.getRuntimeId(),
       runId: run.runId,
@@ -232,6 +239,7 @@ export class IsolateSubagentController {
       toolCallCount,
       toolNames,
     }
+
     Match.value(result.status).pipe(
       Match.when("completed", () => observer.log.info("Isolate sub-agent finished", fields)),
       Match.orElse(() => observer.log.warn("Isolate sub-agent did not complete", fields)),
@@ -242,6 +250,7 @@ export class IsolateSubagentController {
     await this.eventRelay.flush()
     const runs = this.summarizeCapturedRuns()
     completeHostSubagentTurn(this.host, messageId)
+
     return Match.value(runs.length).pipe(
       Match.when(0, () => ({})),
       Match.orElse(() => ({ subagentRuns: runs })),
@@ -253,6 +262,7 @@ export class IsolateSubagentController {
       ...this.activeRunIds,
       ...(this.host.state.subagentDispatch?.runIds ?? []),
     ])
+
     await Promise.all([...runIds].map((runId) => this.host.cancelAgentTool(runId, reason)))
   }
 
@@ -288,7 +298,9 @@ export class IsolateSubagentController {
       Option.fromNullishOr(this.host.activeTurn),
       () => new Error("Sub-agent delegation is only available during an active Isolate turn"),
     )
+
     const runId = `${turn.messageId}:${toolCallId}`
+
     return Option.match(claimHostSubagentRun(this.host, turn.messageId, runId), {
       onNone: (): Promise<AgentToolFailure> =>
         Promise.resolve({
@@ -313,7 +325,9 @@ export class IsolateSubagentController {
       Option.fromNullishOr(this.host.activeTurn),
       () => new Error("Sub-agent delegation is only available during an active Isolate turn"),
     )
+
     const state = this.host.state
+
     const input: IsolateSubagentRunInput = {
       delegation,
       parentSessionId: this.host.getRuntimeId(),
@@ -326,10 +340,12 @@ export class IsolateSubagentController {
       selectedTools: state.tools ?? [],
       customMcpServers: state.customMcpServers ?? {},
     }
+
     this.activeRunIds.add(runId)
 
     const runEffect = Effect.gen({ self: this }, function* () {
       const backgroundTracing = yield* BackgroundTracing
+
       return yield* backgroundTracing.withSpan(
         "isolate.subagent.run",
         {
@@ -380,6 +396,7 @@ export class IsolateSubagentController {
         this.activeRunIds.delete(runId)
         await this.releaseTrustedConfig(runId)
       })
+
     return Match.value(result.status).pipe(
       Match.when("completed", () => resolveCompletedSubagentResult(result)),
       Match.orElse(() => toAgentToolFailure(result)),
@@ -394,6 +411,7 @@ export class IsolateSubagentController {
         sessionId: this.host.getRuntimeId(),
         runId,
       })
+
     return {
       runId,
       agentType: "IsolateSubAgent",
@@ -440,10 +458,12 @@ export class IsolateSubagentController {
       .inspectAgentToolRun(message.event.runId)
       .then(Option.fromNullishOr)
       .catch((cause) => this.failedTerminalInspection(cause, message))
+
     const hydratedMessage = Option.match(inspection, {
       onNone: () => message,
       onSome: (resolved) => hydrateCompletedAgentToolEventMessage(message, resolved.output),
     })
+
     this.terminalFrameByRun.set(message.event.runId, hydratedMessage)
     await Option.match(inspectedAgentToolCompletedAtMs(inspection), {
       onNone: () => Promise.resolve(),
@@ -456,6 +476,7 @@ export class IsolateSubagentController {
     completedAt: number,
   ): Promise<void> {
     this.completedAtByRun.set(message.event.runId, completedAt)
+
     return this.persistAndRelayTerminal(message, completedAt)
   }
 
@@ -468,6 +489,7 @@ export class IsolateSubagentController {
       cause,
       message,
     )
+
     return Option.none()
   }
 
@@ -475,6 +497,7 @@ export class IsolateSubagentController {
     const stableFallback = this.completedAtByRun.get(run.runId) ?? Date.now()
     const completedAt = resolveAgentToolCompletedAtMs(run, stableFallback)
     this.completedAtByRun.set(run.runId, completedAt)
+
     return completedAt
   }
 
@@ -488,28 +511,35 @@ export class IsolateSubagentController {
       result,
       this.nextSequenceByRun.get(run.runId) ?? 1,
     )
+
     const baseMessage = Option.getOrElse(
       Option.fromNullishOr(this.terminalFrameByRun.get(run.runId)),
       () => lifecycleMessage,
     )
+
     const lifecycleSummary = Match.value(lifecycleMessage.event).pipe(
       Match.when({ kind: "finished" }, (finished) => finished.summary),
       Match.orElse(() => undefined),
     )
+
     const lifecycleHydratedMessage = hydrateCompletedAgentToolEventMessage(
       baseMessage,
       lifecycleSummary,
     )
+
     const inspection = await this.host
       .inspectAgentToolRun(run.runId)
       .then(Option.fromNullishOr)
       .catch((cause) => this.failedTerminalInspection(cause, lifecycleHydratedMessage))
+
     const message = Option.match(inspection, {
       onNone: () => lifecycleHydratedMessage,
       onSome: (resolved) =>
         hydrateCompletedAgentToolEventMessage(lifecycleHydratedMessage, resolved.output),
     })
+
     this.terminalFrameByRun.set(run.runId, message)
+
     return this.persistAndRelayTerminal(message, completedAtMs)
   }
 
@@ -627,6 +657,7 @@ function resolveCompletedSubagentResult(
   const text = Option.orElse(nonEmptySubagentText(result.output), () =>
     nonEmptySubagentText(result.summary),
   )
+
   return Option.match(text, {
     onSome: (resolved) => resolved,
     onNone: () => ({

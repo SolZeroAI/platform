@@ -26,6 +26,7 @@ export function jsonArrayContainsAny(
     values.map((value) => sql`${value}`),
     sql`, `,
   )
+
   return Match.value(dialect).pipe(
     Match.when(
       "postgres",
@@ -60,6 +61,7 @@ export function countStar(dialect: ControlPlaneDialect): SQL {
 
 export function asFiniteNumber(value: unknown): number {
   const parsed = Number(value)
+
   return Match.value(Number.isFinite(parsed)).pipe(
     Match.when(true, () => parsed),
     Match.orElse(() => 0),

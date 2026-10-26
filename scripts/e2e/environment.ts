@@ -13,58 +13,80 @@ if (process.env.S0_E2E_APP_CHILD !== "1") {
     if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
   }
 }
+
 // workerd needs the trusted macOS roots explicitly; never replace a supplied CA bundle.
 if (process.platform === "darwin" && !process.env.NODE_EXTRA_CA_CERTS) {
   const trusted = getCACertificates("system")
+
   if (trusted.length > 0) {
     setDefaultCACertificates([...getCACertificates("default"), ...trusted])
     mkdirSync(".e2e", { recursive: true })
     const path = resolve(".e2e/trusted-ca.pem")
     const pem = trusted.join("\n")
+
     if (!existsSync(path) || readFileSync(path, "utf8") !== pem) {
       writeFileSync(path, pem, { mode: 0o600 })
     }
+
     process.env.NODE_EXTRA_CA_CERTS = path
   }
 }
-// Local alchemy dev builds the committed container images instead of pulling published digests.
+// The core suite exercises source-image OpenCode and Codex runtimes.
 process.env.E2E_CONTAINER_RUNTIME ??= "1"
+
 process.env.E2E_TELEMETRY_DISABLED ??= "1"
+
 const profile = process.env.E2E_CONFIG_PROFILE ?? "e2e"
+
 if (!/^e2e(?:-[a-z0-9-]+)?$/.test(profile)) {
   throw new Error("E2E_CONFIG_PROFILE must be e2e or an isolated e2e-* profile.")
 }
+
 const configPath = resolve(s0ConfigPathForStage("dev", profile))
 const configErrors: ParseError[] = []
+
 const parsedConfig = parse(readFileSync(configPath, "utf8"), configErrors, {
   allowTrailingComma: true,
 })
+
 if (configErrors.length > 0) throw new Error("The selected e2e profile contains invalid JSONC.")
+
 export const testDeploymentConfig = resolveS0Config(parsedConfig)
+
 if (!testDeploymentConfig.deployment.appName.startsWith("s0-e2e")) {
   throw new Error(
     "The selected e2e configuration must use deployment.appName starting with s0-e2e.",
   )
 }
+
 process.env.S0_CONFIG_PROFILE = profile
+
 process.env.E2E_USER_ADMIN_USERNAME ??= "e2e-admin@example.test"
+
 process.env.E2E_USER_PEER_USERNAME ??= "e2e-peer@example.test"
+
 const localCredentialPath = resolve("config/.e2e-password")
+
 if (!process.env.E2E_USER_ADMIN_PASSWORD && !existsSync(localCredentialPath)) {
   writeFileSync(localCredentialPath, randomBytes(32).toString("base64url"), {
     mode: 0o600,
     flag: "wx",
   })
 }
+
 process.env.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD =
   process.env.E2E_USER_ADMIN_PASSWORD ?? readFileSync(localCredentialPath, "utf8").trim()
+
 process.env.E2E_USER_ADMIN_PASSWORD = process.env.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD
+
 process.env.E2E_USER_PEER_PASSWORD = process.env.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD
 
 export const appEnvironment = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => {
     const [name, value] = entry
+
     if (value === undefined) return false
+
     // e2e 0.21 forks each worker with these variables after the runner has
     // digested the config. The worker re-imports this module, and the command
     // env key set is part of that digest, so a worker-only key fails the run

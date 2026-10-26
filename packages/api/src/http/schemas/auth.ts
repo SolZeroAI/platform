@@ -4,11 +4,13 @@ import { JsonRecord } from "./common"
 export const CreateApiKeyPayload = Schema.Struct({
   label: Schema.optionalKey(Schema.String),
 })
+
 export type CreateApiKeyPayload = typeof CreateApiKeyPayload.Type
 
 export const KeyIdParams = {
   keyId: Schema.String,
 }
+
 export type KeyIdParams = { keyId: string }
 
 export class AuthSessionResponse extends Schema.Class<AuthSessionResponse>("AuthSessionResponse")({

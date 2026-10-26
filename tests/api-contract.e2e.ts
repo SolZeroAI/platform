@@ -13,10 +13,12 @@ test(
     const created = await api<{ keyId: string; key: string }>(browser, "/auth/api-keys", "POST", {
       label: uniqueName("e2e-contract"),
     })
+
     const session = await api<{ sessionId: string }>(browser, "/sessions", "POST", {
       title: uniqueName("e2e-contract"),
       agentRuntime: "isolate",
     })
+
     try {
       const decoded = Schema.decodeUnknownSync(CreatedApiKeyResponse)(created)
       expect(decoded).toBeDefined()
@@ -30,16 +32,20 @@ test(
       const createdSchema = document.components.schemas.CreatedApiKeyResponseEncoded
       expect(createdSchema.required).toEqual(["keyId", "key", "label", "createdAt"])
       expect(Object.hasOwn(createdSchema.properties, "apiKey")).toBe(false)
+
       const runSchema = resolveOpenApiSchema(
         document,
         document.paths["/sessions/run"].post.requestBody.content["application/json"].schema,
       )
+
       expect(runSchema.required).not.toContain("sessionKind")
       expect(runSchema.propertyHasDefault("sessionKind")).toBe(false)
+
       const stateSchema = resolveOpenApiSchema(
         document,
         document.paths["/sessions/{id}"].get.responses["200"].content["application/json"].schema,
       )
+
       expect(stateSchema.required).toContain("id")
       expect(stateSchema.required).toContain("agentRuntime")
       expect(stateSchema.hasProperty("session")).toBe(false)

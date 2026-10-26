@@ -16,6 +16,7 @@ import type { ApiEnv } from "infra/types/env"
 import {
   databaseEngineFromEnv,
   hasControlPlane,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- better-auth.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the Better Auth adapter needs a database handle before an Effect layer is available.
   makeControlPlaneFromEnv,
   runControlPlaneSql,
   runControlPlaneSqlFirst,
@@ -66,6 +67,7 @@ const GITHUB_PROVIDER_ID = "github"
 const GITHUB_APP_USER_TOKEN_PREFIX = "ghu_"
 const GITHUB_APP_REFRESH_TOKEN_PREFIX = "ghr_"
 const GITHUB_TOKEN_REFRESH_BUFFER_MS = 60_000
+
 const BETTER_AUTH_CLIENT_IP_HEADERS = [
   "cf-connecting-ip",
   "true-client-ip",
@@ -130,6 +132,7 @@ function profileString(profile: Record<string, unknown>, key: string): Option.Op
 
 function mapOidcProfile(profile: Record<string, unknown>) {
   const email = profileString(profile, "email")
+
   const name = profileString(profile, "name").pipe(
     Option.orElse(() => profileString(profile, "preferred_username")),
     Option.orElse(() => email),
@@ -168,10 +171,22 @@ const DISABLED_CREDENTIAL_PATHS = new Set([
   "/reset-password",
 ])
 
+interface AuthRequestBody {
+  readonly email?: unknown
+  readonly provider?: unknown
+  readonly providerId?: unknown
+}
+
+function isAuthRequestBody(body: unknown): body is AuthRequestBody {
+  return typeof body === "object" && body !== null
+}
+
 function requestString(body: unknown, field: "email" | "provider" | "providerId"): string {
-  return typeof body === "object" && body !== null && typeof Reflect.get(body, field) === "string"
-    ? String(Reflect.get(body, field)).trim().toLowerCase()
-    : ""
+  if (!isAuthRequestBody(body)) return ""
+
+  const value = body[field]
+
+  return typeof value === "string" ? value.trim().toLowerCase() : ""
 }
 
 function requireProviderCapability(
@@ -180,6 +195,7 @@ function requireProviderCapability(
   capability: "signIn" | "link",
 ) {
   const provider = registry.providers[providerId]
+
   if (!provider?.enabled || !provider.capabilities[capability]) {
     throw new APIError("FORBIDDEN", {
       message: `Provider '${providerId || "unknown"}' is not allowed to ${capability === "signIn" ? "sign in" : "link accounts"}`,
@@ -194,25 +210,31 @@ function authPolicyHook(env: ApiEnv, registry: ResolvedAuthProviderRegistry) {
         message: "Credential lifecycle is managed through deployment configuration",
       })
     }
+
     if (context.path === "/sign-in/email") {
       requireProviderCapability(registry, CREDENTIAL_AUTH_PROVIDER_ID, "signIn")
       const email = requestString(context.body, "email")
       // oxlint-disable-next-line effect/effect-run-in-body -- Better Auth requires a Promise-returning middleware callback at this boundary.
       const adminConfig = await Effect.runPromise(getAdminConfig(env))
+
       if (!new Set<string>(adminConfig.adminEmails).has(email)) {
         await hashPassword("s0-invalid-managed-credential")
         throw new APIError("UNAUTHORIZED", { message: "Invalid email or password" })
       }
     }
+
     if (context.path === "/sign-in/social") {
       requireProviderCapability(registry, requestString(context.body, "provider"), "signIn")
     }
+
     if (context.path === "/sign-in/oauth2") {
       requireProviderCapability(registry, requestString(context.body, "providerId"), "signIn")
     }
+
     if (context.path === "/link-social") {
       requireProviderCapability(registry, requestString(context.body, "provider"), "link")
     }
+
     if (context.path === "/oauth2/link") {
       requireProviderCapability(registry, requestString(context.body, "providerId"), "link")
     }
@@ -290,6 +312,7 @@ function validGitHubAppUserTokenOption(
   },
 ) {
   const accessTokenExpiresAt = Option.getOrNull(parseDateMsOption(token.accessTokenExpiresAt))
+
   return Option.liftPredicate(
     token,
     (resolved) =>
@@ -329,10 +352,12 @@ function logInvalidGitHubTokenRefresh(
   tokenData: GitHubRefreshTokenResponse,
 ) {
   const shouldDeleteBadRefreshToken = Effect.succeed(tokenData.error === "bad_refresh_token")
+
   const cleanupBadRefreshToken = deleteGitHubAccountTokenRow(input.env, input.row.id).pipe(
     Effect.when(shouldDeleteBadRefreshToken),
     Effect.asVoid,
   )
+
   return logBetterAuthWarning("Failed to refresh GitHub App user access token:", {
     status: input.response.status,
     error: tokenData.error,
@@ -371,6 +396,7 @@ const getGitHubAccountTokenRow = Effect.fn("auth.betterAuth.githubAccountTokenRo
 
 function postUrlEncodedForm(url: string, body: Record<string, string>) {
   const fetch = globalThis.fetch
+
   return HttpClient.execute(
     HttpClientRequest.post(url, {
       headers: { Accept: "application/json" },
@@ -461,6 +487,7 @@ const refreshGitHubAppUserTokenFromResponse = Effect.fn(
   row: GitHubAccountTokenRow
   response: HttpClientResponse.HttpClientResponse
 }) {
+  // SAFETY: HttpClientResponse.json is untyped. A successful GitHub token refresh body is a GitHubRefreshTokenResponse.
   const tokenDataOption = yield* input.response.json.pipe(
     Effect.map((tokenData) => Option.some(tokenData as GitHubRefreshTokenResponse)),
     Effect.catch((errorValue) =>
@@ -505,6 +532,7 @@ const persistGitHubAppUserTokenRefresh = Effect.fn(
 ) {
   const accessTokenExpiresAt = Option.getOrNull(expiresAtFromSecondsOption(tokenData.expires_in))
   const refreshToken = tokenData.refresh_token ?? row.refreshToken
+
   const refreshTokenExpiresAt =
     Option.getOrNull(expiresAtFromSecondsOption(tokenData.refresh_token_expires_in)) ??
     row.refreshTokenExpiresAt
@@ -532,6 +560,7 @@ const persistGitHubAppUserTokenRefresh = Effect.fn(
     ),
   )
 
+  // SAFETY: the filter above rejected responses without a GitHub App user access token, so access_token is a string.
   return Option.some({
     accessToken: tokenData.access_token as string,
     accessTokenExpiresAt: Option.getOrNull(parseDateMsOption(accessTokenExpiresAt)),
@@ -577,9 +606,11 @@ export function createBetterAuth(env: ApiEnv, authConfig?: ResolvedAuthProviderR
   const stageMetadata = getStageMetadataSync(env)
   const baseURL = normalizeBaseUrl(stageMetadata.infra.authBaseUrl)
   const registry = authConfig ?? { defaultSignInProviderId: "", providers: {} }
+
   const genericOAuthConfigs = Object.entries(registry.providers).flatMap(([providerId, provider]) =>
     oidcConfig(providerId, provider),
   )
+
   const socialProviders: Record<string, Record<string, unknown>> = Object.fromEntries(
     Object.entries(registry.providers)
       .filter(
@@ -596,6 +627,7 @@ export function createBetterAuth(env: ApiEnv, authConfig?: ResolvedAuthProviderR
         },
       ]),
   )
+
   const genericOAuthPlugins = Match.value(genericOAuthConfigs.length > 0).pipe(
     Match.when(true, () => [
       genericOAuth({
@@ -604,6 +636,7 @@ export function createBetterAuth(env: ApiEnv, authConfig?: ResolvedAuthProviderR
     ]),
     Match.orElse(() => []),
   )
+
   const plugins = [
     ...genericOAuthPlugins,
     ...Match.value(stageMetadata.app.betterAuthSessionTransferEnabled).pipe(
@@ -715,6 +748,7 @@ export function normalizeUserId(value: string): string {
     .trim()
     .replace(/^\/+|\/+$/g, "")
     .replace(/\/+/g, "_")
+
   return Match.value(normalized.length > 0).pipe(
     Match.when(true, () => normalized),
     Match.orElse(() => {
@@ -733,6 +767,7 @@ export const resolveOktaUserId = Effect.fn("auth.betterAuth.resolveOktaUserId")(
 export function prefixStorageKeyWithUserId(userId: string, key: string): string {
   const normalizedUserId = normalizeUserId(userId)
   const normalizedKey = key.trim().replace(/^\/+/, "")
+
   return Match.value(
     normalizedKey === normalizedUserId || normalizedKey.startsWith(`${normalizedUserId}/`),
   ).pipe(
@@ -775,6 +810,7 @@ const getGitHubAppUserAccessTokenFromRow = Effect.fn(
     accessTokenExpiresAt: row.accessTokenExpiresAt,
   })
 
+  // SAFETY: refreshGitHubAppUserToken resolves to Option<GitHubAppUserToken>. Effect.fn erases that success channel at this catch boundary.
   return yield* Effect.succeed(currentTokenOption).pipe(
     Effect.filterOrFail(Option.isSome, () => "missing_current_token" as const),
     Effect.map(({ value }) => value),
@@ -798,6 +834,7 @@ export const getGitHubAppUserAccessTokenForUserId = Effect.fn(
   "auth.betterAuth.getGitHubAppUserAccessTokenForUserId",
 )(function* (env: ApiEnv, userId: string) {
   const rowOption = yield* getGitHubAccountTokenRow(env, userId)
+
   return yield* Effect.succeed(rowOption).pipe(
     Effect.filterOrFail(Option.isSome, () => "missing_row" as const),
     Effect.flatMap(({ value: row }) => getGitHubAppUserAccessTokenFromRow(env, row)),
@@ -817,6 +854,7 @@ export const getSessionContextFromHeaders = Effect.fn(
   "auth.betterAuth.getSessionContextFromHeaders",
 )(function* (env: ApiEnv, requestHeaders: HeadersInit) {
   const authConfig = yield* getAuthProviderRegistry(env)
+
   const session = yield* Effect.tryPromise(() =>
     createBetterAuth(env, authConfig).api.getSession({
       headers: new Headers(requestHeaders),

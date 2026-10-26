@@ -1,5 +1,6 @@
 import { test } from "@e2e-dev/web"
 import { expect, unique } from "e2e"
+import * as Match from "effect/Match"
 import { requireFixture } from "./support/external-fixtures"
 import { api, uniqueName } from "./support/api"
 
@@ -8,6 +9,7 @@ test(
   { session: "admin" },
   async ({ app, browser, screen, agent }) => {
     const title = uniqueName("e2e-session")
+
     const created = await api<{ sessionId: string; agentRuntime: string }>(
       browser,
       "/sessions",
@@ -20,8 +22,10 @@ test(
         subagents: "disabled",
       },
     )
+
     expect(created.agentRuntime).toBe("isolate")
     const path = `/sessions/${created.sessionId}`
+
     try {
       const detail = await api<{ tools: object[] }>(browser, path)
       expect(detail.tools).toEqual([{ kind: "workflow_builder" }])
@@ -60,33 +64,43 @@ test(
         password: process.env.E2E_USER_ADMIN_PASSWORD,
       }),
     })
+
     expect(signedIn.status).toBe(200)
+
     const ownerCookie = signedIn.headers
       .getSetCookie()
       .map((cookie) => cookie.split(";")[0])
       .join("; ")
+
     const create = await fetch("http://localhost:3100/sessions", {
       method: "POST",
       headers: { Cookie: ownerCookie, "Content-Type": "application/json" },
       body: JSON.stringify({ title: uniqueName("e2e-foreign"), agentRuntime: "isolate" }),
     })
+
     expect(create.status).toBe(201)
     const { sessionId } = await create.json()
+
     try {
       const peerCookie = (await browser.cookies())
         .map(({ name, value }) => `${name}=${value}`)
         .join("; ")
+
       for (const [path, method, payload] of [
         [`/sessions/${sessionId}`, "GET", undefined],
         [`/sessions/${sessionId}/ws-token`, "POST", {}],
         [`/sessions/${sessionId}/tools`, "PATCH", { tools: [] }],
         [`/sessions/${sessionId}`, "DELETE", undefined],
       ] as const) {
-        const response = await fetch(`http://localhost:3100${path}`, {
+        const init: RequestInit = {
           method,
           headers: { Cookie: peerCookie, "Content-Type": "application/json" },
-          ...(payload ? { body: JSON.stringify(payload) } : {}),
-        })
+        }
+
+        if (payload) init.body = JSON.stringify(payload)
+
+        const response = await fetch(`http://localhost:3100${path}`, init)
+
         expect(response.status, `${method} ${path}`).toBe(404)
       }
     } finally {
@@ -94,6 +108,7 @@ test(
         method: "DELETE",
         headers: { Cookie: ownerCookie },
       })
+
       expect(removed.status).toBe(200)
     }
   },
@@ -104,49 +119,55 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
     `${runtime} executes a real prompt and persists its output`,
     {
       session: "admin",
-      tags:
-        runtime === "isolate"
-          ? ["runtime"]
-          : runtime === "claude-code"
-            ? ["runtime", "external", "harness"]
-            : ["runtime", "harness"],
+      tags: Match.value(runtime).pipe(
+        Match.when("isolate", () => ["runtime"]),
+        Match.when("claude-code", () => ["runtime", "external", "harness"]),
+        Match.orElse(() => ["runtime", "harness"]),
+      ),
     },
     async ({ app, browser, screen }) => {
       if (runtime !== "isolate") requireFixture("E2E_CONTAINER_RUNTIME")
+
       if (runtime === "claude-code") requireFixture("E2E_CLAUDE_CODE_MODEL")
       const literalHello = runtime === "isolate" || runtime === "codex"
       const marker = uniqueName("E2E_OUTPUT")
+
+      const model =
+        process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
+        process.env.E2E_APP_MODEL
+
+      const body = {
+        title: uniqueName(`e2e-${runtime}`),
+        agentRuntime: runtime,
+        content: literalHello
+          ? "Reply with only hello. Do not call any tools."
+          : `Reply with only this marker: ${marker}. Do not call any external tools.`,
+      }
+
+      if (model) Object.assign(body, { model })
+
       const result = await api<{
         sessionId: string
         messageId: string
         status: string
         output: string
         error?: string
-      }>(browser, "/sessions/run", "POST", {
-        title: uniqueName(`e2e-${runtime}`),
-        agentRuntime: runtime,
-        content: literalHello
-          ? "Reply with only hello. Do not call any tools."
-          : `Reply with only this marker: ${marker}. Do not call any external tools.`,
-        ...((process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
-        process.env.E2E_APP_MODEL)
-          ? {
-              model:
-                process.env[`E2E_${runtime.toUpperCase().replaceAll("-", "_")}_MODEL`] ??
-                process.env.E2E_APP_MODEL,
-            }
-          : {}),
-      })
+      }>(browser, "/sessions/run", "POST", body)
+
       try {
         expect(result.status, result.error ?? runtime).toBe("completed")
+
         if (literalHello) expect(result.output.trim()).toBe("hello")
         else expect(result.output).toContain(marker)
         await app.open(`/session/${result.sessionId}`)
+
         // Assistant cards have mr-8; user prompts have ml-8 and must not satisfy hello.
         const output = literalHello
           ? browser.locator("div.group.mr-8").getByText("hello", { exact: true })
           : screen.getByText(marker, { exact: false }).last()
+
         await expect(output).toBeVisible()
+
         if (runtime === "isolate") {
           await expect(screen.getByRole("button", "Copy markdown").last()).toBeVisible()
           await output.hover()
@@ -154,13 +175,16 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
           const copied = await browser.evaluate(() => navigator.clipboard.readText())
           expect(copied).toBe(result.output)
         }
+
         await browser.reload()
         await expect(screen.getByRole("button", "Stop", { exact: true })).not.toBeVisible()
         await expect(output).toBeVisible()
+
         if (literalHello) {
           const persisted = await api<{
             events: Array<{ type: string; data: { content?: string } }>
           }>(browser, `/sessions/${result.sessionId}/events?messageId=${result.messageId}`)
+
           expect(
             persisted.events
               .filter((event) => event.type === "token")
@@ -169,10 +193,12 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
           ).toBe("hello")
           expect(persisted.events.filter((event) => event.type === "tool_call").length).toBe(0)
         }
+
         const messages = await api<{ messages: object[] }>(
           browser,
           `/sessions/${result.sessionId}/messages`,
         )
+
         expect(messages.messages.length).toBeGreaterThan(0)
       } finally {
         await api(browser, `/sessions/${result.sessionId}`, "DELETE")

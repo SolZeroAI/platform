@@ -37,9 +37,11 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
   if (direction === "asc") {
     return <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden />
   }
+
   if (direction === "desc") {
     return <ChevronDown className="h-3.5 w-3.5" aria-hidden />
   }
+
   return <ChevronsUpDown className="h-3.5 w-3.5 text-kumo-subtle" aria-hidden />
 }
 
@@ -79,6 +81,7 @@ function SecretEditDialog({
     if (!row || !open) {
       return
     }
+
     setKey(row.key)
     setValue(row.value)
     setTags(row.tags)
@@ -88,9 +91,11 @@ function SecretEditDialog({
 
   const addTag = () => {
     const nextTag = tagDraft.trim()
+
     if (!nextTag) {
       return
     }
+
     setTags((current) => Array.from(new Set([...current, nextTag])).sort())
     setTagDraft("")
   }
@@ -106,6 +111,7 @@ function SecretEditDialog({
 
     if (!row.existing) {
       const keyError = validateKey(trimmedKey)
+
       if (keyError) {
         errors.key = keyError
       } else if (existingKeys.includes(trimmedKey)) {
@@ -119,6 +125,7 @@ function SecretEditDialog({
 
     if (trimmedValue) {
       const valueSize = getUtf8Size(trimmedValue)
+
       if (valueSize > MAX_VALUE_SIZE) {
         errors.value = `Value exceeds ${MAX_VALUE_SIZE} bytes`
       }
@@ -129,10 +136,13 @@ function SecretEditDialog({
 
   const handleSave = () => {
     const errors = validateFields()
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
+
       return
     }
+
     onSave({ key: key.trim(), value, tags, tagDraft })
     onOpenChange(false)
   }
@@ -174,6 +184,7 @@ function SecretEditDialog({
                 value={key}
                 onChange={(event) => {
                   setKey(event.target.value)
+
                   if (fieldErrors.key) {
                     setFieldErrors((current) => ({ ...current, key: undefined }))
                   }
@@ -201,6 +212,7 @@ function SecretEditDialog({
               value={value}
               onChange={(event) => {
                 setValue(event.target.value)
+
                 if (fieldErrors.value) {
                   setFieldErrors((current) => ({ ...current, value: undefined }))
                 }
@@ -374,6 +386,7 @@ export function SecretsTable({
             type="button"
             variant="ghost"
             size="sm"
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="square"
             aria-label={`Edit ${row.original.key}`}
             icon={<Pencil className="h-3 w-3" aria-hidden />}
@@ -418,7 +431,9 @@ export function SecretsTable({
     if (!onRegisterAddSecret) {
       return
     }
+
     onRegisterAddSecret(openCreateDialog)
+
     return () => onRegisterAddSecret(() => {})
   }, [onRegisterAddSecret, openCreateDialog])
 
@@ -449,6 +464,7 @@ export function SecretsTable({
                 <KumoTable.Row key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const isActions = header.column.id === "actions"
+
                     return (
                       <KumoTable.Head
                         key={header.id}
@@ -499,6 +515,7 @@ export function SecretsTable({
                       const isActions = cell.column.id === "actions"
                       const isKey = cell.column.id === "key"
                       const isTags = cell.column.id === "tags"
+
                       return (
                         <KumoTable.Cell
                           key={cell.id}
@@ -533,6 +550,7 @@ export function SecretsTable({
         open={editDialogOpen}
         onOpenChange={(open) => {
           setEditDialogOpen(open)
+
           if (!open) {
             setEditingRow(null)
           }
@@ -541,6 +559,7 @@ export function SecretsTable({
           if (editingRow && !editingRow.existing) {
             onRemoveRow(editingRow.id)
           }
+
           setEditDialogOpen(false)
           setEditingRow(null)
         }}
@@ -548,12 +567,14 @@ export function SecretsTable({
           if (!editingRow) {
             return
           }
+
           void onSave({ rowId: editingRow.id, patch })
         }}
         onDelete={() => {
           if (!editingRow) {
             return
           }
+
           void onDeleteSecret(editingRow)
           setEditDialogOpen(false)
           setEditingRow(null)

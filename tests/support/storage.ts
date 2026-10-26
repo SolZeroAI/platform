@@ -11,24 +11,30 @@ const readySchema = Schema.Struct({
   sourceUrl: Schema.String,
   destinationUrl: Schema.String,
 })
+
 export async function withStorageFixture<T>(
   kind: "r2" | "kv" | "session",
   run: (fixture: typeof readySchema.Type & { directory: string }) => Promise<T>,
 ): Promise<T> {
   const directory = await mkdtemp(join(tmpdir(), "solzero-storage-"))
+
   const child = fork(resolve("tests/support/storage-fixture.ts"), [kind], {
     execArgv: ["--import", import.meta.resolve("tsx")],
     stdio: ["ignore", "ignore", "ignore", "ipc"],
   })
+
   const closed = once(child, "exit")
+
   try {
     const ready = await new Promise<typeof readySchema.Type>((accept, reject) => {
       const timeout = setTimeout(
         () => reject(new Error("Storage fixture startup timed out")),
         30_000,
       )
+
       child.once("message", (value) => {
         clearTimeout(timeout)
+
         if (
           typeof value === "object" &&
           value !== null &&
@@ -36,6 +42,7 @@ export async function withStorageFixture<T>(
           typeof value.error === "string"
         )
           return reject(new Error(value.error))
+
         try {
           accept(Schema.decodeUnknownSync(readySchema)(value))
         } catch {
@@ -51,6 +58,7 @@ export async function withStorageFixture<T>(
         reject(error)
       })
     })
+
     return await run({ ...ready, directory })
   } finally {
     await stopFixture(child, closed)

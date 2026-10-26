@@ -35,6 +35,7 @@ import { stringifyJson } from "../../../lib/json"
 import * as Context from "effect/Context"
 import {
   ControlPlane,
+  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- control-plane.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because runControlPlane opens the database for HTTP handlers.
   makeControlPlaneFromEnv,
   type ControlPlaneDb,
 } from "../../db/control-plane-db"
@@ -50,8 +51,8 @@ import {
   GitHubProvider,
   IdentityProvider,
   providerServicesForEnv,
-  type GitHubProviderShape,
-  type IdentityProviderShape,
+  type GitHubProviderService,
+  type IdentityProviderService,
 } from "../../services/providers"
 import { requireSessionAccess } from "./control-plane/sessions"
 
@@ -161,6 +162,7 @@ const respondUnhandledError = Effect.fn("controlPlane.respondUnhandledError")(fu
   cause: unknown,
 ) {
   yield* logControlPlaneError(cause, { event: "control_plane.unhandled_error" })
+
   return error(describeError(cause), 500)
 })
 
@@ -180,10 +182,11 @@ export const requirePrincipalUserId = Effect.fn("controlPlane.requirePrincipalUs
 })
 
 const resolveOktaIdentityAnnotation = Effect.fn("controlPlane.resolveOktaIdentityAnnotation")(
-  function* (env: ApiEnv, userId: string, identityProvider: IdentityProviderShape) {
+  function* (env: ApiEnv, userId: string, identityProvider: IdentityProviderService) {
     const oktaUserId = yield* identityProvider
       .resolveOktaUserId(env, userId)
       .pipe(Effect.orElseSucceed(() => null))
+
     return Option.some<{ userId: string; oktaUserId: string | null }>({ userId, oktaUserId })
   },
 )
@@ -198,7 +201,7 @@ export const resolveRequestIdentityAnnotation = Effect.fn(
   request: Request,
   env: ApiEnv,
   principal: AuthPrincipal | null,
-  identityProvider: IdentityProviderShape,
+  identityProvider: IdentityProviderService,
 ) {
   return yield* Option.match(resolvePrincipalUserId(request, principal), {
     onSome: (userId) => resolveOktaIdentityAnnotation(env, userId, identityProvider),
@@ -247,6 +250,7 @@ function buildGitHubAppInstallUrl(env: ApiEnv): Option.Option<string> {
 function buildSetupUrl(env: ApiEnv, extraParams?: Record<string, string>): string {
   const baseUrl = getWebUrl(env).replace(/\/+$/, "")
   const params = new URLSearchParams(Object.entries(extraParams ?? {}))
+
   return Match.value(params.size > 0).pipe(
     Match.when(true, () => `${baseUrl}/settings?${params.toString()}`),
     Match.orElse(() => `${baseUrl}/settings`),
@@ -288,14 +292,16 @@ export const failSetupWhen = Effect.fn("controlPlane.failSetupWhen")(function* (
 })
 
 export const resolveUserIdentityByUserId = Effect.fn("controlPlane.resolveUserIdentityByUserId")(
-  function* (env: ApiEnv, userId: string, identityProvider: IdentityProviderShape) {
+  function* (env: ApiEnv, userId: string, identityProvider: IdentityProviderService) {
     const profile = yield* requireOption(
       Option.fromNullishOr(yield* identityProvider.getBetterAuthUserProfile(env, userId)),
       "User not found",
       401,
     )
+
     const githubToken = yield* identityProvider.getGitHubAppUserAccessTokenForUserId(env, userId)
     const oktaUserId = yield* identityProvider.resolveOktaUserId(env, userId)
+
     return {
       userId,
       name: profile.name,
@@ -313,14 +319,16 @@ export const resolveUserIdentity = Effect.fn("controlPlane.resolveUserIdentity")
   request: Request,
   env: ApiEnv,
   principal: AuthPrincipal | null,
-  identityProvider: IdentityProviderShape = providerServicesForEnv(env).identityProvider,
+  identityProvider: IdentityProviderService = providerServicesForEnv(env).identityProvider,
 ) {
   yield* requireOption(Option.fromNullishOr(principal), "Unauthorized", 401)
+
   const userId = yield* requireOption(
     resolvePrincipalUserId(request, principal),
     "Missing acting user context",
     401,
   )
+
   return yield* resolveUserIdentityByUserId(env, userId, identityProvider)
 })
 
@@ -334,7 +342,7 @@ function shouldUseRepoSearch(options: RepoListOptions): boolean {
 }
 
 const fetchReposPage = Effect.fn("controlPlane.fetchReposPage")(function* (
-  githubProvider: GitHubProviderShape,
+  githubProvider: GitHubProviderService,
   accessToken: string,
   options: RepoListOptions,
 ) {
@@ -362,12 +370,13 @@ const fetchReposPage = Effect.fn("controlPlane.fetchReposPage")(function* (
 
 const fetchAndEnrichReposPage = Effect.fn("controlPlane.fetchAndEnrichReposPage")(function* (
   env: ApiEnv,
-  githubProvider: GitHubProviderShape,
+  githubProvider: GitHubProviderService,
   accessToken: string,
   options: RepoListOptions,
 ) {
   const pageResult = yield* fetchReposPage(githubProvider, accessToken, options)
   const metadataStore = new RepoMetadataStore(makeControlPlaneFromEnv(env))
+
   const metadataMap = yield* metadataStore
     .getBatch(pageResult.repositories.map((repo) => ({ owner: repo.owner, name: repo.name })))
     .pipe(
@@ -391,19 +400,21 @@ export const handleListRepos = Effect.fn("controlPlane.handleListRepos")(functio
   env: ApiEnv,
   identity: ResolvedUserIdentity,
   options: RepoListOptions = {},
-  githubProvider: GitHubProviderShape = providerServicesForEnv(env).githubProvider,
+  githubProvider: GitHubProviderService = providerServicesForEnv(env).githubProvider,
 ) {
   const accessToken = yield* Option.match(Option.fromNullishOr(identity.githubAppUserAccessToken), {
     onSome: (token) => Effect.succeed(token),
     onNone: () =>
       failSetup(env, "GitHub App is not authorized for this user", 403, { githubSetup: "1" }),
   })
+
   const page = yield* fetchAndEnrichReposPage(env, githubProvider, accessToken, options).pipe(
     Effect.tapError((cause) =>
       logControlPlaneError(cause, { event: "control_plane.repo_list_failed" }),
     ),
     Effect.catch(() => failMessage("Failed to fetch repositories from GitHub", 500)),
   )
+
   return json({
     repos: page.repos,
     githubAppInstallUrl: Option.getOrNull(buildGitHubAppInstallUrl(env)),
@@ -418,7 +429,7 @@ export const handleListRepos = Effect.fn("controlPlane.handleListRepos")(functio
 })
 
 const fetchAuthorizedRepo = Effect.fn("controlPlane.fetchAuthorizedRepo")(function* (
-  githubProvider: GitHubProviderShape,
+  githubProvider: GitHubProviderService,
   accessToken: string,
   owner: string,
   name: string,
@@ -440,10 +451,11 @@ export const resolveAuthorizedRepo = Effect.fn("controlPlane.resolveAuthorizedRe
   identity: ResolvedUserIdentity,
   repoOwner: string,
   repoName: string,
-  githubProvider: GitHubProviderShape,
+  githubProvider: GitHubProviderService,
 ) {
   const owner = repoOwner.toLowerCase()
   const name = repoName.toLowerCase()
+
   return yield* Option.match(Option.fromNullishOr(identity.githubAppUserAccessToken), {
     onNone: () => Effect.succeed(Option.none<ResolvedAuthorizedRepo>()),
     onSome: (accessToken) => fetchAuthorizedRepo(githubProvider, accessToken, owner, name),
@@ -459,6 +471,7 @@ export const resolveIdentityAndRepo = Effect.fn("controlPlane.resolveIdentityAnd
   providers = providerServicesForEnv(env),
 ) {
   const identity = yield* resolveUserIdentity(request, env, principal, providers.identityProvider)
+
   const repoOption = yield* resolveAuthorizedRepo(
     identity,
     repoOwner,
@@ -470,6 +483,7 @@ export const resolveIdentityAndRepo = Effect.fn("controlPlane.resolveIdentityAnd
     ),
     Effect.catch(() => failMessage("Failed to resolve repository", 500)),
   )
+
   const repo = yield* Option.match(repoOption, {
     onSome: (value) => Effect.succeed(value),
     onNone: () =>
@@ -480,6 +494,7 @@ export const resolveIdentityAndRepo = Effect.fn("controlPlane.resolveIdentityAnd
           failSetup(env, "GitHub App is not authorized for this user", 403, { githubSetup: "1" }),
       }),
   })
+
   return { identity, repo }
 })
 
@@ -490,6 +505,7 @@ function buildSpanTracedRequest(
 ): Request {
   const headers = new Headers(init?.headers)
   Object.entries(localSpanHeaders(context)).forEach(([key, value]) => headers.set(key, value))
+
   return new Request(url, { ...init, headers })
 }
 
@@ -542,7 +558,9 @@ export {
   validateRequestedSecretKeys,
   waitForPromptResult,
 } from "./control-plane/sessions"
+
 export { resolveSessionListToolAvailability } from "./control-plane/session-tool-availability"
+
 export type { AuthPrincipal } from "@solzero/api"
 
 export interface ControlPlaneContext {
@@ -553,8 +571,8 @@ export interface ControlPlaneContext {
   db: ControlPlaneDb
   principal: AuthPrincipal | null
   log: RequestLogger
-  identityProvider: IdentityProviderShape
-  githubProvider: GitHubProviderShape
+  identityProvider: IdentityProviderService
+  githubProvider: GitHubProviderService
 }
 
 // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic handler contract: A/E/R are the parameters, so the channels must be named explicitly here.
@@ -583,6 +601,7 @@ const annotateRequestIdentity = Effect.fn("controlPlane.annotateRequestIdentity"
     context.principal,
     context.identityProvider,
   ).pipe(Effect.orElseSucceed(() => Option.none<{ userId: string; oktaUserId: string | null }>()))
+
   yield* Option.match(identity, {
     onNone: () => Effect.void,
     onSome: (value) => annotateCurrentUserIdentity(value),
@@ -600,6 +619,7 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
     const request = requestFromSource(serverRequest)
 
     const principal = Option.getOrNull(yield* Effect.serviceOption(CurrentPrincipal))
+
     const context: ControlPlaneContext = {
       request,
       serverRequest,
@@ -611,17 +631,21 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
       identityProvider,
       githubProvider,
     }
+
     const internalRequests = makeInternalRequests(observability.context.localTraceContext)
     yield* annotateRequestIdentity(context).pipe(
       Effect.provideService(EffectRequestLogger, observability.effectLog),
     )
+
     return yield* handler(context).pipe(
       Effect.provideService(InternalRequests, internalRequests),
       Effect.provideService(EffectRequestLogger, observability.effectLog),
       Effect.map(toHandlerResponse),
     )
   })
+
   const widenedErrors = program.pipe(Effect.mapError((cause): unknown => cause))
+
   return widenedErrors.pipe(
     Effect.catchIf(
       (cause): cause is ControlPlaneFailure => cause instanceof ControlPlaneFailure,
@@ -639,6 +663,7 @@ const authorizeSessionProxy = Effect.fn("controlPlane.authorizeSessionProxy")(fu
 ) {
   const principal = yield* authenticateControlPlaneRequest(request, env)
   yield* requireSessionAccess(request, env, principal, sessionId)
+
   return null
 })
 

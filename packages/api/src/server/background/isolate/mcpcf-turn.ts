@@ -53,6 +53,7 @@ interface IsolateMcpTurnRuntime {
 }
 
 export type IsolateMcpTurnManager = IsolateMcpManager & McpcfMcpToolExposureManager
+
 type CreateObserver = (path: string, routeBranch: string) => McpcfRequestObserver
 
 export interface IsolateMcpTurnPreparation {
@@ -141,6 +142,7 @@ function emitDiscoveryError(
 
 function handleMcpcfResolveFailure(input: ResolveMcpcfServersInput, errorValue: unknown) {
   const error = describeError(errorValue)
+
   return Effect.gen(function* () {
     logMcpcfMcpSyncFailure({
       createObserver: input.createObserver,
@@ -156,6 +158,7 @@ function handleMcpcfResolveFailure(input: ResolveMcpcfServersInput, errorValue: 
       terminal: true,
       discoveryReason: "server_unavailable",
     })
+
     return yield* Effect.fail(toError(error))
   })
 }
@@ -168,6 +171,7 @@ function resolveMcpcfServers(input: ResolveMcpcfServersInput) {
 
 function reportMcpcfSyncFailure(input: SyncMcpServersInput, syncError: IsolateMcpServerSyncError) {
   const error = formatMcpcfMcpSyncError(syncError)
+
   return Effect.gen(function* () {
     logMcpcfMcpSyncFailure({
       createObserver: input.createObserver,
@@ -183,6 +187,7 @@ function reportMcpcfSyncFailure(input: SyncMcpServersInput, syncError: IsolateMc
       terminal: true,
       discoveryReason: syncError.discoveryReason,
     })
+
     return yield* Effect.fail(toError(error))
   })
 }
@@ -271,9 +276,11 @@ function failMcpcfExposure(
   unavailableServers: ReturnType<typeof unavailableExposureServers>,
 ) {
   const labels = unavailableServers.map((server) => server.label)
+
   const error = `MCP Context Forge MCP connected but exposed no callable tools for ${labels.join(
     ", ",
   )}.`
+
   return Effect.gen(function* () {
     logMcpcfMcpToolExposureFailure({
       createObserver: input.createObserver,
@@ -291,6 +298,7 @@ function failMcpcfExposure(
       terminal: true,
       discoveryReason: "no_callable_tools",
     })
+
     return yield* Effect.fail(toError(error))
   })
 }
@@ -303,6 +311,7 @@ function evaluateMcpcfExposures(input: AssertExposureInput) {
       mcpcfServers: input.mcpcfServers,
       connectedServerNames: input.connectedServerNames,
     })
+
     logMcpcfMcpToolExposure({
       createObserver: input.createObserver,
       runtime: input.runtime,
@@ -315,6 +324,7 @@ function evaluateMcpcfExposures(input: AssertExposureInput) {
 
     const mcpcf = getSelectedMcpcfLogContext(input.selectedTools, input.mcpcfServers)
     const unavailableServers = unavailableExposureServers(exposures, mcpcf.servers)
+
     return yield* Match.value(unavailableServers.length === 0).pipe(
       Match.when(true, () => Effect.succeed(exposures)),
       Match.orElse(() => failMcpcfExposure(input, exposures, unavailableServers)),
@@ -363,11 +373,13 @@ export function prepareIsolateMcpTurn(input: {
 }) {
   return Effect.gen(function* () {
     const mcpcfServers = yield* resolveMcpcfServers(input)
+
     const mcpcfCapability = yield* resolveMcpcfCapability(
       input.env,
       input.runtime.sessionId,
       mcpcfServers,
     )
+
     const mcpSync = yield* syncMcpServers({
       manager: input.manager,
       customMcpServers: input.customMcpServers,
@@ -380,12 +392,14 @@ export function prepareIsolateMcpTurn(input: {
       request: input.request,
       callback: input.callback,
     })
+
     yield* emitSkippedMcpServers(
       input.callback,
       mcpSync.skippedServers,
       input.createObserver,
       input.runtime,
     )
+
     const mcpcfMcpServers = yield* assertMcpcfToolsExposed({
       reader: createMcpcfMcpToolExposureReader(input.manager),
       selectedTools: input.selectedTools,

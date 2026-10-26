@@ -1,5 +1,6 @@
 import { generateId } from "../auth/crypto"
 import { createWorkflowStoreFromD1 } from "../db/workflows"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the workflow actions service-binding edge.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { toError } from "../../lib/effect-errors"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -40,6 +41,7 @@ function stringField(
   key: string,
 ): Option.Option<string> {
   const value = data?.[key]
+
   return Option.liftPredicate(
     value,
     (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0,
@@ -62,6 +64,7 @@ function logActorMismatch(
     ),
     Match.orElse(() => undefined),
   )
+
   return Effect.void
 }
 
@@ -75,6 +78,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(this.env))
     const env = this.env
     const log = this.log
+
     const execution = Effect.gen(function* () {
       const run = yield* Effect.tryPromise({
         try: () => store.getRun(input.workflowId, input.runId),
@@ -85,10 +89,13 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
           () => new Error(`Workflow run '${input.runId}' was not found`),
         ),
       )
+
       yield* Effect.suspend(() => logActorMismatch(log, input, run.user_id))
+
       const oktaUserId = yield* resolveOktaUserId(env, run.user_id).pipe(
         Effect.orElseSucceed(() => null),
       )
+
       return yield* Effect.tryPromise({
         try: () =>
           executeWorkflowNodeWithAdapters({
@@ -101,6 +108,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
         catch: toError,
       })
     })
+
     // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
     return Effect.runPromise(execution)
   }
@@ -139,6 +147,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
     )
 
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(this.env))
+
     // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
     return Effect.runPromise(
       Effect.tryPromise({
@@ -170,6 +179,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
     error?: string | null
   }): Promise<{ ok: true }> {
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(this.env))
+
     // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
     return Effect.runPromise(
       Effect.tryPromise({

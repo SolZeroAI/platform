@@ -24,6 +24,7 @@ export function resume({ params, payload }: { params: IdParams; payload: ResumeS
 
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, "http://internal/internal/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -13,6 +13,7 @@ export function stop({ params }: { params: IdParams }) {
       yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       return yield* internalRequests.fetch(stub, "http://internal/internal/stop", {
         method: "POST",
       })

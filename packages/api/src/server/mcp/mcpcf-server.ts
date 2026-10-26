@@ -34,6 +34,7 @@ export {
   redactMcpcfErrorMessage,
   resolveMcpcfMcpContext,
 } from "./mcpcf-server/runtime"
+
 export type {
   McpcfMcpContext,
   McpcfMcpLogSink,
@@ -102,8 +103,9 @@ function filterDefaultEnabledTools(
 ): Tool[] {
   const settings = context.serverSettingsById[server.id]
   const defaultDisabled = settings?.defaultToolsEnabled === false
+
   return Match.value(defaultDisabled).pipe(
-    Match.when(true, () => [] as Tool[]),
+    Match.when(true, (): Tool[] => []),
     Match.orElse(() => filterToolsByDisabledSet(tools, new Set(settings?.disabledTools ?? []))),
   )
 }
@@ -115,13 +117,14 @@ function isMcpcfToolEnabledForServer(
 ): boolean {
   const settings = context.serverSettingsById[server.id]
   const defaultDisabled = settings?.defaultToolsEnabled === false
+
   return Match.value(defaultDisabled).pipe(
     Match.when(true, () => false),
     Match.orElse(() => !(settings?.disabledTools ?? []).includes(upstreamToolName)),
   )
 }
 
-function buildMcpcfOAuthAuthLogFields(context: McpcfMcpContext): Record<string, unknown> {
+function buildMcpcfOAuthAuthLogFields(context: McpcfMcpContext) {
   const issuerMatches = Option.match(
     Option.all({
       accessTokenIssuer: context.accessTokenIssuer,
@@ -133,6 +136,7 @@ function buildMcpcfOAuthAuthLogFields(context: McpcfMcpContext): Record<string, 
         accessTokenIssuer === expectedAccessTokenIssuer,
     },
   )
+
   return {
     oauth: {
       providerId: Option.getOrNull(context.oauthProviderId),
@@ -144,7 +148,7 @@ function buildMcpcfOAuthAuthLogFields(context: McpcfMcpContext): Record<string, 
   }
 }
 
-function mcpcfOAuthAuthLogFields(context: McpcfMcpContext): Record<string, unknown> {
+function mcpcfOAuthAuthLogFields(context: McpcfMcpContext) {
   return Option.match(context.authMode, {
     onNone: () => ({}),
     onSome: (mode) =>
@@ -163,6 +167,7 @@ const listMcpcfServerTools = Effect.fn("mcp.mcpcf.listServerTools")(function* (
   const startedAt = Date.now()
   const accessToken = getMcpcfAccessTokenForServer(context, server)
   const upstreamAccessToken = getMcpcfUpstreamAccessTokenForServer(context, server)
+
   const tools = yield* context.upstreamClient
     .listTools({
       config,
@@ -179,6 +184,7 @@ const listMcpcfServerTools = Effect.fn("mcp.mcpcf.listServerTools")(function* (
               Option.getOrElse(upstreamAccessToken, () => ""),
             ]),
           })
+
           const oauthAuthFields = mcpcfOAuthAuthLogFields(context)
           context.log.error(listError, {
             event: "mcp.mcpcf.tools.list_failed",
@@ -199,6 +205,7 @@ const listMcpcfServerTools = Effect.fn("mcp.mcpcf.listServerTools")(function* (
             },
             _forceKeep: true,
           })
+
           return yield* Effect.fail(listError)
         }),
       ),
@@ -218,6 +225,7 @@ const listMcpcfServerTools = Effect.fn("mcp.mcpcf.listServerTools")(function* (
       durationMs: Date.now() - startedAt,
     },
   })
+
   return filterDefaultEnabledTools(context, server, tools).map((tool) =>
     prefixMcpcfTool(context, server, tool),
   )
@@ -225,7 +233,7 @@ const listMcpcfServerTools = Effect.fn("mcp.mcpcf.listServerTools")(function* (
 
 const listMcpcfTools = Effect.fn("mcp.mcpcf.listTools")(function* (context: McpcfMcpContext) {
   return yield* Match.value(context.servers.length === 0).pipe(
-    Match.when(true, () => Effect.succeed([] as Tool[])),
+    Match.when(true, () => Effect.succeed(new Array<Tool>())),
     Match.orElse(() =>
       Effect.gen(function* () {
         const config = yield* Option.match(context.config, {
@@ -237,9 +245,11 @@ const listMcpcfTools = Effect.fn("mcp.mcpcf.listTools")(function* (context: Mcpc
             ),
           onSome: Effect.succeed,
         })
+
         const toolsByServer = yield* Effect.all(
           context.servers.map((server) => listMcpcfServerTools(context, config, server)),
         )
+
         return toolsByServer.flat()
       }),
     ),
@@ -265,6 +275,7 @@ function getSelectedServerForProxyTool(
         }),
       ),
   )
+
   const fallbackSelection = Match.value(proxyToolName.startsWith(MCPCF_PROXY_TOOL_PREFIX)).pipe(
     Match.when(true, () => Option.none<{ server: McpcfServerRecord; upstreamToolName: string }>()),
     Match.orElse(() =>
@@ -281,6 +292,7 @@ function getSelectedServerForProxyTool(
       ),
     ),
   )
+
   return Option.getOrThrowWith(parsedSelection.pipe(Option.orElse(() => fallbackSelection)), () =>
     Option.match(Option.fromNullishOr(parseMcpcfProxyToolName(proxyToolName)), {
       onSome: (parsedValue) =>
@@ -318,6 +330,7 @@ const callMcpcfTool = Effect.fn("mcp.mcpcf.callTool")(function* (
   )
   const accessToken = getMcpcfAccessTokenForServer(context, server)
   const upstreamAccessToken = getMcpcfUpstreamAccessTokenForServer(context, server)
+
   return yield* context.upstreamClient
     .callTool({
       config,
@@ -349,6 +362,7 @@ export function createMcpcfMcpServer(context: McpcfMcpContext): McpServer {
         Match.orElse(() => INTERNAL_MCPCF_MCP_SERVER_NAME),
       ),
   })
+
   const server = new McpServer(
     {
       name: serverName,

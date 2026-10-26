@@ -7,8 +7,11 @@ import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
 
 export type CloudflareTracing = NonNullable<ExecutionContext["tracing"]>
+
 export type CloudflareSpan = Parameters<Parameters<CloudflareTracing["enterSpan"]>[1]>[0]
+
 export type SpanAttributeValue = string | number | boolean
+
 export type SpanAttributeInput = Record<string, SpanAttributeValue | null | undefined>
 
 export function spanAttributeInput(fields: Record<string, unknown>): SpanAttributeInput {
@@ -51,11 +54,12 @@ export function toSpanAttributes(fields: SpanAttributeInput): Record<string, Spa
 
 export function errorAttributes(error: unknown): Record<string, string | number | boolean> {
   const normalized = normalizeError(error)
-  return {
-    error: true,
-    "error.message": normalized.message,
-    "error.name": normalized.name,
-  }
+  let attributes: Record<string, string | number | boolean> = {}
+  attributes.error = true
+  attributes["error.message"] = normalized.message
+  attributes["error.name"] = normalized.name
+
+  return attributes
 }
 
 export function causeFailureAttributes(
@@ -94,6 +98,7 @@ export function runCloudflarePromiseSpan<A>(
 ): Promise<A> {
   const startedAt = Date.now()
   setCloudflareSpanAttributes(span, attributes)
+
   return Promise.resolve(handler(span)).then(
     (result) => finalizePromiseSpanSuccess(span, startedAt, result),
     (error) => finalizePromiseSpanFailure(span, startedAt, error),
@@ -105,6 +110,7 @@ function finalizePromiseSpanSuccess<A>(span: CloudflareSpan, startedAt: number, 
     status: "ok",
     duration_ms: Date.now() - startedAt,
   })
+
   return result
 }
 
@@ -135,9 +141,11 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
     const startedAt = Date.now()
     // oxlint-disable-next-line s0-lint/prefer-option-over-null -- Mutable interrupt handle assigned by the Effect.runCallbackWith bridge; it is a low-level imperative finalizer.
     let interrupt: ((interruptor?: number | undefined) => void) | undefined
+
     const interruptChild = () => {
       interrupt?.()
     }
+
     signal.addEventListener("abort", interruptChild, { once: true })
 
     function finalizeExit(
@@ -149,11 +157,13 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
         options.completedAttributes?.(exit, Date.now() - startedAt) ??
           completedSpanAttributes(exit, Date.now() - startedAt),
       )
+
       return exit
     }
 
     function runInstrumented(span: CloudflareSpan | undefined): Promise<Exit.Exit<A, E>> {
       setCloudflareSpanAttributes(span, options.attributes)
+
       return new Promise<Exit.Exit<A, E>>((resolve) => {
         interrupt = Effect.runCallbackWith(options.context)(options.effect, {
           onExit: (exit) => resolve(finalizeExit(span, exit)),
@@ -167,6 +177,7 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
 
     function enterTracingSpan(span: CloudflareSpan): Promise<Exit.Exit<A, E>> {
       options.onSpanStart?.(span)
+
       return runInstrumented(span).finally(() => {
         options.onSpanEnd?.()
       })

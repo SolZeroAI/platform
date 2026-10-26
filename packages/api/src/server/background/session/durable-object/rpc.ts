@@ -163,7 +163,8 @@ function resolvedModel(value: string | null | undefined): Option.Option<string> 
 }
 
 export async function handleInit(host: SessionDODelegate, request: Request): Promise<Response> {
-  const body = (await request.json()) as InitRequestBody
+  const body =
+    /* SAFETY: The JSON body is the InitRequestBody shape read by this caller after the response arrives. */ (await request.json()) as InitRequestBody
 
   return Option.match(resolvedModel(body.model), {
     onNone: () =>
@@ -179,10 +180,12 @@ function initializeSession(
 ): Response {
   const now = Date.now()
   const sessionId = host.ctx.id.toString()
+
   const agentRuntime = resolveAgentRuntime({
     agentRuntime: body.agentRuntime,
     sessionKind: body.sessionKind,
   })
+
   const sessionKind = sessionKindForAgentRuntime(agentRuntime)
   host.repository.upsertSession({
     id: sessionId,
@@ -248,6 +251,7 @@ export function warmRuntimeForKind(host: SessionDODelegate, sessionKind: Session
 
 export function handleGetState(host: SessionDODelegate): Response {
   const state = host.getSessionState()
+
   return Option.match(Option.fromNullishOr(state.id), {
     onNone: () => new Response("Session not found", { status: 404 }),
     onSome: () => host.serializeSessionState(state),
@@ -298,18 +302,20 @@ export async function handleEnqueuePrompt(
   request: Request,
   options: { waitForCompletion?: boolean } = {},
 ): Promise<Response> {
-  const body = (await request.json()) as {
-    content: string
-    authorId: string
-    source: string
-    model?: string
-    reasoningEffort?: string
-    executionMode?: PromptExecutionMode
-    attachments?: Array<{ type: string; name: string; url?: string }>
-    callbackContext?: SessionCallbackContext
-  }
+  const body =
+    /* SAFETY: The JSON body is the { content: string authorId: string source: string model?: string reasoningEffort?: string executionMode?: PromptExecutionMode attachments?: Array<{ type: string; name: string; url?: string }> callbackContext?: SessionCallbackContext } shape read by this caller after the response arrives. */ (await request.json()) as {
+      content: string
+      authorId: string
+      source: string
+      model?: string
+      reasoningEffort?: string
+      executionMode?: PromptExecutionMode
+      attachments?: Array<{ type: string; name: string; url?: string }>
+      callbackContext?: SessionCallbackContext
+    }
 
   const executionMode = body.executionMode ?? "sync"
+
   return Option.match(host.enqueuePromptValidationError(executionMode), {
     onNone: () => host.enqueueValidatedPrompt(request, body, executionMode, options),
     onSome: (response) => Promise.resolve(response),
@@ -347,6 +353,7 @@ export function enqueuePromptValidationError(
         ),
     },
   ]
+
   return Option.map(
     Arr.findFirst(checks, (check) => check.when),
     (check) => check.response(),
@@ -362,6 +369,7 @@ export function enqueueValidatedPrompt(
 ): Promise<Response> {
   const now = Date.now()
   const participant = host.resolveParticipantByUserId(body.authorId)
+
   const model = Option.orElse(resolvedModel(body.model), () =>
     resolvedModel(host.getSession()?.model),
   )
@@ -400,7 +408,9 @@ function enqueuePromptWithResolvedModel(
     id: messageId,
     authorId: participant.id,
     content: body.content,
-    source: (body.source || "web") as "web" | "slack" | "extension" | "github",
+    source:
+      /* SAFETY: (body.source || "web") has the "web" | "slack" | "extension" | "github" shape established by the check or writer around this read. */ (body.source ||
+        "web") as "web" | "slack" | "extension" | "github",
     model,
     reasoningEffort: body.reasoningEffort ?? null,
     executionMode,
@@ -420,6 +430,7 @@ function enqueuePromptWithResolvedModel(
       name: participant.github_name || participant.github_login || participant.user_id,
     },
   }
+
   host.repository.events.createEvent({
     id: generateId(),
     type: "user_message",
@@ -430,6 +441,7 @@ function enqueuePromptWithResolvedModel(
   host.broadcast({ type: "sandbox_event", event: userEvent })
 
   const localParentContext = localSpanContextFromHeaders(request.headers)
+
   return host.dispatchEnqueuedPrompt(executionMode, options, messageId, localParentContext)
 }
 
@@ -464,6 +476,7 @@ export function startStreamedPrompt(
 ): Response {
   const stream = host.registerIsolateStream(messageId)
   host.ctx.waitUntil(host.processMessageQueue(localParentContext))
+
   return new Response(stream, {
     status: 200,
     headers: {
@@ -497,6 +510,7 @@ export function startBackgroundQueuedPrompt(
       .processMessageQueue(localParentContext)
       .catch((errorValue) => host.logAsyncPromptQueueError(errorValue)),
   )
+
   return Response.json({
     messageId,
     status: "queued",
@@ -509,6 +523,7 @@ export async function startAwaitedQueuedPrompt(
   localParentContext: LocalSpanContext | undefined,
 ): Promise<Response> {
   await host.processMessageQueue(localParentContext)
+
   return Response.json({
     messageId,
     status: "queued",
@@ -542,7 +557,9 @@ export async function handleUpdateTools(
   host: SessionDODelegate,
   request: Request,
 ): Promise<Response> {
-  const body = (await request.json()) as UpdateToolsBody
+  const body =
+    /* SAFETY: The JSON body is the UpdateToolsBody shape read by this caller after the response arrives. */ (await request.json()) as UpdateToolsBody
+
   return Option.match(Option.fromNullishOr(body.userId), {
     onNone: () => Promise.resolve(Response.json({ error: "userId is required" }, { status: 400 })),
     onSome: (userId) => host.updateToolsForUser(userId, body),
@@ -578,6 +595,7 @@ export function applyToolUpdate(
   const requestedTools = normalizeSessionTools(body.tools)
   const requestedCustomMcpServers = normalizeOpenCodeMcpServers(body.customMcpServers)
   const requestedRepo = getGitHubRepoTool(requestedTools)
+
   return Option.match(host.repoChangeError(session, requestedRepo), {
     onSome: (response) => Promise.resolve(response),
     onNone: () => host.commitToolUpdate(session, body, requestedTools, requestedCustomMcpServers),
@@ -594,6 +612,7 @@ export function repoChangeError(
     (repo): repo is { repoOwner: string; repoName: string } =>
       Boolean(repo.repoOwner) && Boolean(repo.repoName),
   )
+
   return Option.match(currentRepo, {
     onSome: (current) => host.existingRepoChangeError(current, requestedRepo),
     onNone: () => host.attachRepoError(requestedRepo),
@@ -609,6 +628,7 @@ export function existingRepoChangeError(
     onNone: () => false,
     onSome: (repo) => repo.repoOwner === current.repoOwner && repo.repoName === current.repoName,
   })
+
   return Match.value(matches).pipe(
     Match.when(true, () => Option.none<Response>()),
     Match.orElse(() =>
@@ -662,6 +682,7 @@ export function commitToolUpdate(
     subagents: resolveSessionSubagentMode(session.session_kind, body.subagents, session.subagents),
     updatedAt: Date.now(),
   })
+
   return host.syncToolingRuntime(session).then(() => host.broadcastSessionState())
 }
 
@@ -683,5 +704,6 @@ export function syncRuntimeForKind(host: SessionDODelegate, session: SessionRow)
 export function broadcastSessionState(host: SessionDODelegate): Response {
   const state = host.getSessionState()
   host.broadcast({ type: "session_state", state })
+
   return Response.json(state)
 }

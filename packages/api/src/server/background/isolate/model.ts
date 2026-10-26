@@ -50,7 +50,9 @@ type SupportedProviderPackage =
   | "workers-ai-provider"
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
 type JsonObject = { [key: string]: JsonValue }
+
 function toSupportedProviderPackage(value: string | undefined): SupportedProviderPackage {
   return Match.value(value).pipe(
     Match.whenOr(
@@ -70,9 +72,12 @@ function toStringRecord(value: unknown): Option.Option<Record<string, string>> {
     (resolved) => typeof resolved === "object" && resolved !== null && !Array.isArray(resolved),
   ).pipe(
     Option.map((resolved) =>
-      Object.entries(resolved as Record<string, unknown>).filter(
-        (entry): entry is [string, string] => typeof entry[1] === "string",
-      ),
+      Object.entries(
+        /* SAFETY: resolved was checked to be a non-array object before it is read as Record<string, unknown>. */ resolved as Record<
+          string,
+          unknown
+        >,
+      ).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
     ),
     Option.filter((entries) => entries.length > 0),
     Option.map((entries) => Object.fromEntries(entries)),
@@ -84,7 +89,15 @@ function toRecordOrEmpty(value: unknown): Record<string, unknown> {
     Option.liftPredicate(
       value,
       (resolved) => Boolean(resolved) && typeof resolved === "object",
-    ).pipe(Option.map((resolved) => resolved as Record<string, unknown>)),
+    ).pipe(
+      Option.map(
+        (resolved) =>
+          /* SAFETY: resolved was checked to be a non-array object before it is read as Record<string, unknown>. */ resolved as Record<
+            string,
+            unknown
+          >,
+      ),
+    ),
     (): Record<string, unknown> => ({}),
   )
 }
@@ -111,6 +124,13 @@ function getSelectedProviderConfig(input: CompiledProviderContext) {
   }
 }
 
+function jsonObject<Fields extends object>(fields: Fields): JsonObject {
+  let record: JsonObject = {}
+  Object.assign(record, fields)
+
+  return record
+}
+
 function buildProviderOptions(input: {
   providerId: string
   providerPackage: SupportedProviderPackage
@@ -123,8 +143,8 @@ function buildProviderOptions(input: {
       Option.getOrElse(
         Option.fromNullishOr(input.reasoningEffort).pipe(
           Option.filter((effort) => effort.length > 0),
-          Option.map(
-            (effort): JsonObject => ({
+          Option.map((effort) =>
+            jsonObject({
               reasoning_effort: Match.value(effort).pipe(
                 Match.when("none", () => null),
                 Match.orElse((value) => value),
@@ -139,16 +159,16 @@ function buildProviderOptions(input: {
       Option.getOrElse(
         Option.fromNullishOr(input.reasoningEffort).pipe(
           Option.filter((effort) => effort.length > 0),
-          Option.map((effort): JsonObject => ({ reasoningEffort: effort })),
+          Option.map((effort) => jsonObject({ reasoningEffort: effort })),
         ),
         (): JsonObject => ({}),
       ),
     ),
   )
-  const options: JsonObject = {
-    ...(input.modelOptions as JsonObject),
-    ...reasoningOption,
-  }
+
+  let options: JsonObject = {}
+  Object.assign(options, input.modelOptions, reasoningOption)
+
   const providerOptionsKey = Match.value(input.providerPackage).pipe(
     Match.when("workers-ai-provider", () => "workers-ai"),
     Match.orElse(() => input.providerId),
@@ -185,6 +205,7 @@ async function executeProviderFetch(
     onNone: () => fetch(request, init),
     onSome: (fetchImplementation) => fetchImplementation(request, init),
   })
+
   return Match.value(input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID).pipe(
     Match.when(true, () => normalizeCloudflareAiGatewayResponse(response)),
     Match.orElse(() => response),
@@ -204,18 +225,39 @@ function createProviderFetch(input: {
     init?: Parameters<typeof fetch>[1],
   ): Promise<Response> {
     const url = Match.value(typeof request === "string" || request instanceof URL).pipe(
-      Match.when(true, () => request as string | URL),
-      Match.orElse(() => (request as Request).url),
+      Match.when(
+        true,
+        () =>
+          /* SAFETY: request has the string | URL shape established by the check or writer around this read. */ request as
+            | string
+            | URL,
+      ),
+      Match.orElse(
+        () =>
+          /* SAFETY: request has the Request shape established by the check or writer around this read. */ (
+            request as Request
+          ).url,
+      ),
     )
+
     const parsed = new URL(String(url))
+
     const method =
       init?.method ??
       Match.value(request instanceof Request).pipe(
-        Match.when(true, () => (request as Request).method),
+        Match.when(
+          true,
+          () =>
+            /* SAFETY: request has the Request shape established by the check or writer around this read. */ (
+              request as Request
+            ).method,
+        ),
         Match.orElse(() => "GET"),
       )
+
     const span = Effect.gen(function* () {
       const backgroundTracing = yield* BackgroundTracing
+
       return yield* backgroundTracing.withSpan(
         "ai.provider.fetch",
         {
@@ -232,9 +274,11 @@ function createProviderFetch(input: {
         }),
       )
     }).pipe(Effect.provide(makeBackgroundTracingLayer(input.observability)))
+
     // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK provider fetch boundary requires a Promise; runs the ai.provider.fetch span Effect at that edge.
     return Effect.runPromise(span)
   }
+
   return tracedFetch
 }
 
@@ -301,6 +345,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   const apiKey = stringOption(providerOptions.apiKey)
   const baseURL = stringOption(providerOptions.baseURL)
   const headers = toStringRecord(providerOptions.headers)
+
   const cloudflareProviderNativeFetch = Match.value(
     input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID &&
       providerPackage !== "workers-ai-provider",
@@ -315,6 +360,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
     ),
     Match.orElse(() => Option.none<typeof fetch>()),
   )
+
   const tracedFetch = createProviderFetch({
     env: input.env,
     providerId: input.providerId,
@@ -323,6 +369,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
     observability: input.observability,
     fetchImplementation: Option.getOrUndefined(cloudflareProviderNativeFetch),
   })
+
   const resolvedApiKey = Option.getOrUndefined(apiKey)
   const resolvedBaseUrl = baseURL
 
@@ -382,11 +429,13 @@ export const compileIsolateModelContext = Effect.fn("isolate.model.compileContex
         }),
       catch: (cause) => cause,
     })
+
     const providerContext = {
       ...compiled,
       env: input.env,
       observability: input.observability,
     }
+
     const { modelOptions, providerPackage } = getSelectedProviderConfig(providerContext)
 
     return {

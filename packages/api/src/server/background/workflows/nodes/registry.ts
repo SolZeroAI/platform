@@ -50,10 +50,13 @@ const workflowNodeAdapters: Partial<Record<WorkflowNodeAdapterCategory, Workflow
 }
 
 export function getRegisteredWorkflowNodeAdapterCategories(): WorkflowNodeAdapterCategory[] {
-  return Object.keys(workflowNodeAdapters) as WorkflowNodeAdapterCategory[]
+  return /* SAFETY: These keys are exactly the members of WorkflowNodeAdapterCategory[]. */ Object.keys(
+    workflowNodeAdapters,
+  ) as WorkflowNodeAdapterCategory[]
 }
 
 type WorkflowNodeRuntimeSupport = ReturnType<typeof getWorkflowNodeRuntimeSupport>
+
 type AdapterRuntimeSupport = Extract<WorkflowNodeRuntimeSupport, { kind: "adapter" }>
 
 const isAdapterRuntimeSupport = (

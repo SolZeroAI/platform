@@ -34,6 +34,7 @@ export interface WorkflowManifestAuditResult extends WorkflowManifestMigrationRe
 }
 
 type ManifestNormalizer = (input: unknown, name: string) => WorkflowManifest
+
 type ManifestMigrationInput = (input: unknown) => unknown
 
 interface WorkflowManifestMigrator extends WorkflowManifestMigrationStep {
@@ -45,6 +46,7 @@ const WORKFLOW_MANIFEST_VERSION_V1 = 1
 const WORKFLOW_MANIFEST_VERSION_V2 = 2
 const WORKFLOW_MANIFEST_VERSION_V3 = 3
 const WORKFLOW_MANIFEST_VERSION_V4 = 4
+
 const WORKFLOW_MANIFEST_MIGRATORS = new Map<number, WorkflowManifestMigrator>([
   [
     LEGACY_WORKFLOW_MANIFEST_VERSION,
@@ -96,10 +98,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function migrateR2PutObjectEncodingToV2(input: unknown): unknown {
+function migrateR2PutObjectEncodingToV2(input: unknown) {
   if (!isRecord(input)) {
     return input
   }
+
   if (!Array.isArray(input.nodes)) {
     return { ...input, version: WORKFLOW_MANIFEST_VERSION_V2 }
   }
@@ -111,7 +114,9 @@ function migrateR2PutObjectEncodingToV2(input: unknown): unknown {
       if (!isRecord(node) || node.type !== "r2-put-object") {
         return node
       }
+
       const options = isRecord(node.options) ? node.options : {}
+
       return {
         ...node,
         options: {
@@ -123,10 +128,11 @@ function migrateR2PutObjectEncodingToV2(input: unknown): unknown {
   }
 }
 
-function migrateIsolateSubagentsToV4(input: unknown): unknown {
+function migrateIsolateSubagentsToV4(input: unknown) {
   if (!isRecord(input)) {
     return input
   }
+
   if (!Array.isArray(input.nodes)) {
     return { ...input, version: WORKFLOW_MANIFEST_VERSION_V4 }
   }
@@ -138,7 +144,9 @@ function migrateIsolateSubagentsToV4(input: unknown): unknown {
       if (!isRecord(node) || node.type !== "isolate-session") {
         return node
       }
+
       const options = isRecord(node.options) ? node.options : {}
+
       return {
         ...node,
         options: {
@@ -154,6 +162,7 @@ function readManifestVersion(input: unknown): number {
   if (!isRecord(input) || typeof input.version !== "number" || !Number.isInteger(input.version)) {
     return LEGACY_WORKFLOW_MANIFEST_VERSION
   }
+
   return input.version
 }
 
@@ -183,14 +192,19 @@ function applyManifestMigrationChain(
   if (version >= WORKFLOW_MANIFEST_VERSION) {
     return { migratedInput, steps }
   }
+
   const migrator = WORKFLOW_MANIFEST_MIGRATORS.get(version)
+
   if (!migrator) {
     throw new Error(`No workflow manifest migration path from version ${version}`)
   }
+
   const nextInput = migrator.migrate(migratedInput)
+
   if (migrator.toVersion <= version) {
     throw new Error(`Workflow manifest migration from version ${version} did not advance`)
   }
+
   return applyManifestMigrationChain(nextInput, migrator.toVersion, [
     ...steps,
     {
@@ -212,6 +226,7 @@ export function migrateWorkflowManifestForSave(
   const { migratedInput, steps } = applyManifestMigrationChain(input, fromVersion, [])
 
   const manifest = normalizeManifest(migratedInput, name)
+
   return {
     manifest,
     fromVersion,
@@ -240,6 +255,7 @@ function scanTemplateReferences(input: {
           message: `Template '${expression}' depends on workflow runtime context shape`,
         })
       })
+
     return
   }
 
@@ -252,6 +268,7 @@ function scanTemplateReferences(input: {
         findings: input.findings,
       }),
     )
+
     return
   }
 
@@ -277,6 +294,7 @@ function classifyValidationError(message: string): WorkflowManifestAuditFinding 
       message,
     }
   }
+
   if (message.includes("template")) {
     return {
       severity: "error",
@@ -284,6 +302,7 @@ function classifyValidationError(message: string): WorkflowManifestAuditFinding 
       message,
     }
   }
+
   return {
     severity: "error",
     code: "manifest-validation",
@@ -320,6 +339,7 @@ export function auditWorkflowManifestRuntimeCompatibility(input: {
   })
 
   const manifest = migration?.manifest ?? validation.manifest
+
   if (manifest) {
     manifest.nodes.forEach((node) => {
       scanTemplateReferences({

@@ -19,15 +19,19 @@ test(
     )
     await expect(screen.getByRole("button", "Account menu")).toBeVisible()
     const cookie = (await browser.cookies()).map(({ name, value }) => `${name}=${value}`).join("; ")
+
     const memberSession = await fetch("http://localhost:3100/auth/session", {
       headers: { Cookie: cookie },
     })
+
     expect(memberSession.status).toBe(200)
     const state = await memberSession.json()
     expect(state.isAdmin).toBe(false)
+
     const forbidden = await fetch("http://localhost:3100/admin/summary", {
       headers: { Cookie: cookie },
     })
+
     expect(forbidden.status).toBe(403)
     await app.open("/admin/agents")
     await expect(screen.getByText("Access Denied", { exact: true })).toBeVisible()

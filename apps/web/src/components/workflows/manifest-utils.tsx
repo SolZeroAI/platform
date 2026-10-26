@@ -26,11 +26,14 @@ export function createStarterEdges(): WorkflowCanvasEdge[] {
 export function getTemplateManifest(templateId: string): WorkflowManifest {
   const template =
     WORKFLOW_TEMPLATES.find((item) => item.id === templateId) ?? WORKFLOW_TEMPLATES[0]
+
   return structuredClone(template.manifest)
 }
 
 export function migrateWorkflowManifestForBuilder(manifest: WorkflowManifest): WorkflowManifest {
+  // SAFETY: Workflow manifests always carry a numeric version, which is read before the builder migration check.
   const manifestVersion = (manifest as { version?: unknown }).version
+
   if (typeof manifestVersion === "number" && manifestVersion >= WORKFLOW_MANIFEST_VERSION) {
     return manifest
   }
@@ -42,12 +45,15 @@ export function migrateWorkflowManifestForBuilder(manifest: WorkflowManifest): W
     version: WORKFLOW_MANIFEST_VERSION,
     nodes: manifest.nodes.map((node) => {
       const options = { ...node.options }
+
       if (sourceVersion < 2 && node.type === "r2-put-object") {
         options.encoding = "text"
       }
+
       if (sourceVersion < WORKFLOW_SUBAGENTS_MANIFEST_VERSION && node.type === "isolate-session") {
         options.subagents = "disabled"
       }
+
       return {
         ...node,
         options,
@@ -60,6 +66,7 @@ export function getIfElseConditionExpression(node: WorkflowManifestNode): string
   if (typeof node.options.conditionExpression === "string") {
     return node.options.conditionExpression
   }
+
   return ""
 }
 
@@ -74,17 +81,16 @@ export function toCanvasNode(node: WorkflowManifestNode): WorkflowCanvasNode {
 
 export function getManualInputValues(node: WorkflowManifestNode): Record<string, string> {
   const inputValues = node.options.inputValues
+
   if (!inputValues || typeof inputValues !== "object" || Array.isArray(inputValues)) {
     return {}
   }
 
-  const values: Record<string, string> = {}
-  for (const [key, value] of Object.entries(inputValues)) {
-    if (typeof value === "string") {
-      values[key] = value
-    }
-  }
-  return values
+  return Object.fromEntries(
+    Object.entries(inputValues).flatMap(([key, value]) =>
+      typeof value === "string" ? [[key, value]] : [],
+    ),
+  )
 }
 
 export function hasManualInputValue(node: WorkflowManifestNode, handle: string): boolean {
@@ -111,6 +117,7 @@ export function getWorkflowSessionCacheTtlValue(value: unknown): string {
       : typeof value === "string"
         ? value.trim()
         : ""
+
   return workflowSessionCacheTtlValues.has(seconds) ? seconds : ""
 }
 
@@ -124,6 +131,7 @@ export function setManualInputValue(
   value: string,
 ): WorkflowManifestNode {
   const inputValues = getManualInputValues(node)
+
   if (value === "") {
     delete inputValues[handle]
   } else {
@@ -131,11 +139,13 @@ export function setManualInputValue(
   }
 
   const options = { ...node.options }
+
   if (Object.keys(inputValues).length > 0) {
     options.inputValues = inputValues
   } else {
     delete options.inputValues
   }
+
   return { ...node, options }
 }
 
@@ -169,6 +179,7 @@ export function findEdgeUsingTargetInput(
   connection: Connection,
 ): WorkflowCanvasEdge | null {
   const targetInputKey = getConnectionTargetInputKey(connection)
+
   return edges.find((edge) => getEdgeTargetInputKey(edge) === targetInputKey) ?? null
 }
 
@@ -212,6 +223,7 @@ export function toManifest(
     name,
     nodes: nodes.map((node) => {
       const manifestNode = node.data.node
+
       return {
         ...manifestNode,
         position: node.position,
@@ -232,8 +244,10 @@ export function getWorkflowNodeOptions(node: WorkflowManifestNode): WorkflowNode
   if (node.type !== "isolate-session" && node.type !== "sandbox-session") {
     return node.options
   }
+
   const options = { ...node.options }
   delete options.title
+
   return options
 }
 

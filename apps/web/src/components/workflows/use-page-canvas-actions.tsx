@@ -50,17 +50,21 @@ export function useWorkflowPageCanvasActions(input: any) {
       }
 
       const existingEdge = findEdgeUsingTargetInput(edges, connection)
+
       if (existingEdge) {
         if (!isSameConnection(existingEdge, connection)) {
           setConnectionPendingReplacement({ connection, existingEdge })
         }
+
         return
       }
 
       const targetNode = nodes.find((node) => node.id === connection.target)?.data.node
       const targetHandle = getNormalizedTargetHandle(connection.targetHandle)
+
       if (targetNode && hasManualInputValue(targetNode, targetHandle)) {
         setConnectionPendingManualOverwrite({ connection, targetNode, targetHandle })
+
         return
       }
 
@@ -134,6 +138,7 @@ export function useWorkflowPageCanvasActions(input: any) {
       const definition = getWorkflowNodeDefinition(type)
       const id = `${type}-${Date.now().toString(36)}`
       const nodePosition = position ?? { x: 180 + nodes.length * 28, y: 120 + nodes.length * 24 }
+
       const node: WorkflowManifestNode = {
         id,
         type,
@@ -141,6 +146,7 @@ export function useWorkflowPageCanvasActions(input: any) {
         position: nodePosition,
         options: getWorkflowNodeDefaultOptions(type),
       }
+
       setNodes((current) => [...current, toCanvasNode(node)])
       setSelectedNodeId(id)
       setSelectedEdgeId(null)
@@ -179,6 +185,7 @@ export function useWorkflowPageCanvasActions(input: any) {
       if (!selectedNodeId) {
         return
       }
+
       setNodes((current) =>
         current.map((node) =>
           node.id === selectedNodeId ? { ...node, data: { node: updater(node.data.node) } } : node,
@@ -191,12 +198,15 @@ export function useWorkflowPageCanvasActions(input: any) {
   const renameSelectedNode = useCallback(
     (nextNodeId: string) => {
       const trimmedNodeId = nextNodeId.trim()
+
       if (!selectedNodeId || !trimmedNodeId) {
         return false
       }
+
       if (trimmedNodeId === selectedNodeId) {
         return true
       }
+
       if (nodes.some((node) => node.id === trimmedNodeId)) {
         return false
       }
@@ -228,14 +238,18 @@ export function useWorkflowPageCanvasActions(input: any) {
       )
       setWorkflowHeaderDraftsByNode((current) => {
         const selectedNodeDraftRows = current[selectedNodeId]
+
         if (!selectedNodeDraftRows) {
           return current
         }
+
         const next = { ...current }
         delete next[selectedNodeId]
         next[trimmedNodeId] = selectedNodeDraftRows
+
         return next
       })
+
       return true
     },
     [nodes, selectedNodeId, setEdges, setNodes],
@@ -283,6 +297,7 @@ export function useWorkflowPageCanvasActions(input: any) {
           .filter((edge) => edge.source === nodeId || edge.target === nodeId)
           .map((edge) => edge.id),
       )
+
       setNodes((current) => current.filter((node) => node.id !== nodeId))
       setEdges((current) =>
         current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
@@ -292,18 +307,23 @@ export function useWorkflowPageCanvasActions(input: any) {
         if (!selectedId) {
           return null
         }
+
         return deletedEdgeIds.has(selectedId) ? null : selectedId
       })
+
       if (selectedNodeId === nodeId) {
         setDetailsCollapsed(true)
       }
+
       setWebhookTestNode((current) => (current?.id === nodeId ? null : current))
       setWorkflowHeaderDraftsByNode((current) => {
         if (!current[nodeId]) {
           return current
         }
+
         const next = { ...current }
         delete next[nodeId]
+
         return next
       })
       setNodePendingDeletion(null)
@@ -316,6 +336,7 @@ export function useWorkflowPageCanvasActions(input: any) {
       setEdges((current) => current.filter((edge) => edge.id !== edgeId))
       setSelectedEdgeId((current) => (current === edgeId ? null : current))
       setEdgePendingDeletionId((current) => (current === edgeId ? null : current))
+
       if (selectedEdgeId === edgeId) {
         setDetailsCollapsed(true)
       }
@@ -332,6 +353,7 @@ export function useWorkflowPageCanvasActions(input: any) {
         setSelectedEdgeId(null)
         setDetailsCollapsed(true)
       }
+
       onEdgesChange(changes)
     },
     [onEdgesChange, selectedEdgeId],

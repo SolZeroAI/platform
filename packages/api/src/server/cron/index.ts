@@ -32,8 +32,11 @@ type CronJobEffect = (
   // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Cron dispatch stores heterogeneous Effect jobs in one static map.
 ) => Effect.Effect<unknown, unknown>
 
-const CRON_JOBS: Record<string, readonly CronJobEffect[]> = {
-  ...Object.fromEntries(
+const CRON_JOBS: Record<string, readonly CronJobEffect[]> = {}
+
+Object.assign(
+  CRON_JOBS,
+  Object.fromEntries(
     LITELLM_MODEL_SYNC_CRONS.map((cronExpression) => [
       cronExpression,
       [
@@ -45,7 +48,7 @@ const CRON_JOBS: Record<string, readonly CronJobEffect[]> = {
       ] satisfies readonly CronJobEffect[],
     ]),
   ),
-}
+)
 
 export const runCronByExpression = Effect.fn("cron.runByExpression")(function* (
   controller: ScheduledController,
@@ -56,6 +59,7 @@ export const runCronByExpression = Effect.fn("cron.runByExpression")(function* (
   const shouldLogMissing = Effect.succeed(jobs.length === 0)
   const logMissing = logCron("No cron jobs registered", { cron: controller.cron })
   yield* Effect.when(logMissing, shouldLogMissing)
+
   return yield* Effect.forEach(jobs, (job) => job(controller, env, ctx), {
     concurrency: 1,
   })

@@ -23,5 +23,6 @@ export const workflowNodeFail = (message: string) => Effect.fail(new WorkflowNod
  */
 export function workflowNodeFailWhen(condition: boolean, message: string) {
   const conditionEffect = Effect.succeed(condition)
+
   return workflowNodeFail(message).pipe(Effect.when(conditionEffect))
 }

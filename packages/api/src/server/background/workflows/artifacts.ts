@@ -79,6 +79,7 @@ export const readWorkflowManifest = Effect.fn("workflows.readManifest")(function
     try: () => env.WORKFLOW_BUCKET.get(key),
     catch: toError,
   })
+
   return yield* Match.value(object).pipe(
     Match.when(Match.null, () =>
       Effect.fail(
@@ -87,7 +88,8 @@ export const readWorkflowManifest = Effect.fn("workflows.readManifest")(function
     ),
     Match.orElse((resolved) =>
       Effect.tryPromise({
-        try: () => resolved.json() as Promise<WorkflowManifest>,
+        try: () =>
+          /* SAFETY: The JSON body is the Promise<WorkflowManifest> shape read by this caller after the response arrives. */ resolved.json() as Promise<WorkflowManifest>,
         catch: toError,
       }),
     ),
@@ -99,6 +101,7 @@ export const readWorkflowCode = Effect.fn("workflows.readCode")(function* (env: 
     try: () => env.WORKFLOW_BUCKET.get(key),
     catch: toError,
   })
+
   return yield* Match.value(object).pipe(
     Match.when(Match.null, () =>
       Effect.fail(

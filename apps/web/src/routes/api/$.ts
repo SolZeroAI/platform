@@ -35,6 +35,7 @@ function copyResponseHeaders(source: Headers): Headers {
 
   for (const [key, value] of source.entries()) {
     const normalized = key.toLowerCase()
+
     if (
       normalized === "content-encoding" ||
       normalized === "content-length" ||
@@ -43,12 +44,16 @@ function copyResponseHeaders(source: Headers): Headers {
     ) {
       continue
     }
+
     headers.append(key, value)
   }
 
+  // SAFETY: Node fetch Headers expose getSetCookie for every Set-Cookie value, which the DOM Headers type leaves off.
   const setCookie = (source as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
+
   if (setCookie) {
     headers.delete("set-cookie")
+
     for (const cookie of setCookie) {
       headers.append("set-cookie", cookie)
     }
@@ -98,6 +103,7 @@ function isLocalhost(hostname: string): boolean {
 
 function getForwardedClientIp(request: Request, publicOrigin: URL): string | null {
   const cloudflareClientIp = request.headers.get("cf-connecting-ip")?.split(",")[0]?.trim()
+
   if (cloudflareClientIp) {
     return cloudflareClientIp
   }
@@ -112,9 +118,11 @@ function setForwardedHeaders(headers: Headers, request: Request): void {
   for (const header of CLIENT_IP_HEADERS) {
     headers.delete(header)
   }
+
   if (forwardedClientIp) {
     headers.set("x-forwarded-for", forwardedClientIp)
   }
+
   headers.set("x-forwarded-host", publicOrigin.host)
   headers.set("x-forwarded-proto", publicOrigin.protocol.replace(":", ""))
   headers.set("x-forwarded-prefix", "/api")

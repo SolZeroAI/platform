@@ -395,6 +395,7 @@ export function HomeSessionToolsDialog({
     setMcpcfServersLoading(true)
     fetch("/api/sessions/mcpcf/servers")
       .then(async (response) => {
+        // SAFETY: /api/sessions/mcpcf/servers returns the server list and an error string when response.ok is false.
         const data = (await response.json().catch(() => ({}))) as {
           servers?: McpcfServer[]
           error?: string
@@ -439,6 +440,7 @@ export function HomeSessionToolsDialog({
     setAiSearchSourcesLoading(true)
     fetch("/api/sessions/ai-search/sources")
       .then(async (response) => {
+        // SAFETY: /api/sessions/ai-search/sources returns the source list and an error string when response.ok is false.
         const data = (await response.json().catch(() => ({}))) as {
           sources?: AiSearchSessionSource[]
           error?: string
@@ -493,6 +495,7 @@ export function HomeSessionToolsDialog({
 
     try {
       const response = await fetch(`/api/sessions/mcpcf/${encodeURIComponent(serverId)}/tools`)
+      // SAFETY: The MCP Context Forge tools response returns the tool list and an error string when response.ok is false.
       const data = (await response.json().catch(() => ({}))) as {
         tools?: McpcfToolPreview[]
         error?: string
@@ -908,6 +911,7 @@ export function HomeSessionToolsDialog({
                       <Button
                         type="button"
                         onClick={() => setDraftTools(toggleDocSource(draftTools, source.id))}
+                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
                         shape="circle"
                         variant={isSelected ? "primary" : "secondary"}
                         aria-label={`${isSelected ? "Remove" : "Add"} ${source.label}`}

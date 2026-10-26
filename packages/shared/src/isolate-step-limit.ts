@@ -12,6 +12,7 @@ export function normalizeIsolateStepLimit(
   fallback = DEFAULT_ISOLATE_STEP_LIMIT,
 ): number {
   const fallbackLimit = clampIsolateStepLimit(fallback)
+
   return Option.match(Schema.decodeUnknownOption(IsolateStepLimitSchema)(value), {
     onNone: () => fallbackLimit,
     onSome: clampIsolateStepLimit,

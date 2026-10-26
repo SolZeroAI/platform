@@ -6,6 +6,7 @@ import { stackOptions, type StackOptionsInput } from "../stack"
 import { s0StackRuntime } from "./runtime"
 
 export type S0ApiStackOutput = Effect.Success<ReturnType<typeof createS0Api>>
+
 type S0ApiStackServices = Effect.Services<typeof S0ApiProgram>
 
 export class S0Api extends Alchemy.Stack<S0Api, S0ApiStackOutput>()("S0Api") {}
@@ -13,6 +14,7 @@ export class S0Api extends Alchemy.Stack<S0Api, S0ApiStackOutput>()("S0Api") {}
 // oxlint-disable-next-line effect/prefer-effect-fn -- Alchemy Stack.make expects an Effect value; Effect.fn changes inference here.
 export const S0ApiProgram = Effect.gen(function* () {
   const runtime = yield* s0StackRuntime()
+
   return yield* createS0Api(runtime)
 })
 

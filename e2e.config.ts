@@ -16,6 +16,7 @@ import { appEnvironment } from "./scripts/e2e/environment"
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
+
 const cloudflare = createOpenAICompatible({
   name: "cloudflare-ai-gateway",
   baseURL: `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1`,
@@ -29,6 +30,7 @@ const cloudflare = createOpenAICompatible({
     "cf-aig-backoff": "exponential",
   },
   transformRequestBody(body: Record<string, unknown>) {
+    // oxlint-disable-next-line anti-slop/no-known-value-widening -- request copies the model body, whose keys are dynamic, then overrides reasoning_effort and max_tokens.
     const request: Record<string, unknown> = {
       ...body,
       reasoning_effort: body.reasoning_effort === "none" ? "low" : body.reasoning_effort,
@@ -37,15 +39,19 @@ const cloudflare = createOpenAICompatible({
       // requests still cache for the 3600 second TTL.
       max_tokens: body.max_tokens ?? 8193,
     }
+
     if (!Array.isArray(request.messages)) return request
+
     return {
       ...request,
       messages: request.messages.map((message: { content?: unknown }) => {
         if (!Array.isArray(message.content)) return message
+
         let content = message.content
           .map((part: { text?: unknown } | string) => (typeof part === "string" ? part : part.text))
           .filter((text: unknown): text is string => typeof text === "string")
           .join("\n")
+
         // Action questions say "Goal of this step". Verdicts say "Task of this step".
         // A conditional save sentence activated the selected Overview tab. The direct
         // sentence selected the button. A note that forbade "none" returned invalid JSON.
@@ -69,6 +75,7 @@ const cloudflare = createOpenAICompatible({
             insert: true,
           },
         ] as const
+
         for (const note of notes) {
           if (!content.includes(note.mark)) continue
           const sentence = `\n\n${note.text}`
@@ -77,13 +84,44 @@ const cloudflare = createOpenAICompatible({
               ? content.replace(note.mark, `${note.mark}${sentence}`)
               : content + sentence
         }
+
         return { ...message, content }
       }),
     }
   },
 })
+
 const languageModel = cloudflare.chatModel("@cf/openai/gpt-oss-120b")
 const decisionModel = new Experimental_DecisionLanguageModel({ model: languageModel })
+
+const credentials = {
+  admin: {
+    username: process.env.E2E_USER_ADMIN_USERNAME!,
+    password: () => process.env.E2E_USER_ADMIN_PASSWORD!,
+  },
+  peer: {
+    username: process.env.E2E_USER_PEER_USERNAME!,
+    password: () => process.env.E2E_USER_PEER_PASSWORD!,
+  },
+}
+
+if (process.env.E2E_OIDC_USERNAME) {
+  Object.assign(credentials, {
+    oidcMember: {
+      username: process.env.E2E_OIDC_USERNAME,
+      password: () => process.env.E2E_OIDC_PASSWORD ?? "",
+    },
+  })
+}
+
+const secrets = {
+  gateway: () => process.env.CF_AI_GATEWAY_E2E_TOKEN ?? "",
+  fixture: () => process.env.E2E_FIXTURE_SECRET ?? "disposable-e2e-value",
+}
+
+if (process.env.E2E_BYOK_API_KEY) {
+  Object.assign(secrets, { byok: process.env.E2E_BYOK_API_KEY })
+}
 
 export default {
   projectId: "solzero",
@@ -115,29 +153,8 @@ export default {
         "SolZero test deployment. Only disposable e2e accounts and records are allowed. Do not link real integrations or submit external messages. Use the exact input values supplied in params. Wait for each page before acting.",
     },
   },
-  credentials: {
-    admin: {
-      username: process.env.E2E_USER_ADMIN_USERNAME!,
-      password: () => process.env.E2E_USER_ADMIN_PASSWORD!,
-    },
-    ...(process.env.E2E_OIDC_USERNAME
-      ? {
-          oidcMember: {
-            username: process.env.E2E_OIDC_USERNAME,
-            password: () => process.env.E2E_OIDC_PASSWORD ?? "",
-          },
-        }
-      : {}),
-    peer: {
-      username: process.env.E2E_USER_PEER_USERNAME!,
-      password: () => process.env.E2E_USER_PEER_PASSWORD!,
-    },
-  },
-  secrets: {
-    gateway: () => process.env.CF_AI_GATEWAY_E2E_TOKEN ?? "",
-    fixture: () => process.env.E2E_FIXTURE_SECRET ?? "disposable-e2e-value",
-    ...(process.env.E2E_BYOK_API_KEY ? { byok: process.env.E2E_BYOK_API_KEY } : {}),
-  },
+  credentials,
+  secrets,
   filters: [decisionFilter({ model: decisionModel })],
   workers: 1,
   // gpt-oss sometimes spends the output budget before the JSON answer. A second

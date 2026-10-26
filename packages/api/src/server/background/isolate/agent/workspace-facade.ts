@@ -47,10 +47,12 @@ export class IsolateAgentWorkspace {
   async readFile(path: string): Promise<{ path: string; content: string }> {
     this.assertRepoAttached()
     const content = await this.workspace.readFile(toRepoPath(path))
+
     const resolvedContent = Option.getOrThrowWith(
       Option.fromNullishOr(content),
       () => new Error(`File '${path}' was not found in the repository workspace`),
     )
+
     return {
       path: normalizeRepoRelativePath(path),
       content: resolvedContent,
@@ -60,6 +62,7 @@ export class IsolateAgentWorkspace {
   async writeFile(path: string, content: string): Promise<{ path: string; bytes: number }> {
     this.assertRepoAttached()
     await this.workspace.writeFile(toRepoPath(path), content)
+
     return {
       path: normalizeRepoRelativePath(path),
       bytes: content.length,
@@ -68,11 +71,13 @@ export class IsolateAgentWorkspace {
 
   async subagentReadFile(path: string): Promise<string | null> {
     this.assertRepoAttached()
+
     return this.workspace.readFile(toRepoWorkspacePath(path))
   }
 
   async subagentReadFileBytes(path: string): Promise<Uint8Array | null> {
     this.assertRepoAttached()
+
     return this.workspace.readFileBytes(toRepoWorkspacePath(path))
   }
 
@@ -86,6 +91,7 @@ export class IsolateAgentWorkspace {
     options?: { limit?: number; offset?: number },
   ): Promise<FileInfo[]> {
     this.assertRepoAttached()
+
     return this.workspace.readDir(toRepoWorkspacePath(path, { allowRoot: true }), options)
   }
 
@@ -99,6 +105,7 @@ export class IsolateAgentWorkspace {
 
   async subagentGlob(pattern: string): Promise<FileInfo[]> {
     this.assertRepoAttached()
+
     return this.workspace.glob(toRepoWorkspacePath(pattern, { allowRoot: true }))
   }
 
@@ -109,6 +116,7 @@ export class IsolateAgentWorkspace {
 
   async subagentStat(path: string): Promise<FileInfo | null> {
     this.assertRepoAttached()
+
     return this.workspace.stat(toRepoWorkspacePath(path, { allowRoot: true }))
   }
 
@@ -116,6 +124,7 @@ export class IsolateAgentWorkspace {
     this.assertRepoAttached()
     const normalizedPattern = pattern.trim() || DEFAULT_GLOB_PATTERN
     const results = await this.workspace.glob(`${REPO_ROOT}/${normalizedPattern}`)
+
     return results
       .filter((entry) => entry.type === "file")
       .slice(0, Math.max(1, limit))
@@ -128,6 +137,7 @@ export class IsolateAgentWorkspace {
     limit = DEFAULT_SEARCH_LIMIT,
   ): Promise<Array<{ path: string; excerpt: string }>> {
     this.assertRepoAttached()
+
     const resolvedQuery = Option.getOrThrowWith(
       Option.liftPredicate(query.trim(), (value) => value.length > 0),
       () => new Error("query is required"),
@@ -136,6 +146,7 @@ export class IsolateAgentWorkspace {
     const files = await this.workspace.glob(
       `${REPO_ROOT}/${pattern.trim() || DEFAULT_GLOB_PATTERN}`,
     )
+
     const limitCount = Math.max(1, limit)
     const fileEntries = files.filter((entry) => entry.type === "file")
 
@@ -160,9 +171,11 @@ export class IsolateAgentWorkspace {
     query: string,
   ): Promise<Array<{ path: string; excerpt: string }>> {
     const content = await this.workspace.readFile(entryPath)
+
     const matched = Option.fromNullishOr(content).pipe(
       Option.filter((value) => value.toLowerCase().includes(query.toLowerCase())),
     )
+
     return Option.match(matched, {
       onNone: () => matches,
       onSome: (value) => [
@@ -179,6 +192,7 @@ export class IsolateAgentWorkspace {
     this.assertRepoAttached()
     const git = this.createRepoGit()
     const status = await git.status({ dir: REPO_ROOT })
+
     return status.map((entry) => ({
       filepath: entry.filepath,
       status: entry.status,
@@ -187,15 +201,18 @@ export class IsolateAgentWorkspace {
 
   async gitDiff(): Promise<Array<{ filepath: string; status: string }>> {
     this.assertRepoAttached()
+
     return this.createRepoGit().diff({ dir: REPO_ROOT })
   }
 
   async gitLog(depth = 10): Promise<Array<{ oid: string; message: string }>> {
     this.assertRepoAttached()
+
     const commits = await this.createRepoGit().log({
       depth: Math.max(1, depth),
       dir: REPO_ROOT,
     })
+
     return commits.map((commit) => ({
       oid: commit.oid,
       message: formatCommitMessage(commit.message),
@@ -209,6 +226,7 @@ export class IsolateAgentWorkspace {
   }): Promise<PullRequest> {
     this.assertRepoAttached()
     const state = this.host.state
+
     const repo = Option.getOrThrowWith(
       Option.fromNullishOr(getGitHubRepoTool(state.tools)),
       () => new Error("No repository is attached to this isolate session"),
@@ -217,6 +235,7 @@ export class IsolateAgentWorkspace {
     const accessToken = Option.fromNullishOr(
       this.host.activeTurn?.auth?.githubAccessToken?.trim(),
     ).pipe(Option.filter((value) => value.length > 0))
+
     const token = Option.getOrThrowWith(
       accessToken,
       () => new Error("GitHub App installation token is unavailable for this turn"),
@@ -325,6 +344,7 @@ export class IsolateAgentWorkspace {
         baseBranch,
       }),
     )
+
     Option.getOrThrowWith(
       Option.liftPredicate(hasCommittedChanges, (value) => value === true),
       () => new Error("No repository changes are available to commit"),

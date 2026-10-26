@@ -10,6 +10,7 @@ export interface GetAiSearchNamespaceNameOptions {
 
 function isAsciiLowercaseAlphanumeric(character: string): boolean {
   const code = character.charCodeAt(0)
+
   return (code >= 48 && code <= 57) || (code >= 97 && code <= 122)
 }
 
@@ -28,6 +29,7 @@ function normalizeNamespaceName(value: string): string {
       characters.push("-")
       separatorPending = false
     }
+
     characters.push(character)
   }
 
@@ -36,6 +38,7 @@ function normalizeNamespaceName(value: string): string {
 
 function stageQualifiedNamespaceName(prefix: string, stageName: string): string {
   const candidate = normalizeNamespaceName(`${prefix}-${stageName}`)
+
   if (candidate.length <= AI_SEARCH_NAMESPACE_MAX_LENGTH) {
     return candidate
   }
@@ -44,11 +47,14 @@ function stageQualifiedNamespaceName(prefix: string, stageName: string): string 
     .update(candidate)
     .digest("hex")
     .slice(0, AI_SEARCH_NAMESPACE_HASH_LENGTH)
+
   const prefixLength = AI_SEARCH_NAMESPACE_MAX_LENGTH - hash.length - 1
   const truncatedCandidate = candidate.slice(0, prefixLength)
+
   const truncated = truncatedCandidate.endsWith("-")
     ? truncatedCandidate.slice(0, -1)
     : truncatedCandidate
+
   return `${truncated}-${hash}`
 }
 

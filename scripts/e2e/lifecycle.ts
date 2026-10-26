@@ -327,6 +327,7 @@ export function cancelLaunch(id: string, signal: "SIGINT" | "SIGTERM") {
     try {
       process.kill(leader.pid, signal)
     } catch (error) {
+      // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
     }
   }
@@ -414,6 +415,7 @@ async function stopSnapshots(
         try {
           process.kill(item.pid, kind)
         } catch (error) {
+          // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
           if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
         }
       }
@@ -475,6 +477,7 @@ export function signalOwnLaunchers(runnerPid: number, signal: "SIGINT" | "SIGTER
       try {
         process.kill(run.launcherPid, signal)
       } catch (error) {
+        // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
         if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
       }
   }
@@ -494,6 +497,13 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
   // Alchemy selects Bun when npm_execpath contains "bun". The Nub binary path
   // on an Ubuntu home directory matches that check and then fails to spawn Bun.
   delete env.npm_execpath
+  const options = {
+    cwd: stackDirectory(run),
+    env,
+    stdio: "inherit" as const,
+    detached: command === "dev",
+  }
+  if (command === "destroy") Object.assign(options, { signal: AbortSignal.timeout(120_000) })
   return spawn(
     process.execPath,
     [
@@ -509,13 +519,7 @@ export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, pre
       resolve(stackDirectory(run), ".dev.vars"),
       ...(command === "destroy" ? ["--yes"] : []),
     ],
-    {
-      cwd: stackDirectory(run),
-      env,
-      stdio: "inherit",
-      detached: command === "dev",
-      ...(command === "destroy" ? { signal: AbortSignal.timeout(120_000) } : {}),
-    },
+    options,
   )
 }
 function capture(run: RunManifest) {
@@ -752,6 +756,7 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
       try {
         process.kill(run.launcherPid, "SIGTERM")
       } catch (error) {
+        // SAFETY: process.kill rejects with a Node ErrnoException, and ESRCH means the recorded pid already exited.
         if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
       }
       for (

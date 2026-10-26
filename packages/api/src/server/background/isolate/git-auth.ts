@@ -7,6 +7,7 @@ export interface GitHubAppGitCredentials {
 
 export function buildGitHubAppGitCredentials(githubAccessToken: string): GitHubAppGitCredentials {
   const password = githubAccessToken.trim()
+
   if (!password) {
     throw new Error("GitHub App installation token is unavailable")
   }

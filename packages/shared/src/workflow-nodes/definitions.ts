@@ -29,11 +29,14 @@ export const WORKFLOW_NODE_TYPES = [
 ] as const
 
 export type WorkflowNodeType = (typeof WORKFLOW_NODE_TYPES)[number]
+
 export type WorkflowTriggerNodeType = Extract<
   WorkflowNodeType,
   "manual-trigger" | "webhook-trigger" | "datetime-trigger" | "cron-trigger" | "slack-trigger"
 >
+
 export type WorkflowActionNodeType = Exclude<WorkflowNodeType, WorkflowTriggerNodeType>
+
 export type WorkflowNodeCategory =
   | "trigger"
   | "logic"
@@ -42,9 +45,13 @@ export type WorkflowNodeCategory =
   | "slack"
   | "notification"
   | "storage"
+
 export type WorkflowNodeAdapterCategory = Exclude<WorkflowNodeCategory, "trigger" | "logic">
+
 export type WorkflowNodeTriggerKind = "manual" | "webhook" | "datetime" | "cron" | "slack"
+
 export type WorkflowNodeInlineExecutor = "javascript" | "if-else" | "json-object" | "user-approval"
+
 export type WorkflowNodeRuntimeSupport =
   | {
       kind: "trigger"
@@ -746,8 +753,11 @@ export const WORKFLOW_NODE_CATALOG = [
 ] as const satisfies readonly WorkflowNodeDefinition[]
 
 type WorkflowNodeCatalogType = (typeof WORKFLOW_NODE_CATALOG)[number]["type"]
+
 type WorkflowNodeCatalogMissingTypes = Exclude<WorkflowNodeType, WorkflowNodeCatalogType>
+
 type WorkflowNodeCatalogUnknownTypes = Exclude<WorkflowNodeCatalogType, WorkflowNodeType>
+
 type WorkflowNodeCatalogCompleteness = [
   WorkflowNodeCatalogMissingTypes,
   WorkflowNodeCatalogUnknownTypes,

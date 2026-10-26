@@ -32,20 +32,25 @@ export function upsertMetadata({
       const aliases = Option.getOrUndefined(
         Option.map(Option.fromNullishOr(payload.aliases), (value) => [...value]),
       )
+
       const channelAssociations = Option.getOrUndefined(
         Option.map(Option.fromNullishOr(payload.channelAssociations), (value) => [...value]),
       )
+
       const keywords = Option.getOrUndefined(
         Option.map(Option.fromNullishOr(payload.keywords), (value) => [...value]),
       )
+
       const metadata = {
         ...payload,
         aliases,
         channelAssociations,
         keywords,
       }
+
       const store = new RepoMetadataStore(db)
       yield* store.upsert(repoAuth.repo.repoOwner, repoAuth.repo.repoName, metadata)
+
       return json({
         status: "updated",
         repo: `${repoAuth.repo.repoOwner}/${repoAuth.repo.repoName}`,

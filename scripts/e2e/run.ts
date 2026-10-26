@@ -12,17 +12,18 @@ import {
 
 const mcp = process.argv[2] === "--mcp"
 const forwarded = process.argv.slice(mcp ? 3 : 2)
+
 if (mcp) process.env.E2E_MCP_PROTOCOL = "1"
+
 mkdirSync(".e2e", { recursive: true })
+
 if (process.env.E2E_CLEANUP_APPEND !== "1")
   writeFileSync(".e2e/cleanup-summary.json", "[]", { mode: 0o600 })
+
 let interrupted = false
 let childActive = true
 const launch = prepareLaunch("sdk")
-const env: NodeJS.ProcessEnv = {
-  ...process.env,
-  NODE_E2E_RUNNER_PID: String(process.pid),
-}
+
 const child = spawn(
   process.execPath,
   [
@@ -37,15 +38,18 @@ const child = spawn(
   {
     detached: true,
     stdio: "inherit",
-    env,
+    env: { ...process.env, NODE_E2E_RUNNER_PID: String(process.pid) },
   },
 )
+
 for (const signal of ["SIGINT", "SIGTERM"] as const)
   process.on(signal, () => {
     interrupted = true
     signalOwnLaunchers(process.pid, signal)
+
     if (childActive) cancelLaunch(launch, signal)
   })
+
 const code = await new Promise<number | null>((accept) => {
   child.on("exit", (code) => {
     childActive = false
@@ -56,7 +60,9 @@ const code = await new Promise<number | null>((accept) => {
     accept(1)
   })
 })
+
 process.exitCode = interrupted ? 130 : (code ?? 1)
+
 try {
   // SDK app teardown may ignore an app child's failed exit. Independently recover and verify.
   await waitForOwnLaunchers(process.pid)

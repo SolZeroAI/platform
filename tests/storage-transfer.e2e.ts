@@ -13,6 +13,7 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
     test(`${kind} exports and independently verifies a distinct destination without changing the source`, async () => {
       await withStorageFixture(kind, async (fixture) => {
         const directory = join(fixture.directory, "source")
+
         const source = await exportStorage({
           url: fixture.sourceUrl,
           token: fixture.token,
@@ -21,8 +22,10 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
           frozen: true,
           objectNames: ["original-session"],
         })
+
         expect(source.status).toBe("exported")
         expect((await stat(join(directory, "manifest.ndjson"))).mode & 0o777).toBe(0o600)
+
         const planned = await importStorage({
           directory,
           url: fixture.destinationUrl,
@@ -30,7 +33,9 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
           apply: false,
           frozen: false,
         })
+
         expect(planned.status).toBe("planned")
+
         const verified = await importStorage({
           directory,
           url: fixture.destinationUrl,
@@ -39,8 +44,10 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
           frozen: true,
           verificationDirectory: join(fixture.directory, "verification"),
         })
+
         expect(verified.status).toBe("verified")
         expect(verified.bodyHash).toBe(source.bodyHash)
+
         const repeated = await importStorage({
           directory,
           url: fixture.destinationUrl,
@@ -49,7 +56,9 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
           frozen: true,
           verificationDirectory: join(fixture.directory, "repeat-verification"),
         })
+
         expect(repeated.bodyHash).toBe(source.bodyHash)
+
         const sourceAgain = await exportStorage({
           url: fixture.sourceUrl,
           token: fixture.token,
@@ -58,14 +67,17 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
           frozen: true,
           objectNames: ["original-session"],
         })
+
         expect(sourceAgain.bodyHash).toBe(source.bodyHash)
         const denied = await fetch(new URL("/info", fixture.sourceUrl))
         expect(denied.status).toBe(403)
+
         const sourceWrite = await fetch(new URL("/value?key=forbidden", fixture.sourceUrl), {
           method: "PUT",
           headers: { Authorization: `Bearer ${fixture.token}` },
           body: "must-not-write",
         })
+
         expect(sourceWrite.status).toBe(404)
         expect(JSON.stringify(verified).includes(fixture.token)).toBe(false)
       })
@@ -81,18 +93,22 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
         directory,
         frozen: true,
       })
+
       const lines = (await readFile(join(directory, "manifest.ndjson"), "utf8"))
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line))
+
       const entry = lines.find((line) => line.type === "value")
       await writeFile(join(directory, "blobs", entry.hash), "tampered")
       let rejected = false
+
       try {
         await validateStorageArchive(directory)
       } catch {
         rejected = true
       }
+
       expect(rejected).toBe(true)
     })
   })
@@ -108,6 +124,7 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
         frozen: true,
       })
       let rejected = false
+
       try {
         await importStorage({
           directory,
@@ -120,6 +137,7 @@ describe("portable storage migration", { platforms: ["tools"] }, () => {
       } catch {
         rejected = true
       }
+
       expect(rejected).toBe(true)
     })
   })

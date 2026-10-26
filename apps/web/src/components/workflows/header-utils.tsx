@@ -33,19 +33,24 @@ export function tryParseJsonInput(value: string): JsonParseResult {
 
 export function parseJsonInput(value: string, label: string): unknown {
   const parsed = tryParseJsonInput(value)
+
   if (!parsed.ok) {
     throw new Error(`${label} must be valid JSON: ${getErrorMessage(parsed.error)}`, {
       cause: parsed.error,
     })
   }
+
   return parsed.value
 }
 
 export function parseJsonRecord(value: string, label: string): Record<string, unknown> {
   const parsed = parseJsonInput(value, label)
+
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`${label} must be a JSON object.`)
   }
+
+  // SAFETY: parsed was checked to be a non-array object, so its string keys are JSON object fields.
   return parsed as Record<string, unknown>
 }
 
@@ -54,6 +59,7 @@ export function getWorkflowHeaderDraftRowsValidation(
   createRow: (key?: string, value?: string) => WorkflowHeaderDraftRow,
 ): HeaderDraftRowsValidation {
   const parsedRecord = parseWorkflowHeaderDraftRecord(value)
+
   if (!parsedRecord.ok) {
     return {
       rows: [],
@@ -78,9 +84,11 @@ export function getWorkflowHeaderDraftRowsValidation(
 
 export function parseWorkflowHeaderOption(value: unknown): HeaderDraftParseResult {
   let index = 0
+
   return getWorkflowHeaderDraftRowsValidation(value, (key = "", rowValue = "") => {
     const row = { id: `header-${index.toString(36)}`, key, value: rowValue }
     index += 1
+
     return row
   }).validation
 }
@@ -89,26 +97,35 @@ export function parseWorkflowHeaderDraftRecord(value: unknown): HeaderDraftRecor
   if (value === null || value === undefined || value === "") {
     return { ok: true, value: {} }
   }
+
   if (typeof value === "string") {
     const parsed = tryParseJsonInput(value)
+
     if (!parsed.ok) {
       const message = `Headers must be valid JSON: ${getErrorMessage(parsed.error)}`
+
       return { ok: false, message, messages: [message] }
     }
 
     const record = asJsonRecord(parsed.value)
+
     if (!record) {
       const message = "Headers must be a JSON object."
+
       return { ok: false, message, messages: [message] }
     }
+
     return { ok: true, value: record }
   }
 
   const record = asJsonRecord(value)
+
   if (!record) {
     const message = "Headers must be a JSON object."
+
     return { ok: false, message, messages: [message] }
   }
+
   return { ok: true, value: record }
 }
 
@@ -116,9 +133,11 @@ export function formatHeaderDraftValue(value: unknown): string {
   if (value === null || value === undefined) {
     return ""
   }
+
   if (typeof value === "string") {
     return value
   }
+
   return JSON.stringify(value) ?? String(value)
 }
 
@@ -135,6 +154,7 @@ export function parseWorkflowHeaderDraftRows(
     if (!messages.includes(message)) {
       messages.push(message)
     }
+
     firstMessage ??= message
   }
 
@@ -146,13 +166,16 @@ export function parseWorkflowHeaderDraftRows(
   for (const row of rows) {
     const key = row.key.trim()
     const value = row.value
+
     if (!key && !value) {
       continue
     }
+
     if (!key) {
       setKeyError(row.id, "Header name is required.")
       continue
     }
+
     if (!WORKFLOW_HEADER_NAME_PATTERN.test(key)) {
       setKeyError(row.id, `Header "${key}" must use a valid HTTP header name.`)
       continue
@@ -168,6 +191,7 @@ export function parseWorkflowHeaderDraftRows(
     }
 
     addMessage("Header names must be unique. HTTP header names are case-insensitive.")
+
     for (const row of duplicateRows) {
       rowErrors[row.id] = {
         ...rowErrors[row.id],
@@ -182,9 +206,11 @@ export function parseWorkflowHeaderDraftRows(
 
   for (const row of rows) {
     const key = row.key.trim()
+
     if (!key && !row.value) {
       continue
     }
+
     headers[key] = row.value
   }
 
@@ -192,6 +218,7 @@ export function parseWorkflowHeaderDraftRows(
 }
 
 export function asJsonRecord(value: unknown): Record<string, unknown> | null {
+  // SAFETY: value was checked to be a non-array object, so it can be read as a JSON object.
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null
@@ -205,9 +232,12 @@ export function toDateTimeLocal(value: unknown): string {
   if (typeof value !== "string" || !value) {
     return ""
   }
+
   const date = new Date(value)
+
   if (!Number.isFinite(date.getTime())) {
     return ""
   }
+
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }

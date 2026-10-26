@@ -11,6 +11,8 @@ import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"
 
 async function readJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const text = await response.text()
+
+  // SAFETY: The control-plane JSON body is the caller-selected T and may include error or message when response.ok is false.
   const payload = text.trim()
     ? (JSON.parse(text) as T & { error?: string; message?: string })
     : null
@@ -20,9 +22,11 @@ async function readJsonResponse<T>(response: Response, fallback: string): Promis
       payload && typeof payload === "object"
         ? (payload.error ?? payload.message ?? fallback)
         : fallback
+
     throw new Error(message)
   }
 
+  // SAFETY: response.ok was checked, so the remaining JSON body is the caller-selected T.
   return payload as T
 }
 
@@ -30,6 +34,7 @@ async function requestAdminJson<T>(path: string, request: Request, fallback: str
   const headers = getControlPlaneHeaders(request.headers)
   headers.set("Accept", "application/json")
   const response = await fetch(new URL(path, getControlPlaneUrl()), { headers })
+
   return readJsonResponse<T>(response, fallback)
 }
 
@@ -38,6 +43,7 @@ const getInitialAdminIntegrations = createServerFn({ method: "GET", strict: fals
     try {
       const request = getRequest()
       const session = await getAuthSessionContext(request)
+
       if (!session?.user.id || !session.isAdmin) {
         return null
       }
@@ -75,6 +81,7 @@ const getInitialAdminAiSearch = createServerFn({ method: "GET", strict: false })
     try {
       const request = getRequest()
       const session = await getAuthSessionContext(request)
+
       if (!session?.user.id || !session.isAdmin) {
         return null
       }

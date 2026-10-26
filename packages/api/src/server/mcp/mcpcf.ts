@@ -40,6 +40,7 @@ const runMcpcfMcpHandler = Effect.fn("mcp.mcpcf.run")(function* (
   ctx: ExecutionContext,
 ) {
   const server = createMcpcfMcpServer(context)
+
   return yield* Effect.tryPromise(() =>
     createMcpHandler(server, {
       route: MCPCF_PROXY_MCP_ROUTE,
@@ -64,10 +65,12 @@ const respondMcpcfContextFailure = Effect.fn("mcp.mcpcf.contextFailed")(function
     },
     _forceKeep: true,
   })
+
   const reconnectFields = Match.value(isOAuthReconnectError(error)).pipe(
     Match.when(true, () => ({ data: { discoveryReason: "oauth_reconnect_required" as const } })),
     Match.orElse(() => ({})),
   )
+
   return yield* createJsonRpcErrorResponse(normalized, {
     message: redactMcpcfErrorMessage(cause),
     ...reconnectFields,
@@ -81,9 +84,11 @@ const handleMcpcfMcpRequestEffect = Effect.fn("mcp.mcpcf.handle")(function* (
   runtimeContext: McpcfMcpRuntimeContext,
 ) {
   const normalized = normalizeMcpcfMcpRequest(request)
+
   const sessionId = yield* Effect.tryPromise(() =>
     verifyMcpcfProxyCapabilityRequest(normalized, env.MCPCF_PROXY_SIGNING_SECRET),
   )
+
   return yield* resolveMcpcfMcpContext(normalized, env, runtimeContext, sessionId).pipe(
     Effect.matchEffect({
       onFailure: (cause) =>

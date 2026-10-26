@@ -2,6 +2,7 @@ import type { ApiEnv } from "infra/types/env"
 import type { IdParams } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- unarchive/index.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because unarchive repairs the session index.
 import { makeControlPlaneFromEnv } from "../../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
@@ -20,6 +21,7 @@ const handleStaleSessionIndex = Effect.fn("sessions.unarchive.stale")(function* 
 ) {
   const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
   const deleted = yield* store.delete(sessionId)
+
   return Match.value(deleted).pipe(
     Match.when(true, () => json({ status: "deleted", sessionId, reason: "stale_session_index" })),
     Match.orElse(() => response),
@@ -35,6 +37,7 @@ const activateUnarchivedSession = Effect.fn("sessions.unarchive.activate")(funct
   const activate = store.updateStatus(sessionId, "active")
   const guard = Effect.succeed(response.ok)
   yield* Effect.when(activate, guard)
+
   return response
 })
 
@@ -55,11 +58,13 @@ export function unarchive({ params }: { params: IdParams }) {
       const access = yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
+
       const response = yield* internalRequests.fetch(stub, "http://internal/internal/unarchive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: stringifyJson({ userId: access.userId }),
       })
+
       return yield* handleUnarchiveResponse(env, params.id, response)
     }),
   )

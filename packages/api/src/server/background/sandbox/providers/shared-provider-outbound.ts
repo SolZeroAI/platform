@@ -27,10 +27,12 @@ export const resolveSharedProviderOutboundHosts = Effect.fn(
   "sandbox.sharedProvider.resolveOutboundHosts",
 )(function* (env: Env) {
   const { configured, config } = yield* getLitellmConfigWithPresence(env)
+
   const litellmHost = Match.value(Boolean(configured && config.enabled && config.baseUrl)).pipe(
     Match.when(true, () => hostnameFromUrl(config.baseUrl)),
     Match.orElse(() => Option.none<string>()),
   )
+
   const cloudflareHost = getCloudflareAiGatewaySnapshot(env).pipe(
     Option.filter(
       ({ config: gatewayConfig, gatewayId }) =>
@@ -42,10 +44,12 @@ export const resolveSharedProviderOutboundHosts = Effect.fn(
     ),
     Option.map(() => CLOUDFLARE_AI_GATEWAY_API_HOST),
   )
+
   const cloudflareProviderNativeHost = Option.map(
     cloudflareHost,
     () => CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
   )
+
   return [litellmHost, cloudflareHost, cloudflareProviderNativeHost].flatMap((host) =>
     Option.match(host, { onNone: () => [], onSome: (value) => [value] }),
   )
@@ -126,6 +130,7 @@ export function sharedProviderPathClass(
 export function cloudflareAiGatewayByokProxyCiphertext(request: Request): Option.Option<string> {
   const authorization = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
   const credential = authorization ?? request.headers.get("x-api-key") ?? ""
+
   return Option.liftPredicate(credential, (value) =>
     value.startsWith(CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX),
   ).pipe(Option.map((value) => value.slice(CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX.length)))
@@ -135,11 +140,14 @@ export const decryptCloudflareAiGatewayByokProxyCredential = Effect.fn(
   "sandbox.sharedProvider.decryptCloudflareAiGatewayByokProxyCredential",
 )(function* (request: Request, encryptionKey: string) {
   const ciphertext = cloudflareAiGatewayByokProxyCiphertext(request)
+
   const decryptCredential = decryptSecret(
     Option.getOrElse(ciphertext, () => ""),
     encryptionKey,
   )
+
   const hasCiphertext = Effect.succeed(Option.isSome(ciphertext))
+
   return yield* decryptCredential.pipe(Effect.when(hasCiphertext))
 })
 
@@ -155,6 +163,7 @@ export async function sharedProviderRequestModel(request: Request): Promise<stri
     Option.map((contentType) => contentType.toLowerCase().includes("application/json")),
     Option.getOrElse(() => false),
   )
+
   return Match.value(isJsonRequest).pipe(
     Match.when(false, () => Promise.resolve(null)),
     Match.orElse(() =>
@@ -174,7 +183,7 @@ function requestModelFromBody(body: unknown): Option.Option<string> {
       (candidate): candidate is Record<string, unknown> =>
         typeof candidate === "object" && !Array.isArray(candidate),
     ),
-    Option.map((record) => Reflect.get(record, "model")),
+    Option.map((record) => record.model),
     Option.filter((model): model is string => typeof model === "string" && model.length > 0),
   )
 }
@@ -188,6 +197,7 @@ export function requestWithSharedProviderCredential(
   headers.set("authorization", `Bearer ${apiKey}`)
   Object.entries(extraHeaders ?? {}).forEach(([name, value]) => headers.set(name, value))
   headers.delete("cookie")
+
   return new Request(sharedProviderTargetUrl(request), sharedProviderRequestInit(request, headers))
 }
 
@@ -209,11 +219,13 @@ export function requestWithCloudflareProviderNativeCredential(
       ),
   })
   headers.delete("cookie")
+
   return new Request(sharedProviderTargetUrl(request), sharedProviderRequestInit(request, headers))
 }
 
 function sharedProviderTargetUrl(request: Request): string {
   const url = new URL(request.url)
+
   return `https://${url.hostname}${url.pathname}${url.search}`
 }
 
@@ -234,7 +246,8 @@ function sharedProviderRequestInit(request: Request, headers: Headers): RequestI
 }
 
 function stringEnvValue(env: Record<string, unknown>, key: string): Option.Option<string> {
-  const value = Reflect.get(env, key)
+  const value = env[key]
+
   return Option.flatMap(
     Option.liftPredicate(value, (candidate): candidate is string => typeof candidate === "string"),
     (text) => Option.liftPredicate(text.trim(), (trimmed) => trimmed.length > 0),

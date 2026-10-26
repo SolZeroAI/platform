@@ -22,8 +22,10 @@ export function getMetadata({ params }: { params: RepoParams }) {
         params.name,
         { identityProvider, githubProvider },
       )
+
       const store = new RepoMetadataStore(db)
       const metadata = yield* store.get(repoAuth.repo.repoOwner, repoAuth.repo.repoName)
+
       return json({
         repo: `${repoAuth.repo.repoOwner}/${repoAuth.repo.repoName}`,
         metadata: Option.getOrNull(metadata),

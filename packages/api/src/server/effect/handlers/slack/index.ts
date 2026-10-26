@@ -25,6 +25,7 @@ const buildQueuePromptResponse = Effect.fn("slack.buildQueuePromptResponse")(fun
   promptResponse: Response,
 ) {
   const prompt = yield* Effect.tryPromise(() => promptResponse.json())
+
   return json({ session, prompt })
 })
 

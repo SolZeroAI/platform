@@ -140,17 +140,22 @@ export const ParticipantTokenStatsSchema = Schema.Struct({
 
 const decodeSessionRow = Schema.decodeUnknownSync(SessionRowSchema, { onExcessProperty: "ignore" })
 const decodeSandboxRow = Schema.decodeUnknownSync(SandboxRowSchema, { onExcessProperty: "ignore" })
+
 const decodeParticipantRow = Schema.decodeUnknownSync(ParticipantRowSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeMessageRow = Schema.decodeUnknownSync(MessageRowSchema, { onExcessProperty: "ignore" })
 const decodeEventRow = Schema.decodeUnknownSync(EventRowSchema, { onExcessProperty: "ignore" })
+
 const decodeArtifactRow = Schema.decodeUnknownSync(ArtifactRowSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeSandboxActivityRow = Schema.decodeUnknownSync(SandboxActivityRowSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeRuntimeActivityCreatedAtRow = Schema.decodeUnknownSync(RuntimeActivityCreatedAtSchema, {
   onExcessProperty: "ignore",
 })
@@ -161,22 +166,30 @@ export const decodeParticipantRows = (rows: unknown[]) => decodeSqlRows(decodePa
 export const decodeMessageRows = (rows: unknown[]) => decodeSqlRows(decodeMessageRow, rows)
 export const decodeEventRows = (rows: unknown[]) => decodeSqlRows(decodeEventRow, rows)
 export const decodeArtifactRows = (rows: unknown[]) => decodeSqlRows(decodeArtifactRow, rows)
+
 export const decodeSandboxActivityRows = (rows: unknown[]) =>
   decodeSqlRows(decodeSandboxActivityRow, rows)
+
 export const decodeRuntimeActivityCreatedAtRows = (rows: unknown[]) =>
   decodeSqlRows(decodeRuntimeActivityCreatedAtRow, rows)
+
 export const decodeSqlChangeCount = Schema.decodeUnknownSync(SqlChangeCountSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeWsClientIdRow = Schema.decodeUnknownSync(WsClientIdSchema, {
   onExcessProperty: "ignore",
 })
+
 const decodeWsClientMappingRow = Schema.decodeUnknownSync(WsClientMappingSchema, {
   onExcessProperty: "ignore",
 })
+
 export const decodeWsClientIdRows = (rows: unknown[]) => decodeSqlRows(decodeWsClientIdRow, rows)
+
 export const decodeWsClientMappingRows = (rows: unknown[]) =>
   decodeSqlRows(decodeWsClientMappingRow, rows)
+
 export const decodeParticipantTokenStats = Schema.decodeUnknownSync(ParticipantTokenStatsSchema, {
   onExcessProperty: "ignore",
 })

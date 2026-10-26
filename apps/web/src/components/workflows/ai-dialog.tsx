@@ -203,9 +203,11 @@ export function WorkflowAiChat({
   const submitPrompt = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmed = prompt.trim()
+
     if (!trimmed) {
       return
     }
+
     setPrompt("")
     void onSend(trimmed)
   }
@@ -254,7 +256,9 @@ export function WorkflowAiChatSessionEvents({
 }) {
   const { connected, connecting, events, isProcessing, currentParticipantId } =
     useSessionSocket(sessionId)
+
   const visibleEvents = useMemo(() => getWorkflowAiVisibleEvents(events), [events])
+
   const latestSuccessfulCompletion = useMemo(
     () =>
       [...events]
@@ -274,14 +278,18 @@ export function WorkflowAiChatSessionEvents({
     if (!latestSuccessfulCompletion?.messageId) {
       return
     }
+
     const completionKey = `${sessionId}:${latestSuccessfulCompletion.messageId}`
+
     if (appliedCompletionKeysRef.current.has(completionKey)) {
       return
     }
+
     appliedCompletionKeysRef.current.add(completionKey)
     void (async () => {
       try {
         const draft = await fetchWorkflowAiDraft(sessionId)
+
         if (draft) {
           onDraftReady(draft)
         }
@@ -348,6 +356,7 @@ export function WorkflowAiEventItem({
       event.author?.participantId && currentParticipantId
         ? event.author.participantId === currentParticipantId
         : true
+
     return (
       <div className="ml-8 rounded-2xl bg-kumo-tint p-3">
         <div className="mb-1 flex items-center justify-between gap-2 text-xs text-kumo-subtle">
@@ -401,6 +410,7 @@ export function WorkflowAiEventItem({
         </div>
       )
     }
+
     return (
       <div className="flex items-center justify-center gap-2 text-[11px] uppercase text-kumo-subtle">
         <span className="h-px flex-1 bg-kumo-hairline" />
@@ -423,6 +433,7 @@ export function WorkflowAiEventItem({
 
 export function getWorkflowAiVisibleEvents(events: SandboxEvent[]): SandboxEvent[] {
   const latestTokenByMessageId = new Map<string, SandboxEvent>()
+
   for (const event of events) {
     if (event.type === "token") {
       latestTokenByMessageId.set(event.messageId, event)
@@ -433,6 +444,7 @@ export function getWorkflowAiVisibleEvents(events: SandboxEvent[]): SandboxEvent
     if (event.type === "token") {
       return latestTokenByMessageId.get(event.messageId) === event
     }
+
     return (
       event.type === "user_message" ||
       event.type === "tool_call" ||
@@ -448,13 +460,17 @@ export function getWorkflowAiUserDisplayContent(content: string): string {
   const buildMarker = "User request:"
   const yamlMarker = "Current Workflow YAML:"
   const editIndex = content.indexOf(editMarker)
+
   if (editIndex >= 0) {
     const yamlIndex = content.indexOf(yamlMarker, editIndex)
+
     return content
       .slice(editIndex + editMarker.length, yamlIndex >= 0 ? yamlIndex : undefined)
       .trim()
   }
+
   const buildIndex = content.indexOf(buildMarker)
+
   return buildIndex >= 0 ? content.slice(buildIndex + buildMarker.length).trim() : content
 }
 
@@ -464,5 +480,6 @@ export async function fetchWorkflowAiDraft(
   const response = await requestJson<{ draft: WorkflowBuilderDraft | null }>(
     `/api/workflows/builder/drafts/latest?sessionId=${encodeURIComponent(sessionId)}`,
   )
+
   return response.draft
 }

@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process"
 
 // Reads the e2e report only. Never copies prompts, response bodies, log lines, or filter notes.
 const directory = ".e2e/ai-usage"
+
 const replayReasons = new Set([
   "retry",
   "no-entry",
@@ -17,6 +18,7 @@ const replayReasons = new Set([
   "viewport-changed",
   "end-mismatch",
 ])
+
 const reportPaths = [
   ".e2e/report.json",
   ".e2e/lifecycle/report.json",
@@ -25,6 +27,7 @@ const reportPaths = [
     (app) => `.e2e/${app}/report.json`,
   ),
 ]
+
 const countNames = [
   "discovered",
   "selected",
@@ -35,15 +38,19 @@ const countNames = [
   "flaky",
   "skipped",
 ]
+
 const numeric = (value) => Number.isSafeInteger(value) && value >= 0
+
 const timestamp = (value) =>
   typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) &&
   Number.isFinite(Date.parse(value))
+
 const sha = (value) => (typeof value === "string" && /^[a-f0-9]{40}$/.test(value) ? value : null)
 const modelId = (value) => typeof value === "string" && /^[A-Za-z0-9@._:/-]{1,128}$/.test(value)
 const moneyNumber = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"))
+
 const spendPattern =
   /(?:^|; )(\d+) (call|calls), (\d+|\d+\.\d+[kM]) tokens(?:, (\$\d+(?:\.\d+)|<\$0\.0001))?$/
 
@@ -57,6 +64,7 @@ async function init() {
   await mkdir(directory, { recursive: true, mode: 0o700 })
   await chmod(directory, 0o700)
   let commit = null
+
   try {
     commit = sha(
       execFileSync("git", ["rev-parse", "HEAD"], {
@@ -65,6 +73,7 @@ async function init() {
       }).trim(),
     )
   } catch {}
+
   await privateWrite(
     "run.json",
     JSON.stringify(
@@ -86,13 +95,21 @@ async function init() {
 
 function modelUsage(value) {
   if (!value || typeof value !== "object") return null
+
   if (!modelId(value.provider) || !modelId(value.model)) return null
+
   if (!numeric(value.calls) || value.calls < 1) return null
+
   if (!numeric(value.inputTokens) || !numeric(value.outputTokens)) return null
+
   if (!["provider", "adapter-upper-bound"].includes(value.tokenAccounting)) return null
+
   if (value.cacheReadTokens !== undefined && !numeric(value.cacheReadTokens)) return null
+
   if (value.cacheWriteTokens !== undefined && !numeric(value.cacheWriteTokens)) return null
+
   if (value.estimatedCostUsd !== undefined && !moneyNumber(value.estimatedCostUsd)) return null
+
   return {
     provider: value.provider,
     model: value.model,
@@ -109,10 +126,14 @@ function modelUsage(value) {
 function filterSpend(note) {
   if (typeof note !== "string") return null
   const match = note.match(spendPattern)
+
   if (!match) return null
   const calls = Number(match[1])
+
   if (!numeric(calls)) return null
+
   if ((calls === 1 && match[2] !== "call") || (calls !== 1 && match[2] !== "calls")) return null
+
   return {
     calls,
     text: `${match[1]} ${match[2]}, ${match[3]} tokens${match[4] ? `, ${match[4]}` : ""}`,
@@ -121,10 +142,12 @@ function filterSpend(note) {
 
 async function summarize() {
   const metadata = await readJson(`${directory}/run.json`)
+
   if (metadata.schemaVersion !== 1 || !timestamp(metadata.startedAt))
     throw new Error("Run accounting was not initialized")
   const start = Date.parse(metadata.startedAt)
   const tests = Object.fromEntries(countNames.map((name) => [name, 0]))
+
   const replay = {
     steps: 0,
     actionSteps: 0,
@@ -139,19 +162,26 @@ async function summarize() {
     reasons: {},
     durations: { actionMs: 0, replayedMs: 0, liveActionMs: 0 },
   }
+
   const groups = new Map()
   const filters = []
+
   let e2eMs = 0,
     reports = 0,
     rejectedModels = 0,
     missingModelSteps = 0
+
   let incomplete = false
+
   let sdkModelTokens = 0,
     sdkCost = 0
+
   let sdkTokensKnown = true,
     sdkCostKnown = true
+
   const addModel = (entry) => {
     const key = `${entry.provider}\0${entry.model}\0${entry.tokenAccounting}`
+
     if (!groups.has(key))
       groups.set(key, {
         provider: entry.provider,
@@ -173,26 +203,35 @@ async function summarize() {
     group.calls += entry.calls
     group.inputTokens += entry.inputTokens
     group.outputTokens += entry.outputTokens
+
     if (entry.cacheReadTokens === null) group.cacheReadKnown = false
     else group.cacheReadTokens += entry.cacheReadTokens
+
     if (entry.cacheWriteTokens === null) group.cacheWriteKnown = false
     else group.cacheWriteTokens += entry.cacheWriteTokens
+
     if (entry.estimatedCostUsd === null) group.costKnown = false
     else group.estimatedCostUsd += entry.estimatedCostUsd
   }
+
   const collectSteps = (steps) => {
     for (const step of steps ?? []) {
       if (step.kind === "agent") {
         if (step.api === "agent.act") {
           replay.actionSteps += 1
+
           if (step.cache?.mode === "missed") replay.missedSteps += 1
           else if (!step.cache) replay.uncachedActionSteps += 1
+
           if (step.cache?.notRecorded === "param-collision") replay.notRecordedSteps += 1
+
           if (step.cache?.reason) {
             const reason = replayReasons.has(step.cache.reason) ? step.cache.reason : "unknown"
             replay.reasons[reason] = (replay.reasons[reason] ?? 0) + 1
           }
+
           const field = step.cache?.mode === "self-finalized" ? "replayedMs" : "liveActionMs"
+
           for (const key of ["actionMs", field]) {
             if (Number.isFinite(step.durationMs) && step.durationMs >= 0) {
               if (replay.durations[key] !== null) replay.durations[key] += step.durationMs
@@ -200,36 +239,48 @@ async function summarize() {
           }
         } else replay.liveJudgmentSteps += 1
       }
+
       if (["self-finalized", "agent-concluded"].includes(step.cache?.mode)) {
         replay.steps += 1
+
         if (step.cache.mode === "self-finalized") replay.fullyReplayedSteps += 1
         else replay.partiallyReplayedSteps += 1
+
         if (numeric(step.cache.replayedActions))
           replay.replayedActions += step.cache.replayedActions
       }
+
       if (numeric(step.metrics?.modelCalls)) replay.modelCalls += step.metrics.modelCalls
       const recordedCalls = numeric(step.metrics?.modelCalls) ? step.metrics.modelCalls : 0
+
       if (!step.model) {
         if (recordedCalls > 0) missingModelSteps += 1
         continue
       }
+
       const usage = modelUsage(step.model)
+
       if (!usage) {
         rejectedModels += 1
         continue
       }
+
       if (recordedCalls !== usage.calls) missingModelSteps += 1
       addModel(usage)
     }
   }
+
   for (const path of reportPaths) {
     let report
+
     try {
       report = await readJson(path)
     } catch {
       continue
     }
+
     const run = report?.run
+
     if (
       report?.schemaVersion !== "report-1" ||
       !timestamp(run?.startedAt) ||
@@ -237,9 +288,11 @@ async function summarize() {
     )
       continue
     reports += 1
+
     if (timestamp(run.finishedAt) && Date.parse(run.finishedAt) >= Date.parse(run.startedAt))
       e2eMs += Date.parse(run.finishedAt) - Date.parse(run.startedAt)
     else incomplete = true
+
     for (const name of countNames) {
       if (numeric(run.summary?.[name]))
         tests[name] =
@@ -248,10 +301,13 @@ async function summarize() {
             : tests[name] + run.summary[name]
       else incomplete = true
     }
+
     if (numeric(run.usage?.modelTokens)) sdkModelTokens += run.usage.modelTokens
     else sdkTokensKnown = false
+
     if (moneyNumber(run.usage?.estimatedCostUsd)) sdkCost += run.usage.estimatedCostUsd
     else sdkCostKnown = false
+
     for (const filter of run.filters ?? []) {
       if (
         typeof filter?.name !== "string" ||
@@ -262,6 +318,7 @@ async function summarize() {
         rejectedModels += 1
         continue
       }
+
       const spend = filterSpend(filter.note)
       filters.push({
         name: filter.name,
@@ -271,12 +328,15 @@ async function summarize() {
         spend: spend?.text ?? null,
       })
     }
+
     for (const result of run.results ?? [])
       for (const attempt of result.attempts ?? []) collectSteps(attempt.steps)
+
     for (const group of run.serialGroups ?? [])
       for (const attempt of group.attempts ?? [])
         for (const member of attempt.members ?? []) collectSteps(member.steps)
   }
+
   const rows = [...groups.values()]
     .map((row) => ({
       ...row,
@@ -289,14 +349,18 @@ async function summarize() {
         `${b.provider}:${b.model}:${b.tokenAccounting}`,
       ),
     )
+
   const sum = (field) => rows.reduce((total, row) => total + row[field], 0)
   const calls = sum("calls")
   const costKnown = rows.every((row) => row.estimatedCostUsd !== null)
   const upperBound = rows.some((row) => row.tokenAccounting === "adapter-upper-bound")
+
   const partial =
     incomplete || reports === 0 || rejectedModels > 0 || missingModelSteps > 0 || upperBound
+
   const filterCalls = filters.reduce((total, filter) => total + (filter.calls ?? 0), 0)
   const needsComment = calls > 0 || filterCalls > 0
+
   const summary = {
     schemaVersion: 1,
     validatedSha: sha(metadata.validatedSha),
@@ -329,9 +393,11 @@ async function summarize() {
       sdkEstimatedCostUsd: reports > 0 && sdkCostKnown ? sdkCost : null,
     },
   }
+
   const display = (value) => (value === null ? "unknown" : String(value))
   const money = (value) => (value === null ? "unavailable" : `$${value.toFixed(8)}`)
   const duration = (value) => (value === null ? "unknown" : `${(value / 1000).toFixed(2)}s`)
+
   const markdown = [
     "### E2E AI usage",
     "",
@@ -382,10 +448,12 @@ async function summarize() {
     "Token counts and cost come from the e2e report. Executor rows are the model records attached to steps. Filter spend is the usage suffix e2e appends to its filter note, and is omitted when that suffix is absent. Rounded filter totals are not added to the executor cost. A gateway response-cache hit is reflected only when the executor recorded a zero cost. Application model calls are outside this summary.",
     "",
   ].join("\n")
+
   await mkdir(directory, { recursive: true, mode: 0o700 })
   await chmod(directory, 0o700)
   await privateWrite("summary.json", JSON.stringify(summary, null, 2) + "\n")
   await privateWrite("summary.md", markdown)
+
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, markdown)
 }
 

@@ -16,17 +16,20 @@ export class GlobalSecretWrite extends Schema.Class<GlobalSecretWrite>("GlobalSe
 export const SecretsPayload = Schema.Struct({
   secrets: Schema.Array(GlobalSecretWrite),
 })
+
 export type SecretsPayload = typeof SecretsPayload.Type
 
 export const SecretKeyParams = {
   key: Schema.String,
 }
+
 export type SecretKeyParams = { key: string }
 
 export const GlobalSecretsListQuery = {
   q: Schema.optionalKey(Schema.String),
   tags: Schema.optionalKey(Schema.String),
 }
+
 export type GlobalSecretsListQuery = {
   q?: string
   tags?: string

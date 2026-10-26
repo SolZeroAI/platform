@@ -15,6 +15,7 @@ import {
   type McpcfServerRecord,
 } from "../../background/db/mcpcf"
 import { createGlobalSecretsStoreFromD1 } from "../../background/db/repo-secrets"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- mcpcf-server/runtime.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because MCP Context Forge reads control-plane rows outside a request layer.
 import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../effect/db/control-plane-db"
 import {
   createUserMcpcfServerConfigStoreFromD1,
@@ -82,11 +83,13 @@ export function getMcpcfServerMcpUrl(config: McpcfConfigRecord, server: McpcfSer
 
 function rewriteRequestPathname(request: Request, url: URL, pathname: string): Request {
   url.pathname = pathname
+
   return new Request(url.toString(), request)
 }
 
 export function normalizeMcpcfMcpRequest(request: Request): Request {
   const url = new URL(request.url)
+
   return Match.value(url.pathname === `${MCPCF_PROXY_MCP_ROUTE}/`).pipe(
     Match.when(true, () => rewriteRequestPathname(request, url, MCPCF_PROXY_MCP_ROUTE)),
     Match.orElse(() => request),
@@ -95,16 +98,19 @@ export function normalizeMcpcfMcpRequest(request: Request): Request {
 
 export function redactMcpcfErrorMessage(error: unknown, secrets: string[] = []): string {
   const rawMessage = describeError(error)
+
   const redacted = Arr.reduce(
     Arr.filter(secrets, (secret) => secret.length > 0),
     rawMessage,
     (message, secret) => message.split(secret).join("[redacted]"),
   )
+
   return redacted.replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
 }
 
 export function formatMcpcfBearerCredential(token: string): string {
   const trimmed = token.trim()
+
   return Match.value(/^Bearer\s+/i.test(trimmed)).pipe(
     Match.when(true, () => trimmed),
     Match.orElse(() => `Bearer ${trimmed}`),
@@ -128,6 +134,7 @@ const withMcpcfClient = <A>(input: {
         jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
       },
     )
+
     const transport = new StreamableHTTPClientTransport(
       new URL(getMcpcfServerMcpUrl(input.config, input.server)),
       {
@@ -146,6 +153,7 @@ const withMcpcfClient = <A>(input: {
     )
 
     const closeClient = Effect.tryPromise(() => client.close().catch(() => {})).pipe(Effect.ignore)
+
     return yield* Effect.tryPromise({
       try: () =>
         client
@@ -164,6 +172,7 @@ const withMcpcfClient = <A>(input: {
     }).pipe(Effect.ensuring(closeClient))
   })
 
+// SAFETY: Client.callTool is checked with CallToolResultSchema and resolves to CallToolResult. The SDK types the promise more loosely.
 export const defaultMcpcfUpstreamClient = {
   listTools: ({ config, server, accessToken, upstreamAccessToken }: McpcfUpstreamListToolsInput) =>
     withMcpcfClient({
@@ -339,11 +348,13 @@ const getUserMcpcfServerAuthToken = Effect.fn("mcp.mcpcf.userServerAuthToken")(f
       }),
     catch: toError,
   })
+
   const secretKey = Option.match(input.userConfig, {
     onNone: () => getUserMcpcfAuthTokenSecretKey(input.server.id),
     onSome: (userConfig) =>
       userConfig.authTokenSecretKey ?? getUserMcpcfAuthTokenSecretKey(input.server.id),
   })
+
   return yield* Option.match(Option.fromNullishOr(secrets[secretKey]?.trim()), {
     onNone: () =>
       Effect.fail(
@@ -382,6 +393,7 @@ const getUserMcpcfGatewayAccessToken = Effect.fn("mcp.mcpcf.userGatewayAccessTok
       }),
     catch: toError,
   })
+
   return yield* Option.match(
     Option.fromNullishOr(secrets[getUserMcpcfGatewayApiTokenSecretKey()]?.trim()),
     {
@@ -403,10 +415,12 @@ export function getServerRuntimeSettings(
     onNone: () => true,
     onSome: (config) => config.defaultToolsEnabled ?? true,
   })
+
   const disabledTools = Option.match(userConfig, {
-    onNone: () => [] as string[],
+    onNone: (): string[] => [],
     onSome: (config) => config.disabledTools ?? [],
   })
+
   return { defaultToolsEnabled, disabledTools }
 }
 
@@ -461,10 +475,12 @@ export function logMcpcfAuthFailure(input: {
   servers: readonly McpcfServerRecord[]
 }) {
   const authError = toError(input.cause)
+
   const oauthContext = Match.value(input.cause).pipe(
     Match.when(Match.instanceOf(LinkedOAuthReconnectRequiredError), (error) => error.context),
     Match.orElse(() => undefined),
   )
+
   input.runtimeContext.log.error(authError, {
     event: "mcp.mcpcf.auth.failed",
     boundary: "auth.mcpcf.runtime_credential",
@@ -485,6 +501,7 @@ export function logMcpcfAuthFailure(input: {
     oauth: oauthContext,
     _forceKeep: true,
   })
+
   return Effect.fail(authError)
 }
 
@@ -506,6 +523,7 @@ const resolveMcpcfMcpCredentialsForServers = Effect.fn("mcp.mcpcf.resolveCredent
         ),
       onSome: Effect.succeed,
     })
+
     return yield* resolveMcpcfRuntimeCredentials({
       env: input.env,
       config: input.config,
@@ -531,6 +549,7 @@ export function unavailableMcpcfServerError(
 ): McpcfMcpRuntimeError {
   const availableIds = new Set(servers.map((server) => server.id))
   const missingIds = selectedServerIds.filter((serverId) => !availableIds.has(serverId))
+
   return new McpcfMcpRuntimeError({
     message: `Selected MCP Context Forge servers are unavailable: ${missingIds.join(", ")}`,
   })
@@ -550,6 +569,7 @@ export const resolveMcpcfMcpContextWithConfig = Effect.fn("mcp.mcpcf.resolveCont
       try: () => input.registry.listAvailableServersByIds(input.selectedServerIds),
       catch: toError,
     })
+
     yield* Effect.succeed({ servers, selectedServerIds: input.selectedServerIds }).pipe(
       Effect.filterOrFail(
         ({ servers, selectedServerIds }) =>
@@ -557,6 +577,7 @@ export const resolveMcpcfMcpContextWithConfig = Effect.fn("mcp.mcpcf.resolveCont
         ({ servers, selectedServerIds }) => unavailableMcpcfServerError(servers, selectedServerIds),
       ),
     )
+
     return yield* Match.value(servers.length === 0).pipe(
       Match.when(true, () =>
         Effect.succeed(
@@ -587,6 +608,7 @@ export const resolveMcpcfMcpContext = Effect.fn("mcp.mcpcf.resolveContext")(func
   const storedSelection = yield* mcpcfSelectionFromSession(env, authorizedSessionId)
   const hintServerIds = parseAllowedMcpcfServers(request)
   const hintSet = new Set(hintServerIds)
+
   const selectedServerIds = Match.value(hintServerIds.length > 0).pipe(
     Match.when(true, () => storedSelection.serverIds.filter((serverId) => hintSet.has(serverId))),
     Match.orElse(() => storedSelection.serverIds),
@@ -599,11 +621,14 @@ export const resolveMcpcfMcpContext = Effect.fn("mcp.mcpcf.resolveContext")(func
   })
 
   const registry = createMcpcfRegistryStoreFromEnv(env)
+
   const config = yield* Effect.tryPromise({
     try: () => registry.getConfigOrDefault(),
     catch: toError,
   })
+
   const configReady = config.enabled && Boolean(config.baseUrl)
+
   return yield* Match.value(configReady).pipe(
     Match.when(false, () =>
       Match.value(selectedServerIds.length === 0).pipe(
@@ -658,12 +683,14 @@ const resolveMcpcfGatewayOAuthToken = Effect.fn("mcp.mcpcf.gatewayOAuthToken")(f
             onSome: Effect.succeed,
           },
         )
+
         const oauthToken = yield* getLinkedOAuthAccessTokenForUserId(input.env, {
           userId: input.userId,
           providerId,
           expectedIssuer: input.config.expectedIssuer,
           log: input.runtimeContext.log,
         })
+
         return Option.some(oauthToken)
       }),
     ),
@@ -680,6 +707,7 @@ const resolveMcpcfGatewayAccessToken = Effect.fn("mcp.mcpcf.gatewayAccessToken")
     onSome: (firstServer) =>
       Effect.gen(function* () {
         const token = yield* getUserMcpcfGatewayAccessToken(env, { userId, server: firstServer })
+
         return Option.some(token)
       }),
   })
@@ -695,6 +723,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
   }) {
     const { env, config, servers, userId, runtimeContext } = input
     const userConfigStore = createUserMcpcfServerConfigStoreFromD1(makeControlPlaneFromEnv(env))
+
     const userConfigs = yield* Effect.tryPromise({
       try: () =>
         userConfigStore.listByUserAndServerIds(
@@ -703,15 +732,18 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
         ),
       catch: toError,
     })
+
     const userConfigByServerId = new Map(
       userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
     )
+
     const serverSettingsById = Object.fromEntries(
       servers.map((server) => [
         server.id,
         getServerRuntimeSettings(Option.fromNullishOr(userConfigByServerId.get(server.id))),
       ]),
     )
+
     const gatewayOAuthServers = servers.filter((server) => !usesMcpcfGatewayTokenCredential(server))
     const gatewayTokenServers = servers.filter(usesMcpcfGatewayTokenCredential)
 
@@ -722,6 +754,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
       gatewayOAuthServers,
       runtimeContext,
     })
+
     const gatewayAccessToken = yield* resolveMcpcfGatewayAccessToken(
       env,
       userId,
@@ -733,10 +766,12 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
       onSome: (token) =>
         gatewayOAuthServers.map((server) => [server.id, token.accessToken] as const),
     })
+
     const gatewayTokenEntries = Option.match(gatewayAccessToken, {
       onNone: () => [] as const,
       onSome: (token) => gatewayTokenServers.map((server) => [server.id, token] as const),
     })
+
     const upstreamTokenEntries = yield* Effect.all(
       servers.filter(usesUserUpstreamTokenCredential).map((server) =>
         getUserMcpcfServerAuthToken(env, {
@@ -751,10 +786,12 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
       ...oauthTokenEntries,
       ...gatewayTokenEntries,
     ])
+
     const upstreamAccessTokensByServerId: Record<string, string> =
       Object.fromEntries(upstreamTokenEntries)
 
     const [primaryServer] = servers
+
     const accessToken = Match.value(servers.length === 1 && Boolean(primaryServer)).pipe(
       Match.when(true, () =>
         Option.fromNullishOr(primaryServer && accessTokensByServerId[primaryServer.id]),
@@ -763,6 +800,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
         Option.flatMap(oauthToken, (token) => Option.fromNullishOr(token.accessToken)),
       ),
     )
+
     return {
       userId: Option.some(userId),
       oauthProviderId: Option.flatMap(oauthToken, (token) =>

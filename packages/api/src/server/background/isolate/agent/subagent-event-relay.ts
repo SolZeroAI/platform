@@ -61,6 +61,7 @@ export class OrderedSubagentEventRelay {
 
   private fallbackAfterCallback(cause: unknown, message: AgentToolEventMessage): Promise<void> {
     this.target.onCallbackFailure(cause, message)
+
     return this.persist(message)
   }
 
@@ -96,5 +97,6 @@ async function cancelAndReturnInterrupted<Output>(
   cancel: (runId: string, reason: string) => Promise<void>,
 ): Promise<RunAgentToolResult<Output>> {
   await cancel(runId, "Awaited Isolate sub-agent was interrupted while still running")
+
   return result
 }

@@ -77,12 +77,15 @@ export class IsolateParentTurnRecovery {
   private prepareRecoveredParentTurn() {
     return Effect.gen({ self: this }, function* () {
       const host = this.host
+
       const envelope = Option.getOrThrowWith(
         readParentTurnEnvelope(this.sql),
         () => new Error(PARENT_TURN_RECOVERY_ERROR),
       )
+
       const selectedTools = host.state.tools ?? []
       const callback = host.activeTurn?.callback
+
       const [model, mcpTurn] = yield* Effect.all(
         [
           compileIsolateModelContext({

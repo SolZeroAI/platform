@@ -30,8 +30,13 @@ function booleanValue(value: unknown): boolean {
 function stringRecord(value: unknown): Record<string, string> {
   const record = Option.getOrElse(
     Option.filter(Option.some(value), isRecord),
-    () => ({}) as Record<string, unknown>,
+    () =>
+      /* SAFETY: An empty object has no fields, so it satisfies Record<string, unknown>. */ ({}) as Record<
+        string,
+        unknown
+      >,
   )
+
   return Object.fromEntries(
     Object.entries(record).flatMap(([key, recordValue]) =>
       Option.match(stringValue(recordValue), {
@@ -45,8 +50,13 @@ function stringRecord(value: unknown): Record<string, string> {
 function exportConfigValue(value: unknown) {
   const record = Option.getOrElse(
     Option.filter(Option.some(value), isRecord),
-    () => ({}) as Record<string, unknown>,
+    () =>
+      /* SAFETY: An empty object has no fields, so it satisfies Record<string, unknown>. */ ({}) as Record<
+        string,
+        unknown
+      >,
   )
+
   return {
     enabled: booleanValue(record.enabled),
     baseUrl: Option.getOrElse(stringValue(record.baseUrl), () => ""),
@@ -59,6 +69,7 @@ function exportConfigValue(value: unknown) {
 export const exportLitellmProviderConfig = Effect.fn("aiProviders.litellm.exportProviderConfig")(
   function* (env: Env) {
     const store = getStore(env)
+
     const [configValue, apiKeyConfigured] = yield* Effect.all(
       [
         store.getJson(S0_CONFIG_KEYS.aiProviders.litellmConfig),
@@ -66,12 +77,15 @@ export const exportLitellmProviderConfig = Effect.fn("aiProviders.litellm.export
       ],
       { concurrency: "unbounded" },
     )
+
     const apiKey = yield* Match.value(apiKeyConfigured).pipe(
       Match.when(true, () => store.getEncryptedSecret(S0_CONFIG_KEYS.aiProviders.litellmApiKey)),
       Match.orElse(() => Effect.succeed(Option.none<string>())),
     )
+
     const apiKeyEnvironmentVariable = "S0_LITELLM_API_KEY"
     const apiKeyValue = Option.filter(apiKey, (value) => value.length > 0)
+
     const configLines = Option.match(configValue, {
       onNone: () => ["// No KV-backed LiteLLM configuration is configured."],
       onSome: (resolved) => [
@@ -89,14 +103,17 @@ export const exportLitellmProviderConfig = Effect.fn("aiProviders.litellm.export
         }),
       ],
     })
+
     const secretAssignment = yield* Effect.forEach(Option.toArray(apiKeyValue), (resolved) =>
       dotenvAssignment(apiKeyEnvironmentVariable, resolved),
     )
+
     const secretLines = secretAssignment.flatMap((assignment) => [
       "",
       "# Configure this secret in the stage environment.",
       assignment,
     ])
+
     const lines = [...configLines, ...secretLines]
     const variableCount = Number(Option.isSome(configValue)) + Number(Option.isSome(apiKeyValue))
 
@@ -112,15 +129,18 @@ export const exportLitellmProviderConfig = Effect.fn("aiProviders.litellm.export
 export const resetLitellmProviderConfig = Effect.fn("aiProviders.litellm.resetProviderConfig")(
   function* (env: Env) {
     const store = getStore(env)
+
     const deletedKeys = [
       S0_CONFIG_KEYS.aiProviders.litellmConfig,
       S0_CONFIG_KEYS.aiProviders.litellmApiKey,
       S0_CONFIG_KEYS.aiProviders.litellmModels,
     ]
+
     yield* Effect.all(
       deletedKeys.map((key) => store.delete(key)),
       { concurrency: "unbounded" },
     )
+
     return { deletedKeys }
   },
 )

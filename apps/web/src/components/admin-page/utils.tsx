@@ -16,12 +16,14 @@ export function toColumnFilters(state: SessionTableState | WorkflowTableState): 
   const filters: ColumnFiltersState = []
   addColumnFilter(filters, "status", state.status)
   addColumnFilter(filters, "userId", state.userId)
+
   if ("kind" in state) {
     addColumnFilter(filters, "agentRuntime", state.kind)
     addColumnFilter(filters, "source", state.source)
     addColumnFilter(filters, "repoOwner", state.repoOwner)
     addColumnFilter(filters, "repoName", state.repoName)
   }
+
   return filters
 }
 
@@ -35,18 +37,22 @@ export function fromSharedTablePatch(
   patch: Partial<SharedTableState>,
 ): Partial<SessionTableState & WorkflowTableState> {
   const next: Partial<SessionTableState & WorkflowTableState> = {}
+
   if (patch.globalFilter !== undefined) {
     next.q = patch.globalFilter
   }
+
   if (patch.sorting) {
     const sort = patch.sorting[0]
     next.sortBy = sort?.id ?? "updatedAt"
     next.sortDir = sort?.desc === false ? "asc" : "desc"
   }
+
   if (patch.pagination) {
     next.pageIndex = patch.pagination.pageIndex
     next.pageSize = patch.pagination.pageSize
   }
+
   if (patch.columnFilters) {
     next.status = getColumnFilterValue(patch.columnFilters, "status")
     next.userId = getColumnFilterValue(patch.columnFilters, "userId")
@@ -55,6 +61,7 @@ export function fromSharedTablePatch(
     next.repoOwner = getColumnFilterValue(patch.columnFilters, "repoOwner")
     next.repoName = getColumnFilterValue(patch.columnFilters, "repoName")
   }
+
   return next
 }
 
@@ -65,19 +72,23 @@ export function getTableFilter<TData>(table: Table<TData>, id: string): string {
 export function setTableFilter<TData>(table: Table<TData>, id: string, value: string) {
   table.setColumnFilters((previous) => {
     const next = previous.filter((filter) => filter.id !== id)
+
     if (value.trim()) {
       next.push({ id, value: value.trim() })
     }
+
     return next
   })
 }
 
 export function getColumnFilterValue(filters: ColumnFiltersState, id: string): string {
   const value = filters.find((filter) => filter.id === id)?.value
+
   return typeof value === "string" ? value : ""
 }
 
 export function applyUpdater<T>(updater: Updater<T>, previous: T): T {
+  // SAFETY: A function updater is the React setState callback and is applied to the previous value.
   return typeof updater === "function" ? (updater as (old: T) => T)(previous) : updater
 }
 
@@ -93,9 +104,11 @@ export function formatAdminSessionSourceFilter(value: string): string {
   if (value === "api") {
     return "API"
   }
+
   if (value === "slack") {
     return "Slack"
   }
+
   return "Web"
 }
 
@@ -114,37 +127,47 @@ export function formatTime(value: number): string {
 
 export function formatDuration(start: number, end: number): string {
   const elapsed = Math.max(0, end - start)
+
   if (elapsed < 1_000) {
     return `${elapsed}ms`
   }
+
   if (elapsed < 60_000) {
     return `${(elapsed / 1_000).toFixed(1)}s`
   }
+
   return `${Math.floor(elapsed / 60_000)}m ${Math.floor((elapsed % 60_000) / 1_000)}s`
 }
 
 export function readString(value: Record<string, unknown> | null, key: string): string | null {
   const item = value?.[key]
+
   return typeof item === "string" ? item : null
 }
 
 export function readNumber(value: Record<string, unknown> | null, key: string): number | null {
   const item = value?.[key]
+
   return typeof item === "number" ? item : null
 }
 
 export function findSessionIds(values: unknown[]): string[] {
   const ids = new Set<string>()
+
   const visit = (value: unknown) => {
     if (!value || typeof value !== "object") {
       return
     }
+
     if (Array.isArray(value)) {
       for (const item of value) {
         visit(item)
       }
+
       return
     }
+
+    // SAFETY: value was checked to be a non-array object, so Object.entries walks its own string keys.
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
       if (key === "sessionId" && typeof item === "string") {
         ids.add(item)
@@ -153,6 +176,8 @@ export function findSessionIds(values: unknown[]): string[] {
       }
     }
   }
+
   values.forEach(visit)
+
   return [...ids].sort((left, right) => left.localeCompare(right))
 }

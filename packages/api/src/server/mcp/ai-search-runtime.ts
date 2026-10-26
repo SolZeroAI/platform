@@ -37,7 +37,7 @@ const nonEmptyTrimmedParts = (parts: readonly { text?: string }[]) =>
   parts.flatMap((part) =>
     Match.value(trimmedText(part.text).length > 0).pipe(
       Match.when(true, () => [trimmedText(part.text)]),
-      Match.orElse(() => [] as string[]),
+      Match.orElse((): string[] => []),
     ),
   )
 
@@ -51,6 +51,7 @@ function formatAiSearchSource(item: AiSearchResultItem): string {
   const filename = item.filename ?? "Unknown source"
   const scoreSuffix = scoreSuffixFor(item.score)
   const snippet = nonEmptyTrimmedParts(item.content ?? []).join("\n")
+
   return Match.value(snippet.length > 0).pipe(
     Match.when(true, () => `${filename}${scoreSuffix}\n${snippet}`),
     Match.orElse(() => filename + scoreSuffix),
@@ -83,7 +84,7 @@ function normalizeBindingChatResponse(
     .flatMap((choice) =>
       Match.value(trimmedText(choice.message.content ?? undefined).length > 0).pipe(
         Match.when(true, () => [trimmedText(choice.message.content ?? undefined)]),
-        Match.orElse(() => [] as string[]),
+        Match.orElse((): string[] => []),
       ),
     )
     .join("\n\n")
@@ -98,8 +99,14 @@ function normalizeBindingChatResponse(
 }
 
 const formattedSources = (items: readonly AiSearchResultItem[]) =>
-  items.map((item) => formatAiSearchSource(item)).filter((formatted) => formatted.length > 0)
+  items.flatMap((item) =>
+    Match.value(formatAiSearchSource(item)).pipe(
+      Match.when("", () => []),
+      Match.orElse((formatted) => [formatted]),
+    ),
+  )
 
+// SAFETY: the true arm runs only when result has a string response field, which is the AI search response variant.
 const responseTextFrom = (
   result: FormattedAiSearchAiSearchResponse | FormattedAiSearchSearchResponse,
 ) =>
@@ -113,17 +120,21 @@ export function formatAiSearchToolResponse(
   result: FormattedAiSearchAiSearchResponse | FormattedAiSearchSearchResponse,
 ): string {
   const responseText = responseTextFrom(result)
+
   const responsePart = Match.value(responseText.length > 0).pipe(
     Match.when(true, () => [responseText]),
-    Match.orElse(() => [] as string[]),
+    Match.orElse((): string[] => []),
   )
+
   const sources = formattedSources(result.data ?? [])
+
   const sourcePart = Match.value(sources.length > 0).pipe(
     Match.when(true, () => [
       `Sources:\n${sources.map((value, index) => `${index + 1}. ${value}`).join("\n\n")}`,
     ]),
-    Match.orElse(() => [] as string[]),
+    Match.orElse((): string[] => []),
   )
+
   return [source.label, ...responsePart, ...sourcePart].join("\n\n")
 }
 
@@ -194,15 +205,18 @@ const executeAiSearch = Effect.fn("mcp.aiSearch.execute")(function* (
   mode: AiSearchToolMode,
 ) {
   const binding = Option.fromNullishOr(env.AI_SEARCH)
+
   const instance = yield* Option.match(binding, {
     onNone: () => aiSearchFail("AI Search namespace binding is not configured"),
     onSome: (aiSearch) => Effect.succeed(aiSearch.get(source.id)),
   })
+
   const result = yield* Match.value(mode).pipe(
     Match.when("search", () => searchBinding(instance, query, source.maxResults)),
     Match.when("aiSearch", () => chatBinding(instance, query, source.maxResults)),
     Match.exhaustive,
   )
+
   return formatAiSearchToolResponse(source, result)
 })
 

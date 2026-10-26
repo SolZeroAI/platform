@@ -63,6 +63,7 @@ const formatCloudflareAiGateway = Effect.fn("admin.formatCloudflareAiGateway")(f
   context: ControlPlaneContext,
 ) {
   const providerKeys = yield* getCloudflareAiGatewayProviderKeyStatuses(context.env)
+
   return Option.match(getCloudflareAiGatewaySnapshot(context.env), {
     onNone: () => ({
       enabled: false,
@@ -103,6 +104,7 @@ export const getAiProvidersAdminResponse = Effect.fn("admin.getAiProvidersAdminR
   function* (context: ControlPlaneContext) {
     const litellm = yield* getLitellmProviderSnapshot(context.env)
     const cloudflareAiGateway = yield* formatCloudflareAiGateway(context)
+
     return {
       cloudflareAiGateway,
       litellm: formatLitellmSnapshot(litellm),
@@ -157,6 +159,7 @@ export const performUpdateLitellmProvider = Effect.fn("admin.performUpdateLitell
       "Global secret encryption is not configured",
       500,
     )
+
     const config = yield* updateLitellmProviderConfig(context.env, {
       enabled: payload.enabled,
       baseUrl: payload.baseUrl,
@@ -185,6 +188,7 @@ export const performUpdateLitellmProvider = Effect.fn("admin.performUpdateLitell
     })
 
     const data = yield* getAiProvidersAdminResponse(context)
+
     return json(data)
   },
 )
@@ -198,6 +202,7 @@ export const performSyncLitellmModels = Effect.fn("admin.performSyncLitellmModel
     actorUserId: admin.userId,
     actorEmail: admin.email,
   })
+
   const log = yield* EffectRequestLogger
   yield* log.emit({
     event: "admin.ai_provider.litellm.synced",
@@ -213,6 +218,7 @@ export const performSyncLitellmModels = Effect.fn("admin.performSyncLitellmModel
       runId: result.run.id,
     },
   })
+
   return json(result)
 })
 
@@ -221,6 +227,7 @@ export const performExportLitellmProvider = Effect.fn("admin.performExportLitell
     const result = yield* exportLitellmProviderConfig(context.env).pipe(
       Effect.catch((cause) => failMessage(describeError(cause), 500)),
     )
+
     const log = yield* EffectRequestLogger
     yield* log.emit({
       event: "admin.ai_provider.litellm.exported",
@@ -235,6 +242,7 @@ export const performExportLitellmProvider = Effect.fn("admin.performExportLitell
         includesRegistry: result.includesRegistry,
       },
     })
+
     return json(result)
   },
 )
@@ -244,6 +252,7 @@ export const performResetLitellmProvider = Effect.fn("admin.performResetLitellmP
     const result = yield* resetLitellmProviderConfig(context.env).pipe(
       Effect.catch((cause) => failMessage(describeError(cause), 500)),
     )
+
     const log = yield* EffectRequestLogger
     yield* log.emit({
       event: "admin.ai_provider.litellm.reset",
@@ -258,6 +267,7 @@ export const performResetLitellmProvider = Effect.fn("admin.performResetLitellmP
     })
 
     const data = yield* getAiProvidersAdminResponse(context)
+
     return json(data)
   },
 )

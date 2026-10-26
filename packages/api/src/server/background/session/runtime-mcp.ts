@@ -18,6 +18,7 @@ export const resolveSelectedMcpcfServers = Effect.fn("session.resolveSelectedMcp
   function* (input: { env: Env; tools: readonly SessionToolSpec[] | null | undefined }) {
     const tools = normalizeSessionTools(input.tools)
     const registry = new McpcfRegistryStore(input.env)
+
     return yield* registry.listSelectedAvailableServers(tools)
   },
 )
@@ -35,11 +36,13 @@ export const buildResolvedSessionMcpServers = Effect.fn("session.buildResolvedMc
     const missingSessionId = Effect.fail(toError("MCPCF session id is required"))
     const missingSessionIdGuard = Effect.succeed(needsMcpcfCapability && !input.sessionId)
     yield* Effect.when(missingSessionId, missingSessionIdGuard)
+
     const issueCapability = Effect.tryPromise({
       try: () =>
         issueMcpcfProxyCapability(input.env.MCPCF_PROXY_SIGNING_SECRET, input.sessionId ?? ""),
       catch: toError,
     })
+
     const capabilityGuard = Effect.succeed(needsMcpcfCapability)
     const mcpcfCapability = yield* Effect.when(issueCapability, capabilityGuard)
 

@@ -20,11 +20,13 @@ interface SubagentGroupProps {
 
 type BadgeVariant = "secondary" | "success" | "error" | "warning" | "neutral"
 
-function getStatusPresentation(status: SubagentRunView["status"]): {
+type SubagentStatusPresentation = {
   label: string
   variant: BadgeVariant
   icon: ReactNode
-} {
+}
+
+function getStatusPresentation(status: SubagentRunView["status"]): SubagentStatusPresentation {
   switch (status) {
     case "running":
       return {
@@ -61,23 +63,30 @@ function getStatusPresentation(status: SubagentRunView["status"]): {
 
 function getGroupStatus(runs: readonly SubagentRunView[]): string {
   const runningCount = runs.filter((run) => run.status === "running").length
+
   if (runningCount > 0) {
     return `${runningCount} running`
   }
+
   const failedCount = runs.filter((run) => run.status !== "completed").length
+
   if (failedCount > 0) {
     return `${failedCount} need attention`
   }
+
   return "Complete"
 }
 
 function SubagentProgressView({ run }: { run: SubagentRunView }) {
   const progress = run.progress
+
   if (!progress) {
     return null
   }
+
   const percent =
     progress.fraction === undefined ? null : Math.round(Math.min(1, progress.fraction) * 100)
+
   const label = progress.message ?? progress.phase ?? progress.milestone ?? "Working"
 
   return (
@@ -212,10 +221,12 @@ export function SubagentGroup({
   const [isExpanded, setIsExpanded] = useState(false)
   const userToggledRef = useRef(false)
   const hasRunningRun = runs.some((run) => run.status === "running")
+
   const firstStartedAt = runs.reduce(
     (earliest, run) => Math.min(earliest, run.startedAt),
     Number.POSITIVE_INFINITY,
   )
+
   const time = Number.isFinite(firstStartedAt) ? formatShortTimestamp(firstStartedAt) : ""
   const fullTimestamp = Number.isFinite(firstStartedAt) ? formatFullTimestamp(firstStartedAt) : ""
 

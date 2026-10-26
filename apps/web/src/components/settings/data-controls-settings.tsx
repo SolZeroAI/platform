@@ -24,10 +24,12 @@ export function DataControlsSettings() {
     } else {
       setLoading(true)
     }
+
     try {
       const res = await fetch(
         `/api/sessions?status=archived&limit=${PAGE_SIZE}&offset=${currentOffset}`,
       )
+
       if (res.ok) {
         const data = await res.json()
         const fetched = Array.isArray(data.sessions) ? data.sessions : []
@@ -54,10 +56,12 @@ export function DataControlsSettings() {
   const handleUnarchive = async (sessionId: string) => {
     // Optimistically remove from list
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))
+
     try {
       const res = await fetch(`/api/sessions/${sessionId}/unarchive`, {
         method: "POST",
       })
+
       if (!res.ok) {
         // Re-fetch on failure to restore correct state
         void fetchArchivedSessions(0, false)
@@ -145,6 +149,7 @@ function ArchivedSessionRow({
       customMcpServers: session.customMcpServers,
     },
   )
+
   const displayTitle = session.title || repoInfo
   const timestamp = session.updatedAt || session.createdAt
   const relativeTime = formatRelativeTime(timestamp)

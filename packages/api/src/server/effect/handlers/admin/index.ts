@@ -63,6 +63,7 @@ import {
   type ControlPlaneContext,
 } from "../shared/control-plane"
 import { requireAdmin, resolveAdminAccess, withAudit } from "./route-helpers"
+
 export { agentSkills, createAgentSkill, deleteAgentSkill, updateAgentSkill } from "./skills"
 
 function workflowWebhookPath(webhookId: string): string {
@@ -71,6 +72,7 @@ function workflowWebhookPath(webhookId: string): string {
 
 function formatWorkflowForAdmin(workflow: AdminWorkflowRecord, serverUrl: string) {
   const webhookPath = workflowWebhookPath(workflow.webhookId)
+
   return {
     id: workflow.id,
     userId: workflow.userId,
@@ -106,9 +108,10 @@ function lifecycleFailure(cause: unknown): ControlPlaneFailure {
 }
 
 function toUnknownArray(value: unknown): unknown[] {
+  // SAFETY: the true arm runs only when Array.isArray(value) is true.
   return Match.value(Array.isArray(value)).pipe(
     Match.when(true, () => value as unknown[]),
-    Match.orElse(() => [] as unknown[]),
+    Match.orElse((): unknown[] => []),
   )
 }
 
@@ -120,9 +123,11 @@ function extractArray(value: Option.Option<Record<string, unknown>>, key: string
 }
 
 const parseInternalJson = Effect.fn("admin.parseInternalJson")(function* (response: Response) {
+  // SAFETY: response.json() is untyped. Admin internal routes return a JSON object or null.
   const parsed = yield* Effect.tryPromise(
     () => response.json() as Promise<Record<string, unknown> | null>,
   ).pipe(Effect.orElseSucceed(() => null))
+
   return Option.fromNullishOr(parsed)
 })
 
@@ -132,10 +137,12 @@ const fetchInternalJson = Effect.fn("admin.fetchInternalJson")(function* (
   path: string,
 ) {
   const internalRequests = yield* InternalRequests
+
   const response = yield* internalRequests.fetch(
     getSessionStub(context.env, sessionId),
     `http://internal${path}`,
   )
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () => Effect.succeed(Option.none<Record<string, unknown>>())),
     Match.orElse(() => parseInternalJson(response)),
@@ -156,7 +163,9 @@ const buildAdminSessionResponse = Effect.fn("admin.buildAdminSessionResponse")(f
     ],
     { concurrency: "unbounded" },
   )
+
   const [state, activity, messages, artifacts] = sections
+
   return json({
     session: record,
     state: Option.getOrNull(state),
@@ -173,6 +182,7 @@ const finalizeSessionStatus = Effect.fn("admin.finalizeSessionStatus")(function*
   responseStatus: string,
 ) {
   yield* store.updateSessionStatus(sessionId, storedStatus, Date.now())
+
   return json({ status: responseStatus, targetType: "session", targetId: sessionId })
 })
 
@@ -184,11 +194,13 @@ const performStopSession = Effect.fn("admin.performStopSession")(function* (
   const record = yield* store.getSession(sessionId)
   yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
+
   const response = yield* internalRequests.fetch(
     getSessionStub(context.env, sessionId),
     "http://internal/internal/stop",
     { method: "POST" },
   )
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () => Effect.succeed(response)),
     Match.orElse(() =>
@@ -205,6 +217,7 @@ const performArchiveSession = Effect.fn("admin.performArchiveSession")(function*
   const record = yield* store.getSession(sessionId)
   const resolved = yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
+
   const response = yield* internalRequests.fetch(
     getSessionStub(context.env, sessionId),
     "http://internal/internal/archive",
@@ -214,6 +227,7 @@ const performArchiveSession = Effect.fn("admin.performArchiveSession")(function*
       body: stringifyJson({ userId: resolved.userId }),
     },
   )
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () => Effect.succeed(response)),
     Match.orElse(() => finalizeSessionStatus(store, sessionId, "archived", "archived")),
@@ -228,6 +242,7 @@ const performUnarchiveSession = Effect.fn("admin.performUnarchiveSession")(funct
   const record = yield* store.getSession(sessionId)
   const resolved = yield* requireOption(record, "Session not found", 404)
   const internalRequests = yield* InternalRequests
+
   const response = yield* internalRequests.fetch(
     getSessionStub(context.env, sessionId),
     "http://internal/internal/unarchive",
@@ -237,6 +252,7 @@ const performUnarchiveSession = Effect.fn("admin.performUnarchiveSession")(funct
       body: stringifyJson({ userId: resolved.userId }),
     },
   )
+
   return yield* Match.value(response.ok).pipe(
     Match.when(false, () => Effect.succeed(response)),
     Match.orElse(() => finalizeSessionStatus(store, sessionId, "active", "active")),
@@ -257,6 +273,7 @@ const performDeleteSession = Effect.fn("admin.performDeleteSession")(function* (
   })
   const deleted = yield* store.deleteSession(sessionId)
   yield* failUnless(deleted, "Session not found", 404)
+
   return json({ status: "deleted", targetType: "session", targetId: sessionId })
 })
 
@@ -264,6 +281,7 @@ const performGithubAccountCleanup = Effect.fn("admin.performGithubAccountCleanup
   context: ControlPlaneContext,
 ) {
   const result = yield* new AdminStore(context.db).cleanupGitHubAccounts()
+
   return json({
     status: "deleted",
     affectedUsers: result.affectedUsers,
@@ -282,6 +300,7 @@ const performRunWorkflow = Effect.fn("admin.performRunWorkflow")(function* (
       trigger: createWorkflowTrigger(payload.trigger),
     })
     .pipe(Effect.mapError((cause) => lifecycleFailure(cause)))
+
   return json({
     status: "started",
     targetType: "workflow",
@@ -300,6 +319,7 @@ const performRetryWorkflowRun = Effect.fn("admin.performRetryWorkflowRun")(funct
       runId: params.runId,
     })
     .pipe(Effect.mapError((cause) => lifecycleFailure(cause)))
+
   return json({
     status: "started",
     targetType: "workflow_run",
@@ -315,6 +335,7 @@ const performArchiveWorkflow = Effect.fn("admin.performArchiveWorkflow")(functio
   yield* new WorkflowLifecycle(context.env)
     .archiveWorkflowById(params.id)
     .pipe(Effect.mapError((cause) => lifecycleFailure(cause)))
+
   return json({ status: "archived", targetType: "workflow", targetId: params.id })
 })
 
@@ -325,6 +346,7 @@ const performUnarchiveWorkflow = Effect.fn("admin.performUnarchiveWorkflow")(fun
   yield* new WorkflowLifecycle(context.env)
     .unarchiveWorkflowById(params.id)
     .pipe(Effect.mapError((cause) => lifecycleFailure(cause)))
+
   return json({ status: "active", targetType: "workflow", targetId: params.id })
 })
 
@@ -333,6 +355,7 @@ export function summary() {
     Effect.fn("admin.summary")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const result = yield* new AdminStore(context.db).getSummary()
+
       return json(result)
     }),
   )
@@ -342,6 +365,7 @@ export function access() {
   return runControlPlane(
     Effect.fn("admin.access")(function* (context: ControlPlaneContext) {
       const isAdmin = yield* resolveAdminAccess(context)
+
       return json({ isAdmin })
     }),
   )
@@ -352,6 +376,7 @@ export function sessions({ query }: { query: AdminListQuery }) {
     Effect.fn("admin.sessions")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const result = yield* new AdminStore(context.db).listSessions(query)
+
       return json(result)
     }),
   )
@@ -364,6 +389,7 @@ export function session({ params }: { params: AdminIdParams }) {
       const store = new AdminStore(context.db)
       const record = yield* store.getSession(params.id)
       const resolved = yield* requireOption(record, "Session not found", 404)
+
       return yield* buildAdminSessionResponse(context, params.id, resolved)
     }),
   )
@@ -379,6 +405,7 @@ export function stopSession({
   return runControlPlane(
     Effect.fn("admin.stopSession")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -404,6 +431,7 @@ export function archiveSession({
   return runControlPlane(
     Effect.fn("admin.archiveSession")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -429,6 +457,7 @@ export function unarchiveSession({
   return runControlPlane(
     Effect.fn("admin.unarchiveSession")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -454,6 +483,7 @@ export function deleteSession({
   return runControlPlane(
     Effect.fn("admin.deleteSession")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -475,6 +505,7 @@ export function workflows({ query }: { query: AdminWorkflowListQuery }) {
       yield* requireAdmin(context)
       const result = yield* new AdminStore(context.db).listWorkflows(query)
       const serverUrl = getInfraServerUrl(context.env)
+
       return json({
         ...result,
         workflows: result.workflows.map((workflow) => formatWorkflowForAdmin(workflow, serverUrl)),
@@ -491,6 +522,7 @@ export function workflowRuns({ params }: { params: AdminIdParams }) {
       const workflow = yield* store.getWorkflow(params.id)
       yield* requireOption(workflow, "Workflow not found", 404)
       const runs = yield* store.listWorkflowRuns(params.id)
+
       return json({ runs })
     }),
   )
@@ -504,6 +536,7 @@ export function workflowRunEvents({ params }: { params: AdminWorkflowRunParams }
       const run = yield* store.getWorkflowRun(params.id, params.runId)
       yield* requireOption(run, "Workflow run not found", 404)
       const events = yield* store.listWorkflowRunEvents(params.id, params.runId)
+
       return json({ events })
     }),
   )
@@ -514,6 +547,7 @@ export function githubAccountCleanupPreview() {
     Effect.fn("admin.githubAccountCleanupPreview")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const preview = yield* new AdminStore(context.db).previewGitHubAccountCleanup()
+
       return json(preview)
     }),
   )
@@ -523,6 +557,7 @@ export function githubAccountCleanup() {
   return runControlPlane(
     Effect.fn("admin.githubAccountCleanup")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -543,6 +578,7 @@ export function mcpcf() {
     Effect.fn("admin.mcpcf")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const data = yield* getMcpcfAdminResponse(context)
+
       return json(data)
     }),
   )
@@ -552,6 +588,7 @@ export function updateMcpcfConfig({ payload }: { payload: AdminMcpcfConfigPayloa
   return runControlPlane(
     Effect.fn("admin.updateMcpcfConfig")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -571,6 +608,7 @@ export function resetMcpcfConfig() {
   return runControlPlane(
     Effect.fn("admin.resetMcpcfConfig")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -590,6 +628,7 @@ export function exportMcpcfConfig() {
   return runControlPlane(
     Effect.fn("admin.exportMcpcfConfig")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -609,6 +648,7 @@ export function refreshMcpcf() {
   return runControlPlane(
     Effect.fn("admin.refreshMcpcf")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -629,6 +669,7 @@ export function aiProviders() {
     Effect.fn("admin.aiProviders")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const data = yield* getAiProvidersAdminResponse(context)
+
       return json(data)
     }),
   )
@@ -639,6 +680,7 @@ export function aiSearch() {
     Effect.fn("admin.aiSearch")(function* (context: ControlPlaneContext) {
       yield* requireAdmin(context)
       const data = yield* getAiSearchAdminResponse(context)
+
       return json(data)
     }),
   )
@@ -648,6 +690,7 @@ export function exportAiSearchConfig() {
   return runControlPlane(
     Effect.fn("admin.exportAiSearchConfig")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -667,6 +710,7 @@ export function createAiSearchSource({ payload }: { payload: AdminAiSearchSource
   return runControlPlane(
     Effect.fn("admin.createAiSearchSource")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -691,6 +735,7 @@ export function updateAiSearchSource({
   return runControlPlane(
     Effect.fn("admin.updateAiSearchSource")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -709,6 +754,7 @@ export function deleteAiSearchSource({ params }: { params: AdminIdParams }) {
   return runControlPlane(
     Effect.fn("admin.deleteAiSearchSource")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -727,6 +773,7 @@ export function updateLitellmProvider({ payload }: { payload: AdminLitellmConfig
   return runControlPlane(
     Effect.fn("admin.updateLitellmProvider")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -751,6 +798,7 @@ export function updateCloudflareAiGatewayProviderKeys({
       context: ControlPlaneContext,
     ) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -769,6 +817,7 @@ export function resetLitellmProvider() {
   return runControlPlane(
     Effect.fn("admin.resetLitellmProvider")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -787,6 +836,7 @@ export function exportLitellmProvider() {
   return runControlPlane(
     Effect.fn("admin.exportLitellmProvider")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -805,6 +855,7 @@ export function syncLitellmModels() {
   return runControlPlane(
     Effect.fn("admin.syncLitellmModels")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -829,6 +880,7 @@ export function runWorkflow({
   return runControlPlane(
     Effect.fn("admin.runWorkflow")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -854,6 +906,7 @@ export function retryWorkflowRun({
   return runControlPlane(
     Effect.fn("admin.retryWorkflowRun")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -879,6 +932,7 @@ export function archiveWorkflow({
   return runControlPlane(
     Effect.fn("admin.archiveWorkflow")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,
@@ -904,6 +958,7 @@ export function unarchiveWorkflow({
   return runControlPlane(
     Effect.fn("admin.unarchiveWorkflow")(function* (context: ControlPlaneContext) {
       const admin = yield* requireAdmin(context)
+
       return yield* withAudit(
         {
           context,

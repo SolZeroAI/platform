@@ -23,6 +23,7 @@ export function logIsolateStreamLifecycle(
     `stream_${status}`,
     "isolate-stream-lifecycle",
   )
+
   const fields = {
     sessionId: host.getRuntimeId(),
     userId: host.state.userId,
@@ -33,6 +34,7 @@ export function logIsolateStreamLifecycle(
     messageContentLength: input.request.content.length,
     reasoningEffort: input.request.reasoningEffort ?? "",
   }
+
   Match.value(status).pipe(
     Match.when("interrupted", () => observer.log.warn("Isolate stream interrupted", fields)),
     Match.orElse(() => observer.log.info("Isolate stream started", fields)),

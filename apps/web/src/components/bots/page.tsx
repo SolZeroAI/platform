@@ -27,21 +27,25 @@ export function BotsPage() {
         if (controller.signal.aborted) {
           return
         }
+
         showErrorToast(getErrorMessage(error))
         setBots([])
       })
+
     return () => controller.abort()
   }, [])
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setCreating(true)
+
     try {
       const data = await requestJson<{ bot: BotRecord }>("/api/bots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, instructions }),
       })
+
       setName("")
       setInstructions("")
       await navigate({ to: "/bots/$botId", params: { botId: data.bot.id } })

@@ -20,6 +20,7 @@ export function resolveAppSession({
   if (pending) {
     return initialSession
   }
+
   if (!clientUser) {
     return null
   }

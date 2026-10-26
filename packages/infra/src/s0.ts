@@ -54,6 +54,7 @@ export interface CreateS0WebOptions {
 }
 
 function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
+  // SAFETY: Match.string wraps a plain string with Redacted.make; the unmatched arm is already an Alchemy Output of that same Redacted secret.
   return Match.value(value).pipe(
     Match.when(Match.string, Redacted.make),
     Match.orElse((output) => output),
@@ -76,6 +77,7 @@ function createCloudflareAiGateway(input: {
   cloudflareAccountId: string
 }) {
   const config = input.apiEnv.S0_CONFIG_CLOUDFLARE_AI_GATEWAY
+
   return Effect.gen(function* () {
     // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and local stacks never call the Cloudflare Gateway API.
     if (!config.enabled) return undefined
@@ -85,6 +87,7 @@ function createCloudflareAiGateway(input: {
     }
 
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
+
     const gatewayProps = {
       authentication: true,
       cacheTtl: config.cacheTtl,
@@ -125,6 +128,7 @@ function createCloudflareAiGateway(input: {
         },
       ],
     })
+
     return {
       resource,
       gatewayId: resource.gatewayId,
@@ -148,6 +152,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
       infraDir,
       apiEnv,
     } = options
+
     const migrationsDir = resolve(infraDir, "d1-migrations")
 
     const aiGateway = yield* createCloudflareAiGateway({
@@ -156,11 +161,14 @@ export function createS0Api(options: CreateS0ApiOptions) {
       apiEnv,
       cloudflareAccountId,
     })
+
     const agentContainers = createAgentContainerNamespaces()
+
     const agentContainerApplications = createAgentContainerApplications({
       appName,
       stageMetadata,
     })
+
     const agentResources = yield* createAgentResources({
       appName,
       dev,
@@ -172,6 +180,7 @@ export function createS0Api(options: CreateS0ApiOptions) {
       databaseUrl: databaseUrl ?? LOCAL_PGLITE_DATABASE_URL,
       planetscaleConfig: options.planetscaleConfig,
     })
+
     const api = yield* createApi({
       appName,
       stageMetadata,
@@ -184,11 +193,13 @@ export function createS0Api(options: CreateS0ApiOptions) {
       aiGateway,
       env: apiEnv,
     })
+
     const dynamicWorkflow = yield* createDynamicWorkflowResource({
       appName,
       stageMetadata,
       workerName: api.workerName,
     })
+
     const opencodeAgentContainerApplication = yield* agentContainerApplications.opencode
     const codexAgentContainerApplication = yield* agentContainerApplications.codex
     const claudeCodeAgentContainerApplication = yield* agentContainerApplications.claudeCode

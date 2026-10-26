@@ -8,10 +8,14 @@ const defaultConfig = {
   infraEnvPath: "config/.env",
 }
 
-const githubSecretNameMap: Record<string, string> = {
+const githubSecretNameMap = {
   GITHUB_APP_CLIENT_SECRET: "GH_APP_CLIENT_SECRET",
   GITHUB_APP_PRIVATE_KEY: "GH_APP_PRIVATE_KEY",
   GITHUB_APP_WEBHOOK_SECRET: "GH_APP_WEBHOOK_SECRET",
+}
+
+function isMappedSecretName(name: string): name is keyof typeof githubSecretNameMap {
+  return Object.hasOwn(githubSecretNameMap, name)
 }
 
 const repoSecretNames = [
@@ -19,6 +23,7 @@ const repoSecretNames = [
   "CLOUDFLARE_API_TOKEN",
   "CF_AI_SEARCH_SERVICE_TOKEN_ID",
 ] as const
+
 const repoSecretNameSet = new Set<string>(repoSecretNames)
 
 interface Args {
@@ -123,9 +128,11 @@ function parseArgs(argv: string[]): Args {
 
 function readOptionValue(argv: string[], index: number, option: string): string {
   const value = argv[index]
+
   if (!value || value.startsWith("--")) {
     throw new Error(`${option} requires a value`)
   }
+
   return value
 }
 
@@ -134,7 +141,9 @@ function parseDotenvFile(path: string): Record<string, string> {
 }
 
 function mappedSecretName(name: string): string {
-  return githubSecretNameMap[name] ?? name
+  if (isMappedSecretName(name)) return githubSecretNameMap[name]
+
+  return name
 }
 
 function runtimeUploads(environment: string, path: string): SecretUpload[] {
@@ -144,9 +153,11 @@ function runtimeUploads(environment: string, path: string): SecretUpload[] {
     if (repoSecretNameSet.has(sourceName)) {
       return []
     }
+
     if (!value) {
       throw new Error(`${path}: ${sourceName} is empty; refusing to upload an empty GitHub secret`)
     }
+
     return [
       {
         scope: "environment" as const,
@@ -164,6 +175,7 @@ function infraUploads(path: string): SecretUpload[] {
 
   return repoSecretNames.flatMap((name) => {
     const value = parsed[name]
+
     if (!value) {
       return []
     }
@@ -180,9 +192,11 @@ function infraUploads(path: string): SecretUpload[] {
 
 function childEnv(useGitHubTokenEnv: boolean): NodeJS.ProcessEnv {
   const env = { ...process.env }
+
   if (!useGitHubTokenEnv) {
     delete env.GITHUB_TOKEN
   }
+
   return env
 }
 
@@ -251,12 +265,14 @@ function printPlan(uploads: SecretUpload[], apply: boolean): void {
   if (uploads.length > 0) {
     console.log("Set/update:")
   }
+
   for (const upload of uploads) {
     console.log(`- ${describeUpload(upload)}`)
   }
 
   console.log("")
   console.log(`${uploads.length} secrets ${apply ? "selected" : "would be synced"}.`)
+
   if (!apply) {
     console.log("Pass --apply to write these secrets to GitHub.")
   }
@@ -264,9 +280,11 @@ function printPlan(uploads: SecretUpload[], apply: boolean): void {
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2))
+
   if (!/^[^/\s]+\/[^/\s]+$/.test(args.repo)) {
     throw new Error("--repo <owner/repo> is required and must identify the GitHub destination")
   }
+
   const uploads: SecretUpload[] = []
 
   if (args.syncRuntime) {

@@ -12,12 +12,18 @@ import { Activity, Clock, Server, Zap } from "lucide-react"
 import { S0Loader } from "@/components/s0-loader"
 import { AgentRuntimeIcon } from "@/components/home-page/session-kind"
 
+type RuntimeStatusPresentation = {
+  color: string
+  detail: string
+}
+
 export function getRuntimeStatusPresentation(
   status: string,
   runtimeLabel: string,
-): { color: string; detail: string } {
+): RuntimeStatusPresentation {
   const r = runtimeLabel.toLowerCase()
-  const table: Record<string, { color: string; detail: string }> = {
+
+  const table = {
     pending: {
       color: "text-kumo-subtle",
       detail: `The ${r} runtime has not started yet. Send a new prompt to wake it.`,
@@ -59,22 +65,32 @@ export function getRuntimeStatusPresentation(
       detail: `${runtimeLabel} failed to start. Send a new prompt to retry.`,
     },
   }
-  return table[status] ?? table.pending
+
+  if (status in table) {
+    // SAFETY: status was confirmed with `in` to be a key of the runtime status table.
+    return table[status as keyof typeof table]
+  }
+
+  return table.pending
 }
 
 export function getRuntimeStatusBadgeVariant(status: string): BadgeVariant {
   if (status === "ready") {
     return "success"
   }
+
   if (status === "failed") {
     return "error"
   }
+
   if (status === "spawning" || status === "connecting" || status === "warming") {
     return "warning"
   }
+
   if (status === "running" || status === "syncing") {
     return "info"
   }
+
   return "secondary"
 }
 
@@ -82,28 +98,37 @@ export function formatActivityDuration(durationMs: number | null): string | null
   if (durationMs == null) {
     return null
   }
+
   if (durationMs < 1000) {
     return "same time"
   }
+
   const seconds = Math.round(durationMs / 1000)
+
   if (seconds < 60) {
     return `${seconds}s later`
   }
+
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
+
   if (minutes < 60) {
     return `${remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`} later`
   }
+
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
+
   return `${remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`} later`
 }
 
-export function getActivityPresentation(activity: RuntimeActivityEvent): {
+type ActivityPresentation = {
   dot: string
   text: string
   eyebrow: string
-} {
+}
+
+export function getActivityPresentation(activity: RuntimeActivityEvent): ActivityPresentation {
   if (activity.type === "keep_alive_changed") {
     return activity.keepAlive
       ? { dot: "bg-kumo-brand", text: "text-kumo-brand", eyebrow: "Keep alive on" }
@@ -115,7 +140,8 @@ export function getActivityPresentation(activity: RuntimeActivityEvent): {
   }
 
   const status = activity.statusTo ?? ""
-  const table: Record<string, { dot: string; text: string; eyebrow: string }> = {
+
+  const table = {
     pending: { dot: "bg-kumo-fill", text: "text-kumo-subtle", eyebrow: "Pending" },
     spawning: {
       dot: "bg-kumo-warning-tint",
@@ -139,27 +165,37 @@ export function getActivityPresentation(activity: RuntimeActivityEvent): {
     stale: { dot: "bg-kumo-fill", text: "text-kumo-subtle", eyebrow: "Stale" },
     failed: { dot: "bg-kumo-danger-tint", text: "text-kumo-danger", eyebrow: "Failed" },
   }
-  return (
-    table[status] ?? { dot: "bg-kumo-contrast", text: "text-kumo-default", eyebrow: activity.type }
-  )
+
+  if (status in table) {
+    // SAFETY: status was confirmed with `in` to be a key of the activity presentation table.
+    return table[status as keyof typeof table]
+  }
+
+  return { dot: "bg-kumo-contrast", text: "text-kumo-default", eyebrow: activity.type }
 }
 
 export function formatActivityDetail(activity: RuntimeActivityEvent): string {
   if (activity.type === "status_changed") {
     const from = activity.statusFrom ?? "unknown"
     const to = activity.statusTo ?? "unknown"
+
     return `${from} -> ${to}`
   }
+
   if (activity.keepAlive != null) {
     const state = activity.keepAlive ? "Enabled" : "Disabled"
+
     return activity.reason ? `${state} for ${activity.reason}` : state
   }
+
   if (activity.reason) {
     return activity.reason
   }
+
   if (activity.sandboxId) {
     return activity.sandboxId
   }
+
   return "Runtime lifecycle event"
 }
 
@@ -215,6 +251,7 @@ export function RuntimeActivityTimelineItem({
 }) {
   const presentation = getActivityPresentation(activity)
   const duration = formatActivityDuration(activity.durationSincePreviousMs)
+
   const time = new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -277,11 +314,14 @@ export function SessionStatusSidebar(input: {
     loadingActivity,
     activityError,
   } = input
+
   const status = runtimeStatus ?? "pending"
+
   const resolvedRuntime = resolveAgentRuntime({
     agentRuntime: capabilities?.agentRuntime ?? agentRuntime,
     sessionKind,
   })
+
   const runtimeLabel = formatAgentRuntimeLabel(resolvedRuntime)
   const runtime = getRuntimeStatusPresentation(status, runtimeLabel)
 
@@ -290,6 +330,7 @@ export function SessionStatusSidebar(input: {
     : connected
       ? "text-kumo-success"
       : "text-kumo-subtle"
+
   const connectionHeadline = connecting
     ? "WS connecting"
     : connected
@@ -388,10 +429,12 @@ export function SessionHeaderRuntimeStatus({
   capabilities?: SessionRuntimeCapabilities
 }) {
   const status = runtimeStatus ?? "pending"
+
   const resolvedRuntime = resolveAgentRuntime({
     agentRuntime: capabilities?.agentRuntime ?? agentRuntime,
     sessionKind,
   })
+
   const runtimeLabel = formatAgentRuntimeLabel(resolvedRuntime)
   const meta = getRuntimeStatusPresentation(status, runtimeLabel)
   const badgeVariant = getRuntimeStatusBadgeVariant(status)
@@ -425,12 +468,14 @@ export function CombinedStatusDot({
   capabilities?: SessionRuntimeCapabilities
 }) {
   const status = runtimeStatus ?? "pending"
+
   const runtimeLabel = formatAgentRuntimeLabel(
     resolveAgentRuntime({
       agentRuntime: capabilities?.agentRuntime ?? agentRuntime,
       sessionKind,
     }),
   )
+
   const meta = getRuntimeStatusPresentation(status, runtimeLabel)
 
   return (

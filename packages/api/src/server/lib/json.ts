@@ -8,9 +8,11 @@ import * as Schema from "effect/Schema"
 const decodeRecordOption = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)),
 )
+
 const decodeArrayOption = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Array(Schema.Unknown)),
 )
+
 const decodeValueOption = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 const decodeValueSync = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
 const encodeJsonString = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown))

@@ -6,6 +6,7 @@ function copyToClipboardWithTextArea(text: string): boolean {
   document.body.appendChild(textArea)
   textArea.focus()
   textArea.select()
+
   try {
     return document.execCommand("copy")
   } finally {
@@ -17,6 +18,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard && window.isSecureContext) {
     try {
       await navigator.clipboard.writeText(text)
+
       return true
     } catch {
       return copyToClipboardWithTextArea(text)

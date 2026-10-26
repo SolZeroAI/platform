@@ -65,10 +65,12 @@ export function SessionMoreActionsMenu({
   const handleArchiveToggle = async () => {
     if (!isArchived && onArchive) {
       setIsArchiveConfirmOpen(true)
+
       return
     }
 
     setIsArchiving(true)
+
     try {
       if (isArchived && onUnarchive) {
         await onUnarchive()
@@ -85,6 +87,7 @@ export function SessionMoreActionsMenu({
 
     setIsArchiveConfirmOpen(false)
     setIsArchiving(true)
+
     try {
       await onArchive()
     } finally {
@@ -101,6 +104,7 @@ export function SessionMoreActionsMenu({
   const archiveDialogOpen = isArchiveConfirmOpen && !isArchived
   const showReplayAction = Boolean(isReplaying ? onStopReplay : onReplay)
   const showTestErrorAction = Boolean(onTestError)
+
   const menuItems = [
     {
       key: "copy-link",
@@ -130,6 +134,7 @@ export function SessionMoreActionsMenu({
         <DropdownMenu.Trigger>
           <Button
             type="button"
+            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
             shape="circle"
             variant="ghost"
             disabled={disabled}
@@ -163,6 +168,7 @@ export function SessionMoreActionsMenu({
                       } else {
                         onReplay?.()
                       }
+
                       setIsMenuOpen(false)
                     }}
                   >

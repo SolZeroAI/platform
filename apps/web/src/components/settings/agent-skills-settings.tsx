@@ -20,6 +20,7 @@ export function AgentSkillsSettings() {
 
   const loadSkills = useCallback(async () => {
     setLoading(true)
+
     try {
       const response = await requestJson<AgentSkillsResponse>("/api/skills")
       setSkills(response.skills)
@@ -36,6 +37,7 @@ export function AgentSkillsSettings() {
 
   const setPreference = async (skill: AgentSkillItem, enabled: boolean) => {
     setBusySkillId(skill.id)
+
     try {
       const response = await requestJson<AgentSkillsResponse>(
         `/api/skills/${encodeURIComponent(skill.id)}/preference`,
@@ -45,6 +47,7 @@ export function AgentSkillsSettings() {
           body: JSON.stringify({ enabled }),
         },
       )
+
       setSkills(response.skills)
     } catch (error) {
       showErrorToast(getErrorMessage(error))
@@ -55,11 +58,13 @@ export function AgentSkillsSettings() {
 
   const resetPreference = async (skill: AgentSkillItem) => {
     setBusySkillId(skill.id)
+
     try {
       const response = await requestJson<AgentSkillsResponse>(
         `/api/skills/${encodeURIComponent(skill.id)}/preference`,
         { method: "DELETE" },
       )
+
       setSkills(response.skills)
     } catch (error) {
       showErrorToast(getErrorMessage(error))

@@ -18,10 +18,13 @@ import { getS0Brand } from "@/lib/brand"
 
 export async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init)
+  // SAFETY: The workflow JSON body is the caller-selected T and includes error when response.ok is false.
   const data = (await response.json().catch(() => ({}))) as T & { error?: string }
+
   if (!response.ok) {
     throw new Error(data.error ?? `Request failed with status ${response.status}`)
   }
+
   return data
 }
 
@@ -40,6 +43,7 @@ export function sanitizeFilename(value: string): string {
     .trim()
     .replace(/[^A-Za-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
+
   return sanitized || "workflow.workflow.yaml"
 }
 
@@ -98,10 +102,7 @@ export function buildWorkflowEditorPrompt(input: {
   return promptParts.join("\n")
 }
 
-function toWorkflowRunContext(
-  run: WorkflowRun,
-  events: WorkflowRunEvent[],
-): Record<string, unknown> {
+function toWorkflowRunContext(run: WorkflowRun, events: WorkflowRunEvent[]) {
   return {
     id: run.id,
     workflowVersion: run.workflowVersion,
@@ -184,12 +185,14 @@ export function getWorkflowRunArtifactSummaries(
     const node = nodesById.get(event.nodeId) ?? null
     const eventNodeType = typeof eventData?.nodeType === "string" ? eventData.nodeType : null
     const nodeType = eventNodeType ?? node?.type
+
     if (!isWorkflowSavedArtifactNodeType(nodeType)) {
       continue
     }
 
     const eventResult = asJsonRecord(eventData?.result)
     const output = asJsonRecord(runOutputs?.[event.nodeId]) ?? asJsonRecord(eventResult?.outputs)
+
     if (!output) {
       continue
     }
@@ -220,6 +223,7 @@ export function isWorkflowSavedArtifactNodeType(
 
 export function formatCompletedRunEventNodeTitle(event: WorkflowRunEvent): string {
   const suffix = " completed"
+
   return event.message.endsWith(suffix) ? event.message.slice(0, -suffix.length) : event.message
 }
 
@@ -232,12 +236,15 @@ export function getLatestWebhookTestPayload(
   nodeId: string,
 ): WebhookTestPayload | null {
   const sortedRuns = [...runs].sort((a, b) => b.startedAt - a.startedAt)
+
   for (const run of sortedRuns) {
     const payload = getWebhookTestPayloadFromRun(run, nodeId)
+
     if (payload) {
       return payload
     }
   }
+
   return null
 }
 
@@ -246,12 +253,15 @@ export function getLatestSlackTestTrigger(
   fallbackNodeId: string,
 ): SlackTestTrigger | null {
   const sortedRuns = [...runs].sort((a, b) => b.startedAt - a.startedAt)
+
   for (const run of sortedRuns) {
     const trigger = getSlackTestTriggerFromRun(run, fallbackNodeId)
+
     if (trigger) {
       return trigger
     }
   }
+
   return null
 }
 
@@ -266,15 +276,18 @@ export function defaultSlackTestTrigger(nodeId: string): SlackTestTrigger {
 export function parseSlackTestTriggerInput(value: string, nodeId: string): SlackTestTrigger {
   const parsed = parseJsonInput(value, "Slack input")
   const input = asJsonRecord(parsed)
+
   if (!input) {
     throw new Error("Slack input must be a JSON object.")
   }
 
   if (Object.prototype.hasOwnProperty.call(input, "trigger")) {
     const trigger = asJsonRecord(input.trigger)
+
     if (!trigger) {
       throw new Error("Slack input trigger must be a JSON object.")
     }
+
     return normalizeSlackTriggerRecord(trigger, nodeId)
   }
 
@@ -296,6 +309,7 @@ function normalizeSlackTriggerRecord(
   if (trigger.kind !== "slack") {
     throw new Error("Slack input trigger kind must be slack.")
   }
+
   return {
     kind: "slack",
     nodeId: typeof trigger.nodeId === "string" && trigger.nodeId.trim() ? trigger.nodeId : nodeId,
@@ -308,6 +322,7 @@ export function getWebhookTestPayloadFromRun(
   nodeId: string,
 ): WebhookTestPayload | null {
   const trigger = asJsonRecord(run.input.trigger)
+
   if (trigger?.kind !== "webhook") {
     return null
   }
@@ -318,11 +333,13 @@ export function getWebhookTestPayloadFromRun(
       : typeof run.triggerNodeId === "string"
         ? run.triggerNodeId
         : null
+
   if (triggerNodeId && triggerNodeId !== nodeId) {
     return null
   }
 
   const payload = asJsonRecord(trigger.payload)
+
   if (!payload) {
     return null
   }
@@ -339,6 +356,7 @@ export function getSlackTestTriggerFromRun(
   fallbackNodeId: string,
 ): SlackTestTrigger | null {
   const trigger = asJsonRecord(run.input.trigger)
+
   if (trigger?.kind !== "slack") {
     return null
   }
@@ -375,6 +393,7 @@ export function getRunEventDurationLabel(
   }
 
   const startedEvent = findLatestPriorEvent(events, event, "node_started", event.nodeId)
+
   return startedEvent ? formatDuration(startedEvent.createdAt, event.createdAt) : null
 }
 
@@ -397,6 +416,7 @@ export function findLatestPriorEvent(
   nodeId: string,
 ): WorkflowRunEvent | null {
   let match: WorkflowRunEvent | null = null
+
   for (const candidate of events) {
     if (
       candidate.sequence >= event.sequence ||
@@ -405,21 +425,26 @@ export function findLatestPriorEvent(
     ) {
       continue
     }
+
     if (!match || candidate.sequence > match.sequence) {
       match = candidate
     }
   }
+
   return match
 }
 
 export function formatDuration(start: number, end: number): string {
   const elapsed = Math.max(0, end - start)
+
   if (elapsed < 1_000) {
     return `${elapsed}ms`
   }
+
   if (elapsed < 60_000) {
     return `${(elapsed / 1_000).toFixed(1)}s`
   }
+
   return `${Math.floor(elapsed / 60_000)}m ${Math.floor((elapsed % 60_000) / 1_000)}s`
 }
 

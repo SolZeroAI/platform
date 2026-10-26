@@ -139,10 +139,12 @@ export function WorkflowBuilder({
 }) {
   const [globalVariablesOpen, setGlobalVariablesOpen] = useState(false)
   const [draggedCatalogItemId, setDraggedCatalogItemId] = useState<WorkflowNodeType | null>(null)
+
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<
     WorkflowCanvasNode,
     WorkflowCanvasEdge
   > | null>(null)
+
   const [hoveredCatalogItem, setHoveredCatalogItem] = useState<{
     item: WorkflowNodeCatalogItem
     anchorTop: number
@@ -150,13 +152,16 @@ export function WorkflowBuilder({
     left: number
     top: number
   } | null>(null)
+
   const catalogPreviewRef = useRef<HTMLDivElement | null>(null)
   const { data: authSession } = useAuthSession()
   const isAdmin = authSession?.isAdmin === true
+
   const selectedConnection = useMemo(
     () => getWorkflowConnectionDetails(selectedEdge, nodes),
     [nodes, selectedEdge],
   )
+
   const displayedEdges = useMemo(
     () =>
       edges.map((edge) =>
@@ -170,19 +175,24 @@ export function WorkflowBuilder({
       ),
     [edges, selectedEdge?.id],
   )
+
   const confirmElementDeleteBeforeCanvasDelete = useCallback<
     OnBeforeDelete<WorkflowCanvasNode, WorkflowCanvasEdge>
   >(
     async ({ nodes: nodesToDelete, edges: edgesToDelete }) => {
       const nodeToDelete = nodesToDelete[0]?.data.node
+
       if (nodeToDelete) {
         onRequestDeleteNode(nodeToDelete)
+
         return false
       }
 
       const edgeToDelete = edgesToDelete[0]
+
       if (edgeToDelete) {
         onRequestDeleteEdge(edgeToDelete.id)
+
         return false
       }
 
@@ -190,12 +200,15 @@ export function WorkflowBuilder({
     },
     [onRequestDeleteEdge, onRequestDeleteNode],
   )
+
   const detailsViewActive = Boolean(selectedNode || selectedConnection)
   const leftPanelCollapsed = detailsViewActive ? detailsCollapsed : nodePickerCollapsed
+
   const connectedInputTemplates = useMemo(
     () => (selectedNode ? getConnectedInputTemplates(selectedNode, nodes, edges) : []),
     [edges, nodes, selectedNode],
   )
+
   const showCatalogItemPreview = (item: WorkflowNodeCatalogItem, element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
     setHoveredCatalogItem({
@@ -206,6 +219,7 @@ export function WorkflowBuilder({
       top: getCatalogPreviewTop(rect.top, rect.height, CATALOG_PREVIEW_ESTIMATED_HEIGHT),
     })
   }
+
   const startCatalogItemDrag = useCallback(
     (event: ReactDragEvent<HTMLButtonElement>, item: WorkflowNodeCatalogItem) => {
       event.dataTransfer.effectAllowed = "copy"
@@ -217,9 +231,11 @@ export function WorkflowBuilder({
     },
     [],
   )
+
   const stopCatalogItemDrag = useCallback(() => {
     setDraggedCatalogItemId(null)
   }, [])
+
   const onCanvasDragOver = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
     if (!hasWorkflowNodeDragData(event.dataTransfer)) {
       return
@@ -228,6 +244,7 @@ export function WorkflowBuilder({
     event.preventDefault()
     event.dataTransfer.dropEffect = "copy"
   }, [])
+
   const onCanvasDrop = useCallback(
     (event: ReactDragEvent<HTMLDivElement>) => {
       if (!hasWorkflowNodeDragData(event.dataTransfer)) {
@@ -237,6 +254,7 @@ export function WorkflowBuilder({
       event.preventDefault()
       setDraggedCatalogItemId(null)
       const droppedType = getWorkflowNodeDragType(event.dataTransfer)
+
       if (!droppedType || !reactFlowInstance) {
         return
       }
@@ -245,12 +263,14 @@ export function WorkflowBuilder({
         x: event.clientX,
         y: event.clientY,
       })
+
       onAddNode(droppedType, dropPosition)
       const nodeCenter = getWorkflowNodePositionCenter(dropPosition)
       centerWorkflowCanvasViewport(reactFlowInstance, nodeCenter)
     },
     [onAddNode, reactFlowInstance],
   )
+
   const centerCanvasOnNode = useCallback(
     (node: WorkflowCanvasNode) => {
       if (!reactFlowInstance) {
@@ -264,6 +284,7 @@ export function WorkflowBuilder({
     },
     [reactFlowInstance],
   )
+
   const selectAndCenterCanvasNode = useCallback(
     (node: WorkflowCanvasNode) => {
       onNodeClick(node.id)
@@ -282,6 +303,7 @@ export function WorkflowBuilder({
       hoveredCatalogItem.anchorHeight,
       catalogPreviewRef.current.offsetHeight,
     )
+
     if (Math.abs(measuredTop - hoveredCatalogItem.top) < 1) {
       return
     }
@@ -462,14 +484,17 @@ export function WorkflowNodeCatalogPanel({
   const [collapsedCategories, setCollapsedCategories] = useState<Set<WorkflowNodeCategory>>(
     () => new Set(),
   )
+
   const toggleCategory = useCallback((category: WorkflowNodeCategory) => {
     setCollapsedCategories((current) => {
       const next = new Set(current)
+
       if (next.has(category)) {
         next.delete(category)
       } else {
         next.add(category)
       }
+
       return next
     })
   }, [])

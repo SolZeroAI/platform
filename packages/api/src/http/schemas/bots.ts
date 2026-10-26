@@ -103,10 +103,12 @@ export class OpenBotResponse extends Schema.Class<OpenBotResponse>("OpenBotRespo
 export const BotIdParams = {
   id: Schema.String,
 }
+
 export type BotIdParams = { id: string }
 
 export const BotRoutineParams = {
   id: Schema.String,
   routineId: Schema.String,
 }
+
 export type BotRoutineParams = { id: string; routineId: string }

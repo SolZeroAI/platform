@@ -14,17 +14,20 @@ export function getSettingsAgentTab(value: unknown): SettingsAgentTab {
   return isSettingsAgentTab(value) ? value : "runtimes"
 }
 
+export type AgentSettingsLocation = {
+  forceAgentsCategory: boolean
+  tab: SettingsAgentTab | undefined
+  legacyMcpRedirect: boolean
+}
+
 export function resolveAgentSettingsLocation(input: {
   category: unknown
   tab: unknown
   hasMcpDeepLink: boolean
-}): {
-  forceAgentsCategory: boolean
-  tab: SettingsAgentTab | undefined
-  legacyMcpRedirect: boolean
-} {
+}): AgentSettingsLocation {
   const legacyMcpRedirect = input.category === "mcp"
   const forceAgentsCategory = legacyMcpRedirect || input.hasMcpDeepLink
+
   return {
     forceAgentsCategory,
     tab: forceAgentsCategory ? "mcps" : isSettingsAgentTab(input.tab) ? input.tab : undefined,

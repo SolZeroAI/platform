@@ -53,10 +53,15 @@ function parseOptionalJsonObject(
   if (!value.trim()) {
     return undefined
   }
+
+  // SAFETY: JSON.parse is typed as any, and the options text is checked as unknown before it is treated as an object.
   const parsed = JSON.parse(value) as unknown
+
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
     throw new Error(`${label} must be a JSON object`)
   }
+
+  // SAFETY: parsed was checked to be a non-array object, so its string keys are provider option fields.
   return parsed as Record<string, unknown>
 }
 
@@ -64,10 +69,15 @@ function parseModelsJson(value: string): Record<string, ProviderModelDefinition>
   if (!value.trim()) {
     throw new Error("Models JSON is required")
   }
+
+  // SAFETY: JSON.parse is typed as any, and the models text is checked as unknown before the object check.
   const parsed = JSON.parse(value) as unknown
+
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
     throw new Error("Models JSON must be an object")
   }
+
+  // SAFETY: parsed was checked to be a non-array object whose values are provider model definitions.
   return parsed as Record<string, ProviderModelDefinition>
 }
 
@@ -81,30 +91,51 @@ function buildProviderSettingsPayload(
     defaultModel: defaultModel.trim() || null,
     defaultIsolateStepLimit: settings.defaultIsolateStepLimit ?? null,
     opencodePermission: settings.opencodePermission,
-    sharedOverrides: sharedDrafts
-      .filter((draft) => draft.enabled)
-      .map((draft) => ({
+    sharedOverrides: sharedDrafts.flatMap((draft) => {
+      if (!draft.enabled) {
+        return []
+      }
+
+      const override: ProviderSettingsUpdatePayload["sharedOverrides"][number] = {
         providerId: draft.providerId,
         displayName: draft.displayName,
-        ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
-      })),
-    customProviders: customDrafts.map(
-      (draft): UserCustomProviderUpdate => ({
+      }
+
+      const apiKey = draft.apiKey.trim()
+
+      if (apiKey) {
+        override.apiKey = apiKey
+      }
+
+      return [override]
+    }),
+    customProviders: customDrafts.map((draft): UserCustomProviderUpdate => {
+      const provider: UserCustomProviderUpdate = {
         providerId: draft.providerId.trim(),
         name: draft.name.trim(),
-        ...(draft.npm.trim() ? { npm: draft.npm.trim() } : {}),
-        ...(draft.optionsText.trim()
-          ? {
-              options: parseOptionalJsonObject(
-                draft.optionsText,
-                `${draft.providerId || "provider"} options`,
-              ),
-            }
-          : {}),
         models: parseModelsJson(draft.modelsText),
-        ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
-      }),
-    ),
+      }
+
+      const npm = draft.npm.trim()
+      const apiKey = draft.apiKey.trim()
+
+      if (npm) {
+        provider.npm = npm
+      }
+
+      if (draft.optionsText.trim()) {
+        provider.options = parseOptionalJsonObject(
+          draft.optionsText,
+          `${draft.providerId || "provider"} options`,
+        )
+      }
+
+      if (apiKey) {
+        provider.apiKey = apiKey
+      }
+
+      return provider
+    }),
   }
 }
 
@@ -145,6 +176,7 @@ function SharedProviderApiKeyField({
             if (!draft.enabled) {
               return
             }
+
             onDraftChange(draft.providerId, { apiKey: event.target.value })
           }}
           placeholder={
@@ -215,6 +247,7 @@ function DefaultModelPickerField({
 
 function GlobalProviderModelCountBadge({ modelCount }: { modelCount: number }) {
   const label = modelCount === 1 ? "1 model" : `${modelCount} models`
+
   return (
     <span className="inline-flex shrink-0 items-center rounded-full bg-kumo-tint px-2 py-0.5 text-[11px] font-medium leading-5 text-kumo-subtle ring-1 ring-kumo-hairline">
       {label}
@@ -250,6 +283,7 @@ export function ProvidersSettings({
     if (!error) {
       return
     }
+
     showErrorToast(error)
   }, [error])
 
@@ -257,6 +291,7 @@ export function ProvidersSettings({
     if (!catalog || !settings) {
       return
     }
+
     const shared = buildSharedProviderDrafts(catalog.providers, settings.sharedOverrides)
     const custom = buildCustomProviderDrafts(settings.customProviders)
     const model = settings.defaultModel ?? ""
@@ -270,28 +305,35 @@ export function ProvidersSettings({
     () => catalog?.modelOptions.flatMap((group) => group.models) ?? [],
     [catalog],
   )
+
   const effectiveDefaultModel =
     defaultModel || catalog?.globalDefaultModel || catalog?.defaultModel || ""
+
   const selectedDefaultModelOption = useMemo(
     () => flatModelOptions.find((model) => model.id === effectiveDefaultModel) ?? null,
     [effectiveDefaultModel, flatModelOptions],
   )
+
   const globalDefaultModelOption = useMemo(
     () => flatModelOptions.find((model) => model.id === catalog?.globalDefaultModel) ?? null,
     [catalog?.globalDefaultModel, flatModelOptions],
   )
+
   const defaultModelLabel = formatModelOptionLabel(
     selectedDefaultModelOption,
     effectiveDefaultModel || "Select model",
   )
+
   const globalDefaultModelLabel = formatModelOptionLabel(
     globalDefaultModelOption,
     catalog?.globalDefaultModel || "Not configured",
   )
+
   const providersById = useMemo(
     () => new Map(catalog?.providers.map((provider) => [provider.providerId, provider] as const)),
     [catalog?.providers],
   )
+
   const globalProviderDrafts = useMemo(
     () =>
       sharedDrafts.filter((draft) => {
@@ -300,12 +342,14 @@ export function ProvidersSettings({
             ? CLOUDFLARE_AI_GATEWAY_PROVIDER_ID
             : draft.providerId,
         )
+
         return (
           provider?.source === "shared" && (provider.globalCredentialConfigured || draft.enabled)
         )
       }),
     [providersById, sharedDrafts],
   )
+
   const hasCustomDefaultModel = defaultModel.trim().length > 0
 
   const handleDefaultModelSelect = useCallback(
@@ -353,6 +397,7 @@ export function ProvidersSettings({
           apiKey: "",
         })),
       )
+
       return true
     } catch {
       // save() sets hook error; useEffect above surfaces it as a toast.
@@ -366,8 +411,10 @@ export function ProvidersSettings({
     }
 
     setSavingBeforeNavigation(true)
+
     try {
       const saved = await handleSave()
+
       if (saved) {
         navigationBlocker.proceed()
       }
@@ -487,9 +534,11 @@ export function ProvidersSettings({
               )
                 ? CLOUDFLARE_AI_GATEWAY_PROVIDER_ID
                 : draft.providerId
+
               const provider = catalog.providers.find(
                 (item) => item.providerId === catalogProviderId,
               )
+
               return (
                 <LayerCard key={draft.providerId} className="overflow-hidden rounded-xl">
                   <LayerCard.Secondary className="my-0 flex items-start justify-between gap-3 px-3 py-2">

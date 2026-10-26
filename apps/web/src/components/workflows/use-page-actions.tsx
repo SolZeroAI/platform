@@ -103,6 +103,7 @@ export function useWorkflowPageActions(input: any) {
   const persistWorkflowSave = useCallback(async (): Promise<WorkflowSaveResponse> => {
     const endpoint = selectedWorkflowId ? `/api/workflows/${selectedWorkflowId}` : "/api/workflows"
     const method = selectedWorkflowId ? "PUT" : "POST"
+
     return requestJson<WorkflowSaveResponse>(endpoint, {
       method,
       headers: { "Content-Type": "application/json" },
@@ -119,11 +120,14 @@ export function useWorkflowPageActions(input: any) {
       setSelectedWorkflowId(data.workflow.id)
       setWorkflowDetailLoadStateValue({ workflowId: data.workflow.id, phase: "ready" })
       setEmptyStarterVisible(false)
+
       if ((options.updateRoute ?? true) && data.workflow.id !== selectedWorkflowId) {
         navigationBypassRef.current = true
         showWorkflowRoute(data.workflow.id, !selectedWorkflowId)
       }
+
       setWorkflows((current) => upsertWorkflowSummary(current, data.workflow))
+
       if (!workflowAlreadyListed) {
         setWorkflowTotal((current) => current + 1)
       }
@@ -134,10 +138,12 @@ export function useWorkflowPageActions(input: any) {
   const getWorkflowSaveDialogSummaryForManifest = useCallback(
     (manifest: WorkflowManifest): WorkflowSaveDialogSummary => {
       const previousManifest = selectedWorkflow?.manifest ?? null
+
       const runtimeVersionChange = getWorkflowRuntimeVersionChangePreview(
         previousManifest,
         manifest,
       )
+
       const migratedPreviousManifest =
         previousManifest && runtimeVersionChange
           ? migrateWorkflowManifestForBuilder(previousManifest)
@@ -172,6 +178,7 @@ export function useWorkflowPageActions(input: any) {
       if (!selectedWorkflowId) {
         return !emptyStarterVisible
       }
+
       return selectedWorkflow?.manifest
         ? formatJson(manifest) !== formatJson(selectedWorkflow.manifest)
         : false
@@ -196,15 +203,18 @@ export function useWorkflowPageActions(input: any) {
         const next = Object.fromEntries(
           Object.entries(current).filter(([nodeId]) => nextNodeIds.has(nodeId)),
         )
+
         return Object.keys(next).length === Object.keys(current).length ? current : next
       })
       setWorkflowSaveDialog((current) => {
         if (!current || current.phase === "saving") {
           return current
         }
+
         if (!hasWorkflowSaveDiffForManifest(nextManifest)) {
           return null
         }
+
         return {
           ...current,
           summary: getWorkflowSaveDialogSummaryForManifest(nextManifest),
@@ -224,15 +234,19 @@ export function useWorkflowPageActions(input: any) {
     async (options: { updateRoute?: boolean } = {}): Promise<boolean> => {
       if (workflowConfigErrors.length > 0) {
         setWorkflowValidationDialogOpen(true)
+
         return false
       }
 
       setSaving(true)
+
       try {
         applyWorkflowSave(await persistWorkflowSave(), options)
+
         return true
       } catch (errorValue) {
         showErrorToast(getErrorMessage(errorValue))
+
         return false
       } finally {
         setSaving(false)
@@ -243,11 +257,13 @@ export function useWorkflowPageActions(input: any) {
 
   const saveWorkflowTitle = useCallback(async (): Promise<boolean> => {
     const name = workflowTitleDraft.trim()
+
     if (!selectedWorkflowId || !selectedWorkflow || !name) {
       return false
     }
 
     setSavingWorkflowTitle(true)
+
     try {
       const data = await requestJson<{ workflow: WorkflowSummary }>(
         `/api/workflows/${selectedWorkflowId}/name`,
@@ -257,15 +273,19 @@ export function useWorkflowPageActions(input: any) {
           body: JSON.stringify({ name }),
         },
       )
+
       const workflow = {
         ...data.workflow,
         manifest: data.workflow.manifest ?? selectedWorkflow.manifest,
       }
+
       setWorkflows((current) => upsertWorkflowSummary(current, workflow))
       setWorkflowTitleDraft(workflow.name)
+
       return true
     } catch (errorValue) {
       showErrorToast(getErrorMessage(errorValue))
+
       return false
     } finally {
       setSavingWorkflowTitle(false)
@@ -282,11 +302,14 @@ export function useWorkflowPageActions(input: any) {
   const openWorkflowSaveDialog = useCallback(() => {
     if (workflowConfigErrors.length > 0) {
       setWorkflowValidationDialogOpen(true)
+
       return
     }
+
     if (!workflowHasSaveDiff) {
       return
     }
+
     setWorkflowSaveDialog({
       phase: "confirm",
       summary: getCurrentWorkflowSaveDialogSummary(),
@@ -297,9 +320,11 @@ export function useWorkflowPageActions(input: any) {
     if (!workflowSaveDialog) {
       return
     }
+
     const summary = workflowSaveDialog.summary
     setSaving(true)
     setWorkflowSaveDialog({ phase: "saving", summary })
+
     try {
       const data = await persistWorkflowSave()
       applyWorkflowSave(data)
@@ -319,14 +344,17 @@ export function useWorkflowPageActions(input: any) {
     if (workflowSaveDialog?.phase === "saving") {
       return
     }
+
     setWorkflowSaveDialog(null)
   }, [workflowSaveDialog?.phase])
 
   const shouldBlockWorkflowNavigation = useCallback(() => {
     if (navigationBypassRef.current) {
       navigationBypassRef.current = false
+
       return false
     }
+
     return !showWorkflowIndexView && workflowDirty
   }, [showWorkflowIndexView, workflowDirty])
 
@@ -342,8 +370,10 @@ export function useWorkflowPageActions(input: any) {
     }
 
     setSavingBeforeNavigation(true)
+
     try {
       const saved = await saveWorkflow({ updateRoute: false })
+
       if (saved) {
         navigationBlocker.proceed()
       }
@@ -355,6 +385,7 @@ export function useWorkflowPageActions(input: any) {
   const deleteWorkflow = useCallback(
     async (workflow: WorkflowSummary) => {
       setDeletingWorkflowId(workflow.id)
+
       try {
         await requestJson<{ status: string; workflowId: string }>(`/api/workflows/${workflow.id}`, {
           method: "DELETE",
@@ -363,9 +394,11 @@ export function useWorkflowPageActions(input: any) {
         setWorkflows(remaining)
         setWorkflowTotal((current) => Math.max(0, current - 1))
         setWorkflowPendingDeletion(null)
+
         if (selectedWorkflowId === workflow.id) {
           const deletedIndex = workflows.findIndex((item) => item.id === workflow.id)
           const nextWorkflow = remaining[Math.max(0, deletedIndex)] ?? remaining[0] ?? null
+
           if (nextWorkflow) {
             selectWorkflow(nextWorkflow.id)
           } else {
@@ -388,6 +421,7 @@ export function useWorkflowPageActions(input: any) {
       }
 
       setDeletingRunId(run.id)
+
       try {
         await requestJson<{ status: string; workflowId: string; runId: string }>(
           `/api/workflows/${selectedWorkflowId}/runs/${run.id}`,
@@ -398,12 +432,14 @@ export function useWorkflowPageActions(input: any) {
         setRunTableTotal((current) => Math.max(0, current - 1))
         setRunTotal((current) => Math.max(0, current - 1))
         setRunPendingDeletion(null)
+
         if (selectedRunIdRef.current === run.id) {
           setSelectedRunId(nextRuns[0]?.id ?? null)
           setRunSelectionPinned(false)
           setRunDetailsOpen(false)
           setEvents([])
         }
+
         await loadRuns(selectedWorkflowId)
       } catch (errorValue) {
         showErrorToast(getErrorMessage(errorValue))
@@ -416,14 +452,17 @@ export function useWorkflowPageActions(input: any) {
 
   const setWorkflowEnabled = useCallback(async (workflow: WorkflowSummary, enabled: boolean) => {
     setUpdatingWorkflowStatus(true)
+
     try {
       const action = enabled ? "enable" : "disable"
+
       const data = await requestJson<{ workflow: WorkflowSummary }>(
         `/api/workflows/${workflow.id}/${action}`,
         {
           method: "POST",
         },
       )
+
       setWorkflows((current) => upsertWorkflowSummary(current, data.workflow))
     } catch (errorValue) {
       showErrorToast(getErrorMessage(errorValue))
@@ -437,20 +476,27 @@ export function useWorkflowPageActions(input: any) {
       if (!selectedWorkflowId) {
         const message = "Save the workflow before testing a trigger."
         showErrorToast(message)
+
         if (options.throwOnError) {
           throw new Error(message)
         }
+
         return
       }
+
       if (workflowDisabled) {
         const message = "Enable the workflow before running a trigger."
         showErrorToast(message)
+
         if (options.throwOnError) {
           throw new Error(message)
         }
+
         return
       }
+
       setRunning(true)
+
       try {
         const data = await requestJson<{ run: WorkflowRun }>(
           `/api/workflows/${selectedWorkflowId}/runs`,
@@ -460,6 +506,7 @@ export function useWorkflowPageActions(input: any) {
             body: JSON.stringify({ trigger }),
           },
         )
+
         setRuns((current) => [data.run, ...current.filter((run) => run.id !== data.run.id)])
         setRunTableTotal((current) => current + 1)
         setRunTotal((current) => current + 1)
@@ -470,6 +517,7 @@ export function useWorkflowPageActions(input: any) {
         await loadRuns(selectedWorkflowId)
       } catch (errorValue) {
         showErrorToast(getErrorMessage(errorValue))
+
         if (options.throwOnError) {
           throw errorValue
         }
@@ -484,20 +532,26 @@ export function useWorkflowPageActions(input: any) {
     (node: WorkflowManifestNode) => {
       if (node.type === "webhook-trigger") {
         setWebhookTestNode(node)
+
         return
       }
+
       if (node.type === "slack-trigger") {
         setSlackTestNode(node)
+
         return
       }
+
       if (node.type === "manual-trigger") {
         void runTrigger({
           kind: "manual",
           nodeId: node.id,
           payload: {},
         })
+
         return
       }
+
       if (node.type === "datetime-trigger") {
         void runTrigger({
           kind: "datetime",
@@ -507,8 +561,10 @@ export function useWorkflowPageActions(input: any) {
           firedAt: new Date().toISOString(),
           payload: {},
         })
+
         return
       }
+
       if (node.type === "cron-trigger") {
         void runTrigger({
           kind: "cron",
@@ -539,13 +595,16 @@ export function useWorkflowPageActions(input: any) {
   const importWorkflowFile = useCallback(
     async (file: File) => {
       setImportWarnings([])
+
       try {
         const text = await file.text()
         const exported = parseWorkflowExport(text)
         const validation = validateWorkflowDraft(exported.manifest)
+
         if (!validation.valid || !validation.manifest) {
           throw new Error(validation.errors[0] ?? "Invalid workflow export")
         }
+
         loadWorkflowDraft(validation.manifest, validation.warnings)
       } catch (errorValue) {
         showErrorToast(getErrorMessage(errorValue))
@@ -558,12 +617,16 @@ export function useWorkflowPageActions(input: any) {
     if (!selectedWorkflowId) {
       return
     }
+
     try {
       const response = await fetch(`/api/workflows/${selectedWorkflowId}/export`)
+
       if (!response.ok) {
+        // SAFETY: The workflow export error body includes an error string when response.ok is false.
         const data = (await response.json().catch(() => ({}))) as { error?: string }
         throw new Error(data.error ?? `Export failed with status ${response.status}`)
       }
+
       const yaml = await response.text()
       downloadTextFile(`${selectedWorkflow?.name ?? selectedWorkflowId}.workflow.yaml`, yaml)
     } catch (errorValue) {
@@ -573,6 +636,7 @@ export function useWorkflowPageActions(input: any) {
 
   const buildWorkflowWithLlm = useCallback(async () => {
     setBuilderRunning(true)
+
     try {
       await startWorkflowAiTurn({ prompt: builderPrompt, mode: "build" })
     } finally {

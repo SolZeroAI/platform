@@ -27,6 +27,7 @@ export function usePaperShaderReady() {
     if (!node) return undefined
 
     let rafId: number | null = null
+
     const markReady = () => {
       rafId = requestAnimationFrame(() => {
         rafId = requestAnimationFrame(() => setShaderReady(true))
@@ -35,6 +36,7 @@ export function usePaperShaderReady() {
 
     if (node.querySelector("canvas")) {
       markReady()
+
       return undefined
     }
 
@@ -44,10 +46,12 @@ export function usePaperShaderReady() {
         markReady()
       }
     })
+
     observer.observe(node, { childList: true })
 
     return () => {
       observer.disconnect()
+
       if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])

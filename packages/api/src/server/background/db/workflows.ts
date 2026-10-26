@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, ne, or, sql, type AnyColumn, type SQL } from "
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens workflow tables from the Worker env inside createWorkflowStoreFromD1, the store composition edge.
 import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
@@ -219,7 +220,8 @@ export class WorkflowStore {
       id: row.id,
       user_id: row.userId,
       name: row.name,
-      status: row.status as WorkflowStatus,
+      status:
+        /* SAFETY: row.status is persisted only as WorkflowStatus by the writer for that column. */ row.status as WorkflowStatus,
       manifest_version: row.manifestVersion,
       manifest_key: row.manifestKey,
       code_key: row.codeKey,
@@ -236,9 +238,11 @@ export class WorkflowStore {
       workflow_version: row.workflowVersion,
       workflow_instance_id: row.workflowInstanceId,
       user_id: row.userId,
-      trigger_kind: row.triggerKind as WorkflowRunTriggerKind,
+      trigger_kind:
+        /* SAFETY: row.triggerKind is persisted only as WorkflowRunTriggerKind by the writer for that column. */ row.triggerKind as WorkflowRunTriggerKind,
       trigger_node_id: row.triggerNodeId,
-      status: row.status as WorkflowRunStatus,
+      status:
+        /* SAFETY: row.status is persisted only as WorkflowRunStatus by the writer for that column. */ row.status as WorkflowRunStatus,
       input_json: row.inputJson,
       output_json: row.outputJson,
       error: row.error,
@@ -258,7 +262,8 @@ export class WorkflowStore {
       sequence: row.sequence,
       node_id: row.nodeId,
       event_type: row.eventType,
-      level: row.level as WorkflowRunEventLevel,
+      level:
+        /* SAFETY: row.level is persisted only as WorkflowRunEventLevel by the writer for that column. */ row.level as WorkflowRunEventLevel,
       message: row.message,
       data_json: row.dataJson,
       created_at: row.createdAt,

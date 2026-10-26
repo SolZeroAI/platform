@@ -16,8 +16,14 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`
 }
 
-async function run(command: string, options: { cwd?: string; env?: Record<string, string> } = {}) {
+interface GitCommandEnvironment {
+  readonly GIT_ASKPASS?: string
+  readonly GIT_TERMINAL_PROMPT?: string
+}
+
+async function run(command: string, options: { cwd?: string; env?: GitCommandEnvironment } = {}) {
   const { spawn } = await import("node:child_process")
+
   const child = spawn(command, {
     cwd: options.cwd ?? WORKSPACE_ROOT,
     env: {
@@ -27,6 +33,7 @@ async function run(command: string, options: { cwd?: string; env?: Record<string
     shell: true,
     stdio: ["ignore", "pipe", "pipe"],
   })
+
   const [stdout, stderr, result] = await Promise.all([
     streamToString(child.stdout),
     streamToString(child.stderr),
@@ -35,14 +42,17 @@ async function run(command: string, options: { cwd?: string; env?: Record<string
       child.once("close", (code) => resolve({ exitCode: code ?? 0 }))
     }),
   ])
+
   return { stdout, stderr, exitCode: result.exitCode } satisfies CommandResult
 }
 
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = []
+
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)))
   }
+
   return Buffer.concat(chunks).toString("utf8")
 }
 
@@ -56,10 +66,11 @@ function githubCloneUrl(input: RuntimeInitRequest): string | null {
   if (!input.repoOwner || !input.repoName) {
     return null
   }
+
   return `https://github.com/${input.repoOwner}/${input.repoName}.git`
 }
 
-function gitAuthEnvironment(): Record<string, string> {
+function gitAuthEnvironment(): GitCommandEnvironment {
   return {
     GIT_ASKPASS: GIT_ASKPASS_PATH,
     GIT_TERMINAL_PROMPT: "0",
@@ -70,6 +81,7 @@ async function configureGitCredentials(input: RuntimeInitRequest): Promise<void>
   if (!input.githubAccessToken) {
     return
   }
+
   await writeFile(GIT_TOKEN_PATH, input.githubAccessToken, { mode: 0o600 })
   await writeFile(
     GIT_ASKPASS_PATH,
@@ -90,18 +102,22 @@ async function configureGitCredentials(input: RuntimeInitRequest): Promise<void>
 
 async function hasGitRepository(): Promise<boolean> {
   const result = await run("git rev-parse --is-inside-work-tree")
+
   return result.exitCode === 0 && result.stdout.trim() === "true"
 }
 
 async function cloneRepository(input: RuntimeInitRequest): Promise<void> {
   const url = githubCloneUrl(input)
+
   if (url === null) {
     return
   }
+
   const result = await run(`git clone ${shellQuote(url)} ${shellQuote(WORKSPACE_ROOT)}`, {
     cwd: "/",
     env: gitAuthEnvironment(),
   })
+
   assertSuccess(result, "git clone")
 }
 
@@ -116,10 +132,13 @@ async function configureGitUser(input: RuntimeInitRequest): Promise<void> {
       "git config credential.username",
     )
   }
+
   const name = input.githubName || input.githubLogin
+
   if (name) {
     assertSuccess(await run(`git config user.name ${shellQuote(name)}`), "git config user.name")
   }
+
   if (input.githubEmail) {
     assertSuccess(
       await run(`git config user.email ${shellQuote(input.githubEmail)}`),
@@ -130,22 +149,29 @@ async function configureGitUser(input: RuntimeInitRequest): Promise<void> {
 
 async function checkoutBranch(input: RuntimeInitRequest): Promise<void> {
   const branch = input.branchName
+
   if (!branch) {
     return
   }
+
   const remoteBranch = `origin/${branch}`
   const fetch = await run("git fetch --all --prune", { env: gitAuthEnvironment() })
+
   if (fetch.exitCode !== 0) {
     return
   }
+
   const exists = await run(`git rev-parse --verify ${shellQuote(remoteBranch)}`)
+
   if (exists.exitCode === 0) {
     assertSuccess(
       await run(`git checkout -B ${shellQuote(branch)} ${shellQuote(remoteBranch)}`),
       "git checkout",
     )
+
     return
   }
+
   const base = input.repoDefaultBranch ? `origin/${input.repoDefaultBranch}` : "HEAD"
   assertSuccess(
     await run(`git checkout -B ${shellQuote(branch)} ${shellQuote(base)}`),
@@ -157,13 +183,17 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
   if (!input.repoOwner || !input.repoName || !input.githubAccessToken) {
     return
   }
+
   const baseBranch = input.repoDefaultBranch?.trim() || "main"
   const defaultBranch = input.branchName?.trim() || `s0-agent/${input.sessionId}`
   const command = input.createPullRequestCommand ?? DEFAULT_CREATE_PR_COMMAND
+
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(command) || command.length > 64) {
     throw new Error("Invalid create-pull-request helper command")
   }
+
   const brandName = input.brandName ?? "SolZero"
+
   const script = [
     "#!/bin/sh",
     "set -eu",
@@ -208,6 +238,7 @@ async function writeCreatePullRequestScript(input: RuntimeInitRequest): Promise<
     "NODE",
     "",
   ].join("\n")
+
   for (const name of new Set([DEFAULT_CREATE_PR_COMMAND, command])) {
     const scriptPath = `/usr/local/bin/${name}`
     await writeFile(scriptPath, script, { mode: 0o700 })
@@ -219,9 +250,11 @@ export async function initializeWorkspace(input: RuntimeInitRequest): Promise<vo
   await mkdir(WORKSPACE_ROOT, { recursive: true })
   await configureGitCredentials(input)
   const repositoryExists = await hasGitRepository()
+
   if (!repositoryExists) {
     await cloneRepository(input)
   }
+
   if (await hasGitRepository()) {
     await configureGitUser(input)
     await checkoutBranch(input)

@@ -37,6 +37,7 @@ function formatMcpcfConfig(input: {
 }) {
   const { adminApiTokenStatus, configPresence } = input
   const config = configPresence.config
+
   return {
     enabled: config.enabled,
     baseUrl: config.baseUrl,
@@ -77,6 +78,7 @@ export const getMcpcfAdminResponse = Effect.fn("admin.getMcpcfAdminResponse")(fu
   context: ControlPlaneContext,
 ) {
   const registry = new McpcfRegistryStore(context.env)
+
   const [configPresence, adminApiTokenStatus, registryPresence, servers] = yield* Effect.all(
     [
       registry.getConfigWithPresence(),
@@ -86,6 +88,7 @@ export const getMcpcfAdminResponse = Effect.fn("admin.getMcpcfAdminResponse")(fu
     ],
     { concurrency: "unbounded" },
   )
+
   return {
     config: formatMcpcfConfig({ configPresence, adminApiTokenStatus }),
     servers: servers.map(formatMcpcfServer),
@@ -152,6 +155,7 @@ export const performUpdateMcpcfConfig = Effect.fn("admin.performUpdateMcpcfConfi
   })
 
   const data = yield* getMcpcfAdminResponse(context)
+
   return json(data)
 })
 
@@ -162,6 +166,7 @@ export const performExportMcpcfConfig = Effect.fn("admin.performExportMcpcfConfi
   const result = yield* exportMcpcfConfig(context.env).pipe(
     Effect.catch((cause) => failMessage(describeError(cause), 500)),
   )
+
   const log = yield* EffectRequestLogger
   yield* log.emit({
     event: "admin.mcpcf.config.exported",
@@ -177,6 +182,7 @@ export const performExportMcpcfConfig = Effect.fn("admin.performExportMcpcfConfi
       serverCount: result.serverCount,
     },
   })
+
   return json(result)
 })
 
@@ -187,6 +193,7 @@ export const performResetMcpcfConfig = Effect.fn("admin.performResetMcpcfConfig"
   const result = yield* resetMcpcfConfig(context.env).pipe(
     Effect.catch((cause) => failMessage(describeError(cause), 500)),
   )
+
   const log = yield* EffectRequestLogger
   yield* log.emit({
     event: "admin.mcpcf.config.reset",
@@ -201,6 +208,7 @@ export const performResetMcpcfConfig = Effect.fn("admin.performResetMcpcfConfig"
   })
 
   const data = yield* getMcpcfAdminResponse(context)
+
   return json(data)
 })
 
@@ -240,6 +248,7 @@ export const performRefreshMcpcf = Effect.fn("admin.performRefreshMcpcf")(functi
   const adminApiTokenPresence = yield* registry
     .getAdminApiTokenWithPresence()
     .pipe(Effect.catch(() => failMessage("Global secret encryption is not configured", 500)))
+
   const adminApiToken = yield* requireOption(
     adminApiTokenPresence.adminApiToken.pipe(Option.filter((value) => value.trim().length > 0)),
     "MCP Context Forge admin API token is not configured",
@@ -252,6 +261,7 @@ export const performRefreshMcpcf = Effect.fn("admin.performRefreshMcpcf")(functi
       failMessage(`MCP Context Forge refresh failed: ${describeError(cause)}`, 502),
     ),
   )
+
   const log = yield* EffectRequestLogger
   yield* log.emit({
     event: "admin.mcpcf.registry.refreshed",
@@ -275,5 +285,6 @@ export const performRefreshMcpcf = Effect.fn("admin.performRefreshMcpcf")(functi
       failures: result.failures.length,
     },
   })
+
   return json(result)
 })

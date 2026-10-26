@@ -39,11 +39,13 @@ interface CreateSessionTransferUrlOptions {
 function randomHex(bytes: number): string {
   const values = new Uint8Array(bytes)
   crypto.getRandomValues(values)
+
   return [...values].map((value) => value.toString(16).padStart(2, "0")).join("")
 }
 
 async function hashSessionTransferToken(token: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token))
+
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("")
 }
 
@@ -52,6 +54,7 @@ function sessionTransferIdentifier(tokenHash: string): string {
 }
 
 function parseUrlOption(input: string, base?: string): Option.Option<URL> {
+  // SAFETY: URL.canParse exists on current runtimes. Older URL constructors omit it, so the method stays optional.
   return Match.value((URL as UrlConstructorWithCanParse).canParse?.(input, base) === true).pipe(
     Match.when(true, () => Option.some(new URL(input, base))),
     Match.orElse(() => Option.none<URL>()),
@@ -121,6 +124,7 @@ async function buildSessionTransferUrl(options: CreateSessionTransferUrlOptions)
 
 function renderSessionTransferHtml(redeemUrl: URL): Response {
   const escapedRedeemUrl = escapeHtml(redeemUrl.toString())
+
   return new Response(
     `<!doctype html>
 <html lang="en">
@@ -186,8 +190,10 @@ export function betterAuthSessionTransferPlugin(env: ApiEnv): BetterAuthPlugin {
         use: [sessionMiddleware],
       },
       async function (ctx) {
+        // SAFETY: sessionMiddleware has already loaded the active Better Auth session onto ctx.context.session.
         const activeSession = ctx.context.session as ActiveBetterAuthSession
         const isAdmin = await resolveSessionTransferAdmin(env, activeSession.user?.email)
+
         return Match.value(isAdmin).pipe(
           Match.when(false, () => forbiddenSessionTransferResponse()),
           Match.orElse(async function () {
@@ -199,6 +205,7 @@ export function betterAuthSessionTransferPlugin(env: ApiEnv): BetterAuthPlugin {
               createVerificationValue: (data) =>
                 ctx.context.internalAdapter.createVerificationValue(data),
             })
+
             return Match.value(
               Boolean(ctx.headers?.get("accept")?.includes("application/json")),
             ).pipe(
@@ -227,6 +234,7 @@ export function betterAuthSessionTransferPlugin(env: ApiEnv): BetterAuthPlugin {
         const tokenHash = await hashSessionTransferToken(ctx.query.token)
         const identifier = sessionTransferIdentifier(tokenHash)
         const verification = await ctx.context.internalAdapter.consumeVerificationValue(identifier)
+
         return Option.match(Option.fromNullishOr(verification), {
           onNone: () =>
             new Response("Invalid or already used session transfer token.", {
@@ -242,6 +250,7 @@ export function betterAuthSessionTransferPlugin(env: ApiEnv): BetterAuthPlugin {
                 const session = await ctx.context.internalAdapter.findSession(
                   validVerification.value,
                 )
+
                 return Option.match(
                   Option.fromNullishOr(session).pipe(
                     Option.filter((value) => value.session.expiresAt >= new Date()),

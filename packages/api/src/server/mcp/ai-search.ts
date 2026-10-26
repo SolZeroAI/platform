@@ -17,11 +17,14 @@ const handleAiSearchMcpRequestEffect = Effect.fn("mcp.aiSearch.handle")(function
   runtimeContext: AiSearchMcpRuntimeContext,
 ) {
   const normalized = normalizeAiSearchMcpRequest(request)
+
   const allowedSources = yield* Effect.tryPromise({
     try: () => resolveAllowedAiSearchSources(normalized, env),
     catch: toError,
   })
+
   const server = createAiSearchMcpServer(env, allowedSources, runtimeContext)
+
   return yield* Effect.tryPromise({
     try: () =>
       createMcpHandler(server, {

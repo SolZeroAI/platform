@@ -9,6 +9,7 @@ import {
 } from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
 import { BotStore } from "../db/bots"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the workflow alarm Durable Object fires, which has no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -30,6 +31,7 @@ const StoredScheduleSchema = Schema.Struct({
   cron: Schema.optional(Schema.NullOr(Schema.String)),
   target: Schema.optional(Schema.Literals(["workflow", "routine"])),
 })
+
 type StoredScheduleInput = typeof StoredScheduleSchema.Type
 
 interface StoredSchedule {
@@ -74,6 +76,7 @@ function json(data: unknown, status = 200): Response {
 
 function parseCronNumber(value: string, min: number, max: number, allowSevenAsSunday = false) {
   const parsed = Number(value)
+
   return Match.value(parsed).pipe(
     Match.when(
       (candidate) => !Number.isInteger(candidate),
@@ -132,10 +135,12 @@ function addCronPart(
     Match.orElse(() => undefined),
   )
   const [rangePart, stepPart] = trimmed.split("/")
+
   const step = Match.value(stepPart).pipe(
     Match.when(Match.undefined, () => 1),
     Match.orElse((resolved) => parseCronNumber(resolved, 1, max)),
   )
+
   Match.value(rangePart).pipe(
     Match.when("*", () => addCronRange(min, max, step, values, trimmed)),
     Match.when(
@@ -171,6 +176,7 @@ function parseCronField(
     }),
     Match.orElse(() => undefined),
   )
+
   return values
 }
 
@@ -212,6 +218,7 @@ export function nextCronDate(expression: string, after: Date): Date {
 
   const maxAttempts = 366 * 24 * 60 * 5
   let found = Option.none<Date>()
+
   // oxlint-disable-next-line effect/imperative-loops -- Bounded minute-by-minute scan over up to ~2.6M candidates that returns at the first match. Recursion would overflow the stack on the worst case, and materializing the full candidate array would be a memory regression, so the imperative scan is retained.
   for (let attempt = 0; attempt < maxAttempts && Option.isNone(found); attempt += 1) {
     found = Match.value(cronMatches(cron, candidate)).pipe(
@@ -239,6 +246,7 @@ const scheduleValidAlarm = Effect.fn("workflows.scheduleValidAlarm")(function* (
   body: StoredScheduleInput
 }) {
   const timestamp = Date.parse(input.body.scheduledAt)
+
   return yield* Match.value(Number.isFinite(timestamp)).pipe(
     Match.when(false, () =>
       Effect.succeed(json({ error: "scheduledAt must be a valid date" }, 400)),
@@ -266,6 +274,7 @@ const persistAlarmSchedule = Effect.fn("workflows.persistAlarmSchedule")(functio
     ),
     target: input.body.target,
   })
+
   yield* Effect.tryPromise({
     try: () => input.storage.put("schedule", schedule),
     catch: toError,
@@ -274,6 +283,7 @@ const persistAlarmSchedule = Effect.fn("workflows.persistAlarmSchedule")(functio
     try: () => input.storage.setAlarm(input.timestamp),
     catch: toError,
   })
+
   return json({ status: "scheduled", schedule })
 })
 
@@ -285,6 +295,7 @@ const scheduleAlarmRequest = Effect.fn("workflows.scheduleAlarmRequest")(functio
     try: () => input.request.json(),
     catch: toError,
   })
+
   return yield* Option.match(Schema.decodeUnknownOption(StoredScheduleSchema)(body), {
     onNone: () =>
       Effect.succeed(
@@ -309,6 +320,7 @@ const cancelAlarmRequest = Effect.fn("workflows.cancelAlarmRequest")(function* (
     try: () => input.storage.deleteAlarm(),
     catch: toError,
   })
+
   return json({ status: "cancelled" })
 })
 
@@ -318,6 +330,7 @@ const handleWorkflowAlarmFetchEffect = Effect.fn("workflows.handleAlarmFetch")(f
 }) {
   const url = new URL(input.request.url)
   const route = `${input.request.method} ${url.pathname}`
+
   return yield* Match.value(route).pipe(
     Match.when("POST /schedule", () =>
       scheduleAlarmRequest({ request: input.request, storage: input.storage }),
@@ -350,8 +363,15 @@ function rescheduleAlarmPromise(
   schedule: StoredSchedule,
 ): Promise<unknown> {
   const cron = schedule.cron
+
   return Match.value(schedule.kind === "cron" && typeof cron === "string" && cron.length > 0).pipe(
-    Match.when(true, () => rescheduleCronPromise(storage, schedule, cron as string)),
+    Match.when(true, () =>
+      rescheduleCronPromise(
+        storage,
+        schedule,
+        /* SAFETY: The preceding check established that cron is string. */ cron as string,
+      ),
+    ),
     Match.orElse(() => storage.delete("schedule")),
   )
 }
@@ -366,6 +386,7 @@ const runScheduledWorkflow = Effect.fn("workflows.runScheduledWorkflow")(functio
     Match.when("cron", () => "cron" as const),
     Match.orElse(() => "datetime" as const),
   )
+
   const trigger: WorkflowTriggerPayload = {
     kind: triggerKind,
     nodeId: input.schedule.nodeId,
@@ -374,7 +395,9 @@ const runScheduledWorkflow = Effect.fn("workflows.runScheduledWorkflow")(functio
     firedAt: new Date().toISOString(),
     payload: {},
   }
+
   const userId = input.workflow.user_id
+
   const oktaUserId = yield* resolveOktaUserId(input.env, input.workflow.user_id).pipe(
     Effect.orElseSucceed(() => null),
   )
@@ -400,6 +423,7 @@ const handleWorkflowAlarmEffect = Effect.fn("workflows.handleAlarm")(function* (
     try: () => input.storage.get("schedule"),
     catch: toError,
   })
+
   yield* Option.match(
     Option.flatMap(Option.fromNullishOr(stored), (value) =>
       Schema.decodeUnknownOption(StoredScheduleSchema)(value),
@@ -424,12 +448,14 @@ const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(functio
   const parsedRoutineId = Option.fromNullishOr(
     parseRoutineAlarmWorkflowId(input.schedule.workflowId),
   )
+
   const targetedRoutineId = Match.value(input.schedule.target).pipe(
     Match.when("routine", () =>
       Option.orElse(parsedRoutineId, () => Option.some(input.schedule.workflowId)),
     ),
     Match.orElse(() => parsedRoutineId),
   )
+
   yield* Option.match(targetedRoutineId, {
     onSome: (routineId) =>
       handleScheduledRoutineAlarm({
@@ -445,10 +471,12 @@ const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(functio
 const handleScheduledWorkflowAlarm = Effect.fn("workflows.handleScheduledWorkflowAlarm")(
   function* (input: { env: Env; storage: WorkflowAlarmStorage; schedule: StoredSchedule }) {
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
+
     const workflow = yield* Effect.tryPromise({
       try: () => store.getWorkflow(input.schedule.workflowId),
       catch: toError,
     })
+
     yield* Option.match(
       Option.filter(Option.fromNullishOr(workflow), (resolved) => resolved.status === "active"),
       {
@@ -475,7 +503,10 @@ const promptBotSession = Effect.fn("workflows.promptBotSession")(function* (inpu
   userId: string
   content: string
 }) {
-  const sessionNamespace = input.env.SESSION as DurableObjectNamespace
+  const sessionNamespace =
+    /* SAFETY: input.env.SESSION is the Worker Durable Object namespace binding for this runtime. */ input
+      .env.SESSION as DurableObjectNamespace
+
   const stub = sessionNamespace.get(sessionNamespace.idFromName(input.sessionId))
   yield* Effect.tryPromise({
     try: () =>
@@ -528,6 +559,7 @@ const dispatchRoutineTick = Effect.fn("workflows.dispatchRoutineTick")(function*
   store: BotStore
 }) {
   const now = Date.now()
+
   const decision = evaluateRoutineTick({
     kind: input.routine.kind,
     until: input.routine.until,
@@ -536,14 +568,17 @@ const dispatchRoutineTick = Effect.fn("workflows.dispatchRoutineTick")(function*
     now,
     nextCronDate,
   })
+
   const nextRunAt = Match.value(decision).pipe(
     Match.when({ action: "run" }, (run) => Option.some(run.nextRunAt)),
     Match.orElse(() => Option.none()),
   )
+
   const expiredRoutineId = Match.value(decision.action).pipe(
     Match.when("expire", () => Option.some(input.routine.id)),
     Match.orElse(() => Option.none()),
   )
+
   yield* Option.match(nextRunAt, {
     onSome: (scheduledAt) =>
       runActiveRoutineTick({
@@ -600,14 +635,17 @@ const runActiveRoutineTick = Effect.fn("workflows.runActiveRoutineTick")(functio
       }),
   })
   yield* input.store.markRoutineRun(input.routine.id, input.now)
+
   const cron = Match.value(input.routine.cadence).pipe(
     Match.when({ kind: "cron" }, (cadence) => Option.fromNullishOr(cadence.cron)),
     Match.orElse(() => Option.none()),
   )
+
   const kind = Match.value(input.routine.cadence.kind).pipe(
     Match.when("cron", () => "cron" as const),
     Match.orElse(() => "datetime" as const),
   )
+
   yield* Effect.tryPromise({
     try: () =>
       persistRoutineReschedule({
@@ -635,6 +673,7 @@ async function persistRoutineReschedule(input: {
     target: "routine",
     scheduledAt: input.nextRunAt,
   }
+
   await input.storage.put("schedule", nextSchedule)
   await input.storage.setAlarm(Date.parse(input.nextRunAt))
 }
@@ -648,8 +687,11 @@ export function handleWorkflowAlarm(input: {
 }
 
 function getWorkflowAlarmStub(env: Env, workflowId: string, nodeId: string) {
-  const namespace = env.WORKFLOW_ALARM as DurableObjectNamespace
+  const namespace =
+    /* SAFETY: env.WORKFLOW_ALARM is the Worker Durable Object namespace binding for this runtime. */ env.WORKFLOW_ALARM as DurableObjectNamespace
+
   const id = namespace.idFromName(`${workflowId}:${nodeId}`)
+
   return namespace.get(id)
 }
 
@@ -673,10 +715,12 @@ function postAlarmScheduleFetch(
     Match.when("cron-trigger", () => "cron"),
     Match.orElse(() => "datetime"),
   )
+
   const scheduleCron = Match.value(input.node.type === "cron-trigger").pipe(
     Match.when(true, () => input.cron),
     Match.orElse(() => null),
   )
+
   return Effect.tryPromise({
     try: () =>
       stub.fetch("http://workflow-alarm/schedule", {
@@ -705,6 +749,7 @@ const scheduleTriggerNode = Effect.fn("workflows.scheduleTriggerNode")(function*
     Match.when(Match.string, (value) => value.trim()),
     Match.orElse(() => ""),
   )
+
   const scheduledAt = Match.value(input.node.type).pipe(
     Match.when("cron-trigger", () =>
       Match.value(cron.length > 0).pipe(
@@ -720,6 +765,7 @@ const scheduleTriggerNode = Effect.fn("workflows.scheduleTriggerNode")(function*
     ),
     Match.orElse(() => ""),
   )
+
   const stub = getWorkflowAlarmStub(input.env, input.workflowId, input.node.id)
   yield* Match.value(scheduledAt.length > 0).pipe(
     Match.when(true, () =>
@@ -746,6 +792,7 @@ export const scheduleWorkflowDateTriggers = Effect.fn("workflows.scheduleDateTri
       input.nodes,
       (node) => node.type === "datetime-trigger" || node.type === "cron-trigger",
     )
+
     yield* Effect.forEach(
       triggerNodes,
       (node) =>
@@ -772,10 +819,12 @@ export function scheduleRoutineAlarm(input: {
     routineAlarmWorkflowId(input.routineId),
     BOT_ROUTINE_ALARM_NODE_ID,
   )
+
   const kind = Match.value(Option.fromNullishOr(input.cron)).pipe(
     Match.when(Option.isSome, () => "cron" as const),
     Match.orElse(() => "datetime" as const),
   )
+
   return Effect.tryPromise({
     try: () =>
       stub.fetch("http://workflow-alarm/schedule", {
@@ -811,6 +860,7 @@ export const cancelWorkflowDateTriggers = Effect.fn("workflows.cancelDateTrigger
       input.nodes,
       (node) => node.type === "datetime-trigger" || node.type === "cron-trigger",
     )
+
     yield* Effect.forEach(
       triggerNodes,
       (node) =>

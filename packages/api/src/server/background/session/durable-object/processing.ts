@@ -193,21 +193,21 @@ export function messageSpanAttributes(
   host: SessionDODelegate,
   ctx: QueuedMessageContext,
 ): Record<string, unknown> {
-  return {
-    "session.id": host.getSessionId(),
-    "session.kind": ctx.sessionKind,
-    "agent.runtime": ctx.agentRuntime,
-    "message.id": ctx.message.id,
-    "message.content_length": ctx.message.content.length,
-    "message.execution_mode": ctx.message.execution_mode,
-    "ai.model.requested": ctx.message.model ?? "",
-    "ai.model.resolved": ctx.resolvedModel,
-    "reasoning.effort": ctx.resolvedReasoningEffort ?? "",
-    "attachment.count": ctx.attachments?.length ?? 0,
-    "tool.count": ctx.sessionTools.length,
-    "mcp.custom_server_count": Object.keys(ctx.sessionCustomMcpServers).length,
-    "user.id": ctx.author?.user_id ?? "",
-  }
+  let attributes: Record<string, unknown> = {}
+  attributes["session.id"] = host.getSessionId()
+  attributes["session.kind"] = ctx.sessionKind
+  attributes["agent.runtime"] = ctx.agentRuntime
+  attributes["message.id"] = ctx.message.id
+  attributes["message.content_length"] = ctx.message.content.length
+  attributes["message.execution_mode"] = ctx.message.execution_mode
+  attributes["ai.model.requested"] = ctx.message.model ?? ""
+  attributes["ai.model.resolved"] = ctx.resolvedModel
+  attributes["reasoning.effort"] = ctx.resolvedReasoningEffort ?? ""
+  attributes["attachment.count"] = ctx.attachments?.length ?? 0
+  attributes["tool.count"] = ctx.sessionTools.length
+  attributes["mcp.custom_server_count"] = Object.keys(ctx.sessionCustomMcpServers).length
+  attributes["user.id"] = ctx.author?.user_id ?? ""
+  return attributes
 }
 
 export function processQueuedMessage(

@@ -11,6 +11,7 @@ export function builderDraftLatest({ query }: { query: { sessionId: string } }) 
       yield* failUnless(sessionId.length > 0, "sessionId is required", 400)
       const access = yield* requireSessionAccess(request, env, principal, sessionId)
       const draft = yield* readLatestWorkflowBuilderDraft({ env, sessionId, userId: access.userId })
+
       const draftSummary = Option.match(draft, {
         onNone: () => ({
           found: false,
@@ -27,11 +28,13 @@ export function builderDraftLatest({ query }: { query: { sessionId: string } }) 
           submittedAt: value.submittedAt,
         }),
       })
+
       const log = yield* EffectRequestLogger
       yield* log.set({
         sessionId,
         ...draftSummary,
       })
+
       const draftPayload = Option.match(draft, {
         onSome: (value) => ({
           sessionId: value.sessionId,
@@ -41,6 +44,7 @@ export function builderDraftLatest({ query }: { query: { sessionId: string } }) 
         }),
         onNone: () => null,
       })
+
       return json({ draft: draftPayload })
     }),
   )

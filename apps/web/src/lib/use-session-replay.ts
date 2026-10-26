@@ -25,6 +25,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
   const timerDelayMsRef = useRef<number | null>(null)
   const remainingDelayMsRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [state, setState] = useState<ReplayState>({
     isReplaying: false,
     isPaused: false,
@@ -35,6 +36,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
   useEffect(() => {
     const recordedEventsChanged = recordedEventsRef.current !== recordedEvents
     recordedEventsRef.current = recordedEvents
+
     if (!recordedEventsChanged || !isReplayingRef.current) {
       return
     }
@@ -43,6 +45,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+
     isReplayingRef.current = false
     isPausedRef.current = false
     replayEventsRef.current = []
@@ -63,6 +66,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+
     timerStartedAtRef.current = null
     timerDelayMsRef.current = null
   }, [])
@@ -100,6 +104,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
         events: [],
         isProcessing: false,
       })
+
       return
     }
 
@@ -153,6 +158,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
         events: [],
         isProcessing: false,
       })
+
       return
     }
 
@@ -172,6 +178,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
 
     const elapsedMs =
       timerStartedAtRef.current === null ? 0 : Date.now() - timerStartedAtRef.current
+
     remainingDelayMsRef.current =
       timerDelayMsRef.current === null ? 0 : Math.max(0, timerDelayMsRef.current - elapsedMs)
 
@@ -197,6 +204,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
   const togglePause = useCallback(() => {
     if (isPausedRef.current) {
       resume()
+
       return
     }
 

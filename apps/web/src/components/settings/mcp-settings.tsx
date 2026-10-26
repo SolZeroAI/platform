@@ -104,6 +104,7 @@ function contextForgeAuthConfigured(server: McpServerSettings): boolean {
   if (server.gatewayAuthTokenRequired) {
     return server.gatewayAuthTokenConfigured
   }
+
   return server.configuredForUser
 }
 
@@ -111,15 +112,19 @@ function configuredLabel(server: McpServerSettings): string {
   if (server.gatewayAuthTokenRequired && !server.gatewayAuthTokenConfigured) {
     return "API token needed"
   }
+
   if (server.upstreamAuthTokenRequired && !server.upstreamAuthTokenConfigured) {
     return "Token needed"
   }
+
   if (gatewayAuthType(server) === "oauth") {
     return server.configuredForUser ? "Linked" : "Not linked"
   }
+
   if (server.configuredForUser) {
     return "Configured"
   }
+
   return "Unavailable"
 }
 
@@ -139,11 +144,13 @@ function findDeepLinkedServer(input: {
 }): McpServerSettings | undefined {
   if (input.selectedServerId) {
     const selectedServerId = input.selectedServerId.toLowerCase()
+
     const server = input.servers.find(
       (candidate) =>
         candidate.id.toLowerCase() === selectedServerId ||
         candidate.slug.toLowerCase() === selectedServerId,
     )
+
     if (server) {
       return server
     }
@@ -154,6 +161,7 @@ function findDeepLinkedServer(input: {
   }
 
   const selectedServerLabel = input.selectedServerLabel.toLowerCase()
+
   return input.servers.find(
     (candidate) =>
       candidate.label.toLowerCase() === selectedServerLabel ||
@@ -165,6 +173,7 @@ function activeToolCount(server: McpServerSettings): number {
   if (!server.defaultToolsEnabled) {
     return 0
   }
+
   return Math.max(0, server.toolCount - server.disabledTools.length)
 }
 
@@ -172,24 +181,29 @@ function formatApiError(message: string | undefined, fallback: string): string {
   if (!message) {
     return fallback
   }
+
   if (/^(Failed query:|SQLITE_ERROR)|no such table/i.test(message)) {
     return fallback
   }
+
   return message
 }
 
 // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Local fallback helper at a fetch catch boundary. The catch value stays unknown until this helper reads Error.message.
 function formatCaughtError(errorValue: unknown, fallback: string): string {
   const message = errorValue instanceof Error ? errorValue.message : String(errorValue)
+
   return formatApiError(message, fallback)
 }
 
 function applyUpdater<T>(updater: T | ((current: T) => T), current: T): T {
+  // SAFETY: A function updater is the React setState callback and is applied to the current value.
   return typeof updater === "function" ? (updater as (value: T) => T)(current) : updater
 }
 
 function getTableFilter<TData>(table: Table<TData>, id: string): string {
   const value = table.getColumn(id)?.getFilterValue()
+
   return typeof value === "string" ? value : ""
 }
 
@@ -199,6 +213,7 @@ function setTableFilter<TData>(table: Table<TData>, id: string, value: string) {
 
 function formatFilterSelectValue(allLabel: string, value: unknown): string {
   const normalized = String(value ?? "")
+
   return normalized === FILTER_ALL || normalized === "" ? allLabel : normalized
 }
 
@@ -206,12 +221,15 @@ function formatAuthFilterLabel(value: string): string {
   if (value === "token") {
     return "MCPCF token"
   }
+
   if (value === "oauth") {
     return "OAuth"
   }
+
   if (value === "other") {
     return "Other"
   }
+
   return value
 }
 
@@ -219,9 +237,11 @@ function formatConfiguredFilterLabel(value: string): string {
   if (value === "needs_config") {
     return "Needs config"
   }
+
   if (value === "configured") {
     return "Configured"
   }
+
   return value
 }
 
@@ -229,9 +249,11 @@ function formatDefaultToolsFilterLabel(value: string): string {
   if (value === "enabled") {
     return "Enabled"
   }
+
   if (value === "disabled") {
     return "Disabled"
   }
+
   return value
 }
 
@@ -239,9 +261,11 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
   if (direction === "asc") {
     return <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden />
   }
+
   if (direction === "desc") {
     return <ChevronDown className="h-3.5 w-3.5" aria-hidden />
   }
+
   return <ChevronsUpDown className="h-3.5 w-3.5 text-kumo-subtle" aria-hidden />
 }
 
@@ -259,6 +283,7 @@ function FilterSelect<TData>({
   formatOption?: (value: string) => string
 }) {
   const allLabel = `All ${label.toLowerCase()}`
+
   return (
     <Select
       value={getTableFilter(table, id) || FILTER_ALL}
@@ -267,9 +292,11 @@ function FilterSelect<TData>({
       }
       renderValue={(value) => {
         const normalized = String(value ?? "")
+
         if (normalized === FILTER_ALL || normalized === "") {
           return allLabel
         }
+
         return formatOption ? formatOption(normalized) : formatFilterSelectValue(allLabel, value)
       }}
       aria-label={label}
@@ -293,15 +320,19 @@ export function McpSettings({
   const [total, setTotal] = useState(0)
   const [selectedServer, setSelectedServer] = useState<McpServerSettings | null>(null)
   const [draft, setDraft] = useState<DraftState | null>(null)
+
   const [globalFilter, setGlobalFilter] = useState(
     initialQuery ?? selectedServerLabel ?? selectedServerId ?? "",
   )
+
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [sorting, setSorting] = useState<SortingState>([{ id: "label", desc: false }])
+
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   })
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -418,16 +449,21 @@ export function McpSettings({
         limit: String(pagination.pageSize),
         offset: String(pagination.pageIndex * pagination.pageSize),
       })
+
       const trimmedSearch = globalFilter.trim()
+
       if (trimmedSearch) {
         params.set("q", trimmedSearch)
       }
+
       for (const filter of columnFilters) {
         if (typeof filter.value === "string" && filter.value.trim()) {
           params.set(filter.id, filter.value.trim())
         }
       }
+
       const [sort] = sorting
+
       if (sort) {
         params.set("sortBy", sort.id)
         params.set("sortDir", sort.desc ? "desc" : "asc")
@@ -437,19 +473,25 @@ export function McpSettings({
         const response = await fetch(`/api/sessions/mcpcf/settings?${params.toString()}`, {
           signal,
         })
+
+        // SAFETY: /api/sessions/mcpcf/settings returns McpSettingsListResponse, including an error when response.ok is false.
         const payload = (await response.json().catch(() => ({}))) as McpSettingsListResponse
+
         if (!response.ok) {
           throw new Error(formatApiError(payload.error, "Failed to load MCP settings."))
         }
+
         if (fetchSequenceRef.current !== sequence) {
           return
         }
+
         setServers(Array.isArray(payload.servers) ? payload.servers : [])
         setTotal(typeof payload.total === "number" ? payload.total : 0)
       } catch (errorValue) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
         }
+
         setErrorMessage(formatCaughtError(errorValue, "Failed to load MCP settings."))
       } finally {
         if (fetchSequenceRef.current === sequence) {
@@ -462,9 +504,11 @@ export function McpSettings({
 
   useEffect(() => {
     const controller = new AbortController()
+
     const timeoutId = setTimeout(() => {
       void loadServers(controller.signal)
     }, 200)
+
     return () => {
       clearTimeout(timeoutId)
       controller.abort()
@@ -488,6 +532,7 @@ export function McpSettings({
       : selectedServerLabel
         ? `label:${selectedServerLabel}`
         : null
+
     if (!targetKey || autoSelectedTargetRef.current === targetKey) {
       return
     }
@@ -497,6 +542,7 @@ export function McpSettings({
       selectedServerId,
       selectedServerLabel,
     })
+
     if (!server) {
       return
     }
@@ -514,16 +560,20 @@ export function McpSettings({
     if (selectedServerControlsDisabled) {
       return
     }
+
     setDraft((current) => {
       if (!current) {
         return current
       }
+
       const disabled = new Set(current.disabledTools)
+
       if (enabled) {
         disabled.delete(toolName)
       } else {
         disabled.add(toolName)
       }
+
       return {
         ...current,
         disabledTools: [...disabled].sort((left, right) => left.localeCompare(right)),
@@ -535,9 +585,11 @@ export function McpSettings({
     if (!selectedServer || !draft || selectedServerControlsDisabled) {
       return
     }
+
     setSaving(true)
     setStatusMessage(null)
     setErrorMessage(null)
+
     try {
       const response = await fetch(
         `/api/sessions/mcpcf/${encodeURIComponent(selectedServer.id)}/settings`,
@@ -554,13 +606,17 @@ export function McpSettings({
           }),
         },
       )
+
+      // SAFETY: PUT MCP server settings returns the updated server and an error string when the save fails.
       const payload = (await response.json().catch(() => ({}))) as {
         server?: McpServerSettings
         error?: string
       }
+
       if (!response.ok || !payload.server) {
         throw new Error(formatApiError(payload.error, "Failed to save MCP settings."))
       }
+
       setSelectedServer(payload.server)
       setDraft(createDraft(payload.server))
       setStatusMessage(`${payload.server.label} updated.`)
@@ -875,6 +931,7 @@ export function McpSettings({
                     selectedServer.tools.map((tool) => {
                       const enabled =
                         draft.defaultToolsEnabled && !draft.disabledTools.includes(tool.name)
+
                       return (
                         <label
                           key={tool.name}
