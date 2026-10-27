@@ -16,8 +16,3 @@ Keep these product facts honest:
   link.
 - Custom MCP configuration and the tools/subagent editor persist exact preferences through
   UI save and reload.
-- Attachment-bearing prompt cancellation (`runtime` tag) reaches processing, Stop produces
-  a failed terminal message, and reload retains history. The app exposes attachment metadata
-  through HTTP; there is no browser upload field in message-list responses.
-- Actual child-agent delegation (`runtime` tag) requires a real isolate child event and
-  output marker from a live invocation, not a mocked child.

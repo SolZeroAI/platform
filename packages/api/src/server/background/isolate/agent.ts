@@ -38,6 +38,8 @@ import {
   // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate agent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
 } from "../observability/tracing"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate agent.ts is a composition root. It selects the AI Gateway layer at the Effect.runPromise edge.
+import { aiGatewayLayer } from "../../effect/services/ai-gateway"
 import {
   resolveIsolateOutputTokenLimit,
   compileIsolateModelContext,
@@ -484,7 +486,10 @@ export class IsolateSessionAgent
         this.runPromptEffect(request, callback),
         { parentContext: request.observabilityTrace },
       )
-    }).pipe(Effect.provide(makeBackgroundTracingLayer({ tracing: workerTracing })))
+    }).pipe(
+      Effect.provide(makeBackgroundTracingLayer({ tracing: workerTracing })),
+      Effect.provide(aiGatewayLayer(this.env)),
+    )
 
     // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget entrypoint boundary; runs the run_prompt span Effect at the Durable Object RPC edge.
     return Effect.runPromise(promptEffect)
@@ -868,7 +873,9 @@ export class IsolateSessionAgent
 
   private async summarizeCompaction(prompt: string): Promise<string> {
     // oxlint-disable-next-line effect/effect-run-in-body -- agents memory compaction callback boundary requires a Promise; runs the model-resolution span Effect at that edge.
-    const model = await Effect.runPromise(this.resolveCompactionModel())
+    const model = await Effect.runPromise(
+      this.resolveCompactionModel().pipe(Effect.provide(aiGatewayLayer(this.env))),
+    )
 
     const telemetry = aiTelemetrySettings("isolate.compaction.summary", {
       "session.id": this.getRuntimeId(),

@@ -35,6 +35,8 @@ import { buildResolvedIsolateSkillSources } from "./skills"
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
 import { makeBackgroundTracingLayer } from "../observability/tracing"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It selects the AI Gateway layer at the Effect.runPromise edge.
+import { aiGatewayLayer } from "../../effect/services/ai-gateway"
 import { buildIsolateTools, type IsolateWorkspaceRuntime } from "./tools"
 import { IsolateSessionAgent } from "./agent"
 import type { IsolateSubagentTrustedConfig } from "./agent/subagent-trusted-config"
@@ -367,7 +369,7 @@ export class IsolateSubAgent extends Think<Env> {
             userId: input.userId,
             model: input.model,
             reasoningEffort: input.reasoningEffort,
-          }),
+          }).pipe(Effect.provide(aiGatewayLayer(this.env))),
         ),
         // oxlint-disable-next-line effect/effect-run-in-body -- Think lifecycle hooks are Promise APIs; this is the Effect-to-SDK boundary.
         Effect.runPromise(

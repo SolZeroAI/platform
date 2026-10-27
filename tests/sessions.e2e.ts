@@ -129,7 +129,8 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       if (runtime !== "isolate") requireFixture("E2E_CONTAINER_RUNTIME")
 
       if (runtime === "claude-code") requireFixture("E2E_CLAUDE_CODE_MODEL")
-      const literalHello = runtime === "isolate" || runtime === "codex"
+      // Codex wraps the prompt in its session instructions, so the echoed answer contains the marker.
+      const literalHello = runtime === "isolate"
       const marker = uniqueName("E2E_OUTPUT")
 
       const model =
@@ -139,8 +140,9 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       const body = {
         title: uniqueName(`e2e-${runtime}`),
         agentRuntime: runtime,
+        // The e2e stage's mock AI Gateway answers with the user's message.
         content: literalHello
-          ? "Reply with only hello. Do not call any tools."
+          ? "hello"
           : `Reply with only this marker: ${marker}. Do not call any external tools.`,
       }
 

@@ -2,7 +2,6 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { type LanguageModel, type ModelMessage } from "ai"
-import { createWorkersAI } from "workers-ai-provider"
 import type { CompiledOpenCodeConfig } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -20,6 +19,7 @@ import {
   type CloudflareTracing,
 } from "../observability/tracing"
 import type { Env } from "../types"
+import { AiGateway, type AiGatewayService } from "../../effect/services/ai-gateway"
 
 interface IsolateModelObservability {
   readonly tracing?: CloudflareTracing
@@ -27,6 +27,7 @@ interface IsolateModelObservability {
 
 interface CompiledProviderContext {
   env: Env
+  aiGateway: AiGatewayService
   providerId: string
   modelId: string
   config: CompiledOpenCodeConfig
@@ -177,22 +178,6 @@ function buildProviderOptions(input: {
   )
 }
 
-function requireAiGatewayBinding(env: Env): Ai {
-  return Option.getOrThrowWith(
-    Option.fromNullishOr(env.AI_GATEWAY),
-    () => new Error("Cloudflare AI Gateway is enabled but the AI_GATEWAY binding is missing"),
-  )
-}
-
-function requireAiGatewayId(env: Env): string {
-  return Option.getOrThrowWith(
-    Option.fromNullishOr(env.AI_GATEWAY_ID).pipe(
-      Option.filter((gatewayId) => gatewayId.trim().length > 0),
-    ),
-    () => new Error("Cloudflare AI Gateway is enabled but AI_GATEWAY_ID is missing"),
-  )
-}
-
 async function executeProviderFetch(
   input: {
     providerId: string
@@ -285,6 +270,7 @@ function createProviderFetch(input: {
 
 function createCloudflareAiGatewayProviderNativeFetch(input: {
   env: Env
+  aiGateway: AiGatewayService
   storedKey: boolean
 }): typeof fetch {
   return async function cloudflareAiGatewayProviderNativeFetch(request, init) {
@@ -307,8 +293,7 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
       Match.orElse(() => undefined),
     )
 
-    // oxlint-disable-next-line effect/avoid-native-fetch -- Provider-native AI Gateway execution is the outbound AI provider boundary required for stored and per-request BYOK.
-    return fetch(new Request(providerRequest, { headers }))
+    return input.aiGateway.fetch(new Request(providerRequest, { headers }))
   }
 }
 
@@ -326,6 +311,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
       Option.some(
         createCloudflareAiGatewayProviderNativeFetch({
           env: input.env,
+          aiGateway: input.aiGateway,
           storedKey: providerOptions.s0CloudflareStoredKey === true,
         }),
       ),
@@ -346,12 +332,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   const resolvedBaseUrl = baseURL
 
   return Match.value(providerPackage).pipe(
-    Match.when("workers-ai-provider", () =>
-      createWorkersAI({
-        binding: requireAiGatewayBinding(input.env),
-        gateway: { id: requireAiGatewayId(input.env) },
-      })(input.modelId),
-    ),
+    Match.when("workers-ai-provider", () => input.aiGateway.workersAi(input.modelId)),
     Match.when("@ai-sdk/openai", () =>
       createOpenAI({
         name: input.providerId,
@@ -405,6 +386,7 @@ export const compileIsolateModelContext = Effect.fn("isolate.model.compileContex
     const providerContext = {
       ...compiled,
       env: input.env,
+      aiGateway: yield* AiGateway,
       observability: input.observability,
     }
 

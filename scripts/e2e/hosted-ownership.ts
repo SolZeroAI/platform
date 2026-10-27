@@ -6,7 +6,7 @@ import { resolve } from "node:path"
 import * as Schema from "effect/Schema"
 import { hostedOwnershipScope, restoreVerifiedOwnership } from "./lifecycle"
 
-const { repo, profile, ci, accountHash, appName, gatewayForRun } = hostedOwnershipScope
+const { repo, profile, ci, accountHash } = hostedOwnershipScope
 
 const PublicOwnership = Schema.Struct({
   schemaVersion: Schema.Literal(1),
@@ -18,9 +18,6 @@ const PublicOwnership = Schema.Struct({
   accountHash: Schema.String,
   owner: Schema.String,
   createdAt: Schema.String,
-  gatewayId: Schema.String,
-  tokenName: Schema.String,
-  tokenIds: Schema.Array(Schema.String),
   completed: Schema.Boolean,
 })
 
@@ -120,8 +117,6 @@ export async function restoreHostedOwnership(
       item.ci !== ci ||
       item.accountHash !== accountHash ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(item.owner) ||
-      item.gatewayId !== gatewayForRun(item.owner) ||
-      item.tokenName !== `${appName}-dev-ai-gateway-run-${item.owner}` ||
       !Number.isFinite(Date.parse(item.createdAt))
     )
       throw new Error("Hosted ownership scope mismatch.")
@@ -225,17 +220,7 @@ export async function recoverHostedOwnership() {
       if (
         previous &&
         (
-          [
-            "repository",
-            "run",
-            "attempt",
-            "profile",
-            "ci",
-            "accountHash",
-            "createdAt",
-            "gatewayId",
-            "tokenName",
-          ] as const
+          ["repository", "run", "attempt", "profile", "ci", "accountHash", "createdAt"] as const
         ).some((key) => previous[key] !== row[key])
       )
         throw new Error("Conflicting hosted ownership receipts.")

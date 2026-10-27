@@ -23,6 +23,7 @@ import {
   normalizeCloudflareAiGatewayResponse,
   prepareWorkersAiResponses,
   streamWorkersAiResponse,
+  aiGatewayForEnv,
   createApiRequestObserver,
   decryptCloudflareAiGatewayByokProxyCredential,
   withApiSurfaceSpan,
@@ -167,8 +168,12 @@ const containerAiProviderOutbound: OutboundHandler<ApiEnv> = (request, env) => {
                 ? requestWithCloudflareProviderNativeCredential(request, apiKey, providerApiKey)
                 : requestWithSharedProviderCredential(prepared.request, apiKey, headers)
 
-            // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
-            const upstream = await fetch(authenticatedRequest)
+            // LiteLLM is not an AI Gateway route, so only Cloudflare credentials use the gateway layer.
+            const upstream =
+              kind === "bearer"
+                ? // oxlint-disable-next-line effect/avoid-native-fetch -- Sandbox outbound handlers are Worker fetch boundaries; no Effect HttpClient layer is available in this container hook.
+                  await fetch(authenticatedRequest)
+                : await aiGatewayForEnv(env).fetch(authenticatedRequest)
 
             const response = prepared.streaming
               ? await streamWorkersAiResponse(upstream, prepared.functionNames)
