@@ -93,17 +93,15 @@ export class UserApiKeyStore {
       catch: d1Error("db.userApiKeys.listByUserId"),
     })
 
-    return rows.map(
-      (row): UserApiKeyRecord => ({
-        keyId: row.keyId,
-        userId: row.userId,
-        label: row.label,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        lastUsedAt: row.lastUsedAt,
-        revokedAt: row.revokedAt,
-      }),
-    )
+    return rows.map((row): UserApiKeyRecord => ({
+      keyId: row.keyId,
+      userId: row.userId,
+      label: row.label,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      lastUsedAt: row.lastUsedAt,
+      revokedAt: row.revokedAt,
+    }))
   })
 
   revoke = Effect.fn("db.userApiKeys.revoke")(function* (

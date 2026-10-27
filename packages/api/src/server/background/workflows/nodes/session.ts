@@ -190,15 +190,14 @@ function getSubagentMode(
 
   return Match.value(sessionKind).pipe(
     Match.when("sandbox", () => Option.none<SubagentMode>()),
-    Match.orElse(
-      (): Option.Option<SubagentMode> =>
-        Match.value(value).pipe(
-          Match.when(Match.undefined, () => Option.some(defaultMode)),
-          Match.when(isSubagentMode, (mode) => Option.some<SubagentMode>(mode)),
-          Match.orElse(() => {
-            throw new Error("Isolate session subagents must be 'enabled' or 'disabled'")
-          }),
-        ),
+    Match.orElse((): Option.Option<SubagentMode> =>
+      Match.value(value).pipe(
+        Match.when(Match.undefined, () => Option.some(defaultMode)),
+        Match.when(isSubagentMode, (mode) => Option.some<SubagentMode>(mode)),
+        Match.orElse(() => {
+          throw new Error("Isolate session subagents must be 'enabled' or 'disabled'")
+        }),
+      ),
     ),
   )
 }
