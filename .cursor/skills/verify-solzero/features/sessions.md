@@ -21,8 +21,8 @@ Keep these product facts honest:
 - Isolate prompt execution (`runtime` tag) requires exact `hello` in returned output,
   the assistant card, native clipboard, and a message-scoped final token after reload,
   without tools.
-- OpenCode and Codex simple prompts (`harness` tag) require Docker source images.
-  Codex asserts exact `hello` in output, the assistant card, and the persisted token
-  after reload, without tools.
+- OpenCode and Codex simple prompts (`harness` tag) require Docker source images. They
+  assert a unique marker in the output and the assistant card after reload. Codex wraps
+  the prompt in its session instructions, so the echo is not an exact `hello`.
 - Claude Code prompt execution is tagged `external` and `harness` and stays deferred
   until a compatible Anthropic fixture is supplied.
