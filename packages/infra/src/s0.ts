@@ -1,6 +1,5 @@
 import { resolve } from "node:path"
 import * as Cloudflare from "alchemy/Cloudflare"
-import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -63,6 +62,15 @@ function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
   ) as Redacted.Redacted<string>
 }
 
+function mockAiGateway(appName: string, stageName: string): ApiAiGatewayBinding {
+  // The mock provider layer keeps a local Workers AI binding so the catalog can
+  // see models. It does not provision an account gateway, secrets store, or run token.
+  return {
+    resource: Cloudflare.Workers.AI("AI_GATEWAY"),
+    gatewayId: `${appName}-${stageName}-ai-gateway`,
+  }
+}
+
 function createCloudflareAiGateway(input: {
   appName: string
   stageMetadata: StageMetadata
@@ -72,17 +80,12 @@ function createCloudflareAiGateway(input: {
   const config = input.apiEnv.S0_CONFIG_CLOUDFLARE_AI_GATEWAY
 
   return Effect.gen(function* () {
-    // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and mock stacks never call the Cloudflare Gateway API.
+    // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and local stacks never call the Cloudflare Gateway API.
     if (!config.enabled) return undefined
 
-    // oxlint-disable-next-line s0-lint/no-if-statement -- Alchemy stack tests need the native binding shape without provisioning an account resource.
-    if (input.apiEnv.S0_PROVIDER_LAYER === "mock") {
-      return {
-        resource: Cloudflare.Workers.AI("AI_GATEWAY"),
-        gatewayId: `${input.appName}-${input.stageMetadata.name}-ai-gateway`,
-        runToken: "local-ai-gateway-run-token",
-        secretsStoreId: "local-ai-gateway-secrets-store",
-      } satisfies ApiAiGatewayBinding
+    // oxlint-disable-next-line s0-lint/no-if-statement -- A mock AI gateway layer needs the native binding shape without provisioning an account resource.
+    if (input.apiEnv.S0_AI_GATEWAY_LAYER === "mock") {
+      return mockAiGateway(input.appName, input.stageMetadata.name)
     }
 
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
@@ -94,37 +97,7 @@ function createCloudflareAiGateway(input: {
       storeId: secretsStore.storeId,
     }
 
-    // Only an isolated development test launcher may supply durable run ownership.
-    const runOwner = yield* Config.String("S0_E2E_RUN_ID").pipe(Config.option)
-
-    const forbiddenOwner = Option.filter(
-      runOwner,
-      (id) =>
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id) ||
-        !/^s0-e2e(?:-[a-z0-9-]+)?$/.test(input.appName) ||
-        input.stageMetadata.name !== "dev",
-    )
-
-    yield* Option.match(forbiddenOwner, {
-      onNone: () => Effect.void,
-      onSome: () =>
-        Effect.die(
-          new Error("E2E run ownership requires an isolated development profile and UUID."),
-        ),
-    })
-    const ci = yield* Config.Boolean("CI").pipe(Config.withDefault(false))
-
-    const scope = Match.value(ci).pipe(
-      Match.when(true, () => "-ci"),
-      Match.orElse(() => ""),
-    )
-
-    const testGatewayId = Option.map(runOwner, (id) => `${input.appName}${scope}-dev-${id}`)
-
-    const resource = yield* Option.match(testGatewayId, {
-      onNone: () => Cloudflare.AI.Gateway("ai-gateway", gatewayProps),
-      onSome: (id) => Cloudflare.AI.Gateway("ai-gateway", { ...gatewayProps, id }),
-    })
+    const resource = yield* Cloudflare.AI.Gateway("ai-gateway", gatewayProps)
 
     yield* Effect.forEach(
       CLOUDFLARE_AI_GATEWAY_BYOK_PROVIDERS,
@@ -147,14 +120,9 @@ function createCloudflareAiGateway(input: {
       { concurrency: "unbounded" },
     )
 
-    const tokenName = Option.match(runOwner, {
-      onNone: () => `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
-      onSome: (id) => `${input.appName}-${input.stageMetadata.name}-ai-gateway-run-${id}`,
-    })
-
     const runToken = yield* Cloudflare.ApiToken.AccountApiToken("ai-gateway-run-token", {
       accountId: input.cloudflareAccountId,
-      name: tokenName,
+      name: `${input.appName}-${input.stageMetadata.name}-ai-gateway-run`,
       policies: [
         {
           effect: "allow",

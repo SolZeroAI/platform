@@ -10,6 +10,7 @@ import {
   RequestObservability,
   type RequestObservabilityService,
 } from "./observability"
+import { AiGatewayBinding } from "./ai-gateway-binding"
 import { GitHubProvider, IdentityProvider, providerServicesForEnv } from "./providers"
 
 export interface CloudflareContextService {
@@ -29,6 +30,7 @@ export type CloudflareEffectContext = Context.Context<
   | EffectRequestLogger
   | IdentityProvider
   | GitHubProvider
+  | AiGatewayBinding
 >
 
 export function makeCloudflareContext(
@@ -45,6 +47,7 @@ export function makeCloudflareContext(
     Context.add(ControlPlane, controlPlane),
     Context.add(IdentityProvider, providers.identityProvider),
     Context.add(GitHubProvider, providers.githubProvider),
+    Context.add(AiGatewayBinding, providers.aiGateway),
   )
 
   return Match.value(hasControlPlane(env)).pipe(

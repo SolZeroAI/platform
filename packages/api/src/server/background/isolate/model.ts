@@ -9,9 +9,10 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import {
   CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
-  CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET,
+  CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST,
   normalizeCloudflareAiGatewayResponse,
 } from "../ai-providers/cloudflare-ai-gateway"
+import { providerServicesForEnv } from "../../effect/services/providers"
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
 import {
   BackgroundTracing,
@@ -178,10 +179,7 @@ function buildProviderOptions(input: {
 }
 
 function requireAiGatewayBinding(env: Env): Ai {
-  return Option.getOrThrowWith(
-    Option.fromNullishOr(env.AI_GATEWAY),
-    () => new Error("Cloudflare AI Gateway is enabled but the AI_GATEWAY binding is missing"),
-  )
+  return providerServicesForEnv(env).aiGateway
 }
 
 function requireAiGatewayId(env: Env): string {
@@ -283,22 +281,58 @@ function createProviderFetch(input: {
   return tracedFetch
 }
 
+async function gatewayUniversalRequest(request: Request) {
+  const url = new URL(request.url)
+
+  const query = await Match.value(request.method === "GET" || request.method === "HEAD").pipe(
+    Match.when(true, () => Promise.resolve({})),
+    Match.orElse(() =>
+      request
+        .clone()
+        .json()
+        .catch(() => ({})),
+    ),
+  )
+
+  const headers = Object.fromEntries(request.headers.entries())
+
+  const native = url.pathname.match(/^\/v1\/[^/]+\/[^/]+\/([^/]+)\/(.*)$/)
+
+  return Match.value(
+    url.hostname === CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST && native !== null,
+  ).pipe(
+    Match.when(true, () => ({
+      provider: native?.[1] ?? "openai",
+      endpoint: native?.[2] ?? "",
+      headers,
+      query,
+    })),
+    Match.orElse(() => ({
+      provider: "workers-ai",
+      endpoint: url.pathname.match(/\/ai\/(?:v1|run)\/(.*)$/)?.[1] ?? url.pathname,
+      headers,
+      query,
+    })),
+  )
+}
+
 function createCloudflareAiGatewayProviderNativeFetch(input: {
   env: Env
   storedKey: boolean
 }): typeof fetch {
   return async function cloudflareAiGatewayProviderNativeFetch(request, init) {
+    const binding = requireAiGatewayBinding(input.env)
     const providerRequest = new Request(request, init)
     const headers = new Headers(providerRequest.headers)
 
-    const runToken = Option.getOrThrowWith(
-      stringOption(input.env[CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET]).pipe(
-        Option.filter((value) => value.trim().length > 0),
-      ),
-      () => new Error("Cloudflare AI Gateway run token is missing"),
+    const runToken = stringOption(input.env.CLOUDFLARE_AI_GATEWAY_RUN_TOKEN).pipe(
+      Option.filter((value) => value.trim().length > 0),
     )
 
-    headers.set("cf-aig-authorization", `Bearer ${runToken}`)
+    Option.match(runToken, {
+      onNone: () => undefined,
+      onSome: (token) => headers.set("cf-aig-authorization", `Bearer ${token}`),
+    })
     Match.value(input.storedKey).pipe(
       Match.when(true, () => {
         headers.delete("authorization")
@@ -307,8 +341,9 @@ function createCloudflareAiGatewayProviderNativeFetch(input: {
       Match.orElse(() => undefined),
     )
 
-    // oxlint-disable-next-line effect/avoid-native-fetch -- Provider-native AI Gateway execution is the outbound AI provider boundary required for stored and per-request BYOK.
-    return fetch(new Request(providerRequest, { headers }))
+    const universal = await gatewayUniversalRequest(new Request(providerRequest, { headers }))
+
+    return binding.gateway(requireAiGatewayId(input.env)).run(universal)
   }
 }
 

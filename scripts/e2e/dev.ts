@@ -27,7 +27,7 @@ try {
 
     if (docker.status !== 0) {
       throw new Error(
-        "Core harness flows require a running Docker daemon. Start Docker before running e2e.",
+        "Local container image builds require a running Docker daemon. Start Docker before running e2e.",
       )
     }
 
@@ -47,7 +47,7 @@ try {
       )
     }
 
-    appEnvironment.S0_E2E_CONTAINER_CONTEXTS = contexts
+    appEnvironment.S0_LOCAL_CONTAINER_CONTEXTS = contexts
   }
 
   // The same Alchemy CLI/stack/watch runs in an owned directory: simulator data never shares dev storage.

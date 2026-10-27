@@ -367,6 +367,14 @@ export function HomeSessionToolsDialog({
     if (!open) {
       return
     }
+    setDraftIsolateStepLimit(String(normalizeIsolateStepLimit(isolateStepLimit)))
+    setDraftSubagents(subagents)
+  }, [isolateStepLimit, open, subagents])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {

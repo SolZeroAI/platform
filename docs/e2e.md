@@ -49,10 +49,11 @@ its optional environment-file path to exist. The comment-only files supply no de
 secrets; real credentials still come from the environment.
 
 After stopping the local test stack, run `test:e2e:cleanup` with the same credential file
-and profile. It validates persisted account, Worker, gateway and token ownership, then
-runs normal Alchemy destruction of that isolated local stack. It refuses unknown remote
-resources. The dedicated gateway and generated application run token are deleted; replay
-cache remains available. Stopping dev alone does not remove account-level resources.
+and profile. It validates the run's local Alchemy state, then destroys that state and
+removes the run directory, labelled containers, and images. It refuses an unexpected
+remote resource. `config/e2e-dev.config.jsonc` sets `aiGatewayLayer` to `mock`. Identity and GitHub stay on their live providers. The mock AI binding answers Workers AI `run()` and `gateway()` calls locally and does not provision an account AI Gateway, secrets store, or run token. `aiProviders.cloudflareAiGateway.enabled` stays true so the catalog still has models.
+When `CLOUDFLARE_API_TOKEN` is unset, cleanup does not call the Cloudflare API. The replay
+cache remains available. Stopping dev alone does not remove the run directory.
 
 The environment loader reads an explicitly selected `E2E_ENV_FILE`, then this repository's
 `config/.env` and `config/.dev.vars`. Values already supplied by the shell or CI win.
@@ -60,8 +61,10 @@ It never prints values. The shared local gateway credentials can be selected wit
 `E2E_ENV_FILE=/Users/jbeckman/projects/personal/alchemy-new/config/.env` on the maintainer's
 machine; this path is optional and is never assumed in CI.
 
-Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. `CLOUDFLARE_API_TOKEN` stays
-the Alchemy deployment token. The semantic model does not read it, and it does not
+Supply `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`. The launcher and the Validate
+e2e job do not read `CLOUDFLARE_API_TOKEN`. `alchemy dev` keeps D1, KV, R2, and Durable
+Objects in the run directory. The application child does not receive the e2e token.
+The semantic model does not read the deploy token, and it does not
 read the gateway or run token the application provisions for a stage or a run.
 The suite does not read that gateway's logs.
 `e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
@@ -96,12 +99,8 @@ every test. `agent.act` and `agent.assert` use the decision adapter. The same la
 model answers `agent.waitFor` and `agent.extract`. Exact text values come from
 `agent.act` params. Use `expect` for deterministic polling and extraction.
 
-The application runtime model is separate from the semantic test executor. The test
-profile declares the existing Workers AI default and provider catalog. `E2E_APP_MODEL`
-can select a model that the application actually exposes. Runtime prompt tests require a
-working application model provider. The core suite requires a running Docker daemon for
-source-image OpenCode and Codex, using the same configured Cloudflare GPT-OSS provider. Setting the semantic gateway token alone does not
-supply OpenAI, Anthropic, or harness subscription credentials.
+The semantic gateway token is not an application provider credential. It does not
+supply OpenAI, Anthropic, or harness subscription keys.
 
 The profile provisions only `e2e-admin@example.test` and `e2e-peer@example.test`.
 `E2E_USER_ADMIN_PASSWORD` overrides the disposable administrator password. Otherwise a
@@ -113,8 +112,8 @@ its returned cookies, retaining redacted screenshot support. The separate sign-i
 exercises the visible credential form with e2e secret handles.
 
 `nub run test` and `test:e2e` run core flows, excluding tests tagged `external`.
-`test:e2e:all` runs every flow. `test:e2e:external` runs only deferred integrations and
-Claude Code. OpenCode and Codex prompts, tools, follow-ups, and history are core flows. External tests fail with a named missing fixture instead of skipping.
+`test:e2e:all` runs every flow. `test:e2e:external` runs only deferred integrations.
+External tests fail with a named missing fixture instead of skipping.
 
 ## Recorded-action replay
 
@@ -151,12 +150,9 @@ an application-provider cache proof. Run IDs: cold `01a10b0d-472f-7873-b184-6879
 initial warm `01a10b0f-9795-79e9-ac4e-b395e90dd70e`, final warm
 `01a10b12-c730-73cf-b00d-ee8c8b6cfe75`.
 
-Replay does not replace real application inference. Core Isolate/OpenCode/Codex prompts,
-tools, delegation and the bounded provider probe still call the configured provider.
-Stack startup, browser/API checks, container startup and those provider calls remain a
-speed limit. Live semantic judgments also need a model; the current core suite uses only
-`agent.act`, with exact assertions afterward. AI Gateway response-cache hits are a
-separate layer and are not evidence of recorded-action replay.
+Live semantic judgments need a model. The current core suite uses `agent.act`, with exact
+assertions afterward. AI Gateway response-cache hits are a separate layer and are not
+evidence of recorded-action replay.
 
 ## AI usage accounting
 
@@ -203,8 +199,8 @@ table here.
 The external suites require an isolated deployment with integrations enabled in its
 configuration and identities linked to the disposable test account. Set:
 
-- `E2E_CONTAINER_RUNTIME=1` is the default for the core source-image harness flows. Docker
-  must be running, with an application model compatible with the selected harness (`E2E_APP_MODEL`). The container
+- `E2E_CONTAINER_RUNTIME=1` builds the committed agent-container images for local `alchemy dev`. Docker
+  must be running. The container
   includes the third-party bootstrap package manager required by AI SDK harness lockfiles;
   repository commands remain Nub (`nub install`, `nub run`, `nub exec`).
   With this flag, the isolated development stack bundles the committed runtime entrypoints
@@ -238,84 +234,41 @@ starts. Enable the commented integration blocks in this profile:
 | Slack | `integrations.slack.enabled`; `SLACK_TOKEN` | Linked Slack test user for `E2E_SLACK_USER_ID` |
 | MCPCF | `mcpcf.enabled`, baseUrl, userOauthProviderId; `S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN` | Reachable registry, read-only tool server, OAuth/token linked identity; choose an ID actually returned by `/sessions/mcpcf/servers` |
 | AI Search | `aiSearch.serviceTokenId` referencing `CF_AI_SEARCH_SERVICE_TOKEN_ID` | Seed/index a document, enable the source in Admin > AI Search; choose an ID returned by `/sessions/ai-search/sources` |
-| Claude Code | Gateway providerKeys.anthropic references `S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY`; `E2E_CLAUDE_CODE_MODEL=cloudflare-ai-gateway/anthropic/claude-opus-5` | Anthropic messages-compatible model and container bootstrap |
-| OpenCode/Codex (core) | Shipped Workers AI GPT-OSS120b; override independently with `E2E_OPENCODE_MODEL`, `E2E_CODEX_MODEL` | Docker and the configured application Workers AI binding/run token; optional OpenAI gateway models additionally need `S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY` in providerKeys.openai |
 | OIDC | `auth.providers.<id>` kind=oidc, issuer/clientId and a chosen clientSecret env reference; signIn/provisionUsers/link capabilities | Isolated IdP clients with localhost callback URLs; distinct admin/member users |
 | LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the e2e AI Gateway token as an application provider |
 
 Fixture values alone do not enable integrations or link accounts. Missing/disabled
 integration state is a reported failure in `test:e2e:all`, not passing coverage.
 
-The source-image harness checks reproduced and fixed a missing container bootstrap package
-manager for AI SDK lockfiles, unwritable OpenCode cache directories, missing custom-model
-registration, and local outbound certificate trust.
 The launcher exports trusted macOS system roots to an ignored mode-0600 PEM before Alchemy
 starts and adds those roots to the runner's default trust set. It never disables certificate
 verification or replaces an explicitly supplied CA bundle.
 
-The configured GPT-OSS Responses route rejected the harness tool schema. Its Chat compatibility
-route also rejected replayed tool history. The narrowly scoped adapter uses the documented
-native `/accounts/<account>/ai/run/@cf/openai/gpt-oss-120b` Chat route, deliberately requests
+The configured GPT-OSS Responses route rejects the harness tool schema. Its Chat compatibility
+route also rejects replayed tool history. The adapter uses the documented
+native `/accounts/<account>/ai/run/@cf/openai/gpt-oss-120b` Chat route, requests
 buffered JSON with `stream:false`, then emits standard Responses events from the actual result.
 The [native Chat model](https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/)
-also supports streaming; this bridge buffers for the tested harness protocol.
+also supports streaming; this bridge buffers for the harness protocol.
 The [Responses compatibility endpoint](https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/)
 requires `stream:false`. Text, call IDs, arguments,
 namespace names, tool results, abort signals, scoped application credentials and gateway headers
 are preserved. Output arrives after generation completes. Consecutive calls remain in one
 assistant turn. Private provider reasoning is omitted; unsupported replay/protocol semantics
 fail explicitly. Absent token budgets use 4096 rather than the native 256-token default;
-explicit budgets remain unchanged. Native isolate parent and delegated turns receive the same
-4096-token default when no explicit turn limit is supplied. The harness tests verify genuine shell writes/readback and
-same-session follow-ups with the exposed `reasoningEffort: "low"` fixture for these two tiny
-shell operations, including the omission of `sessionKind` in a follow-up request.
+explicit budgets remain unchanged.
 
-Codex tool trials, including runs with low effort selected locally, returned
-`max_output_tokens` incomplete responses;
-the application returned a bounded failed result after about 70–75 seconds. That negative
-API outcome was observed. A later failure also exposed an incorrect thinking/Stop
-state after WebSocket replay: `Option.none` was incorrectly treated as a processing message.
-The replay now checks `Option.isSome`, and harness regressions require idle controls after
-reload or a terminal failure. The tool regression selects
-low effort explicitly, writes each file in a distinct call, and reads both files with one
-exact `cat` command. It asserts actual commands and byte-exact stdout, rather than the
-model summary spelling. Separate simple-prompt tests retain their literal response contract.
-
-A native-request diagnostic later proved that pinned Codex 0.144.5 omitted the selected
-reasoning effort for the multi-part Cloudflare model ID. Its fallback model metadata gates
-reasoning requests. The small pinned harness patch enables that metadata only for
-`@cf/openai/gpt-oss-20b` and `@cf/openai/gpt-oss-120b`, with summaries disabled; user-selected
+Pinned Codex 0.144.5 omitted the selected reasoning effort for the multi-part Cloudflare model ID.
+Its fallback model metadata gates reasoning requests. The pinned harness patch enables that metadata
+only for `@cf/openai/gpt-oss-20b` and `@cf/openai/gpt-oss-120b`, with summaries disabled; user-selected
 effort then reaches Workers AI. Nub and Docker apply the same patch. This matches the
 [tagged client gate](https://github.com/openai/codex/blob/rust-v0.144.5/codex-rs/core/src/client.rs#L762)
 and [upstream custom-model report](https://github.com/openai/codex/issues/30697).
-The actual fixed Codex tool/follow-up run passed with all five requests at `low`; completion
-counts were 108, 90, 27, 71, and 26 tokens. A later full strict run still encountered a
-native output-limit failure. A bounded 8192-token experiment also returned actual
-`finish_reason: length` with 8192 completion tokens, so it was reverted: increasing the
-limit did not fix this provider behavior. The default remains 4096; no temperature change,
-model alias, fabricated tool call, or extra test retry is used.
+The default output budget remains 4096.
 
-The Codex case also probes the real provider route inside its exclusively owned shipping
-container before asserting the positive result. It verifies the container's current session,
-uses the shipping Cloudflare CA with TLS verification, and sends an explicit eight-token
-limit. The live negative contract returned HTTP 200, `response.incomplete`,
-`max_output_tokens`, and exactly eight output tokens. A full positive tool/follow-up/history
-case then passed on the same route. Only status, limit usage and lifecycle metadata are
-logged; raw SSE, private reasoning, arguments, headers and credentials are excluded.
-The [Cloudflare GPT-OSS Harmony issue](https://github.com/cloudflare/ai/issues/574) describes
-related serving problems, but it does not establish the cause of the observed length failure.
-
-The delegation regression requests all events for its returned parent message instead of
-the default latest-100 tail. It requires a real child start, correlated completion and parent
-tool result with the marker, and no child error. Counts and lifecycle categories are recorded
-before cleanup. A strict run failed the earlier tail-only assertion, but pagination eviction
-was not reproduced: later real runs had 42 events/17 child events and 37/14. The corrected
-strong child contract passed; another run produced malformed parent output and remains a
-recorded provider failure rather than evidence of successful delegation.
-
-The user deferred the extra GitHub, Slack, MCPCF, AI Search, Anthropic, BYOK, and ordinary-member
+The user deferred the extra GitHub, Slack, MCPCF, AI Search, BYOK, and ordinary-member
 OIDC fixtures. Their authored cases and fail-fast preflight remain available; no live positive
-result is claimed for those seven cases.
+result is claimed for those cases.
 
 Source inventory still exposes additional external paths that require dedicated fixtures:
 Additional social-provider sign-in variants; GitHub linking/clone/branch/write/webhooks;
@@ -338,17 +291,21 @@ are deleted in cleanup; all mutations are limited to the isolated profile.
 `Validate` runs static checks and discovers all e2e tests without secrets. Its dedicated
 Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes and manual
 runs, including the canonical repository. Fork pull requests cannot access its credentials.
-Configure repository secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and
-`CF_AI_GATEWAY_E2E_TOKEN`; the workflow generates and masks a fresh disposable account
-password. Do not use production identity or integration secrets for tests.
+Configure repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`.
+The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic
+model uses the account default AI Gateway, with response caching left on
+(`CF_AI_GATEWAY_E2E_SKIP_CACHE=0` unless set). The workflow generates and masks a
+fresh disposable account password. Do not use production identity or integration secrets
+for tests. Preview and production deploy jobs still read `CLOUDFLARE_API_TOKEN` because
+Alchemy's Cloudflare CI credentials require it for a real stage deploy or destroy.
 
-Each launcher owns `.e2e/runs/<UUID>/stack`, including Alchemy state, simulator D1/KV/R2/DO data and source-container build contexts. It runs the shipping stack and normal Alchemy destruction from that directory. The application gateway and token names contain the same run UUID; local and CI names have separate scopes. Cleanup never treats a shared name or prefix as ownership. Application run tokens have account-level AI permissions; a gateway name is not a token authorization boundary.
+Each launcher owns `.e2e/runs/<UUID>/stack`, including Alchemy state, simulator D1/KV/R2/DO data and source-container build contexts. It runs the shipping stack and normal Alchemy destruction from that directory. The ownership record still names a per-run gateway id so a deploy token, when present, can only revoke that id. Local emulation does not create that gateway and does not attach the e2e gateway. Local and CI names have separate scopes. Cleanup never treats a shared name or prefix as ownership. A gateway name is not a token authorization boundary.
 
 The default `test:e2e` command wraps the SDK and verifies recovery after exit. Cleanup failures make the command fail even if SDK teardown ignored the app's exit code. The launcher records exact process birth times and descendants, including detached sidecar groups. Both SDK and Alchemy children must publish a durable launch intent and their own PID/birth before importing the real CLI. Unresolved registration, failed process inspection and a same-birth process moving groups retain evidence and block storage removal. Process inspection and signaling use portable POSIX tools; they cannot eliminate every operating-system identity race. Cancellation signals the owned launcher, and recovery stops only birth-matched descendants before deleting storage. Run `nub run test:e2e:cleanup` again with the same credentials, profile and CI scope after an abrupt termination. Completed receipts make repeated recovery a no-op; active launchers and mismatched ownership are refused.
 
-Cleanup reconciles a token created before its state record was flushed by exact UUID name, account, permission policy and creation time. It verifies gateway/token HTTP 404 and owned Docker label absence before removing the run directory. The directory removal also clears every run-owned identity, auth session/API key, session/workspace/history, bot/routine, agent/skill/MCP definition, uploaded attachment, secret and runtime preference. Most tests also delete their entities or restore settings in `finally`; storage teardown recovers interrupted requests and APIs without individual delete endpoints.
+When `CLOUDFLARE_API_TOKEN` is set, cleanup reconciles a token created before its state record was flushed by exact UUID name, account, permission policy and creation time, then verifies gateway and token HTTP 404. Without that token, cleanup skips those Cloudflare API calls. It still verifies owned Docker label absence before removing the run directory. The directory removal also clears every run-owned identity, auth session/API key, session/workspace/history, bot/routine, agent/skill/MCP definition, uploaded attachment, secret and runtime preference. Most tests also delete their entities or restore settings in `finally`; storage teardown recovers interrupted requests and APIs without individual delete endpoints.
 
-`nub run test:e2e:lifecycle` exercises real success/failure recovery: launcher SIGTERM; SIGKILL with a real Codex container and missing token state; killed CLI leader with detached runtime descendants; an intentionally failing SDK suite; outer-command SIGTERM and SIGKILL after creating an authenticated session; a failed process inspector; and a genuine filesystem publication failure before Alchemy loads; and an official MCP open/observe/close session with valid JSON-RPC stdout and verified app teardown. It verifies receipts, state removal and idempotent recovery. These lifecycle fixtures are excluded from the ordinary core catalogue. To run them on the normal hosted validation job, dispatch `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. The boolean defaults to false, so ordinary PR and push validation still runs only the core suite; an opt-in dispatch adds lifecycle cases after core. Lifecycle reports use `.e2e/cleanup-proof`; intentional inner failures use separate private report directories.
+`nub run test:e2e:lifecycle` exercises real success/failure recovery: launcher SIGTERM; SIGKILL with local simulator state and no minted account token; killed CLI leader with detached runtime descendants; an intentionally failing SDK suite; outer-command SIGTERM and SIGKILL after creating an authenticated session; a failed process inspector; and a genuine filesystem publication failure before Alchemy loads; and an official MCP open/observe/close session with valid JSON-RPC stdout and verified app teardown. It verifies receipts, state removal and idempotent recovery. These lifecycle fixtures are excluded from the ordinary core catalogue. To run them on the normal hosted validation job, dispatch `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. The boolean defaults to false, so ordinary PR and push validation still runs only the core suite; an opt-in dispatch adds lifecycle cases after core. Lifecycle reports use `.e2e/cleanup-proof`; intentional inner failures use separate private report directories.
 
 Sanitized CI diagnostics retain `cleanup-summary.json` (counts/types/verified status) for seven days. A separate `solzero-cleanup-ownership-<run>-<attempt>` artifact retains only `cleanup-ownership.json` (repository/run/account hash/profile and exact run-owned resource metadata) for 30 days and uploads even on cancellation. Private state, credentials, logs and journals are never uploaded. Before new allocations, CI examines up to 10,000 repository artifact records and restores pending ownership from completed same-repository Validate attempts, including earlier attempts of the current run. It verifies original producer metadata and byte-equivalent pending rows in immutable dedicated archives. A newer empty or completed inventory does not discard older pending evidence; recovery verifies absence again. Active producers are preserved. Unavailable, conflicting or malformed claimed ownership evidence blocks recovery. Explicit manual recovery can also use a historical diagnostic archive containing the exact ownership file: `CI=1 nub exec tsx scripts/e2e/cleanup.ts /path/to/cleanup-ownership.json`, with the same isolated profile/account and an Actions-read token. Live token IDs are reconciled from exact UUID ownership; supplied IDs do not authorize deletion. Evidence beyond the retention and inventory bounds requires operator review; it is never replaced by a prefix sweep.
 
@@ -368,13 +325,12 @@ raw stack logs are local diagnostics and are never uploaded by CI. This preserve
 the original Alchemy process lifecycle while exposing errors before a final watch
 process failure.
 
-The workflow verifies Docker, builds the current harness source images through Alchemy,
-installs Chromium separately, restores `.e2e/cache`, runs the core suite,
-saves replay recordings and uploads reports and failure artifacts. `.e2e/` is ignored
+The workflow verifies Docker, builds the current harness source images through local
+`alchemy dev`, installs Chromium separately, restores `.e2e/cache`, runs the core suite,
+saves replay recordings, and uploads reports and failure artifacts. `.e2e/` is ignored
 locally. Chromium receives native clipboard read/write permissions through the small
 pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
-have no Copy button in the current UI; the runtime response's existing Copy markdown
-control verifies the native permission path. Replay cache is preserved by CI rather than checked into Git. `test:e2e:live`
+have no Copy button in the current UI. Replay cache is preserved by CI rather than checked into Git. `test:e2e:live`
 forces fresh model decisions; `test:e2e:cache-strict` fails on stale recordings. Read
 `.e2e/report.json`, `.e2e/summary.md`, failure pages and the ignored stack log to diagnose
 failures. Treat unsupported runtime services and missing credentials as explicit blockers;
@@ -391,55 +347,25 @@ its interactive gate fixes early native GET submission. Real regression runs als
 and corrected bot child-route rendering, subagent select layering, D1's 50-byte LIKE search
 limit, API schema drift, and stale workflow export names. The initial hosted Validate run at `381334d` passed all 27 then-core cases.
 Earlier independent live verification and hosted Validate `37241453073` at `e0c39c6`
-each passed 31/31. That commit's strict run passed 30/31: the Codex first tool turn
-exhausted the native output limit, and its terminal failure UI checks passed.
+each passed 31/31. That commit's strict run passed 30/31.
 
 Full-suite verification at `dc6e3ea` produced these results, with 31 core cases selected and
 seven user-deferred external cases excluded:
 
 - Independent live run `01a1092d-7d62-7548-884d-95daef4b75f2`: 30/31 in 261.43 seconds.
-  The delegation parent omitted the required marker although its real child and correlated
-  tool result contained it. Cleanup removed the failed payload before an exact API-output
-  versus final-parent-token comparison; model noncompliance remains a hypothesis, not a
-  proven cause.
-- Hosted Validate `37242692025`: 30/31. The default-effort Codex prompt exhausted the
-  4096-token native output limit before the marker assertion. Its terminal status failed;
-  this case did not reach failure-UI assertions. The native effort is inferred absent from
-  source, implying Cloudflare's documented medium default; CI request metadata did not
-  capture it. Static validation and actionlint passed.
+- Hosted Validate `37242692025`: 30/31. Static validation and actionlint passed.
 - Independent strict run `01a10932-409a-7b67-b9fd-c76d10d2132f`: 31/31 in 196.91 seconds,
   with six action replays, five cache misses, 15 Clef calls and 30,672 tokens; no skips or
   flaky passes. Strict action replay still executes the real application and provider flows.
 
-Both harness tool/follow-up/history cases and the genuine eight-token negative probe
-passed in those three runs. Explicit low effort reaches the Codex provider; the
-supported default and 4096-token limit remain unchanged. These results establish actual
-positive and bounded-failure behavior, but do not establish stable success across the
-native provider flows. These earlier outcomes remain historical evidence; no retry or
-provider workaround hides the recorded failures.
-
-The later Codex smoke prompt at `981b51d` requests only `hello`, without tools. Its focused
-live run `01a109a6-dad5-7bee-9ccf-eb868203a25c` passed the one Codex case and required
-sign-in setup (2/2 selected, 35.36 seconds; Codex case 17.37 seconds). The report records
-that immutable commit and a clean checkout. The real source-image Codex runtime used the
-configured Cloudflare `@cf/openai/gpt-oss-120b` provider, with the existing default reasoning
-and 4096-token budget. Returned output and the persisted final token equal `hello` after
-trimming transport whitespace; the browser assertion targets the assistant card before
-and after reload, and message-scoped events contain no tool calls. Node 24.15.0 ran the
-documented dotenv/CA launcher; no replay, retry or fabricated output was used. Root
-typecheck, lint and format passed. This focused result does not replace the earlier
-full-suite outcomes or prove provider stability. Reproduce it with:
-
-```sh
-E2E_ENV_FILE=/path/to/private.env nub run test:e2e:live tests/sessions.e2e.ts --grep 'codex executes a real prompt'
-```
+These earlier outcomes remain historical evidence.
 
 The subsequent full hosted run `37251567618` at `bca93d5` executed zero tests: Cloudflare
 rejected creation of another auto-generated AI Gateway at the account's 20-gateway limit.
 Repository validation and actionlint passed; this was a startup failure, not 31 test failures.
 The lifecycle correction at `5bfd00a` was verified against that real full account. Only the
 legacy gateway matched to this repository's local e2e Worker/state/store was removed.
-Local creation, real Codex `hello`, deletion and token revocation passed, returning the
+Local creation, deletion and token revocation passed, returning the
 account to 19 gateways. CI-mode creation then passed 2/2 selected cases in 37.72 seconds
 (`01a109c0-7c77-7878-9a52-62174eba2d44`). A cold-state launch at 20 gateways adopted the
 same CI gateway and creation timestamp, then passed 2/2 in 35.83 seconds
@@ -471,6 +397,4 @@ The latest local full core run passed 30/31 in 248.04 seconds (`01a10b68-abcc-7c
 
 The final read-only account inventory contained 19 gateways and 16 unrelated tokens, zero active run-owned tokens or pending journals, and HTTP 404 for the latest owned gateway and token. Five historical test tokens were matched to recorded ID hashes, creation times, exact names and account policies, then revoked with HTTP 404 verification. Fourteen historical unlabelled containers and seven proxies were preserved because ownership was unproven. Automatic hosted recovery inspected the canonical repository and found zero retained dedicated ownership archives; cross-host recovery of a nonempty archived run remains unexercised. Preview guards have read-only current-PR proof, but no nonempty remote preview teardown was performed. These are local/read-only proofs, not new hosted CI results.
 
-Hosted validation `37296872909` at `25c3903` passed static checks, actionlint, hosted-recovery initialization and cleanup, but core passed 30/31. The Isolate prompt returned a completed status with 4096 repeated punctuation characters instead of its requested marker. The retained report does not contain that call's native finish reason or usage; the separate eight-token limit diagnostic belongs to the deliberate negative probe. All ten semantic driver steps replayed without model calls, so this failure was outside recorded-action replay.
-
-The Isolate smoke prompt now requests only `hello`, without tools, and checks the exact returned text, assistant-only card, native clipboard and message-scoped final token after reload. This focused real-binding case plus authentication setup passed 2/2 in 29.747 seconds (`01a10ba7-38c0-73b9-890f-477a5ecb6b8e`). Temporary content-free diagnostics observed native `stop`, 2384 input tokens, 40 output tokens, five public text bytes and zero tool calls; the diagnostic was removed. The supported default effort, 4096-token budget and all tool/delegation cases remain unchanged. This is prompt stabilization, not proof of a Cloudflare serving defect repair or a new full-suite pass.
+Hosted validation `37296872909` at `25c3903` passed static checks, actionlint, hosted-recovery initialization and cleanup, but core passed 30/31.

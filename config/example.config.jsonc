@@ -3,6 +3,7 @@
   // Secret values stay outside JSONC and are referenced by environment binding name.
   "$schema": "./s0.config.schema.json",
   "schemaVersion": 1,
+  "aiGatewayLayer": "live",
   // Optional. A complete brand object takes precedence over VITE_S0_BRAND_* environment values.
   // Omit it to keep the existing environment overrides or SolZero defaults.
   // "brand": {
@@ -98,6 +99,7 @@
   // Remove an optional runtime-configurable domain to manage it from Admin instead.
   "aiProviders": {
     // Cloudflare AI Gateway is deployment-managed and available to Isolate and compatible container runtimes.
+    // Set the stage aiGatewayLayer to "mock" to skip the account gateway, secrets store, and run token.
     "cloudflareAiGateway": {
       "enabled": true,
       "cacheTtl": null,

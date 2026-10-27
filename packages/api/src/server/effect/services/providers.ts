@@ -22,6 +22,7 @@ import {
   getLinkedUserIdByProviderAccountId,
   resolveOktaUserId,
 } from "../../lib/better-auth"
+import { AiGatewayBinding, aiGatewayBindingForContext } from "./ai-gateway-binding"
 
 export interface GitHubAppUserToken {
   readonly githubUserId: string
@@ -224,32 +225,40 @@ export const MockGitHubProvider: GitHubProviderService = {
   },
 }
 
-export const LiveProviderLayer = Layer.mergeAll(
-  Layer.succeed(IdentityProvider, LiveIdentityProvider),
-  Layer.succeed(GitHubProvider, LiveGitHubProvider),
-)
+export function liveProviderLayer(env: ApiEnv) {
+  return Layer.mergeAll(
+    Layer.succeed(IdentityProvider, LiveIdentityProvider),
+    Layer.succeed(GitHubProvider, LiveGitHubProvider),
+    Layer.succeed(AiGatewayBinding, aiGatewayBindingForContext(env)),
+  )
+}
 
-export const MockProviderLayer = Layer.mergeAll(
-  Layer.succeed(IdentityProvider, MockIdentityProvider),
-  Layer.succeed(GitHubProvider, MockGitHubProvider),
-)
+export function mockProviderLayer(env: ApiEnv) {
+  return Layer.mergeAll(
+    Layer.succeed(IdentityProvider, MockIdentityProvider),
+    Layer.succeed(GitHubProvider, MockGitHubProvider),
+    Layer.succeed(AiGatewayBinding, aiGatewayBindingForContext(env)),
+  )
+}
 
 export function providerServicesForEnv(env: ApiEnv) {
   return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
     Match.when(true, () => ({
       identityProvider: MockIdentityProvider,
       githubProvider: MockGitHubProvider,
+      aiGateway: aiGatewayBindingForContext(env),
     })),
     Match.orElse(() => ({
       identityProvider: LiveIdentityProvider,
       githubProvider: LiveGitHubProvider,
+      aiGateway: aiGatewayBindingForContext(env),
     })),
   )
 }
 
 export function providerLayerForEnv(env: ApiEnv) {
   return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
-    Match.when(true, () => MockProviderLayer),
-    Match.orElse(() => LiveProviderLayer),
+    Match.when(true, () => mockProviderLayer(env)),
+    Match.orElse(() => liveProviderLayer(env)),
   )
 }
