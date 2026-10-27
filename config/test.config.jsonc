@@ -7,7 +7,6 @@
     "appName": "s0",
     "zone": "localhost",
     // "webFqdn": "ai.example.com",
-    // "apiFqdn": "api.ai.example.com",
     "useApiShield": false,
     "observability": {
       "logsDestinations": [],

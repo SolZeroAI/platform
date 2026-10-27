@@ -531,19 +531,6 @@ export function createApi(options: CreateApiOptions) {
     Match.orElse(() => ({})),
   )
 
-  const [primaryDomain, ...domainAliases] = stageMetadata.infra.apiDomains
-
-  const domainConfig = Match.value(primaryDomain).pipe(
-    Match.when(Match.string, (name) => ({
-      domain: {
-        name,
-        aliases: domainAliases,
-      },
-      workersDev: false as const,
-    })),
-    Match.orElse(() => ({})),
-  )
-
   const api = Cloudflare.Worker("api", {
     name: workerName,
     main: entrypoint,
@@ -568,17 +555,12 @@ export function createApi(options: CreateApiOptions) {
         persist: true,
       },
     },
-    ...domainConfig,
-    ...(stageMetadata.infra.apiRouting === "same-origin"
-      ? {
-          domain: null,
-          workersDev: false,
-          routes: stageMetadata.infra.apiRoutes.map((pattern) => ({
-            pattern,
-            zoneName: stageMetadata.infra.zone,
-          })),
-        }
-      : {}),
+    // Public traffic reaches the API only through the web origin's /api routes.
+    workersDev: false,
+    routes: stageMetadata.infra.apiRoutes.map((pattern) => ({
+      pattern,
+      zoneName: stageMetadata.infra.zone,
+    })),
     crons: ["0 13 * * *", "0 14 * * *"],
     env: createApiBindings({
       appName,

@@ -10,10 +10,6 @@
         "appName": { "type": "string" },
         "zone": { "type": "string" },
         "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-        "apiFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-        "apiRouting": {
-          "anyOf": [{ "type": "string", "enum": ["subdomain", "same-origin"] }, { "type": "null" }]
-        },
         "useApiShield": { "type": "boolean" },
         "planetscale": {
           "anyOf": [

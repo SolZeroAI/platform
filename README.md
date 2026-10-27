@@ -149,12 +149,12 @@ nub exec wrangler whoami
 nub run dev
 ```
 
-The web app runs at <http://localhost:3000>. The API Worker runs at <http://localhost:3100>.
+The web app runs at <http://localhost:3000> and serves the API at <http://localhost:3000/api>.
 
 In another terminal, check the control plane and get the generated administrator password:
 
 ```sh
-curl --fail-with-body http://localhost:3100/health
+curl --fail-with-body http://localhost:3000/api/health
 nub run auth:admin-password -- dev --local
 ```
 
@@ -164,7 +164,7 @@ Create an Isolate, Codex, Claude Code, or OpenCode session. Select a compatible 
 
 ### Deploy to Cloudflare
 
-The production profile derives `https://ai.<zone>` for the web app and `https://api.ai.<zone>` for the API by default. Set `deployment.webFqdn` or `deployment.apiFqdn` to use explicit hostnames. Both hostnames must belong to the configured Cloudflare zone.
+The production profile derives `https://ai.<zone>` for the web app by default and serves the API from the same origin at `/api`. Set `deployment.webFqdn` to use an explicit hostname. It must belong to the configured Cloudflare zone.
 
 Create the production secrets file:
 
@@ -175,7 +175,7 @@ cp config/.dev.vars.example config/.prod.vars
 Prepare the production profile:
 
 1. Set `deployment.zone` in `config/prod.config.jsonc` to your Cloudflare-managed zone.
-2. Add explicit `deployment.webFqdn` and `deployment.apiFqdn` values when you need custom hostnames.
+2. Add an explicit `deployment.webFqdn` value when you need a custom hostname.
 3. Replace `admin@example.com` with the production administrator email.
 4. Enable the external integrations that you are ready to configure.
 5. Uncomment the matching secrets in `config/.prod.vars`, and then add their values.

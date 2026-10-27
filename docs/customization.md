@@ -69,16 +69,15 @@ enabled. Adding the gateway must not silently replace the existing default model
 
 ## API routing
 
-Separate web/API domains remain the default (`deployment.apiRouting: "subdomain"`). To expose one
-public origin instead, set `deployment.apiRouting: "same-origin"`, set `zone` and `webFqdn`, and
-omit `apiFqdn`. The public API base becomes `https://<webFqdn>/api`; Better Auth remains at
-`/api/auth/*`. This mode intentionally supports the fixed `/api` prefix, not arbitrary mount paths.
+The API is served from the web origin at the fixed `/api` path; there is no separate API hostname.
+Set `zone` and, optionally, `webFqdn`. The public API base is `https://<webFqdn>/api`, and Better
+Auth remains at `/api/auth/*`. Arbitrary mount paths are not supported.
 
 Cloudflare routes `<webFqdn>/api` and `<webFqdn>/api/*` directly to the API Worker. The web Worker
-owns the custom domain and UI paths. API custom domains and workers.dev access are disabled in
-this mode. Keep the hostname proxied in the configured zone, and review route ownership in the
-Alchemy plan. Switching an existing deployment detaches its API domains; keep the old stack on
-its existing mode during a blue/green migration.
+owns the custom domain and UI paths. The API Worker has no custom domain or workers.dev access.
+Keep the hostname proxied in the configured zone, and review route ownership in the Alchemy plan.
+Upgrading a deployment that used the former `api.<webFqdn>` hostname detaches that domain, so keep
+the old stack running during a blue/green migration until external callers have moved.
 
 Server-side web requests use the `S0_API` service binding, not the public origin. The combined stack
 binds the API it creates; a separate web stack references `S0Api` in the same stage, so deploy the
@@ -92,8 +91,7 @@ base, never a service-binding origin. Workflow/webhook IDs do not change. Update
 OAuth provider callbacks, GitHub App webhooks and Slack request URLs when moving public domains.
 Auth callbacks stay under the web origin's `/api/auth`, without a doubled `/api` prefix.
 
-`nub run test:config` includes owned local Worker transport tests. The full browser suite's profile
-selects same-origin mode; run that suite and review deployed routes, OAuth, signed webhooks,
+`nub run test:config` includes owned local Worker transport tests. Run the full browser suite and review deployed routes, OAuth, signed webhooks,
 streaming, WebSockets and observability before cutting over a production hostname.
 
 ## Private deployment CI

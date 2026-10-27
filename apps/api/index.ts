@@ -355,10 +355,8 @@ export default class Api extends WorkerEntrypoint {
     const tracedCtx = tracedExecutionContext(this.ctx)
     const stageMetadata = getStageMetadataSync(env)
     const url = new URL(request.url)
-    if (stageMetadata.infra.apiRouting === "same-origin") {
-      url.pathname = canonicalApiPath(url.pathname)
-      request = new Request(url, request)
-    }
+    url.pathname = canonicalApiPath(url.pathname)
+    request = new Request(url, request)
 
     const observer = createApiRequestObserver(request, env, tracedCtx)
 

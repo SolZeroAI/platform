@@ -46,7 +46,7 @@ export interface CreateS0Options {
 export type CreateS0ApiOptions = CreateS0Options
 
 export interface CreateS0WebOptions {
-  apiWorker?: Cloudflare.Worker
+  apiWorker: Cloudflare.Worker
   appName: string
   brand: S0BrandConfig
   stageMetadata: StageMetadata
@@ -269,11 +269,7 @@ export function createS0Web(options: CreateS0WebOptions) {
 export function createS0(options: CreateS0Options) {
   return Effect.gen(function* () {
     const api = yield* createS0Api(options)
-    const apiWorker = Match.value(options.stageMetadata.infra.apiRouting).pipe(
-      Match.when("same-origin", () => api.api),
-      Match.orElse(() => undefined),
-    )
-    const web = yield* createS0Web({ ...options, apiWorker })
+    const web = yield* createS0Web({ ...options, apiWorker: api.api })
 
     return { ...api, web }
   })

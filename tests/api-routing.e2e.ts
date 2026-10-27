@@ -12,60 +12,57 @@ import { OpenApi } from "effect/http-api"
 import { apiForBrand } from "../packages/api/src/http"
 import { exampleDeploymentConfig } from "./support/deployment-config"
 
-function configured(mode?: "same-origin" | "subdomain") {
+function configured() {
   const source = exampleDeploymentConfig()
+
   return resolveS0Config({
     ...source,
-    deployment: {
-      ...source.deployment,
-      zone: "example.test",
-      webFqdn: "agent.example.test",
-      apiRouting: mode,
-    },
+    deployment: { ...source.deployment, zone: "example.test", webFqdn: "agent.example.test" },
   })
 }
 
-test("API routing defaults to separate domains and rejects ambiguous same-origin host configuration", async () => {
-  const config = configured()
-  const stage = getStageMetadataFromConfigSync("prod", config.deployment, config.application)
-  expect(stage.infra.apiRouting).toBe("subdomain")
-  expect(stage.infra.serverUrl).toBe("https://api.agent.example.test")
-  expect(stage.infra.apiDomains).toEqual(["api.agent.example.test"])
-  expect(stage.infra.apiRoutes).toEqual([])
+test("API configuration has no separate API hostname", async () => {
+  const source = exampleDeploymentConfig()
   let error = ""
+
   try {
     resolveS0Config({
-      ...config,
-      deployment: { ...config.deployment, apiRouting: "same-origin", apiFqdn: "api.example.test" },
+      ...source,
+      deployment: { ...source.deployment, apiFqdn: "api.example.test" },
     })
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Unexpected error"
   }
-  expect(error).toContain("must omit deployment.apiFqdn")
+
+  expect(error).toContain("apiFqdn")
 })
 
-test("same-origin metadata binds only API paths and keeps public URLs distinct from internal transport", async () => {
-  const config = configured("same-origin")
+test("stage metadata binds only API paths and keeps public URLs distinct from internal transport", async () => {
+  const config = configured()
+
   for (const name of ["pre", "pre-123", "prod"]) {
     const stage = getStageMetadataFromConfigSync(name, config.deployment, config.application)
     expect(stage.infra.serverUrl).toBe("https://agent.example.test/api")
     expect(stage.infra.authBaseUrl).toBe("https://agent.example.test")
-    expect(stage.infra.apiDomains).toEqual([])
     expect(stage.infra.webDomains).toEqual(["agent.example.test"])
     expect(stage.infra.apiRoutes).toEqual(["agent.example.test/api", "agent.example.test/api/*"])
   }
+
   const local = getStageMetadataFromConfigSync("dev", config.deployment, config.application)
   expect(local.infra.serverUrl).toBe("http://localhost:3000/api")
   expect(local.infra.apiRoutes).toEqual([])
+
   const remoteLocal = getStageMetadataFromConfigSync(
     "pre-123",
     { ...config.deployment, zone: "localhost" },
     config.application,
   )
+
   const workersDev = withWorkersDevOrigins(remoteLocal, {
     appName: "fixture",
     subdomain: "account",
   })
+
   expect(workersDev.infra.serverUrl).toBe("https://fixture-web-pre-123.account.workers.dev/api")
   expect(workersDev.infra.apiRoutes).toEqual([])
 })
@@ -104,7 +101,9 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
     target: "es2022",
     write: false,
   })
+
   const script = bundle.outputFiles[0].text
+
   const runtime = new Miniflare(
     convertV4MiniflareOptions({
       port: 0,
@@ -128,10 +127,12 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
       ],
     }),
   )
+
   try {
     await runtime.ready
     // Ephemeral transport markers, not credentials accepted by an auth service.
     const marker = crypto.randomUUID()
+
     const response = await runtime.dispatchFetch(
       "https://public.example/api/workflows/webhooks/original-id?value=a%2Fb",
       {
@@ -145,6 +146,7 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
         body: new Uint8Array([0, 255, 10, 13, 123, 125]),
       },
     )
+
     expect(await response.json()).toEqual({
       pathname: "/workflows/webhooks/original-id",
       search: "?value=a%2Fb",
@@ -155,6 +157,7 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
       signature: marker,
       body: [0, 255, 10, 13, 123, 125],
     })
+
     const withoutBrowserSession = await runtime.dispatchFetch(
       "https://public.example/api/github/webhook",
       {
@@ -163,10 +166,13 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
         headers: { "x-hub-signature-256": marker },
       },
     )
+
     expect(await withoutBrowserSession.json()).toMatchObject({ cookie: null })
+
     const redirect = await runtime.dispatchFetch("https://public.example/api/redirect", {
       redirect: "manual",
     })
+
     expect(redirect.status).toBe(302)
     expect(redirect.headers.get("location")).toBe("/api/auth/callback/fixture")
     expect(redirect.headers.getSetCookie()).toHaveLength(2)
@@ -177,17 +183,22 @@ test("real Worker service binding preserves auth, raw webhook bodies, streaming,
     expect(new TextDecoder().decode(first.value)).toBe("data: first\n\n")
     // There is no EOF: buffering at the web boundary would never yield this chunk.
     await reader.cancel()
+
     const upgraded = await runtime.dispatchFetch("https://public.example/api/socket", {
       headers: { Upgrade: "websocket" },
     })
+
     expect(upgraded.status).toBe(101)
     const socket = upgraded.webSocket
     expect(socket).toBeDefined()
+
     if (!socket) throw new Error("Missing WebSocket upgrade")
     socket.accept()
+
     const echoed = new Promise((accept) =>
       socket.addEventListener("message", (event) => accept(event.data), { once: true }),
     )
+
     socket.send("round-trip")
     expect(await echoed).toBe("round-trip")
     socket.close(1000)

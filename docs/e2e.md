@@ -13,8 +13,8 @@ allocation. These checks cover raw bodies and credential headers, redirects, mul
 an open SSE response and WebSocket round-trips. They do not validate application authentication
 or external OAuth providers against the transport fixture.
 
-The full application profile (`config/e2e-dev.config.jsonc`) selects same-origin routing. Its
-sign-in, public health/OpenAPI and API-key checks use `http://localhost:3000/api`. Full execution
+The full application profile's sign-in, public health/OpenAPI and API-key checks use
+`http://localhost:3000/api`. Full execution
 of this routing revision remains pending approval for isolated Cloudflare resources and Docker;
 earlier green runs do not prove this revision. Deployed path-route precedence, live OAuth,
 signed external webhooks and provider/observability smoke checks remain cutover gates. A stacked

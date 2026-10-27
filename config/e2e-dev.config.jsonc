@@ -13,9 +13,7 @@
   "deployment": {
     "appName": "s0-e2e",
     "zone": "localhost",
-    "apiRouting": "same-origin",
     // "webFqdn": "ai.example.com",
-    // "apiFqdn": "api.ai.example.com",
     "useApiShield": false,
     "observability": {
       "logsDestinations": [],
