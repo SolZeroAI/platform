@@ -5,7 +5,7 @@
   "labels": ["dependencies"],
   "prConcurrentLimit": 10,
   "postUpgradeTasks": {
-    "commands": ["nub install --no-frozen-lockfile"],
+    "commands": ["nub install --no-frozen-lockfile --ignore-scripts"],
     "fileFilters": ["nub.lock"],
     "executionMode": "branch"
   },

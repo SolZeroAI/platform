@@ -30,7 +30,7 @@ jobs:
 
       # Renovate runs as the solzero-bot App. An App token, unlike
       # GITHUB_TOKEN, starts pull_request workflows on the PRs it opens.
-      - name: Create release App token
+      - name: Create solzero-bot token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
@@ -38,9 +38,17 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+          permission-checks: read
+          permission-statuses: read
+          permission-vulnerability-alerts: read
 
       # Renovate has no nub manager. It edits package.json, then the
-      # postUpgradeTasks in renovate.json run `nub install` to refresh nub.lock.
+      # postUpgradeTasks in renovate.json run `nub install` without
+      # lifecycle scripts to refresh nub.lock.
       - name: Run Renovate
         env:
           RENOVATE_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -48,6 +56,6 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: required
-          RENOVATE_ALLOWED_COMMANDS: '["^nub install --no-frozen-lockfile$"]'
+          RENOVATE_ALLOWED_COMMANDS: '["^nub install --no-frozen-lockfile --ignore-scripts$"]'
           LOG_LEVEL: info
         run: npx --yes renovate@44.188.2
