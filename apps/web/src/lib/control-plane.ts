@@ -5,21 +5,16 @@
  */
 
 import { env } from "cloudflare:workers"
-import { getStageMetadataSync } from "@solzero/shared"
+import { forwardApiRequest } from "./api-transport"
 
-function getWebStageMetadata() {
-  return getStageMetadataSync(env)
+/** Forward a public `/api` request to the API Worker through the S0_API service binding. */
+export function forwardPublicApiRequest(request: Request): Promise<Response> {
+  return forwardApiRequest(request, env.S0_API)
 }
 
-/**
- * Get the control plane URL for the current stage.
- */
-export function getControlPlaneUrl(): string {
-  return getWebStageMetadata().infra.serverUrl
-}
-
-export function getWebAppUrl(): string {
-  return getWebStageMetadata().infra.authBaseUrl
+/** Paths here are canonical Worker paths, not public URLs; SSR never fetches its own /api route. */
+export function fetchControlPlane(path: string, init?: RequestInit): Promise<Response> {
+  return forwardPublicApiRequest(new Request(new URL(path, "https://s0-api.internal"), init))
 }
 
 export function getControlPlaneHeaders(init?: HeadersInit): Headers {

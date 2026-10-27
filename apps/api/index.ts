@@ -1,7 +1,7 @@
 /* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/effect-run-in-body -- Worker entrypoint and container outbound handlers are imperative runtime boundaries around Effect-based services. */
 import { WorkerEntrypoint, tracing } from "cloudflare:workers"
 import { Container, ContainerProxy, type OutboundHandler } from "@cloudflare/containers"
-import { getStageMetadataSync } from "@solzero/shared"
+import { canonicalApiPath, getStageMetadataSync } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import {
@@ -351,10 +351,12 @@ function workflowActionBaseContext(
 
 export default class Api extends WorkerEntrypoint {
   async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url)
     const env = this.env
     const tracedCtx = tracedExecutionContext(this.ctx)
     const stageMetadata = getStageMetadataSync(env)
+    const url = new URL(request.url)
+    url.pathname = canonicalApiPath(url.pathname)
+    request = new Request(url, request)
 
     const observer = createApiRequestObserver(request, env, tracedCtx)
 

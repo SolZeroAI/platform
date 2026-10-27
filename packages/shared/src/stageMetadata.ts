@@ -26,7 +26,6 @@ export type AlchemyStateStoreKind = "local" | "cloudflare"
 export interface StageInfraConfig {
   readonly zone: Option.Option<string>
   readonly webFqdn: Option.Option<string>
-  readonly apiFqdn: Option.Option<string>
   readonly apiObservabilityLogsDestinations: Option.Option<readonly string[]>
   readonly apiObservabilityTracesDestinations: Option.Option<readonly string[]>
   readonly apiObservabilityLogsHeadSamplingRate: Option.Option<number>
@@ -38,7 +37,6 @@ export interface StageInfraConfig {
 const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
   zone: Option.none(),
   webFqdn: Option.none(),
-  apiFqdn: Option.none(),
   apiObservabilityLogsDestinations: Option.none(),
   apiObservabilityTracesDestinations: Option.none(),
   apiObservabilityLogsHeadSamplingRate: Option.none(),
@@ -58,7 +56,6 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
   return {
     zone: nonEmptyStringOption(config.zone),
     webFqdn: nonEmptyStringOption(config.webFqdn),
-    apiFqdn: nonEmptyStringOption(config.apiFqdn),
     apiObservabilityLogsDestinations: Option.some(config.observability.logsDestinations),
     apiObservabilityTracesDestinations: Option.some(config.observability.tracesDestinations),
     apiObservabilityLogsHeadSamplingRate: Option.some(config.observability.logsHeadSamplingRate),
@@ -72,8 +69,10 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
 
 export interface InfraStageProps {
   readonly zone: string
-  /** Public origin for the API / control plane for this stage. */
+  /** Public API base URL: the web origin's `/api` path. */
   readonly serverUrl: string
+  /** Public web-origin path routes bound directly to the API Worker. */
+  readonly apiRoutes: readonly string[]
   /**
    * Public origin Better Auth should use when generating OAuth callbacks and
    * other browser-facing auth URLs. In local dev this is the web app origin,
@@ -86,8 +85,6 @@ export interface InfraStageProps {
    * the worker on LOCAL_API_PORT (3100).
    */
   readonly authTrustedOrigins: readonly string[]
-  /** Custom domains to bind to the API worker for this stage. */
-  readonly apiDomains: readonly string[]
   /** Custom domains to bind to the web worker for this stage. */
   readonly webDomains: readonly string[]
   readonly useApiShield: boolean
@@ -152,10 +149,10 @@ export interface StageProps {
 // oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
 const InfraStagePropsSchema = Schema.Struct({
   zone: Schema.String,
+  apiRoutes: Schema.Array(Schema.String),
   serverUrl: Schema.String,
   authBaseUrl: Schema.String,
   authTrustedOrigins: Schema.Array(Schema.String),
-  apiDomains: Schema.Array(Schema.String),
   webDomains: Schema.Array(Schema.String),
   useApiShield: Schema.Boolean,
   internalMcpOrigin: Schema.String,
@@ -277,15 +274,19 @@ function localInfraStageProps(
   consoleOutputEnabled: boolean,
 ): InfraStageProps {
   const zone = "localhost"
-  const serverUrl = `http://${zone}:${LOCAL_API_PORT}`
   const authBaseUrl = "http://localhost:3000"
 
   return {
     zone,
-    serverUrl,
+    apiRoutes: [],
+    serverUrl: `${authBaseUrl}/api`,
     authBaseUrl,
-    authTrustedOrigins: [serverUrl, authBaseUrl, "http://127.0.0.1:3000", "http://[::1]:3000"],
-    apiDomains: [],
+    authTrustedOrigins: [
+      `http://${zone}:${LOCAL_API_PORT}`,
+      authBaseUrl,
+      "http://127.0.0.1:3000",
+      "http://[::1]:3000",
+    ],
     webDomains: [],
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
     internalMcpOrigin: INTERNAL_MCP_LOCAL_ORIGIN,
@@ -348,17 +349,14 @@ function deployedInfraStageProps(input: {
   })
 
   const webFqdn = Option.getOrElse(config.webFqdn, () => defaultWebFqdn)
-  const defaultApiFqdn = `api.${webFqdn}`
-  const apiFqdn = Option.getOrElse(config.apiFqdn, () => defaultApiFqdn)
-  const serverUrl = `https://${apiFqdn}`
   const authBaseUrl = `https://${webFqdn}`
 
   return {
     zone,
-    serverUrl,
+    apiRoutes: [`${webFqdn}/api`, `${webFqdn}/api/*`],
+    serverUrl: `${authBaseUrl}/api`,
     authBaseUrl,
     authTrustedOrigins: [authBaseUrl],
-    apiDomains: [apiFqdn],
     webDomains: [webFqdn],
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
     internalMcpOrigin: INTERNAL_MCP_INTERNAL_ORIGIN,
@@ -535,7 +533,7 @@ export function deployedWebWorkerName(appName: string, stageName: string): strin
 
 /**
  * A deployed stage whose zone is `localhost` has no custom domain. Serve the
- * web and API workers on the account workers.dev subdomain instead.
+ * web worker on the account workers.dev subdomain; the API stays at its `/api` path.
  */
 export function withWorkersDevOrigins(
   metadata: StageMetadata,
@@ -554,7 +552,6 @@ export function withWorkersDevOrigins(
     )
   }
 
-  const serverUrl = `https://${deployedApiWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
   const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
 
   return stageMetadataFromBinding({
@@ -563,10 +560,10 @@ export function withWorkersDevOrigins(
     app: metadata.app,
     infra: {
       ...metadata.infra,
-      serverUrl,
+      serverUrl: `${authBaseUrl}/api`,
       authBaseUrl,
       authTrustedOrigins: [authBaseUrl],
-      apiDomains: [],
+      apiRoutes: [],
       webDomains: [],
     },
   })

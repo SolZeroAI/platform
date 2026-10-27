@@ -73,7 +73,6 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   appName: Schema.String,
   zone: Schema.String,
   webFqdn: Schema.optional(Schema.String),
-  apiFqdn: Schema.optional(Schema.String),
   useApiShield: Schema.Boolean,
   planetscale: Schema.optional(S0PlanetscaleConfigSchema),
   observability: Schema.Struct({
@@ -457,8 +456,6 @@ function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
     zone: decoded.deployment.zone.trim(),
     webFqdn:
       decoded.deployment.webFqdn === undefined ? undefined : decoded.deployment.webFqdn.trim(),
-    apiFqdn:
-      decoded.deployment.apiFqdn === undefined ? undefined : decoded.deployment.apiFqdn.trim(),
     observability: {
       ...decoded.deployment.observability,
       logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),

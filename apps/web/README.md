@@ -99,7 +99,7 @@ nub install
 nub run dev
 ```
 
-The web app runs at http://localhost:3000 and proxies API calls to the control plane at http://localhost:3100.
+The web app runs at http://localhost:3000 and forwards `/api` to the control plane through the `S0_API` service binding.
 
 If you want to run them separately:
 
@@ -135,7 +135,7 @@ if (!apiKey) {
 
 const client = new BackgroundSessionsClient({
   auth: { kind: "api-key", apiKey },
-  baseUrl: "http://localhost:3100",
+  baseUrl: "http://localhost:3000/api",
 })
 
 const session = await client.createSession({

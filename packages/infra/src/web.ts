@@ -29,6 +29,7 @@ export interface CreateWebOptions {
   deploymentMetadata: DeploymentMetadata
   repoRoot: string
   dev: boolean
+  apiWorker: Cloudflare.Worker
 }
 
 export function createWeb(options: CreateWebOptions) {
@@ -47,6 +48,7 @@ export function createWeb(options: CreateWebOptions) {
     },
     ...webDevOptions(dev),
     env: {
+      S0_API: Cloudflare.WorkerEntrypoint(options.apiWorker),
       STAGE: stageMetadata.name,
       VITE_STAGE: stageMetadata.name,
       VITE_APP_VERSION: deploymentMetadata.appVersion,

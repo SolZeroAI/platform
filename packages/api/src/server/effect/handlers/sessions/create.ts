@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { CreateSessionPayload, SessionKind } from "@solzero/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
+import { getInfraServerUrl, resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   ControlPlaneFailure,
   createSessionWithIdentity,
@@ -72,7 +72,7 @@ export function createSession(payload: CreateSessionPayload, forcedKind?: Sessio
         sessionKind,
         agentRuntime,
         source,
-        serverUrl: new URL(request.url).origin,
+        serverUrl: getInfraServerUrl(env),
         title: body.title ?? null,
         model: body.model,
         reasoningEffort: body.reasoningEffort ?? null,

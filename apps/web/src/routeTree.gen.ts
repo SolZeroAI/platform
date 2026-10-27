@@ -13,17 +13,17 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated.bots'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authenticated.workflows'
-import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated.bots'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthenticatedAdminAgentsRouteImport } from './routes/_authenticated.admin.agents'
 import { Route as AuthenticatedAdminAiSearchRouteImport } from './routes/_authenticated.admin.ai-search'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated.admin.integrations'
 import { Route as AuthenticatedAdminWorkflowsRouteImport } from './routes/_authenticated.admin.workflows'
+import { Route as AuthenticatedBotsBotIdRouteImport } from './routes/_authenticated.bots.$botId'
 import { Route as AuthenticatedSessionIdRouteImport } from './routes/_authenticated.session.$id'
 import { Route as AuthenticatedWorkflowsWorkflowIdRouteImport } from './routes/_authenticated.workflows.$workflowId'
-import { Route as AuthenticatedBotsBotIdRouteImport } from './routes/_authenticated.bots.$botId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -44,6 +44,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBotsRoute = AuthenticatedBotsRouteImport.update({
+  id: '/bots',
+  path: '/bots',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -52,11 +57,6 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedWorkflowsRoute = AuthenticatedWorkflowsRouteImport.update({
   id: '/workflows',
   path: '/workflows',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedBotsRoute = AuthenticatedBotsRouteImport.update({
-  id: '/bots',
-  path: '/bots',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -88,6 +88,11 @@ const AuthenticatedAdminWorkflowsRoute =
     path: '/workflows',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedBotsBotIdRoute = AuthenticatedBotsBotIdRouteImport.update({
+  id: '/$botId',
+  path: '/$botId',
+  getParentRoute: () => AuthenticatedBotsRoute,
+} as any)
 const AuthenticatedSessionIdRoute = AuthenticatedSessionIdRouteImport.update({
   id: '/session/$id',
   path: '/session/$id',
@@ -99,61 +104,56 @@ const AuthenticatedWorkflowsWorkflowIdRoute =
     path: '/$workflowId',
     getParentRoute: () => AuthenticatedWorkflowsRoute,
   } as any)
-const AuthenticatedBotsBotIdRoute = AuthenticatedBotsBotIdRouteImport.update({
-  id: '/$botId',
-  path: '/$botId',
-  getParentRoute: () => AuthenticatedBotsRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/access-denied': typeof AccessDeniedRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
-  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
   '/admin/agents': typeof AuthenticatedAdminAgentsRoute
   '/admin/ai-search': typeof AuthenticatedAdminAiSearchRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/workflows': typeof AuthenticatedAdminWorkflowsRoute
+  '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/session/$id': typeof AuthenticatedSessionIdRoute
   '/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
-  '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
 }
 export interface FileRoutesByTo {
   '/access-denied': typeof AccessDeniedRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
-  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/agents': typeof AuthenticatedAdminAgentsRoute
   '/admin/ai-search': typeof AuthenticatedAdminAiSearchRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/workflows': typeof AuthenticatedAdminWorkflowsRoute
+  '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/session/$id': typeof AuthenticatedSessionIdRoute
   '/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
-  '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/access-denied': typeof AccessDeniedRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/bots': typeof AuthenticatedBotsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
-  '/_authenticated/bots': typeof AuthenticatedBotsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/agents': typeof AuthenticatedAdminAgentsRoute
   '/_authenticated/admin/ai-search': typeof AuthenticatedAdminAiSearchRoute
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/workflows': typeof AuthenticatedAdminWorkflowsRoute
+  '/_authenticated/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/_authenticated/session/$id': typeof AuthenticatedSessionIdRoute
   '/_authenticated/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
-  '/_authenticated/bots/$botId': typeof AuthenticatedBotsBotIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,50 +161,50 @@ export interface FileRouteTypes {
     | '/'
     | '/access-denied'
     | '/admin'
+    | '/bots'
     | '/settings'
     | '/workflows'
-    | '/bots'
     | '/api/$'
     | '/admin/agents'
     | '/admin/ai-search'
     | '/admin/integrations'
     | '/admin/workflows'
+    | '/bots/$botId'
     | '/session/$id'
     | '/workflows/$workflowId'
-    | '/bots/$botId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/access-denied'
     | '/admin'
+    | '/bots'
     | '/settings'
     | '/workflows'
-    | '/bots'
     | '/api/$'
     | '/'
     | '/admin/agents'
     | '/admin/ai-search'
     | '/admin/integrations'
     | '/admin/workflows'
+    | '/bots/$botId'
     | '/session/$id'
     | '/workflows/$workflowId'
-    | '/bots/$botId'
   id:
     | '__root__'
     | '/_authenticated'
     | '/access-denied'
     | '/_authenticated/admin'
+    | '/_authenticated/bots'
     | '/_authenticated/settings'
     | '/_authenticated/workflows'
-    | '/_authenticated/bots'
     | '/api/$'
     | '/_authenticated/'
     | '/_authenticated/admin/agents'
     | '/_authenticated/admin/ai-search'
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/workflows'
+    | '/_authenticated/bots/$botId'
     | '/_authenticated/session/$id'
     | '/_authenticated/workflows/$workflowId'
-    | '/_authenticated/bots/$botId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bots': {
+      id: '/_authenticated/bots'
+      path: '/bots'
+      fullPath: '/bots'
+      preLoaderRoute: typeof AuthenticatedBotsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -255,13 +262,6 @@ declare module '@tanstack/react-router' {
       path: '/workflows'
       fullPath: '/workflows'
       preLoaderRoute: typeof AuthenticatedWorkflowsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/bots': {
-      id: '/_authenticated/bots'
-      path: '/bots'
-      fullPath: '/bots'
-      preLoaderRoute: typeof AuthenticatedBotsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/api/$': {
@@ -299,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminWorkflowsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/bots/$botId': {
+      id: '/_authenticated/bots/$botId'
+      path: '/$botId'
+      fullPath: '/bots/$botId'
+      preLoaderRoute: typeof AuthenticatedBotsBotIdRouteImport
+      parentRoute: typeof AuthenticatedBotsRoute
+    }
     '/_authenticated/session/$id': {
       id: '/_authenticated/session/$id'
       path: '/session/$id'
@@ -312,13 +319,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/workflows/$workflowId'
       preLoaderRoute: typeof AuthenticatedWorkflowsWorkflowIdRouteImport
       parentRoute: typeof AuthenticatedWorkflowsRoute
-    }
-    '/_authenticated/bots/$botId': {
-      id: '/_authenticated/bots/$botId'
-      path: '/$botId'
-      fullPath: '/bots/$botId'
-      preLoaderRoute: typeof AuthenticatedBotsBotIdRouteImport
-      parentRoute: typeof AuthenticatedBotsRoute
     }
   }
 }
@@ -340,6 +340,17 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedBotsRouteChildren {
+  AuthenticatedBotsBotIdRoute: typeof AuthenticatedBotsBotIdRoute
+}
+
+const AuthenticatedBotsRouteChildren: AuthenticatedBotsRouteChildren = {
+  AuthenticatedBotsBotIdRoute: AuthenticatedBotsBotIdRoute,
+}
+
+const AuthenticatedBotsRouteWithChildren =
+  AuthenticatedBotsRoute._addFileChildren(AuthenticatedBotsRouteChildren)
+
 interface AuthenticatedWorkflowsRouteChildren {
   AuthenticatedWorkflowsWorkflowIdRoute: typeof AuthenticatedWorkflowsWorkflowIdRoute
 }
@@ -355,32 +366,20 @@ const AuthenticatedWorkflowsRouteWithChildren =
     AuthenticatedWorkflowsRouteChildren,
   )
 
-interface AuthenticatedBotsRouteChildren {
-  AuthenticatedBotsBotIdRoute: typeof AuthenticatedBotsBotIdRoute
-}
-
-const AuthenticatedBotsRouteChildren: AuthenticatedBotsRouteChildren = {
-  AuthenticatedBotsBotIdRoute: AuthenticatedBotsBotIdRoute,
-}
-
-const AuthenticatedBotsRouteWithChildren = AuthenticatedBotsRoute._addFileChildren(
-  AuthenticatedBotsRouteChildren,
-)
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedBotsRoute: typeof AuthenticatedBotsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRouteWithChildren
-  AuthenticatedBotsRoute: typeof AuthenticatedBotsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedSessionIdRoute: typeof AuthenticatedSessionIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedBotsRoute: AuthenticatedBotsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRouteWithChildren,
-  AuthenticatedBotsRoute: AuthenticatedBotsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedSessionIdRoute: AuthenticatedSessionIdRoute,
 }

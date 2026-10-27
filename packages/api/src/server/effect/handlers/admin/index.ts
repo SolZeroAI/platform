@@ -1,4 +1,4 @@
-import { getInfraServerUrl } from "@solzero/shared"
+import { getInfraServerUrl, publicApiUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -83,7 +83,7 @@ function formatWorkflowForAdmin(workflow: AdminWorkflowRecord, serverUrl: string
     manifestVersion: workflow.manifestVersion,
     webhookId: workflow.webhookId,
     webhookPath,
-    webhookUrl: new URL(webhookPath, serverUrl).toString(),
+    webhookUrl: publicApiUrl(serverUrl, webhookPath),
     createdAt: workflow.createdAt,
     updatedAt: workflow.updatedAt,
     latestRun: workflow.latestRun,

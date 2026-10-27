@@ -6,6 +6,20 @@ Objects, KV, R2, and the web application. The stack uses the isolated `e2e` conf
 profile with the existing `dev` stage, web port 3000, and API port 3100. Stop other stacks
 on these ports before running the suite. Existing applications are never reused.
 
+## Same-origin API routing proof
+
+`nub run test:config` includes local workerd service-binding transport checks without cloud
+allocation. These checks cover raw bodies and credential headers, redirects, multiple cookies,
+an open SSE response and WebSocket round-trips. They do not validate application authentication
+or external OAuth providers against the transport fixture.
+
+The full application profile's sign-in, public health/OpenAPI and API-key checks use
+`http://localhost:3000/api`. Full execution
+of this routing revision remains pending approval for isolated Cloudflare resources and Docker;
+earlier green runs do not prove this revision. Deployed path-route precedence, live OAuth,
+signed external webhooks and provider/observability smoke checks remain cutover gates. A stacked
+PR whose base is not `master` does not trigger the master-only Validate workflow automatically.
+
 ## Run locally
 
 `nub run test:config` runs account-free configuration and offline migration contracts in the same runner,

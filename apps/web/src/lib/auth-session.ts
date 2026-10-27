@@ -1,4 +1,4 @@
-import { getControlPlaneHeaders, getControlPlaneUrl } from "@/lib/control-plane"
+import { getControlPlaneHeaders, fetchControlPlane } from "@/lib/control-plane"
 import type { AppSession } from "@/lib/auth-session-state"
 
 export interface AuthSessionContext extends AppSession {
@@ -22,7 +22,7 @@ function isAuthSessionContext(value: unknown): value is AuthSessionContext {
 export async function getAuthSessionContext(request: Request): Promise<AuthSessionContext | null> {
   const cookie = request.headers.get("cookie")
 
-  const response = await fetch(`${getControlPlaneUrl().replace(/\/+$/, "")}/auth/session`, {
+  const response = await fetchControlPlane("/auth/session", {
     headers: await getControlPlaneHeaders(cookie ? { Cookie: cookie } : undefined),
   })
 

@@ -16,7 +16,6 @@
     "appName": "s0",
     "zone": "localhost",
     // "webFqdn": "ai.example.com",
-    // "apiFqdn": "api.ai.example.com",
     "useApiShield": false,
     // Control-plane engine is process env DATABASE (alchemy.new select): d1 | planetscale.
     // Omit DATABASE or set d1 for Cloudflare D1. PlanetScale is not a deployment provider.

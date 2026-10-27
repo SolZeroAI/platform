@@ -1,4 +1,5 @@
 import type { WorkflowSlackAppCredentialsPayload } from "@solzero/api"
+import { getInfraServerUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import { readWorkflowManifest } from "../../../background/workflows/artifacts"
 import {
@@ -38,10 +39,6 @@ function formatSlackAppSetup(setup: WorkflowSlackAppSetup) {
   }
 }
 
-function publicServerUrl(request: Request): string {
-  return new URL(request.url).origin
-}
-
 export function getWorkflowSlackApp({ params }: { params: { id: string } }) {
   return runControlPlane(
     Effect.fn("workflows.slackApp.get")(function* (context) {
@@ -52,7 +49,7 @@ export function getWorkflowSlackApp({ params }: { params: { id: string } }) {
         env: context.env,
         workflow,
         manifest,
-        serverUrl: publicServerUrl(context.request),
+        serverUrl: getInfraServerUrl(context.env),
       })
 
       return json({ slackApp: formatSlackAppSetup(setup) })
@@ -73,7 +70,7 @@ export function updateWorkflowSlackAppCredentials(input: {
         env: context.env,
         workflow,
         manifest,
-        serverUrl: publicServerUrl(context.request),
+        serverUrl: getInfraServerUrl(context.env),
       })
 
       const status = yield* storeWorkflowSlackAppCredentials({

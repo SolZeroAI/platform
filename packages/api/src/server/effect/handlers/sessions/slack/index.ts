@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import type { ApiEnv } from "infra/types/env"
 import type { SlackCreateSessionPayload } from "@solzero/api"
-import { resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
+import { getInfraServerUrl, resolveAgentRuntime, sessionKindForAgentRuntime } from "@solzero/shared"
 import {
   type AuthPrincipal,
   ControlPlaneFailure,
@@ -93,7 +93,7 @@ export const createSlackSessionForPayload = Effect.fn("sessions.slack.createForP
       sessionKind,
       agentRuntime,
       source: "slack",
-      serverUrl: new URL(input.request.url).origin,
+      serverUrl: getInfraServerUrl(input.env),
       title: input.payload.title ?? null,
       model: input.payload.model,
       reasoningEffort: input.payload.reasoningEffort ?? null,

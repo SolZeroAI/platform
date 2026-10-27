@@ -1,4 +1,5 @@
 import type { WorkflowManifest, WorkflowManifestNode } from "@solzero/shared"
+import { publicApiUrl } from "@solzero/shared"
 import { generateId } from "../auth/crypto"
 import { parseJson } from "../../lib/json"
 import { toError } from "../../lib/effect-errors"
@@ -285,12 +286,12 @@ export function buildWorkflowSlackRequestUrls(input: {
   const appPath = `/workflows/slack-apps/${encodeURIComponent(input.appId)}`
 
   return {
-    events: new URL(`${appPath}/events`, input.serverUrl).toString(),
-    interactions: new URL(`${appPath}/interactions`, input.serverUrl).toString(),
+    events: publicApiUrl(input.serverUrl, `${appPath}/events`),
+    interactions: publicApiUrl(input.serverUrl, `${appPath}/interactions`),
     commands: Object.fromEntries(
       Arr.map(input.commandIds ?? [], (commandId) => [
         commandId,
-        new URL(`${appPath}/commands/${encodeURIComponent(commandId)}`, input.serverUrl).toString(),
+        publicApiUrl(input.serverUrl, `${appPath}/commands/${encodeURIComponent(commandId)}`),
       ]),
     ),
   }

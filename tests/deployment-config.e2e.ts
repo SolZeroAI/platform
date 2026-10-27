@@ -97,7 +97,6 @@ test("profile validation and stage URLs select the same complete named file", as
         ...source.deployment,
         zone: "example.test",
         webFqdn: "agent.example.test",
-        apiFqdn: "api.agent.example.test",
       },
     },
     (fixture) => {
