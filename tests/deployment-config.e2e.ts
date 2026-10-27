@@ -125,6 +125,7 @@ test("the stage secret writer includes only active references without printing t
 
   withConfigFixture(configured, (fixture) => {
     const value = randomBytes(48).toString("base64url")
+
     writeFileSync(fixture.varsPath, "UNREFERENCED_TOKEN=\n")
     chmodSync(fixture.varsPath, 0o644)
     const written = fixture.run(["write-stage-vars", "pre", fixture.varsPath], {
