@@ -530,14 +530,14 @@ function normalizeSessionSource(value: string | null | undefined): SessionInitia
   )
 }
 
-// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+// oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
 function runSessionIndexEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.
   return Effect.runPromise(effect)
 }
 
 function runSessionIndexOption<A>(
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
   effect: Effect.Effect<Option.Option<A>, D1Error>,
 ): Promise<A | null> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.

@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/prefer-option-over-null, effect/avoid-direct-json, effect/avoid-try-catch, effect/effect-run-in-body, effect/imperative-loops -- This module is the D1, R2, and untrusted SKILL.md package boundary; explicit validation, pagination, compensation, and cleanup ordering stay local and imperative. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/no-return-in-arrow, solzero/prefer-option-over-null, effect/avoid-direct-json, effect/avoid-try-catch, effect/effect-run-in-body, effect/imperative-loops -- This module is the D1, R2, and untrusted SKILL.md package boundary; explicit validation, pagination, compensation, and cleanup ordering stay local and imperative. */
 import { and, asc, eq, isNull, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"

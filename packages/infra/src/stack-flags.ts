@@ -1,4 +1,4 @@
-/* oxlint-disable effect/avoid-process-env, s0-lint/no-if-statement -- Stack flavor selection reads DATABASE and APP_DB_MODE before Alchemy context exists. Service-token bind is only for remote planetscale. */
+/* oxlint-disable effect/avoid-process-env, solzero/no-if-statement -- Stack flavor selection reads DATABASE and APP_DB_MODE before Alchemy context exists. Service-token bind is only for remote planetscale. */
 import { APP_DB_MODE_ENV, DATABASE_ENV } from "@solzero/shared"
 import {
   appDbModeForStage,

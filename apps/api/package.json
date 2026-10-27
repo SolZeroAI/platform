@@ -7,9 +7,7 @@
   "scripts": {
     "dev": "nub run --cwd ../../packages/infra dev:api",
     "build": "tsc --noEmit -p tsconfig.json",
-    "typecheck": "tsrs --noEmit -p tsconfig.json",
-    "lint": "NODE_OPTIONS='--import tsx' oxlint index.ts src infra",
-    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix index.ts src infra"
+    "typecheck": "tsrs --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",

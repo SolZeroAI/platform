@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Control-plane dialect selection is an imperative adapter boundary between D1 sqlite and Hyperdrive postgres. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/no-return-in-arrow -- Control-plane dialect selection is an imperative adapter boundary between D1 sqlite and Hyperdrive postgres. */
 import { AsyncLocalStorage } from "node:async_hooks"
 import { defineRelations } from "drizzle-orm"
 import * as Context from "effect/Context"

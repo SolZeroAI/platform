@@ -214,7 +214,7 @@ function runIsolateTool<A, E>(
   context: IsolateToolContext,
   toolName: string,
   attributes: Record<string, string | number | boolean>,
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span runner: the `Effect<A, E>` parameter channel is intrinsic to forwarding the caller's tool effect into BackgroundTracing.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Generic span runner: the `Effect<A, E>` parameter channel is intrinsic to forwarding the caller's tool effect into BackgroundTracing.
   run: Effect.Effect<A, E>,
 ) {
   return Effect.gen(function* () {

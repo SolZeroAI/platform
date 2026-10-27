@@ -13,8 +13,6 @@
     "deploy:pre": "nub run --cwd ../../packages/infra deploy:web:pre",
     "deploy:prod": "nub run --cwd ../../packages/infra deploy:web:prod",
     "typecheck": "tsrs --noEmit",
-    "lint": "NODE_OPTIONS='--import tsx' oxlint src scripts vite.config.ts",
-    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src scripts vite.config.ts",
     "render:release": "tsx scripts/render-release-card.ts render-release"
   },
   "dependencies": {

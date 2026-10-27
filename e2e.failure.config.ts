@@ -1,4 +1,5 @@
 import config from "./e2e.config"
+
 export default {
   ...config,
   reporters: ["list", "junit", "markdown"],

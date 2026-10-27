@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/avoid-direct-json -- JSONC compilation is a synchronous deployment boundary; explicit validation keeps configuration failures path-specific. */
+/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-if-statement, solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null, effect/avoid-direct-json -- JSONC compilation is a synchronous deployment boundary; explicit validation keeps configuration failures path-specific. */
 import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
 import { AdminConfigSchema, normalizeAdminConfig, type AdminConfig } from "./admin"

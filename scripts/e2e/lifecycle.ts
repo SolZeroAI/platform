@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- This isolated Node process boundary validates durable ownership before invoking Alchemy and Docker CLIs. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- This isolated Node process boundary validates durable ownership before invoking Alchemy and Docker CLIs. */
 import { spawn, spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import {

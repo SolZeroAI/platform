@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-if-statement, s0-lint/no-ternary -- Secret references are synchronously validated while compiling deployment configuration. */
+/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-if-statement, solzero/no-ternary -- Secret references are synchronously validated while compiling deployment configuration. */
 import * as Schema from "effect/Schema"
 
 const ENVIRONMENT_BINDING_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/

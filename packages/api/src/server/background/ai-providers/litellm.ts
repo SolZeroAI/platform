@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-call-tower, s0-lint/no-effect-call-in-effect-arg, s0-lint/no-if-statement, s0-lint/no-match-effect-branch, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- LiteLLM model-info normalization is a defensive external JSON boundary with compact heuristics; keeping the parser local is clearer than splitting every guard into Effect-style combinators. */
+/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-effect-call-in-effect-arg, solzero/no-if-statement, solzero/no-match-effect-branch, solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null -- LiteLLM model-info normalization is a defensive external JSON boundary with compact heuristics; keeping the parser local is clearer than splitting every guard into Effect-style combinators. */
 import type { S0LitellmConfig, ReasoningEffort } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
