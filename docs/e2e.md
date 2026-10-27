@@ -183,7 +183,7 @@ human authorization.
 ## Coverage inventory
 
 The user-facing flow map lives under
-[`.cursor/skills/verify-solzero/features/`](../.cursor/skills/verify-solzero/features/README.md).
+[`.agents/skills/verify-solzero/features/`](../.agents/skills/verify-solzero/features/README.md).
 That directory is the single inventory of areas, feature files, and canonical
 `tests/**/*.e2e.ts` suites. Every executable test remains under `tests/**/*.e2e.ts`;
 shared fetch helpers call live endpoints with the test browser's cookies. Tests never
@@ -397,3 +397,12 @@ The latest local full core run passed 30/31 in 248.04 seconds (`01a10b68-abcc-7c
 The final read-only account inventory contained 19 gateways and 16 unrelated tokens, zero active run-owned tokens or pending journals, and HTTP 404 for the latest owned gateway and token. Five historical test tokens were matched to recorded ID hashes, creation times, exact names and account policies, then revoked with HTTP 404 verification. Fourteen historical unlabelled containers and seven proxies were preserved because ownership was unproven. Automatic hosted recovery inspected the canonical repository and found zero retained dedicated ownership archives; cross-host recovery of a nonempty archived run remains unexercised. Preview guards have read-only current-PR proof, but no nonempty remote preview teardown was performed. These are local/read-only proofs, not new hosted CI results.
 
 Hosted validation `37296872909` at `25c3903` passed static checks, actionlint, hosted-recovery initialization and cleanup, but core passed 30/31.
+
+## Rules for agents
+
+These rules moved here from `AGENTS.md`. They apply to every agent that runs or changes the suite.
+
+- Wrap fresh fixture data in e2e `unique(value)` action params so recordings substitute the current value. Keep choices that change the action flow as ordinary params. Prove warm action replay with `self-finalized` steps and zero model calls; API response-cache hits do not prove replay.
+- Default test commands automatically verify per-run local Alchemy, Docker, and simulator teardown. The launcher boots `alchemy dev` in the run directory and does not create a Cloudflare AI Gateway or account API token, so it does not read `CLOUDFLARE_API_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` stays because the decision model calls the account's default AI Gateway. The application does not receive the e2e token or gateway id. Keep private run journals until verified absent; never signal a reused PID/group or sweep shared simulator data. Publish durable child launch intent and self-registration before allocation; unresolved publication or failed process inspection must block storage removal. Run `nub run test:e2e:lifecycle` after lifecycle changes; hosted dispatch accepts `e2e_lifecycle=true`.
+- After the local test launcher stops, run `nub run test:e2e:cleanup` with the same credential file, account, profile and `CI` setting. Preserve unrelated resources; never bypass ownership guards. CI performs this cleanup automatically and restores exact pending ownership from completed producer-attempt artifacts before new allocations. Keep cancellation-safe ownership artifacts separate from diagnostic reports; never infer cleanup from a newer empty inventory.
+- Keep AI usage accounting content-free. Report only the suite's own decision-model usage from the e2e report. Do not record application inference in the app, the Worker, or the test report, and do not read the application's gateway logs. Preserve unknown token measurements. Upload sanitized usage summaries only; never raw logs or ledgers. Use the official @e2e-dev/github reporter for CI checks/comments and keep its GitHub token out of application children. Disable SDK telemetry with E2E_TELEMETRY_DISABLED=1.
