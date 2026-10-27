@@ -185,6 +185,8 @@ export type S0AuthConfig = typeof S0AuthConfigSchema.Type
 
 const S0ResolvedConfigFields = {
   schemaVersion: Schema.Literal(S0_CONFIG_SCHEMA_VERSION),
+  // "mock" answers Workers AI locally and provisions no account AI Gateway. Local e2e only.
+  aiGatewayLayer: Schema.optional(Schema.Literals(["live", "mock"])),
   deployment: S0DeploymentConfigSchema,
   application: S0ApplicationConfigSchema,
   admins: AdminConfigSchema,

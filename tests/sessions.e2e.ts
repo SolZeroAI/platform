@@ -139,8 +139,9 @@ for (const runtime of ["isolate", "opencode", "codex", "claude-code"]) {
       const body = {
         title: uniqueName(`e2e-${runtime}`),
         agentRuntime: runtime,
+        // The e2e stage's mock AI Gateway answers with the user's message.
         content: literalHello
-          ? "Reply with only hello. Do not call any tools."
+          ? "hello"
           : `Reply with only this marker: ${marker}. Do not call any external tools.`,
       }
 

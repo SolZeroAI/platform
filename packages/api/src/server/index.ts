@@ -56,6 +56,8 @@ export { handler as effectApiHandler } from "./effect/runtime"
 
 export { makeCloudflareContext } from "./effect/services/cloudflare"
 
+export { aiGatewayForEnv } from "./effect/services/ai-gateway"
+
 export {
   createApiRequestObserver,
   createNoopTracing,

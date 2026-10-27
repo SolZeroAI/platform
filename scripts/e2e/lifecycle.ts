@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, effect/avoid-native-fetch -- This isolated Node process boundary validates durable ownership before invoking Alchemy and Docker CLIs. */
+/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- This isolated Node process boundary validates durable ownership before invoking Alchemy and Docker CLIs. */
 import { spawn, spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import {
@@ -37,8 +37,6 @@ const Manifest = Schema.Struct({
   cliPid: Schema.optional(Schema.Number),
   cliLaunchId: Schema.optional(Schema.String),
   createdAt: Schema.String,
-  gatewayId: Schema.String,
-  tokenIds: Schema.Array(Schema.String),
   resources: Schema.Array(Schema.String),
   docker: Schema.optional(
     Schema.Array(
@@ -58,7 +56,6 @@ const appName = resolveS0Config(
 ).deployment.appName
 const ci = await Effect.runPromise(Config.Boolean("CI").pipe(Config.withDefault(false)))
 const account = process.env.CLOUDFLARE_ACCOUNT_ID ?? ""
-const gatewayForRun = (runId: string) => `${appName}${ci ? "-ci" : ""}-dev-${runId}`
 const Resource = Schema.Struct({
   resourceType: Schema.optional(Schema.String),
   providerMode: Schema.optional(Schema.String),
@@ -71,10 +68,8 @@ const Resource = Schema.Struct({
   ),
   attr: Schema.optional(
     Schema.Struct({
-      gatewayId: Schema.optional(Schema.String),
       name: Schema.optional(Schema.String),
       accountId: Schema.optional(Schema.String),
-      tokenId: Schema.optional(Schema.String),
     }),
   ),
 })
@@ -114,9 +109,6 @@ function save(manifest: RunManifest) {
     accountHash: createHash("sha256").update(manifest.account).digest("hex"),
     owner: manifest.runId,
     createdAt: manifest.createdAt,
-    gatewayId: manifest.gatewayId,
-    tokenName: `${manifest.appName}-dev-ai-gateway-run-${manifest.runId}`,
-    tokenIds: manifest.tokenIds,
     completed: Boolean(manifest.completedAt),
   }
   publishOwnership(
@@ -144,8 +136,6 @@ export function createRun() {
       ? Number(process.env.NODE_E2E_RUNNER_PID)
       : undefined,
     createdAt: new Date().toISOString(),
-    gatewayId: gatewayForRun(runId),
-    tokenIds: [],
     resources: [],
   }
   mkdirSync(resolve(root, runId, "stack"), { recursive: true, mode: 0o700 })
@@ -487,9 +477,12 @@ export function stackDirectory(run: RunManifest) {
 }
 export function alchemyCommand(command: "dev" | "destroy", run: RunManifest, prepared?: string) {
   const launch = command === "dev" ? (prepared ?? prepareLaunch("alchemy", run)) : undefined
+  // The e2e profile answers model calls inside the Worker, so local alchemy dev needs no deploy token.
+  const { CLOUDFLARE_API_TOKEN: _deployToken, npm_execpath: _execPath, ...env } = appEnvironment
+  // Alchemy selects Bun when npm_execpath contains "bun", which the Nub binary path can match.
   const options = {
     cwd: stackDirectory(run),
-    env: { ...appEnvironment, S0_E2E_RUN_ID: run.runId, S0_E2E_APP_CHILD: "1" },
+    env: { ...env, S0_E2E_APP_CHILD: "1" },
     stdio: "inherit" as const,
     detached: command === "dev",
   }
@@ -526,22 +519,7 @@ function capture(run: RunManifest) {
       )
     )
       throw new Error("Cleanup refused another account's state.")
-    if (resource.resourceType === "Cloudflare.AI.Gateway") {
-      if (
-        resource.props?.id !== run.gatewayId ||
-        (resource.attr?.gatewayId !== undefined && resource.attr.gatewayId !== run.gatewayId)
-      )
-        throw new Error("Cleanup refused an unrelated gateway.")
-    } else if (resource.resourceType === "Cloudflare.ApiToken.AccountApiToken") {
-      const name = `${run.appName}-dev-ai-gateway-run-${run.runId}`
-      if (
-        resource.props?.name !== name ||
-        (resource.attr?.name !== undefined && resource.attr.name !== name)
-      )
-        throw new Error("Cleanup refused an unrelated token.")
-      if (resource.attr?.tokenId && !run.tokenIds.includes(resource.attr.tokenId))
-        run = { ...run, tokenIds: [...run.tokenIds, resource.attr.tokenId] }
-    } else if (resource.providerMode !== "local" && resource.resourceType !== "Alchemy.Random")
+    if (resource.providerMode !== "local" && resource.resourceType !== "Alchemy.Random")
       throw new Error("Cleanup refused an unexpected remote resource.")
     if (
       resource.resourceType === "Cloudflare.Worker" &&
@@ -649,88 +627,12 @@ function cleanDocker(run: RunManifest) {
     remainingImages: 0,
   }
 }
-const TokenList = Schema.Struct({
-  success: Schema.Boolean,
-  result: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      name: Schema.String,
-      issued_on: Schema.String,
-      policies: Schema.Array(
-        Schema.Struct({
-          effect: Schema.String,
-          permission_groups: Schema.Array(Schema.Struct({ name: Schema.String })),
-          resources: Schema.Record(Schema.String, Schema.Json),
-        }),
-      ),
-    }),
-  ),
-  result_info: Schema.Struct({ total_count: Schema.Number }),
-})
-async function reconcileTokens(run: RunManifest) {
-  const createdAt = Date.parse(run.createdAt)
-  if (!Number.isFinite(createdAt))
-    throw new Error("Cleanup refused an invalid run creation timestamp.")
-  const ids = [...run.tokenIds]
-  let count = 0
-  for (let page = 1; page <= 100; page++) {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens?per_page=100&page=${page}`,
-      {
-        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    )
-    if (response.status !== 200) throw new Error("Cleanup could not reconcile its token intent.")
-    const list = Schema.decodeUnknownSync(TokenList)(await response.json())
-    if (!list.success) throw new Error("Token reconciliation failed.")
-    for (const token of list.result) {
-      if (token.name !== `${run.appName}-dev-ai-gateway-run-${run.runId}`) continue
-      const issuedOn = Date.parse(token.issued_on)
-      if (!Number.isFinite(issuedOn))
-        throw new Error("Cleanup refused an invalid owned token issue timestamp.")
-      const policy = token.policies[0]
-      const groups = policy?.permission_groups.map((group) => group.name).sort()
-      if (
-        !/^[a-f0-9]{32}$/.test(token.id) ||
-        policy?.resources[`com.cloudflare.api.account.${run.account}`] !== "*" ||
-        token.policies.length !== 1 ||
-        policy?.effect !== "allow" ||
-        JSON.stringify(groups) !== JSON.stringify(["AI Gateway Run", "Workers AI Read"]) ||
-        JSON.stringify(Object.keys(policy.resources)) !==
-          JSON.stringify([`com.cloudflare.api.account.${run.account}`]) ||
-        issuedOn < createdAt - 1000
-      )
-        throw new Error("Cleanup refused mismatched per-run token metadata.")
-      if (!ids.includes(token.id)) ids.push(token.id)
-    }
-    count += list.result.length
-    if (count >= list.result_info.total_count) break
-    if (page === 100) throw new Error("Account token inventory exceeded its bounded limit.")
-    if (list.result.length === 0) throw new Error("Incomplete account token inventory.")
-  }
-  const owned = { ...run, tokenIds: ids }
-  save(owned)
-  return owned
-}
-async function absent(run: RunManifest, path: string) {
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${run.account}/${path}`,
-    {
-      headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-      signal: AbortSignal.timeout(20_000),
-    },
-  )
-  if (response.status !== 404)
-    throw new Error("Cleanup could not verify an owned remote resource is absent.")
-}
 export async function cleanRun(run: RunManifest, ownLauncher = false) {
   if (
     run.account !== account ||
     run.profile !== profile ||
     run.ci !== ci ||
     run.appName !== appName ||
-    run.gatewayId !== gatewayForRun(run.runId) ||
     !/^[0-9a-f-]{36}$/.test(run.runId)
   )
     throw new Error("Cleanup ownership does not match the selected account/profile/scope.")
@@ -764,7 +666,6 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
   run = saved
   await stopRunProcesses(run)
   run = capture(run)
-  run = await reconcileTokens(run)
   if (existsSync(resolve(stackDirectory(run), ".alchemy/state/S0/dev"))) {
     const child = alchemyCommand("destroy", run)
     const code = await new Promise<number | null>((accept, reject) => {
@@ -772,46 +673,6 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
       child.on("error", reject)
     })
     if (code !== 0) throw new Error("Alchemy cleanup failed; ownership receipt retained.")
-  }
-  const gateway = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${run.account}/ai-gateway/gateways/${run.gatewayId}`,
-    {
-      headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-      signal: AbortSignal.timeout(20_000),
-    },
-  )
-  if (gateway.status === 200) {
-    const removed = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${run.account}/ai-gateway/gateways/${run.gatewayId}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    )
-    if (removed.status !== 200) throw new Error("Owned gateway removal failed.")
-  } else if (gateway.status !== 404) throw new Error("Owned gateway status could not be verified.")
-  await absent(run, `ai-gateway/gateways/${run.gatewayId}`)
-  for (const id of run.tokenIds) {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
-      {
-        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    )
-    if (response.status === 200) {
-      const removed = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${run.account}/tokens/${id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN ?? ""}` },
-          signal: AbortSignal.timeout(20_000),
-        },
-      )
-      if (removed.status !== 200) throw new Error("Owned token revocation failed.")
-    } else if (response.status !== 404) throw new Error("Owned token status could not be verified.")
-    await absent(run, `tokens/${id}`)
   }
   const dockerReceipt = cleanDocker(run)
   rmSync(stackDirectory(run), { recursive: true, force: true })
@@ -822,7 +683,6 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
     verified: true,
     ...dockerReceipt,
     resourceKinds: run.resources.length,
-    revokedTokens: run.tokenIds.length,
     simulatorRemoved: true,
     resourceTypes: run.resources,
   }
@@ -873,7 +733,6 @@ export const hostedOwnershipScope = {
   ci,
   appName,
   accountHash: createHash("sha256").update(account).digest("hex"),
-  gatewayForRun,
 }
 export async function restoreVerifiedOwnership(
   pending: readonly import("./hosted-ownership").OwnershipReceipt[],
@@ -882,9 +741,7 @@ export async function restoreVerifiedOwnership(
     if (
       item.profile !== profile ||
       item.ci !== ci ||
-      item.accountHash !== hostedOwnershipScope.accountHash ||
-      item.gatewayId !== gatewayForRun(item.owner) ||
-      item.tokenName !== `${appName}-dev-ai-gateway-run-${item.owner}`
+      item.accountHash !== hostedOwnershipScope.accountHash
     )
       throw new Error("Restored ownership scope mismatch.")
   }
@@ -909,7 +766,6 @@ export async function restoreVerifiedOwnership(
     const path = resolve(root, item.owner, "manifest.json")
     if (existsSync(path)) continue
     mkdirSync(resolve(root, item.owner, "stack"), { recursive: true, mode: 0o700 })
-    // Recover IDs from exact live token name/account/policy, rather than accepting supplied IDs as mutation authority.
     save({
       version: 1,
       runId: item.owner,
@@ -919,8 +775,6 @@ export async function restoreVerifiedOwnership(
       appName,
       launcherPid: 0,
       createdAt: item.createdAt,
-      gatewayId: item.gatewayId,
-      tokenIds: [],
       resources: [],
     })
   }

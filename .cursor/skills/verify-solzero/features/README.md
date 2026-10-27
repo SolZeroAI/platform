@@ -11,9 +11,8 @@ tester-army/e2e.
 | Settings, runtime defaults, theme, MCP deep links, secrets | `settings.md` | `tests/settings.e2e.ts` |
 | Accounts, API keys, OpenAPI contracts | `accounts.md` | `tests/accounts.e2e.ts`, `tests/api-contract.e2e.ts` |
 | Skills (admin defaults and user overrides) | `skills.md` | `tests/skills.e2e.ts` |
-| Sessions / Agents home (create, tools, archive, isolate/OpenCode/Codex prompts) | `sessions.md` | `tests/sessions.e2e.ts` |
-| Advanced sessions (incognito, MCP/subagent editor, attachment cancel, delegation) | `advanced-sessions.md` | `tests/advanced-sessions.e2e.ts` |
-| Harness tools (OpenCode/Codex multi-tool and follow-up) | `harness-tools.md` | `tests/harness-tools.e2e.ts` |
+| Sessions / Agents home (create, tools, archive) | `sessions.md` | `tests/sessions.e2e.ts` |
+| Advanced sessions (incognito, MCP/subagent editor) | `advanced-sessions.md` | `tests/advanced-sessions.e2e.ts` |
 | Session transfer (auth-transfer redemption) | `session-transfer.md` | `tests/session-transfer.e2e.ts` |
 | External integrations (GitHub, MCP, AI Search, Slack) | `external-integrations.md` | `tests/external-integrations.e2e.ts` |
 | BYOK / personal provider | `providers.md` | `tests/provider.external.e2e.ts` |

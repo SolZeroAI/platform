@@ -50,6 +50,7 @@ export type ApiSecretInput = string | Output.Output<Redacted.Redacted<string>>
 
 export interface ApiInfraEnv {
   readonly S0_PROVIDER_LAYER: "live" | "mock"
+  readonly S0_AI_GATEWAY_LAYER: "live" | "mock"
   readonly S0_CONFIG_FILE: string
   readonly S0_BRAND_NAME: string
   readonly S0_SERVICE_NAME: string
@@ -191,6 +192,7 @@ export function getApiInfraEnv(
     includeWhenDefined(
       {
         S0_PROVIDER_LAYER: "live" as const,
+        S0_AI_GATEWAY_LAYER: config.aiGatewayLayer ?? "live",
         S0_CONFIG_FILE: configurationFile,
         S0_BRAND_NAME: config.brand.name,
         S0_SERVICE_NAME: `${config.deployment.appName}-agent-control-plane`,
@@ -368,6 +370,7 @@ function createApiBindings(options: CreateApiBindingsOptions) {
         APP_VERSION: deploymentMetadata.appVersion,
         COMMIT_SHA: deploymentMetadata.commitSha,
         S0_PROVIDER_LAYER: env.S0_PROVIDER_LAYER,
+        S0_AI_GATEWAY_LAYER: env.S0_AI_GATEWAY_LAYER,
         S0_CONFIG_FILE: env.S0_CONFIG_FILE,
         S0_BRAND_NAME: env.S0_BRAND_NAME,
         S0_SERVICE_NAME: env.S0_SERVICE_NAME,
