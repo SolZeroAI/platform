@@ -481,40 +481,40 @@ export class AiSearchRegistryStore {
     )
   })
 
-  listSourcesWithPresence = Effect.fn("db.aiSearch.listSourcesWithPresence")(
-    function* (this: AiSearchRegistryStore) {
-      const kvKeys = yield* this.s0Config.listKeys(S0_CONFIG_KEYS.aiSearch.sourcePrefix)
+  listSourcesWithPresence = Effect.fn("db.aiSearch.listSourcesWithPresence")(function* (
+    this: AiSearchRegistryStore,
+  ) {
+    const kvKeys = yield* this.s0Config.listKeys(S0_CONFIG_KEYS.aiSearch.sourcePrefix)
 
-      const kvSourceOptions = yield* Effect.forEach(
-        kvKeys,
-        (key) =>
-          this.s0Config.getJson(key).pipe(
-            Effect.map((value) =>
-              Option.flatMap(value, (resolved) =>
-                sourcePresenceOption(resolved, {
-                  recordSource: "kv" as const,
-                  locked: false,
-                  envVarName: null,
-                }),
-              ),
+    const kvSourceOptions = yield* Effect.forEach(
+      kvKeys,
+      (key) =>
+        this.s0Config.getJson(key).pipe(
+          Effect.map((value) =>
+            Option.flatMap(value, (resolved) =>
+              sourcePresenceOption(resolved, {
+                recordSource: "kv" as const,
+                locked: false,
+                envVarName: null,
+              }),
             ),
           ),
-        { concurrency: "unbounded" },
-      )
+        ),
+      { concurrency: "unbounded" },
+    )
 
-      const kvSources = kvSourceOptions.flatMap((source) =>
-        Option.match(source, {
-          onNone: () => [],
-          onSome: (value) => [value],
-        }),
-      )
+    const kvSources = kvSourceOptions.flatMap((source) =>
+      Option.match(source, {
+        onNone: () => [],
+        onSome: (value) => [value],
+      }),
+    )
 
-      const sources = kvSources
-      ensureUniqueToolNames(sources.map((source) => source.source))
+    const sources = kvSources
+    ensureUniqueToolNames(sources.map((source) => source.source))
 
-      return sources.sort((left, right) => left.source.label.localeCompare(right.source.label))
-    },
-  )
+    return sources.sort((left, right) => left.source.label.localeCompare(right.source.label))
+  })
 
   listSources = Effect.fn("db.aiSearch.listSources")(function* (this: AiSearchRegistryStore) {
     const sources = yield* this.listSourcesWithPresence()
@@ -522,13 +522,13 @@ export class AiSearchRegistryStore {
     return sources.map((source) => source.source)
   })
 
-  listAvailableSources = Effect.fn("db.aiSearch.listAvailableSources")(
-    function* (this: AiSearchRegistryStore) {
-      const sources = yield* this.listSources()
+  listAvailableSources = Effect.fn("db.aiSearch.listAvailableSources")(function* (
+    this: AiSearchRegistryStore,
+  ) {
+    const sources = yield* this.listSources()
 
-      return sources.filter((source) => source.enabled)
-    },
-  )
+    return sources.filter((source) => source.enabled)
+  })
 
   listAvailableSourcesByIds = Effect.fn("db.aiSearch.listAvailableSourcesByIds")(function* (
     this: AiSearchRegistryStore,
@@ -653,26 +653,26 @@ export class AiSearchRegistryStore {
     yield* this.s0Config.delete(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
   })
 
-  listCloudflareInstances = Effect.fn("db.aiSearch.listCloudflareInstances")(
-    function* (this: AiSearchRegistryStore) {
-      if (!isRecordEnv(this.env)) {
-        return []
-      }
+  listCloudflareInstances = Effect.fn("db.aiSearch.listCloudflareInstances")(function* (
+    this: AiSearchRegistryStore,
+  ) {
+    if (!isRecordEnv(this.env)) {
+      return []
+    }
 
-      const aiSearch = this.env.AI_SEARCH
+    const aiSearch = this.env.AI_SEARCH
 
-      const response = yield* Effect.tryPromise({
-        try: () => aiSearch.list({ per_page: 100 }),
-        catch: toError,
-      }).pipe(Effect.catch(() => Effect.succeed({ result: [] })))
+    const response = yield* Effect.tryPromise({
+      try: () => aiSearch.list({ per_page: 100 }),
+      catch: toError,
+    }).pipe(Effect.catch(() => Effect.succeed({ result: [] })))
 
-      const result = isRecord(response) && Array.isArray(response.result) ? response.result : []
+    const result = isRecord(response) && Array.isArray(response.result) ? response.result : []
 
-      return result
-        .map(normalizeInstanceListItem)
-        .filter((item): item is AiSearchInstanceListItem => item !== null)
-    },
-  )
+    return result
+      .map(normalizeInstanceListItem)
+      .filter((item): item is AiSearchInstanceListItem => item !== null)
+  })
 
   private createCloudflareInstance = Effect.fn("db.aiSearch.createCloudflareInstance")(function* (
     this: AiSearchRegistryStore,

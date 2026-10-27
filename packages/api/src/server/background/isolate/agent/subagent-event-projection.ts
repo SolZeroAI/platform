@@ -47,40 +47,33 @@ export function projectSubagentSessionEvent(
 
   return Match.value(event).pipe(
     Match.when({ kind: "started" }, (started) => projectStartedEvent(common, started)),
-    Match.when(
-      { kind: "chunk" },
-      (chunk): SubagentSessionEvent => ({ ...common, kind: "chunk", body: chunk.body }),
-    ),
-    Match.when(
-      { kind: "finished" },
-      (finished): SubagentSessionEvent => ({
-        ...common,
-        kind: "finished",
-        summary: finished.summary,
-      }),
-    ),
-    Match.when(
-      { kind: "error" },
-      (failed): SubagentSessionEvent => ({ ...common, kind: "error", error: failed.error }),
-    ),
-    Match.when(
-      { kind: "aborted" },
-      (aborted): SubagentSessionEvent => ({
-        ...common,
-        kind: "aborted",
-        reason: aborted.reason,
-      }),
-    ),
-    Match.when(
-      { kind: "interrupted" },
-      (interrupted): SubagentSessionEvent => ({
-        ...common,
-        kind: "interrupted",
-        error: interrupted.error,
-        reason: interrupted.reason,
-        childStillRunning: interrupted.childStillRunning,
-      }),
-    ),
+    Match.when({ kind: "chunk" }, (chunk): SubagentSessionEvent => ({
+      ...common,
+      kind: "chunk",
+      body: chunk.body,
+    })),
+    Match.when({ kind: "finished" }, (finished): SubagentSessionEvent => ({
+      ...common,
+      kind: "finished",
+      summary: finished.summary,
+    })),
+    Match.when({ kind: "error" }, (failed): SubagentSessionEvent => ({
+      ...common,
+      kind: "error",
+      error: failed.error,
+    })),
+    Match.when({ kind: "aborted" }, (aborted): SubagentSessionEvent => ({
+      ...common,
+      kind: "aborted",
+      reason: aborted.reason,
+    })),
+    Match.when({ kind: "interrupted" }, (interrupted): SubagentSessionEvent => ({
+      ...common,
+      kind: "interrupted",
+      error: interrupted.error,
+      reason: interrupted.reason,
+      childStillRunning: interrupted.childStillRunning,
+    })),
     Match.exhaustive,
   )
 }

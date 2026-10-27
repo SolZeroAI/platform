@@ -235,15 +235,12 @@ export class UserProviderConfigsStore {
       const apiKey = yield* this.decryptApiKey(row.apiKeyEncrypted)
 
       return Match.value(row.scope === "shared_override").pipe(
-        Match.when(
-          true,
-          (): RuntimeUserProviderRecord => ({
-            providerId: row.providerId,
-            scope: row.scope,
-            displayName: row.displayName,
-            apiKey,
-          }),
-        ),
+        Match.when(true, (): RuntimeUserProviderRecord => ({
+          providerId: row.providerId,
+          scope: row.scope,
+          displayName: row.displayName,
+          apiKey,
+        })),
         Match.orElse(() => buildCustomRuntimeRecord(row, apiKey)),
       )
     },
@@ -609,13 +606,11 @@ export class UserProviderConfigsStore {
       catch: d1Error("db.userProviderConfigs.listConfigRows"),
     })
 
-    return rows.map(
-      (row): UserProviderConfigRow => ({
-        ...row,
-        scope:
-          /* SAFETY: row.scope is persisted only as UserProviderScope by the writer for that column. */ row.scope as UserProviderScope,
-      }),
-    )
+    return rows.map((row): UserProviderConfigRow => ({
+      ...row,
+      scope:
+        /* SAFETY: row.scope is persisted only as UserProviderScope by the writer for that column. */ row.scope as UserProviderScope,
+    }))
   })
 
   private getPreference = Effect.fn("db.userProviderConfigs.getPreference")(function* (
@@ -659,12 +654,10 @@ export class UserProviderConfigsStore {
       catch: d1Error("db.userProviderConfigs.getPreferenceWithoutOpenCodePermission"),
     })
 
-    return rows.map(
-      (row): UserProviderPreferenceRow => ({
-        ...row,
-        opencodePermissionJson: null,
-      }),
-    )
+    return rows.map((row): UserProviderPreferenceRow => ({
+      ...row,
+      opencodePermissionJson: null,
+    }))
   })
 }
 

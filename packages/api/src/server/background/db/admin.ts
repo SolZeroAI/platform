@@ -773,26 +773,26 @@ export class AdminStore {
     return updated.length > 0
   })
 
-  previewGitHubAccountCleanup = Effect.fn("db.admin.previewGitHubAccountCleanup")(
-    function* (this: AdminStore) {
-      const rows = yield* Effect.tryPromise({
-        try: () =>
-          this.drizzle
-            .select({
-              linkedAccounts: sql<number>`count(*)`,
-              affectedUsers: sql<number>`count(distinct ${this.schema.account.userId})`,
-            })
-            .from(this.schema.account)
-            .where(eq(this.schema.account.providerId, "github")),
-        catch: d1Error("db.admin.previewGitHubAccountCleanup"),
-      })
+  previewGitHubAccountCleanup = Effect.fn("db.admin.previewGitHubAccountCleanup")(function* (
+    this: AdminStore,
+  ) {
+    const rows = yield* Effect.tryPromise({
+      try: () =>
+        this.drizzle
+          .select({
+            linkedAccounts: sql<number>`count(*)`,
+            affectedUsers: sql<number>`count(distinct ${this.schema.account.userId})`,
+          })
+          .from(this.schema.account)
+          .where(eq(this.schema.account.providerId, "github")),
+      catch: d1Error("db.admin.previewGitHubAccountCleanup"),
+    })
 
-      return {
-        linkedAccounts: Number(rows[0]?.linkedAccounts ?? 0),
-        affectedUsers: Number(rows[0]?.affectedUsers ?? 0),
-      }
-    },
-  )
+    return {
+      linkedAccounts: Number(rows[0]?.linkedAccounts ?? 0),
+      affectedUsers: Number(rows[0]?.affectedUsers ?? 0),
+    }
+  })
 
   cleanupGitHubAccounts = Effect.fn("db.admin.cleanupGitHubAccounts")(function* (this: AdminStore) {
     const deleted = yield* Effect.tryPromise({

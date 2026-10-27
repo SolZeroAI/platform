@@ -74,19 +74,14 @@ export class SessionWebSocketManagerImpl implements SessionWebSocketManager {
     const tags = this.ctx.getTags(ws)
 
     return Match.value(tags.includes("sandbox")).pipe(
-      Match.when(
-        true,
-        (): ParsedTags => ({
-          kind: "sandbox",
-          sandboxId: tags.find((tag) => tag.startsWith("sid:"))?.slice(4),
-        }),
-      ),
-      Match.orElse(
-        (): ParsedTags => ({
-          kind: "client",
-          wsId: tags.find((tag) => tag.startsWith("wsid:"))?.slice(5),
-        }),
-      ),
+      Match.when(true, (): ParsedTags => ({
+        kind: "sandbox",
+        sandboxId: tags.find((tag) => tag.startsWith("sid:"))?.slice(4),
+      })),
+      Match.orElse((): ParsedTags => ({
+        kind: "client",
+        wsId: tags.find((tag) => tag.startsWith("wsid:"))?.slice(5),
+      })),
     )
   }
 

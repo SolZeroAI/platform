@@ -354,7 +354,7 @@ export async function exportStorage(input: {
         await write({ type: "object", name, inventory })
 
         for (const table of inventory.tables)
-          for (let offset = 0; offset < table.rows; ) {
+          for (let offset = 0; offset < table.rows;) {
             const data = Schema.decodeUnknownSync(sqlPageSchema)(
               await rpc(fetcher, name, { operation: "read", table: table.name, offset }),
             )
