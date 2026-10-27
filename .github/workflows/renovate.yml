@@ -28,7 +28,7 @@ jobs:
           nub-version: 0.9.6
           node-version-file: .nvmrc
 
-      # Renovate runs as the SolZero release App. An App token, unlike
+      # Renovate runs as the solzero-bot App. An App token, unlike
       # GITHUB_TOKEN, starts pull_request workflows on the PRs it opens.
       - name: Create release App token
         id: app-token
