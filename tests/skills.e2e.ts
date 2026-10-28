@@ -30,7 +30,7 @@ test(
       await app.open("/settings?category=agents&tab=skills")
       await expect(screen.getByRole("switch", `Enable ${name}`)).toBeChecked()
       await agent.act(
-        "Turn off the Enable switch for the supplied skill. Finish when the Use admin default button is visible beside this skill; leave that button untouched.",
+        "Turn off the Enable switch for the supplied skill. Finish when that switch is off.",
         { params: { name: unique(name) } },
       )
       await expect(screen.getByRole("switch", `Enable ${name}`)).not.toBeChecked()
