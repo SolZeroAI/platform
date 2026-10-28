@@ -74,7 +74,7 @@ test(
     let created = false
 
     try {
-      await agent.act("Open the Add secret editor")
+      await agent.act("Click Add secret. Finish when the Add secret dialog is open.")
       await expect(screen.getByRole("dialog")).toBeVisible()
       await screen.getByLabel("Secret key").fill(key)
       await screen.getByLabel("Secret value").fill(secrets.get("fixture"))

@@ -13,6 +13,11 @@ import { appEnvironment } from "./scripts/e2e/environment"
 // gpt-oss-120b on the unified chat route. Harmony rejects reasoning_effort
 // "none" and array message content, and its default budget ends in reasoning
 // before the JSON answer. Those requests are normalized below.
+//
+// Gateway response caching stays off. It stores any 200 body, including an
+// answer the decision adapter rejects, and replays it to the retry and to every
+// CI run inside the TTL. Verified e2e action replay in .e2e/cache is the only
+// cache, because it records a step only after the step passes.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "unconfigured"
 const gatewayId = process.env.CF_AI_GATEWAY_E2E_ID || "default"
 const gatewayToken = process.env.CF_AI_GATEWAY_E2E_TOKEN || "unconfigured"
@@ -24,8 +29,7 @@ const cloudflare = createOpenAICompatible({
   supportsStructuredOutputs: true,
   headers: {
     "cf-aig-gateway-id": gatewayId,
-    "cf-aig-cache-ttl": "3600",
-    "cf-aig-skip-cache": process.env.CF_AI_GATEWAY_E2E_SKIP_CACHE === "1" ? "true" : "false",
+    "cf-aig-skip-cache": "true",
     "cf-aig-max-attempts": "3",
     "cf-aig-backoff": "exponential",
   },
@@ -34,10 +38,7 @@ const cloudflare = createOpenAICompatible({
     const request: Record<string, unknown> = {
       ...body,
       reasoning_effort: body.reasoning_effort === "none" ? "low" : body.reasoning_effort,
-      // The cache key includes this field. 8192 stored a length finish and an
-      // inconclusive verdict. 8193 misses those entries. Later identical
-      // requests still cache for the 3600 second TTL.
-      max_tokens: body.max_tokens ?? 8193,
+      max_tokens: body.max_tokens ?? 8192,
     }
 
     if (!Array.isArray(request.messages)) return request
@@ -157,8 +158,8 @@ export default {
   secrets,
   filters: [decisionFilter({ model: decisionModel })],
   workers: 1,
-  // gpt-oss sometimes spends the output budget before the JSON answer. A second
-  // attempt builds a new page, so the gateway does not replay that body.
+  // gpt-oss sometimes returns an answer the decision adapter rejects. A second
+  // attempt asks the model again, because the gateway does not cache responses.
   retries: 1,
   timeout: 180_000,
   assertionTimeout: 20_000,

@@ -151,6 +151,7 @@ jobs:
           restore-keys: |
             e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:${{ hashFiles('nub.lock') }}-
             e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.head_ref || github.ref_name }}:
+            e2e-replay-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.event.repository.default_branch }}:
       - name: Initialize AI usage accounting
         id: ai-usage-init
         env:

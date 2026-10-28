@@ -68,16 +68,16 @@ read the gateway or run token the application provisions for a stage or a run.
 The suite does not read that gateway's logs.
 `e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
 gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
-`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Response caching uses a
-3600 second TTL. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` sets `cf-aig-skip-cache` and
-bypasses gateway response caching independently of e2e action replay. The gateway
+`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Each request sends
+`cf-aig-skip-cache: true`, so the gateway does not cache responses. The gateway
+cache stored any 200 body, including an answer the decision adapter rejected.
+It then replayed that answer to the retry and to every CI run inside the TTL, so
+one bad sample failed the secret editor test on every pull request for an hour.
+Verified e2e action replay is the only cache. The gateway
 retries with three attempts and exponential backoff. The decision adapter sends
 `reasoning_effort: none` and array message content. This model rejects `none`
 and array content, and its default token budget stops during reasoning, so the
-request uses `low`, joins text parts into a string, and allows 8193 output tokens.
-The gateway cache key includes that token budget. 8192 had stored a length finish
-and an inconclusive verdict, so this budget misses those entries. Later identical
-requests still cache for 3600 seconds.
+request uses `low`, joins text parts into a string, and allows 8192 output tokens.
 The route calls chat models. It does not expose a Clef decision model. The test filter
 and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
 The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
@@ -89,9 +89,8 @@ selected Overview tab. The skill question chooses the checked Enable switch
 for the supplied skill, then done when Use admin default is visible. Creating
 a bot, deleting its routine, searching MCPs, opening Agent tools, and setting
 Sub-agents use the named controls directly.
-A failed test runs once more. The model sometimes spends the output budget
-before the JSON answer, and the new attempt has a new page, so the gateway
-does not replay that body.
+A failed test runs once more. The model sometimes returns an answer the decision
+adapter rejects, and the new attempt asks the model again.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
 every test. `agent.act` and `agent.assert` use the decision adapter. The same language
@@ -129,8 +128,9 @@ disables action recording and replay; it cannot warm the cache. Strict mode stil
 step live when no entry exists, so verify `step.cache.mode === "self-finalized"` and zero
 model calls in the report rather than relying on the command name.
 
-CI restores only the current branch's replay archives, preferring the same Nub lockfile
-then the branch prefix. OS and architecture remain part of the key. Successful suites
+CI restores the current branch's replay archives, preferring the same Nub lockfile
+then the branch prefix. A branch with no archive restores the default branch's latest
+archive, so a new pull request or a lockfile change does not run every step live. OS and architecture remain part of the key. Successful suites
 save a fresh run-and-attempt archive so repaired recordings reach the next run. Changes
 to documentation or accounting scripts do not invalidate the archive; the SDK validates
 each step's instruction, parameters, agent context, controls and final state itself.
@@ -292,8 +292,7 @@ Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes a
 runs, including the canonical repository. Fork pull requests cannot access its credentials.
 Configure repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`.
 The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic
-model uses the account default AI Gateway, with response caching left on
-(`CF_AI_GATEWAY_E2E_SKIP_CACHE=0` unless set). The workflow generates and masks a
+model uses the account default AI Gateway, with response caching off. The workflow generates and masks a
 fresh disposable account password. Do not use production identity or integration secrets
 for tests. Preview and production deploy jobs still read `CLOUDFLARE_API_TOKEN` because
 Alchemy's Cloudflare CI credentials require it for a real stage deploy or destroy.
