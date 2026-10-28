@@ -82,8 +82,9 @@
     "effect": "4.0.3"
   },
   "devDependencies": {
-    "@ai-sdk/openai-compatible": "3.0.44",
-    "@ai-sdk/provider-utils": "5.0.67",
+    "@ai-sdk/anthropic": "4.0.87",
+    "@ai-sdk/openai": "4.0.101",
+    "@ai-sdk/typesafe-ai": "3.0.26",
     "@cloudflare/workers-types": "^4.20260702.1",
     "@e2e-dev/decision": "0.3.0",
     "@e2e-dev/github": "0.4.3",
