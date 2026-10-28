@@ -76,14 +76,17 @@ jobs:
       - name: Check formatting
         run: nub run format
 
-      # Run actionlint as a step so the "Repository validation" check reports it.
-      # A check run that a step creates through the API joins an older check
-      # suite on the same commit, so the pull request never shows its status.
-      # kjanat/actionlint is the maintained fork that reviewdog also installs.
+      # The local reporter prints findings and fails this step, so the
+      # "Repository validation" check reports actionlint. The default
+      # github-pr-check reporter creates a check run through the API. GitHub
+      # adds that run to an older check suite on the same commit, so the pull
+      # request never shows its status.
       - name: Lint GitHub Actions workflows
-        uses: docker://ghcr.io/kjanat/actionlint:1.17.0
+        uses: reviewdog/action-actionlint@v1
         with:
-          args: -color
+          reporter: local
+          fail_level: error
+          filter_mode: nofilter
 
       - name: Collect end-to-end tests
         run: nub run test:e2e:list
