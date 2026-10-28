@@ -44,11 +44,14 @@ export function formatSolZeroReleaseNotes(
   const sections = changelogs.flatMap((entry) =>
     entry.sections.flatMap((section) => [`### ${section.title}`, "", section.content, ""]),
   )
+
   const hasCard = changelogs.some((entry) =>
     isReleaseCardBump(entry.packages.get(SOLZERO_PACKAGE_ID)?.type),
   )
+
   const imageUrl = `https://raw.githubusercontent.com/${SOLZERO_GITHUB_REPO}/v${version}/docs/solzero-release-notes.png`
   const card = hasCard ? [`![SolZero v${version} release notes](${imageUrl})`, ""] : []
+
   return [...card, ...sections].join("\n").trim()
 }
 
@@ -58,9 +61,11 @@ const applyCreativeDraft = Effect.fn("releaseCard.applyTegamiDraft")(function* (
 ) {
   if (!(yield* releaseAssetsEnabled)) return
   const packageDraft = draft.getPackageDraft(SOLZERO_PACKAGE_ID)
+
   if (!packageDraft || !isReleaseCardBump(packageDraft.type)) return
 
   const entries = releaseEntries(packageDraft.changelogs ?? [])
+
   if (entries.length === 0) return
 
   const fs = yield* FileSystem.FileSystem

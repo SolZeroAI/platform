@@ -66,37 +66,51 @@ Objects in the run directory. The application child does not receive the e2e tok
 The semantic model does not read the deploy token, and it does not
 read the gateway or run token the application provisions for a stage or a run.
 The suite does not read that gateway's logs.
-`e2e.config.ts` calls the unified chat route with `createOpenAICompatible`. The
-gateway id is `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
-`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Response caching uses a
-3600 second TTL. `CF_AI_GATEWAY_E2E_SKIP_CACHE=1` sets `cf-aig-skip-cache` and
-bypasses gateway response caching independently of e2e action replay. The gateway
-retries with three attempts and exponential backoff. The decision adapter sends
-`reasoning_effort: none` and array message content. This model rejects `none`
-and array content, and its default token budget stops during reasoning, so the
-request uses `low`, joins text parts into a string, and allows 8193 output tokens.
-The gateway cache key includes that token budget. 8192 had stored a length finish
-and an inconclusive verdict, so this budget misses those entries. Later identical
-requests still cache for 3600 seconds.
-The route calls chat models. It does not expose a Clef decision model. The test filter
-and the step executor use `@e2e-dev/decision`: `decisionFilter` and `decisionExecutor`.
-The AI SDK decision adapter asks `@cf/openai/gpt-oss-120b` through that gateway.
-The workflow rename action question adds one sentence: choose the button named
-Save workflow name, and choose done when that button is not offered. The completion
-question for that task adds one sentence: the save holds when that button was
-activated and is now absent. A conditional action sentence still activated the
-selected Overview tab. The skill question chooses the checked Enable switch
-for the supplied skill, then done when Use admin default is visible. Creating
-a bot, deleting its routine, searching MCPs, opening Agent tools, and setting
-Sub-agents use the named controls directly.
-A failed test runs once more. The model sometimes spends the output budget
-before the JSON answer, and the new attempt has a new page, so the gateway
-does not replay that body.
+The test filter and the step executor use `@e2e-dev/decision`: `decisionFilter` and
+`decisionExecutor`. `scripts/e2e/models.ts` selects both models. It is the same
+file in every SolZero repository.
+
+| Setting | Default | Role |
+| --- | --- | --- |
+| `E2E_DECISION_MODEL` | `@cf/cloudflare/clef` | `agent.act` actions, `agent.assert` verdicts and the affected-test filter |
+| `E2E_LANGUAGE_MODEL` | `anthropic/claude-haiku-5.5` | Text: field values, `agent.waitFor` and `agent.extract` |
+
+CI reads both settings from SolZeroAI organization Actions variables, so one
+change there moves every repository. The defaults serve local runs and match the
+Shared Project DNA page. Set either variable in `E2E_ENV_FILE` to try another
+model locally.
+
+- The decision model returns a probability for each option, so it does not
+  write JSON that can fail to parse. Cloudflare Clef speaks the TypeSafe System
+  One protocol, so the official `@ai-sdk/typesafe-ai` provider maps the
+  questions and answers. Its `fetch` option sends the request to
+  `/accounts/<account>/ai/run/<model>` and unwraps the Workers AI
+  `{ success, result }` envelope. An `anthropic/` decision model uses
+  `@ai-sdk/anthropic` instead; its probabilities are estimates from structured
+  output.
+- The language model uses the official provider for its API format on the
+  Cloudflare REST API at `/accounts/<account>/ai/v1`. `anthropic/` models use
+  `@ai-sdk/anthropic` on the Messages route. Other models, such as `@cf/`
+  Workers AI models and `openai/` models, use `@ai-sdk/openai` on the chat
+  completions route. Third-party models bill through Cloudflare Unified Billing.
+
+Both models use the account's default gateway. The gateway id is
+`CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
+`CF_AI_GATEWAY_E2E_TOKEN` is the `Authorization` bearer. Each request sends
+`cf-aig-skip-cache: true`, so the gateway does not cache responses. The gateway
+cache stored any 200 body, including an answer the runner rejected. It then
+replayed that answer to the retry and to every CI run inside the TTL, so one bad
+sample failed the secret editor test on every pull request for an hour. Verified
+e2e action replay is the only cache.
+
+Name the control and the finish condition in the `agent.act` goal itself, for
+example `Click Save workflow name. Finish when the Save workflow name button is
+gone.` Do not add per-step prompt text in the model request.
+A failed test runs once more, and the new attempt asks the models again.
 `e2e list --changed-since <ref>` and `e2e run --changed-since <ref>` ask the filter which
 tests the change can affect. A change to the loaded config or a known lockfile keeps
-every test. `agent.act` and `agent.assert` use the decision adapter. The same language
-model answers `agent.waitFor` and `agent.extract`. Exact text values come from
-`agent.act` params. Use `expect` for deterministic polling and extraction.
+every test. Exact text values come from `agent.act` params. Use `expect` for
+deterministic polling and extraction.
 
 The semantic gateway token is not an application provider credential. It does not
 supply OpenAI, Anthropic, or harness subscription keys.
@@ -129,8 +143,9 @@ disables action recording and replay; it cannot warm the cache. Strict mode stil
 step live when no entry exists, so verify `step.cache.mode === "self-finalized"` and zero
 model calls in the report rather than relying on the command name.
 
-CI restores only the current branch's replay archives, preferring the same Nub lockfile
-then the branch prefix. OS and architecture remain part of the key. Successful suites
+CI restores the current branch's replay archives, preferring the same Nub lockfile
+then the branch prefix. A branch with no archive restores the default branch's latest
+archive, so a new pull request or a lockfile change does not run every step live. OS and architecture remain part of the key. Successful suites
 save a fresh run-and-attempt archive so repaired recordings reach the next run. Changes
 to documentation or accounting scripts do not invalidate the archive; the SDK validates
 each step's instruction, parameters, agent context, controls and final state itself.
@@ -292,8 +307,7 @@ Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes a
 runs, including the canonical repository. Fork pull requests cannot access its credentials.
 Configure repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`.
 The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic
-model uses the account default AI Gateway, with response caching left on
-(`CF_AI_GATEWAY_E2E_SKIP_CACHE=0` unless set). The workflow generates and masks a
+model uses the account default AI Gateway, with response caching off. The workflow generates and masks a
 fresh disposable account password. Do not use production identity or integration secrets
 for tests. Preview and production deploy jobs still read `CLOUDFLARE_API_TOKEN` because
 Alchemy's Cloudflare CI credentials require it for a real stage deploy or destroy.

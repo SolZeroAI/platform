@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Auth JSON normalization is a synchronous validation boundary; explicit discriminant branches keep invalid configuration errors adjacent to their fields. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-return-in-arrow -- Auth JSON normalization is a synchronous validation boundary; explicit discriminant branches keep invalid configuration errors adjacent to their fields. */
 import * as Schema from "effect/Schema"
 import * as Match from "effect/Match"
 import { normalizeSecretReference, SecretReferenceSchema } from "./secret-reference"

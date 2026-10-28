@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Isolated process lifecycle boundary. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Isolated process lifecycle boundary. */
 import { spawn } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import {

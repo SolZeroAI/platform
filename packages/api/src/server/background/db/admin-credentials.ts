@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Idempotent credential reconciliation is an imperative persistence boundary; explicit existence and rotation branches mirror the SQL operations. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Idempotent credential reconciliation is an imperative persistence boundary; explicit existence and rotation branches mirror the SQL operations. */
 import { CREDENTIAL_AUTH_PROVIDER_ID, type S0AuthConfig } from "@solzero/shared"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 import * as Effect from "effect/Effect"

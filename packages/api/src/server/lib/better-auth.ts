@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Better Auth request hooks are an imperative adapter boundary whose path/body guards must reject before library route execution. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Better Auth request hooks are an imperative adapter boundary whose path/body guards must reject before library route execution. */
 import { CREDENTIAL_AUTH_PROVIDER_ID, getStageMetadataSync } from "@solzero/shared"
 import { betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"

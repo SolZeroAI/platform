@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/max-file-lines -- MCPCF registry is already at the lint ceiling; keep registry storage changes localized. */
+/* oxlint-disable max-lines -- MCPCF registry is already at the lint ceiling; keep registry storage changes localized. */
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -172,7 +172,7 @@ function defaultMcpcfConfig(now = Date.now()): McpcfConfigRecord {
   }
 }
 
-/* oxlint-disable s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- S0_CONFIG migration/registry decoders normalize untrusted JSON at a narrow boundary. */
+/* oxlint-disable solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null -- S0_CONFIG migration/registry decoders normalize untrusted JSON at a narrow boundary. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -276,7 +276,7 @@ function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord>
     Option.filter((record) => record.id.length > 0),
   )
 }
-/* oxlint-enable s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null */
+/* oxlint-enable solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null */
 
 function trimmedServerIds(serverIds: readonly string[]): string[] {
   return serverIds.flatMap((serverId) =>
@@ -980,7 +980,7 @@ export class McpcfRegistryStore {
 }
 
 function runMcpcfRegistryEffect<A, E>(
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge for the generic Effect returned by the registry methods.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge for the generic Effect returned by the registry methods.
   effect: Effect.Effect<A, E>,
 ): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect McpcfRegistryStore to non-Effect runtime consumers (session MCP resolution and the MCP Context Forge server).

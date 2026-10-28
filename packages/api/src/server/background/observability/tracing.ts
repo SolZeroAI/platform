@@ -35,10 +35,10 @@ export interface BackgroundTracingService {
   readonly withSpan: <A, E, R>(
     name: string,
     attributes: SpanAttributeInput,
-    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span service method forwards the caller's Effect channels unchanged.
+    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Generic span service method forwards the caller's Effect channels unchanged.
     effect: Effect.Effect<A, E, R>,
     options?: BackgroundSpanOptions,
-    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span service method returns the caller's Effect channels unchanged.
+    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Generic span service method returns the caller's Effect channels unchanged.
   ) => Effect.Effect<A, E, R>
 }
 
@@ -126,7 +126,7 @@ export function localSpanHeaders(context: LocalSpanContext): Record<string, stri
   return headers
 }
 
-// oxlint-disable-next-line s0-lint/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
+// oxlint-disable-next-line solzero/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
 export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext | undefined {
   const traceId = headers.get(LOCAL_TRACE_ID_HEADER)?.trim().toLowerCase()
   const spanId = headers.get(LOCAL_PARENT_SPAN_ID_HEADER)?.trim().toLowerCase()
@@ -144,7 +144,7 @@ export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext 
 const runBackgroundSpan = <A, E, R>(
   name: string,
   attributes: SpanAttributeInput,
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Generic span combinator: the `Effect<A, E, R>` parameter channel is intrinsic to the combinator contract.
   effect: Effect.Effect<A, E, R>,
   options: BackgroundSpanOptions & { readonly tracing?: CloudflareTracing } = {},
 ) =>

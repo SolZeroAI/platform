@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, effect/avoid-native-fetch -- Real process and HTTP lifecycle boundary; no mocked providers or handlers. */
+/* oxlint-disable solzero/no-if-statement, effect/avoid-native-fetch -- Real process and HTTP lifecycle boundary; no mocked providers or handlers. */
 import { test, expect } from "e2e"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"

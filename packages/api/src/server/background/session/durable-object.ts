@@ -342,7 +342,7 @@ export function parseAttachments(attachmentsJson: string | null) {
   )
 }
 
-// oxlint-disable-next-line s0-lint/prefer-option-over-null -- Promise-side Durable Object artifact reader; callers still branch on null until those surfaces convert to Effect.
+// oxlint-disable-next-line solzero/prefer-option-over-null -- Promise-side Durable Object artifact reader; callers still branch on null until those surfaces convert to Effect.
 export function parseArtifactMetadata(value: string | null): SessionArtifactMetadata | null {
   return Option.getOrNull(Option.flatMap(decodeJson(value), parseSessionArtifactMetadata))
 }

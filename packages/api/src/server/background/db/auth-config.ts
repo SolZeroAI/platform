@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
 import {
   normalizeAuthProviderRegistry,
   publicAuthProviderRegistry,

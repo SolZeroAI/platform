@@ -1,4 +1,4 @@
-/* oxlint-disable effect/avoid-process-env, s0-lint/no-if-statement -- DATABASE and PlanetScale service tokens are operator process env from alchemy.new. */
+/* oxlint-disable effect/avoid-process-env, solzero/no-if-statement -- DATABASE and PlanetScale service tokens are operator process env from alchemy.new. */
 import {
   DATABASE_ENV,
   PLANETSCALE_ALCHEMY_TOKEN_ENV,

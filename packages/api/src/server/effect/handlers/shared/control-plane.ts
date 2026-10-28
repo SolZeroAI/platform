@@ -526,7 +526,7 @@ export interface InternalRequestsService {
     stub: DurableObjectStub,
     url: string,
     init?: RequestInit,
-    // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Service method exposes an Effectful Durable Object fetch.
+    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Service method exposes an Effectful Durable Object fetch.
   ) => Effect.Effect<Response, unknown>
 }
 
@@ -575,7 +575,7 @@ export interface ControlPlaneContext {
   githubProvider: GitHubProviderService
 }
 
-// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Generic handler contract: A/E/R are the parameters, so the channels must be named explicitly here.
+// oxlint-disable-next-line solzero/no-manual-effect-channels -- Generic handler contract: A/E/R are the parameters, so the channels must be named explicitly here.
 type ControlPlaneHandler<A, E, R> = (context: ControlPlaneContext) => Effect.Effect<A, E, R>
 
 export function toEffectResponse(response: Response) {

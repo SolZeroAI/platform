@@ -634,7 +634,7 @@ export class WorkflowSlackAppStore {
 }
 
 function runSlackAppStoreEffect<A>(
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
   effect: Effect.Effect<A, D1Error | WorkflowSlackDeliveryError>,
 ): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowSlackAppStore to the non-Effect Slack registration sync and public Slack router.
@@ -642,7 +642,7 @@ function runSlackAppStoreEffect<A>(
 }
 
 function runSlackAppStoreOption<A>(
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
   effect: Effect.Effect<Option.Option<A>, D1Error>,
 ): Promise<A | null> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowSlackAppStore to the non-Effect Slack registration sync and public Slack router.

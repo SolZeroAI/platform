@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/avoid-untagged-errors, s0-lint/no-manual-effect-channels, s0-lint/no-match-effect-branch, s0-lint/no-ternary -- S0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
+/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-manual-effect-channels, solzero/no-match-effect-branch, solzero/no-ternary -- S0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"

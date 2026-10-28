@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- Stage metadata exposes synchronous adapters for browser, Worker, and deployment callers while its Effect constructors remain typed. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Stage metadata exposes synchronous adapters for browser, Worker, and deployment callers while its Effect constructors remain typed. */
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"

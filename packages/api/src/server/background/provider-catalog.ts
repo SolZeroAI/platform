@@ -779,7 +779,7 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
     Match.orElse(async () => {
       const dynamicLitellm = await runProviderCatalogEffect(buildLitellmCatalogProviders(env))
 
-      // oxlint-disable-next-line s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback -- Async Match branch returns the computed shared-provider snapshot.
+      // oxlint-disable-next-line solzero/no-return-in-arrow -- Async Match branch returns the computed shared-provider snapshot.
       return Option.match(dynamicLitellm, {
         onNone: () => ({
           providers: deploymentProviders,
@@ -835,7 +835,7 @@ function toResolvedBindingProviderRecord(
 }
 
 function runProviderCatalogEffect<A, E>(
-  // oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Promise-boundary bridge for generic provider catalog Effects.
+  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge for generic provider catalog Effects.
   effect: Effect.Effect<A, E>,
 ): Promise<A> {
   // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for provider catalog assembly.

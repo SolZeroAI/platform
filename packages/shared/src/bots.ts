@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- Bot routine normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/prefer-option-over-null -- Bot routine normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"

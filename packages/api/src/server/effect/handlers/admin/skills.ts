@@ -179,7 +179,7 @@ export function deleteAgentSkill({ params }: { params: AdminIdParams }) {
               deleteGlobalSkillPackage(context.env.AGENT_SKILLS, skill.slug),
             ).pipe(
               Effect.tapError((cause) =>
-                // oxlint-disable-next-line s0-lint/warn-effect-sync-wrapper -- The request-scoped logger is an imperative service and the effect keeps it ordered with the failed cleanup.
+                // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- The request-scoped logger is an imperative service and the effect keeps it ordered with the failed cleanup.
                 Effect.sync(() =>
                   context.log.error(cause, {
                     event: "admin.agent_skill.r2_cleanup_failed",

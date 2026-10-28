@@ -29,7 +29,7 @@ export interface GitHubAppUserToken {
   readonly accessTokenExpiresAt: number | null
 }
 
-// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Service method signatures need the broad GitHub provider contract shared by live and mock implementations.
+// oxlint-disable-next-line solzero/no-manual-effect-channels -- Service method signatures need the broad GitHub provider contract shared by live and mock implementations.
 type GitHubProviderEffect<A> = Effect.Effect<A, GitHubAppError>
 
 export interface IdentityProviderService {

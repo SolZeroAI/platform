@@ -29,8 +29,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "NODE_OPTIONS='--import tsx' oxlint src",
-    "lint:fix": "NODE_OPTIONS='--import tsx' oxlint --fix src",
     "typecheck": "tsrs --noEmit"
   },
   "dependencies": {

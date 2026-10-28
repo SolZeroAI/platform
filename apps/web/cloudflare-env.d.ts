@@ -1,5 +1,6 @@
 declare namespace Cloudflare {
   type WebEnv = import("infra/types/web-env").WebEnv
+
   interface Env extends WebEnv {}
 }
 

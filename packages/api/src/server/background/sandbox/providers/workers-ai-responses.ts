@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null -- This HTTP protocol adapter validates untrusted provider JSON at the container fetch boundary. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null -- This HTTP protocol adapter validates untrusted provider JSON at the container fetch boundary. */
 import * as Match from "effect/Match"
 
 type JsonObject = Record<string, unknown>
