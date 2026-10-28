@@ -57,7 +57,7 @@ request.
 
 ## Run or recover a release
 
-- The release workflow mints a repository-scoped GitHub App token from `RELEASE_APP_ID` and
+- The release workflow mints a repository-scoped GitHub App token from the org secrets `RELEASE_APP_CLIENT_ID` and
   `RELEASE_APP_PRIVATE_KEY`. Checkout and `nub run tegami ci` use that token for the version pull
   request, the `vX.Y.Z` tag, and the GitHub Release. The job's `GITHUB_TOKEN` stays `contents: read`.
 - Review the generated version pull request before merge. Verify `VERSION`, `CHANGELOG.md`, and the
