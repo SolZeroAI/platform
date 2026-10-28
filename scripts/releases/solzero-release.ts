@@ -32,9 +32,11 @@ class SolZeroGitTagPublishTask extends GitTagPublishTask<SolZeroReleasePackage> 
 
 async function readVersion(root: string): Promise<string> {
   const version = (await readFile(join(root, SOLZERO_VERSION_FILE), "utf8")).trim()
+
   if (valid(version) !== version) {
     throw new Error(`${SOLZERO_VERSION_FILE} must contain one valid SemVer version.`)
   }
+
   return version
 }
 
@@ -51,6 +53,7 @@ export function solZeroRelease(): TegamiPlugin {
     async applyDraft(draft) {
       if (!pkg) return
       const nextVersion = draft.getPackageDraft(pkg.id)?.bumpVersion(pkg)
+
       if (!nextVersion || nextVersion === pkg.version) return
       pkg.setVersion(nextVersion)
       await writeFile(join(this.cwd, SOLZERO_VERSION_FILE), `${nextVersion}\n`)
@@ -58,6 +61,7 @@ export function solZeroRelease(): TegamiPlugin {
     initPublishPlan({ plan }) {
       if (!pkg) return
       const packagePlan = plan.packages.get(pkg.id)
+
       if (!packagePlan) return
       packagePlan.git ??= {}
       packagePlan.git.tag = `v${pkg.version}`

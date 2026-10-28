@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary -- This is a redaction boundary from full child replay events to compact workflow disclosures; explicit guards make every allowed field visible. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- This is a redaction boundary from full child replay events to compact workflow disclosures; explicit guards make every allowed field visible. */
 import {
   sanitizeSubagentCompactError,
   sanitizeSubagentCompactLabel,

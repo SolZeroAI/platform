@@ -12,6 +12,7 @@ const host = process.env.PGLITE_HOST ?? "127.0.0.1"
 const port = Number(process.env.PGLITE_PORT ?? LOCAL_PGLITE_PORT)
 
 const db = new PGlite()
+
 for (const filename of readdirSync(migrationsFolder)
   .filter((name) => name.endsWith(".sql"))
   .sort()) {
@@ -23,6 +24,7 @@ const server = new PGLiteSocketServer({
   host,
   port,
 })
+
 await server.start()
 
 process.stdout.write(
@@ -37,6 +39,7 @@ const stop = async () => {
 process.on("SIGINT", () => {
   void stop().then(() => process.exit(0))
 })
+
 process.on("SIGTERM", () => {
   void stop().then(() => process.exit(0))
 })

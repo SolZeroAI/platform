@@ -68,7 +68,7 @@ export class GitHubAppError extends Schema.TaggedError<GitHubAppError>()("GitHub
   cause: Schema.optional(Schema.Unknown),
 }) {}
 
-// oxlint-disable-next-line s0-lint/no-manual-effect-channels -- Recursive GitHub pagination helpers need explicit self-referential return types.
+// oxlint-disable-next-line solzero/no-manual-effect-channels -- Recursive GitHub pagination helpers need explicit self-referential return types.
 type GitHubEffect<A> = Effect.Effect<A, GitHubAppError>
 
 function githubAppError(message: string) {
@@ -109,7 +109,7 @@ function fetchWithTimeout(
   init: RequestInit,
   timeoutMs = GITHUB_FETCH_TIMEOUT_MS,
 ) {
-  // oxlint-disable-next-line s0-lint/warn-effect-sync-wrapper -- Resource acquisition for the AbortController timeout used by fetchWithTimeout.
+  // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- Resource acquisition for the AbortController timeout used by fetchWithTimeout.
   const acquireAbortState = Effect.sync(() => createGitHubAbortState(timeoutMs))
 
   return Effect.acquireUseRelease(
@@ -122,7 +122,7 @@ function fetchWithTimeout(
         catch: githubAppError("GitHub request failed"),
       }),
     (state) =>
-      // oxlint-disable-next-line s0-lint/warn-effect-sync-wrapper -- Resource finalizer for the timeout created by acquireAbortState.
+      // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- Resource finalizer for the timeout created by acquireAbortState.
       Effect.sync(() => clearGitHubAbortState(state)),
   )
 }

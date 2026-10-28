@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, s0-lint/prefer-option-over-null, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-branch-in-object -- AI Search registry is a low-level S0_CONFIG and Cloudflare namespace boundary with compact JSON decoders and request builders. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/prefer-option-over-null, solzero/no-return-in-arrow, solzero/no-branch-in-object -- AI Search registry is a low-level S0_CONFIG and Cloudflare namespace boundary with compact JSON decoders and request builders. */
 import {
   AI_SEARCH_SESSION_TOOL_KIND,
   getSelectedAiSearchSourceIds,

@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-ternary, effect/avoid-direct-json, effect/imperative-loops -- Cloudflare binding compilation is a synchronous deployment boundary; direct guards and size scans keep failures adjacent to the invalid binding. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, effect/avoid-direct-json, effect/imperative-loops -- Cloudflare binding compilation is a synchronous deployment boundary; direct guards and size scans keep failures adjacent to the invalid binding. */
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as Cloudflare from "alchemy/Cloudflare"

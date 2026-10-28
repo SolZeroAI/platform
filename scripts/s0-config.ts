@@ -1,4 +1,4 @@
-/* oxlint-disable effect/avoid-process-env, s0-lint/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
+/* oxlint-disable effect/avoid-process-env, solzero/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import dotenv from "dotenv"
@@ -24,14 +24,18 @@ function readConfigPath(configPath: string): unknown {
   if (!existsSync(configPath)) {
     throw new Error(`Missing s0 configuration file: ${configPath}`)
   }
+
   const errors: ParseError[] = []
   const parsed = parse(readFileSync(configPath, "utf8"), errors, { allowTrailingComma: true })
+
   if (errors.length > 0) {
     const details = errors
       .map((error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`)
       .join(", ")
+
     throw new Error(`Invalid JSONC in ${configPath}: ${details}`)
   }
+
   return parsed
 }
 
@@ -41,43 +45,58 @@ function readConfigFile(stage: string, profile?: string): unknown {
 
 async function generatedSchema(): Promise<string> {
   const document = Schema.toJsonSchemaDocument(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)
-  const schema = {
+
+  const baseSchema = {
     $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
     ...document.schema,
-    ...(Object.keys(document.definitions).length > 0 ? { $defs: document.definitions } : {}),
   }
+
+  const schema =
+    Object.keys(document.definitions).length > 0
+      ? { ...baseSchema, $defs: document.definitions }
+      : baseSchema
+
   const result = await format(schemaPath, JSON.stringify(schema))
+
   if (result.errors.length > 0) {
     throw new Error(`Unable to format ${schemaPath}: ${result.errors[0]?.message}`)
   }
+
   return result.code
 }
 
 async function checkConfig(profile?: string): Promise<void> {
   resolveS0Config(readConfigPath(exampleConfigPath))
+
   const stages: string[] = profile?.startsWith("e2e")
     ? ["dev"]
     : profile
       ? ["dev", "pre", "prod"]
       : [...S0_CONFIG_STAGE_NAMES]
+
   if (
     profile &&
     !profile.startsWith("e2e") &&
     existsSync(resolve(repoRoot, s0ConfigPathForStage("test", profile)))
   )
     stages.push("test")
+
   for (const stage of stages) {
     resolveS0Config(readConfigFile(stage, profile))
   }
+
   if (readFileSync(schemaPath, "utf8") !== (await generatedSchema())) {
     throw new Error("config/s0.config.schema.json is stale. Run `nub run config:schema`.")
   }
+
   const configPaths = stages.map((stage) => s0ConfigPathForStage(stage, profile))
+
   if (!profile) {
     const e2ePath = s0ConfigPathForStage("dev", "e2e")
     resolveS0Config(readConfigPath(resolve(repoRoot, e2ePath)))
     configPaths.push(e2ePath)
   }
+
   process.stdout.write(
     `Validated s0 config files: config/example.config.jsonc, ${configPaths.join(", ")}\n`,
   )
@@ -99,15 +118,19 @@ function dotenvQuote(value: string): string {
 function writeStageVars(stage: string, outputPath: string): void {
   const config = resolveS0Config(readConfigFile(stage, process.env.S0_CONFIG_PROFILE))
   const resolvedOutputPath = resolve(repoRoot, outputPath)
+
   const existing = existsSync(resolvedOutputPath)
     ? dotenv.parse(readFileSync(resolvedOutputPath))
     : {}
+
   const names = [
     ...new Set(s0ActiveSecretReferences(config).map((reference) => reference.env)),
   ].sort()
+
   const contents = names
     .map((name) => `${name}=${dotenvQuote(process.env[name] ?? existing[name] ?? "")}`)
     .join("\n")
+
   if (existsSync(resolvedOutputPath)) chmodSync(resolvedOutputPath, 0o600)
   writeFileSync(resolvedOutputPath, `${contents}\n`, { mode: 0o600 })
   process.stdout.write(`Wrote ${names.length} secret references to ${outputPath}\n`)
@@ -121,6 +144,7 @@ function printStageWebUrl(stage: string): void {
 
 const args = process.argv.slice(2).filter((argument) => argument !== "--")
 const [command, second, third] = args
+
 if (command === "check" && args.length === 1) {
   await checkConfig(process.env.S0_CONFIG_PROFILE)
 } else if (command === "check" && second === "--profile" && third && args.length === 3) {

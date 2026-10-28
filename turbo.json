@@ -2,15 +2,14 @@
   "$schema": "https://turbo.build/schema.json",
   "agentGuidance": false,
   "globalDependencies": [
-    ".oxlintrc.json",
+    "oxlint.config.ts",
     "config/.env",
     "config/.dev.vars",
     "config/.test.vars",
     "config/.pre.vars",
     "config/.prod.vars",
     "config/*.config.jsonc",
-    "config/s0.config.schema.json",
-    "packages/s0-lint/src/**"
+    "config/s0.config.schema.json"
   ],
   "tasks": {
     "build": {
@@ -27,7 +26,6 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {},
     "typecheck": {},
     "clean": {
       "cache": false

@@ -163,12 +163,11 @@ Neither job is a Cloudflare deploy.
 
 ### Tests
 
-`s0-lint/no-colocated-tests` lives in `packages/s0-lint/src/rules.ts` and `packages/s0-lint/src/messages.ts`.
+`solzero/no-colocated-tests` comes from the shared `oxlint-plugin-solzero` package.
 `*.test.*` and `*.spec.*` must live under `test`, `tests`, or `__tests__`.
 AGENTS.md puts web tests under `apps/web/tests`.
 Cross-package suites live under root `tests/<suite>`.
 Current suites are `tests/integration`, `tests/infra`, `tests/workflows`, `tests/api`, and `tests/e2e`.
-Package-local suites are `packages/api/test` and `packages/s0-lint/tests`.
 
 ### Stack versions
 

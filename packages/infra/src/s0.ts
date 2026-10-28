@@ -71,10 +71,10 @@ function createCloudflareAiGateway(input: {
   const config = input.apiEnv.S0_CONFIG_CLOUDFLARE_AI_GATEWAY
 
   return Effect.gen(function* () {
-    // oxlint-disable-next-line s0-lint/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and mock stacks never call the Cloudflare Gateway API.
+    // oxlint-disable-next-line solzero/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and mock stacks never call the Cloudflare Gateway API.
     if (!config.enabled) return undefined
 
-    // oxlint-disable-next-line s0-lint/no-if-statement -- The mock AI Gateway layer answers model calls inside the Worker, so it needs the binding shape without account resources.
+    // oxlint-disable-next-line solzero/no-if-statement -- The mock AI Gateway layer answers model calls inside the Worker, so it needs the binding shape without account resources.
     if (input.apiEnv.S0_AI_GATEWAY_LAYER === "mock") {
       return {
         resource: Cloudflare.Workers.AI("AI_GATEWAY"),

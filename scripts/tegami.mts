@@ -20,6 +20,7 @@ const release = tegami({
         eager: false,
         create({ pkg, plan }) {
           const changelogs = plan.packages.get(pkg.id)?.changelogs ?? []
+
           return {
             title: `SolZero v${pkg.version}`,
             notes: formatSolZeroReleaseNotes(pkg.version, changelogs),

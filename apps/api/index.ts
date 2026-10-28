@@ -1,4 +1,4 @@
-/* oxlint-disable s0-lint/no-if-statement, s0-lint/no-return-in-arrow, s0-lint/no-return-in-callback, s0-lint/no-ternary, s0-lint/prefer-option-over-null, effect/effect-run-in-body -- Worker entrypoint and container outbound handlers are imperative runtime boundaries around Effect-based services. */
+/* oxlint-disable solzero/no-if-statement, solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null, effect/effect-run-in-body -- Worker entrypoint and container outbound handlers are imperative runtime boundaries around Effect-based services. */
 import { WorkerEntrypoint, tracing } from "cloudflare:workers"
 import { Container, ContainerProxy, type OutboundHandler } from "@cloudflare/containers"
 import { canonicalApiPath, getStageMetadataSync } from "@solzero/shared"

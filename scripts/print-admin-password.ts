@@ -16,6 +16,7 @@ function usage(): string {
 
 function stateCommand(stack: (typeof ADMIN_PASSWORD_STATE_STACKS)[number], stage: string) {
   const stageTag = s0ConfigStageForStage(stage)
+
   return execFileSync(
     "nub",
     [
@@ -55,24 +56,31 @@ function passwordFromCloudflareState(stage: string): string | undefined {
     (state, stack) => state ?? tryStateCommand(stack, stage),
     undefined,
   )
+
   if (!rawState) return undefined
   const jsonStart = rawState.indexOf("{")
+
   if (jsonStart < 0) return undefined
+
   return adminPasswordFromStateDocument(JSON.parse(rawState.slice(jsonStart)))
 }
 
 const args = process.argv.slice(2).filter((arg) => arg !== "--")
 const stage = args.find((arg) => !arg.startsWith("--"))
+
 if (!stage || args.some((arg) => arg.startsWith("--") && arg !== "--local")) {
   throw new Error(usage())
 }
+
 const password = args.includes("--local")
   ? readLocalAdminPassword(repoRoot, stage)
   : passwordFromCloudflareState(stage)
+
 if (!password) {
   const configProfile = process.env.S0_CONFIG_PROFILE
   throw new Error(
     `No generated admin password exists for stage '${stage}'. Deploy the stack first, or configure the secret referenced by ${s0ConfigPathForStage(stage, configProfile)}:auth.adminPassword.`,
   )
 }
+
 process.stdout.write(`${password}\n`)
