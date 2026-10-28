@@ -37,11 +37,9 @@ jobs:
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
     timeout-minutes: 30
-    # actionlint's default reporter is github-pr-check, which writes a check run.
     permissions:
       contents: read
       actions: read
-      checks: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -78,9 +76,15 @@ jobs:
       - name: Check formatting
         run: nub run format
 
+      # The local reporter prints findings and fails this step, so the
+      # "Repository validation" check reports actionlint. The default
+      # github-pr-check reporter creates a check run through the API. GitHub
+      # adds that run to an older check suite on the same commit, so the pull
+      # request never shows its status.
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@v1
         with:
+          reporter: local
           fail_level: error
           filter_mode: nofilter
 

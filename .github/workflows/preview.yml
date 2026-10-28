@@ -54,7 +54,6 @@ jobs:
     permissions:
       actions: read
       contents: read
-      checks: write
       pull-requests: write
 
   deploy-preview:
