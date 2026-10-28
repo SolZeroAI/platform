@@ -37,11 +37,9 @@ jobs:
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
     timeout-minutes: 30
-    # actionlint's default reporter is github-pr-check, which writes a check run.
     permissions:
       contents: read
       actions: read
-      checks: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -78,11 +76,14 @@ jobs:
       - name: Check formatting
         run: nub run format
 
+      # Run actionlint as a step so the "Repository validation" check reports it.
+      # A check run that a step creates through the API joins an older check
+      # suite on the same commit, so the pull request never shows its status.
+      # kjanat/actionlint is the maintained fork that reviewdog also installs.
       - name: Lint GitHub Actions workflows
-        uses: reviewdog/action-actionlint@v1
+        uses: docker://ghcr.io/kjanat/actionlint:1.17.0
         with:
-          fail_level: error
-          filter_mode: nofilter
+          args: -color
 
       - name: Collect end-to-end tests
         run: nub run test:e2e:list
