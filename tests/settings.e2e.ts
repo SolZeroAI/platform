@@ -110,8 +110,13 @@ test(
       await expect(screen.getByRole("button", `Switch to ${original} mode`)).toBeVisible()
       expect(await browser.evaluate(() => document.documentElement.dataset.mode ?? "")).toBe(next)
     } finally {
-      await screen.getByRole("button", `Switch to ${original} mode`).tap()
-      await expect(screen.getByRole("button", `Switch to ${next} mode`)).toBeVisible()
+      // Restore only a changed preference, so a failed toggle reports its own error.
+      const mode = await browser.evaluate(() => document.documentElement.dataset.mode ?? "light")
+
+      if (mode !== original) {
+        await screen.getByRole("button", `Switch to ${original} mode`).tap()
+        await expect(screen.getByRole("button", `Switch to ${next} mode`)).toBeVisible()
+      }
     }
   },
 )
