@@ -74,7 +74,7 @@ test(
     let created = false
 
     try {
-      await agent.act("Open the Add secret editor")
+      await agent.act("Click Add secret. Finish when the Add secret dialog is open.")
       await expect(screen.getByRole("dialog")).toBeVisible()
       await screen.getByLabel("Secret key").fill(key)
       await screen.getByLabel("Secret value").fill(secrets.get("fixture"))
@@ -110,8 +110,13 @@ test(
       await expect(screen.getByRole("button", `Switch to ${original} mode`)).toBeVisible()
       expect(await browser.evaluate(() => document.documentElement.dataset.mode ?? "")).toBe(next)
     } finally {
-      await screen.getByRole("button", `Switch to ${original} mode`).tap()
-      await expect(screen.getByRole("button", `Switch to ${next} mode`)).toBeVisible()
+      // Restore only a changed preference, so a failed toggle reports its own error.
+      const mode = await browser.evaluate(() => document.documentElement.dataset.mode ?? "light")
+
+      if (mode !== original) {
+        await screen.getByRole("button", `Switch to ${original} mode`).tap()
+        await expect(screen.getByRole("button", `Switch to ${next} mode`)).toBeVisible()
+      }
     }
   },
 )

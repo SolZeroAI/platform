@@ -68,7 +68,9 @@ test(
       await expect(screen.getByLabel("Workflow name")).toHaveValue(name)
       const renamed = `${name}-renamed`
       await screen.getByLabel("Workflow name").fill(renamed)
-      await agent.act("Save the changed workflow name")
+      await agent.act(
+        "Click Save workflow name. Finish when the Save workflow name button is gone.",
+      )
       await browser.reload()
       await expect(screen.getByLabel("Workflow name")).toHaveValue(renamed)
 
