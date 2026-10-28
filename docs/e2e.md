@@ -67,23 +67,32 @@ The semantic model does not read the deploy token, and it does not
 read the gateway or run token the application provisions for a stage or a run.
 The suite does not read that gateway's logs.
 The test filter and the step executor use `@e2e-dev/decision`: `decisionFilter` and
-`decisionExecutor`. The two model ids are constants at the top of `e2e.config.ts`.
+`decisionExecutor`. `scripts/e2e/models.ts` selects both models. It is the same
+file in every SolZero repository.
 
-- The decision model is Cloudflare Clef (`@cf/cloudflare/clef`). It answers
-  `agent.act` actions, `agent.assert` verdicts and the affected-test filter. Clef
-  returns a probability for each option, so it does not write JSON that can fail
-  to parse. No AI SDK provider ships a Clef decision model, so
-  `scripts/e2e/clef-decision-model.ts` implements the AI SDK decision model
-  contract on the Workers AI route
-  `/accounts/<account>/ai/run/@cf/cloudflare/clef`. It maps boolean questions to
-  Clef `noul` questions, sends at most 64 questions per request, and normalizes
-  Clef's rounded probabilities so the AI SDK distribution checks pass.
-- The language model is `@cf/openai/gpt-oss-120b` on the unified chat route,
-  called with `createOpenAICompatible`. Clef cannot write text, so this model
-  answers `agent.waitFor` and `agent.extract`. Harmony rejects
-  `reasoning_effort: none` and array message content, and its default token
-  budget stops during reasoning, so the request uses `low`, joins text parts into
-  a string, and allows 8192 output tokens.
+| Setting | Default | Role |
+| --- | --- | --- |
+| `E2E_DECISION_MODEL` | `@cf/cloudflare/clef` | `agent.act` actions, `agent.assert` verdicts and the affected-test filter |
+| `E2E_LANGUAGE_MODEL` | `anthropic/claude-haiku-5.5` | Text: field values, `agent.waitFor` and `agent.extract` |
+
+CI reads both settings from SolZeroAI organization Actions variables, so one
+change there moves every repository. The defaults serve local runs and match the
+Shared Project DNA page. Set either variable in `E2E_ENV_FILE` to try another
+model locally.
+
+- The decision model returns a probability for each option, so it does not
+  write JSON that can fail to parse. Cloudflare Clef speaks the TypeSafe System
+  One protocol, so the official `@ai-sdk/typesafe-ai` provider maps the
+  questions and answers. Its `fetch` option sends the request to
+  `/accounts/<account>/ai/run/<model>` and unwraps the Workers AI
+  `{ success, result }` envelope. An `anthropic/` decision model uses
+  `@ai-sdk/anthropic` instead; its probabilities are estimates from structured
+  output.
+- The language model uses the official provider for its API format on the
+  Cloudflare REST API at `/accounts/<account>/ai/v1`. `anthropic/` models use
+  `@ai-sdk/anthropic` on the Messages route. Other models, such as `@cf/`
+  Workers AI models and `openai/` models, use `@ai-sdk/openai` on the chat
+  completions route. Third-party models bill through Cloudflare Unified Billing.
 
 Both models use the account's default gateway. The gateway id is
 `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
