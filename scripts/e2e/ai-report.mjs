@@ -1,5 +1,6 @@
 import { appendFile, chmod, mkdir, readFile, writeFile } from "node:fs/promises"
 import { execFileSync } from "node:child_process"
+import * as P from "effect/Predicate"
 
 // Reads the e2e report only. Never copies prompts, response bodies, log lines, or filter notes.
 const directory = ".e2e/ai-usage"
@@ -42,13 +43,13 @@ const countNames = [
 const numeric = (value) => Number.isSafeInteger(value) && value >= 0
 
 const timestamp = (value) =>
-  typeof value === "string" &&
+  P.isString(value) &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) &&
   Number.isFinite(Date.parse(value))
 
-const sha = (value) => (typeof value === "string" && /^[a-f0-9]{40}$/.test(value) ? value : null)
-const modelId = (value) => typeof value === "string" && /^[A-Za-z0-9@._:/-]{1,128}$/.test(value)
-const moneyNumber = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0
+const sha = (value) => (P.isString(value) && /^[a-f0-9]{40}$/.test(value) ? value : null)
+const modelId = (value) => P.isString(value) && /^[A-Za-z0-9@._:/-]{1,128}$/.test(value)
+const moneyNumber = (value) => P.isNumber(value) && Number.isFinite(value) && value >= 0
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"))
 
 const spendPattern =
@@ -94,7 +95,7 @@ async function init() {
 }
 
 function modelUsage(value) {
-  if (!value || typeof value !== "object") return null
+  if (!P.isObject(value)) return null
 
   if (!modelId(value.provider) || !modelId(value.model)) return null
 
@@ -124,7 +125,7 @@ function modelUsage(value) {
 }
 
 function filterSpend(note) {
-  if (typeof note !== "string") return null
+  if (!P.isString(note)) return null
   const match = note.match(spendPattern)
 
   if (!match) return null
@@ -310,7 +311,7 @@ async function summarize() {
 
     for (const filter of run.filters ?? []) {
       if (
-        typeof filter?.name !== "string" ||
+        !P.isString(filter?.name) ||
         !/^[A-Za-z0-9@._:/-]{1,256}$/.test(filter.name) ||
         !numeric(filter.candidates) ||
         !numeric(filter.excluded)
@@ -374,8 +375,9 @@ async function summarize() {
     actionReplay: replay,
     rejectedModels,
     missingModelSteps,
-    replayCacheRestored:
-      typeof metadata.replayCacheRestored === "boolean" ? metadata.replayCacheRestored : null,
+    replayCacheRestored: P.isBoolean(metadata.replayCacheRestored)
+      ? metadata.replayCacheRestored
+      : null,
     models: rows,
     filters,
     totals: {
@@ -401,7 +403,7 @@ async function summarize() {
   const markdown = [
     "### E2E AI usage",
     "",
-    "Counts only the suite's own Clef calls: the decision filter and the step executor. Application inference is not included.",
+    "Counts only the suite's own model calls: the decision filter and the step executor. Application inference is not included.",
     "",
     `Validated commit: ${summary.validatedSha ? `\`${summary.validatedSha}\`` : "unknown"}.`,
     `E2E report duration sum: ${duration(summary.durations.e2eMs)}; accounting window: ${duration(summary.durations.elapsedMs)}.`,
