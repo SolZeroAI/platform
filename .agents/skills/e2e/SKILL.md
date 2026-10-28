@@ -7,7 +7,7 @@ description: Agentic end-to-end tests with e2e, the e2e runner. Covers scaffoldi
 
 SolZero uses **Nub** for install and every e2e/verify command (`nub install`,
 `nub run test`, `nub run test:e2e`, `nub exec e2e ...`). Project rules live in
-`AGENTS.md`, `docs/e2e.md`, and `.cursor/skills/verify-solzero/`. Prefer those
+`AGENTS.md`, `docs/e2e.md`, and `.agents/skills/verify-solzero/`. Prefer those
 wrappers over raw `npx e2e` when working in this repository.
 
 e2e runs UI tests with agent goals and exact assertions. `agent.act` drives

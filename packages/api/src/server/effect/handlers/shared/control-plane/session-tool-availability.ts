@@ -91,13 +91,11 @@ const resolveToolKindAvailability = Effect.fn("controlPlane.resolveToolKindAvail
             error: describeError(errorValue),
           }),
           Effect.map(() =>
-            selectedTools.map(
-              (tool): SessionToolAvailability => ({
-                kind: tool.kind,
-                toolId: getSessionToolId(tool),
-                reason: "availability_unknown",
-              }),
-            ),
+            selectedTools.map((tool): SessionToolAvailability => ({
+              kind: tool.kind,
+              toolId: getSessionToolId(tool),
+              reason: "availability_unknown",
+            })),
           ),
         ),
       ),

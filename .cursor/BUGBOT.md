@@ -5,7 +5,6 @@
 This file tells you what is intended on SolZeroAI/platform and what is a regression.
 You include this root file on every review.
 Do not expect nested `.cursor/BUGBOT.md` copies under packages.
-Cursor project rules in `.cursor/rules` do not apply to you.
 The repo is public at https://github.com/SolZeroAI/platform.
 The license is LGPL-3.0-only.
 
@@ -85,7 +84,7 @@ A second database must not move chat.
 When a copy CLI exists as `nub run db:copy-d1-to-planetscale`, dry-run is the default.
 That CLI must not rewrite live stage jsonc such as `config/prod.config.jsonc`.
 That CLI must not call `infra:deploy:*`.
-`.cursor/skills/verify-solzero/SKILL.md` mentions the CLI and forbids running it during verification.
+`.agents/skills/verify-solzero/SKILL.md` mentions the CLI and forbids running it during verification.
 
 ### Better Auth
 
@@ -105,7 +104,7 @@ That copy renders when `signInProviders.length === 0`.
 It is a product failure.
 It is not a mapped empty state.
 
-`.cursor/skills/verify-solzero/SKILL.md` requires real credential sign-in verification.
+`.agents/skills/verify-solzero/SKILL.md` requires real credential sign-in verification.
 When `GET /api/auth/config` does not return a credential sign-in provider, the sign-in checks fail.
 Health-only ready is not enough.
 Do not paper over this in verify-solzero.
@@ -263,4 +262,4 @@ When a PR recommends Clerk, Effect 3.x, or moving the default control plane off 
 `.github/workflows/validate.yml` has secret-less static validation and a credentialed isolated e2e job for trusted events.
 Fork pull requests must not receive e2e credentials.
 `.github/workflows/release.yml` is Tegami notes, not a Cloudflare deploy.
-`.cursor/skills/verify-solzero/SKILL.md` must not hide product failures.
+`.agents/skills/verify-solzero/SKILL.md` must not hide product failures.

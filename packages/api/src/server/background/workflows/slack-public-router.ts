@@ -164,14 +164,12 @@ const startWorkflowForRegistration = Effect.fn("workflows.slack.startWorkflowFor
             catch: toError,
           }),
         ),
-        Effect.map(
-          (run): SlackRunResult => ({
-            runId: run.id,
-            workflowId: input.workflow.id,
-            nodeId: input.nodeId,
-            status: run.status,
-          }),
-        ),
+        Effect.map((run): SlackRunResult => ({
+          runId: run.id,
+          workflowId: input.workflow.id,
+          nodeId: input.nodeId,
+          status: run.status,
+        })),
         Effect.catch((error) =>
           Effect.gen(function* () {
             const message = describeError(error)

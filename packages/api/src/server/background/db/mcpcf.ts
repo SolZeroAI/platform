@@ -423,162 +423,159 @@ export class McpcfRegistryStore {
     )
   })
 
-  getConfigWithPresence = Effect.fn("db.mcpcf.getConfigWithPresence")(
-    function* (this: McpcfRegistryStore) {
-      const now = Date.now()
+  getConfigWithPresence = Effect.fn("db.mcpcf.getConfigWithPresence")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const now = Date.now()
 
-      const deploymentValue = getS0DeploymentConfig<S0McpcfConfig>(
-        this.env,
-        S0_CONFIG_BINDINGS.mcpcf,
-      )
+    const deploymentValue = getS0DeploymentConfig<S0McpcfConfig>(this.env, S0_CONFIG_BINDINGS.mcpcf)
 
-      const store = this
+    const store = this
 
-      return yield* Option.match(deploymentValue, {
-        onNone: () =>
-          Effect.gen(function* () {
-            const value = yield* store.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
-            const configured = Option.isSome(value)
+    return yield* Option.match(deploymentValue, {
+      onNone: () =>
+        Effect.gen(function* () {
+          const value = yield* store.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
+          const configured = Option.isSome(value)
 
-            const source = Match.value(configured).pipe(
-              Match.when(true, () => "kv" as const),
-              Match.orElse(() => "default" as const),
-            )
+          const source = Match.value(configured).pipe(
+            Match.when(true, () => "kv" as const),
+            Match.orElse(() => "default" as const),
+          )
 
-            return {
-              configured,
-              source,
-              locked: false,
-              envVarName: null,
-              config: readMcpcfConfig(value, now),
-            } satisfies McpcfConfigPresence
-          }),
-        onSome: (value) =>
-          Effect.succeed({
-            configured: true,
-            source: "deployment" as const,
-            locked: true,
-            envVarName: S0_CONFIG_LOCATIONS.mcpcf,
-            config: readMcpcfConfig(Option.some(value), now),
-          } satisfies McpcfConfigPresence),
-      })
-    },
-  )
+          return {
+            configured,
+            source,
+            locked: false,
+            envVarName: null,
+            config: readMcpcfConfig(value, now),
+          } satisfies McpcfConfigPresence
+        }),
+      onSome: (value) =>
+        Effect.succeed({
+          configured: true,
+          source: "deployment" as const,
+          locked: true,
+          envVarName: S0_CONFIG_LOCATIONS.mcpcf,
+          config: readMcpcfConfig(Option.some(value), now),
+        } satisfies McpcfConfigPresence),
+    })
+  })
 
-  getConfigOrDefault = Effect.fn("db.mcpcf.getConfigOrDefault")(
-    function* (this: McpcfRegistryStore) {
-      const presence = yield* this.getConfigWithPresence()
+  getConfigOrDefault = Effect.fn("db.mcpcf.getConfigOrDefault")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const presence = yield* this.getConfigWithPresence()
 
-      return presence.config
-    },
-  )
+    return presence.config
+  })
 
-  getAdminApiTokenStatus = Effect.fn("db.mcpcf.getAdminApiTokenStatus")(
-    function* (this: McpcfRegistryStore) {
-      const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
-        this.env,
-        S0_CONFIG_BINDINGS.mcpcf,
-      )
+  getAdminApiTokenStatus = Effect.fn("db.mcpcf.getAdminApiTokenStatus")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
+      this.env,
+      S0_CONFIG_BINDINGS.mcpcf,
+    )
 
-      const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
-        Option.fromNullishOr(config.adminApiToken),
-      )
+    const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
+      Option.fromNullishOr(config.adminApiToken),
+    )
 
-      const store = this
+    const store = this
 
-      return yield* Option.match(deploymentTokenReference, {
-        onNone: () =>
-          Effect.gen(function* () {
-            const configured = yield* store.s0Config.encryptedSecretConfigured(
-              S0_CONFIG_KEYS.mcpcf.adminApiToken,
-            )
+    return yield* Option.match(deploymentTokenReference, {
+      onNone: () =>
+        Effect.gen(function* () {
+          const configured = yield* store.s0Config.encryptedSecretConfigured(
+            S0_CONFIG_KEYS.mcpcf.adminApiToken,
+          )
 
-            const source = Match.value(configured).pipe(
-              Match.when(true, () => "kv" as const),
-              Match.orElse(() => "none" as const),
-            )
+          const source = Match.value(configured).pipe(
+            Match.when(true, () => "kv" as const),
+            Match.orElse(() => "none" as const),
+          )
 
-            return {
-              configured,
-              source,
-              locked: false,
-              envVarName: null,
+          return {
+            configured,
+            source,
+            locked: false,
+            envVarName: null,
+            adminApiToken: Option.none<string>(),
+          } satisfies McpcfAdminApiTokenPresence
+        }),
+      onSome: (reference) =>
+        Option.match(getS0DeploymentSecret(this.env, reference), {
+          onNone: () =>
+            Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
+          onSome: () =>
+            Effect.succeed({
+              configured: true,
+              source: "deployment" as const,
+              locked: true,
+              envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
               adminApiToken: Option.none<string>(),
-            } satisfies McpcfAdminApiTokenPresence
-          }),
-        onSome: (reference) =>
-          Option.match(getS0DeploymentSecret(this.env, reference), {
-            onNone: () =>
-              Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
-            onSome: () =>
-              Effect.succeed({
-                configured: true,
-                source: "deployment" as const,
-                locked: true,
-                envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
-                adminApiToken: Option.none<string>(),
-              } satisfies McpcfAdminApiTokenPresence),
-          }),
-      })
-    },
-  )
+            } satisfies McpcfAdminApiTokenPresence),
+        }),
+    })
+  })
 
-  getAdminApiTokenWithPresence = Effect.fn("db.mcpcf.getAdminApiTokenWithPresence")(
-    function* (this: McpcfRegistryStore) {
-      const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
-        this.env,
-        S0_CONFIG_BINDINGS.mcpcf,
-      )
+  getAdminApiTokenWithPresence = Effect.fn("db.mcpcf.getAdminApiTokenWithPresence")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const deploymentConfig = getS0DeploymentConfig<S0McpcfConfig>(
+      this.env,
+      S0_CONFIG_BINDINGS.mcpcf,
+    )
 
-      const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
-        Option.fromNullishOr(config.adminApiToken),
-      )
+    const deploymentTokenReference = Option.flatMap(deploymentConfig, (config) =>
+      Option.fromNullishOr(config.adminApiToken),
+    )
 
-      const store = this
+    const store = this
 
-      return yield* Option.match(deploymentTokenReference, {
-        onNone: () =>
-          Effect.gen(function* () {
-            const configured = yield* store.s0Config.encryptedSecretConfigured(
-              S0_CONFIG_KEYS.mcpcf.adminApiToken,
-            )
+    return yield* Option.match(deploymentTokenReference, {
+      onNone: () =>
+        Effect.gen(function* () {
+          const configured = yield* store.s0Config.encryptedSecretConfigured(
+            S0_CONFIG_KEYS.mcpcf.adminApiToken,
+          )
 
-            const adminApiToken = yield* Match.value(configured).pipe(
-              Match.when(false, () => Effect.succeed(Option.none<string>())),
-              Match.orElse(() =>
-                store.s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken),
-              ),
-            )
+          const adminApiToken = yield* Match.value(configured).pipe(
+            Match.when(false, () => Effect.succeed(Option.none<string>())),
+            Match.orElse(() =>
+              store.s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken),
+            ),
+          )
 
-            const source = Match.value(configured).pipe(
-              Match.when(true, () => "kv" as const),
-              Match.orElse(() => "none" as const),
-            )
+          const source = Match.value(configured).pipe(
+            Match.when(true, () => "kv" as const),
+            Match.orElse(() => "none" as const),
+          )
 
-            return {
-              configured: Option.isSome(adminApiToken),
-              source,
-              locked: false,
-              envVarName: null,
-              adminApiToken,
-            } satisfies McpcfAdminApiTokenPresence
-          }),
-        onSome: (reference) =>
-          Option.match(getS0DeploymentSecret(this.env, reference), {
-            onNone: () =>
-              Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
-            onSome: (adminApiToken) =>
-              Effect.succeed({
-                configured: true,
-                source: "deployment" as const,
-                locked: true,
-                envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
-                adminApiToken: Option.some(adminApiToken),
-              } satisfies McpcfAdminApiTokenPresence),
-          }),
-      })
-    },
-  )
+          return {
+            configured: Option.isSome(adminApiToken),
+            source,
+            locked: false,
+            envVarName: null,
+            adminApiToken,
+          } satisfies McpcfAdminApiTokenPresence
+        }),
+      onSome: (reference) =>
+        Option.match(getS0DeploymentSecret(this.env, reference), {
+          onNone: () =>
+            Effect.die(new Error(`${reference.env} is required by ${S0_CONFIG_LOCATIONS.mcpcf}`)),
+          onSome: (adminApiToken) =>
+            Effect.succeed({
+              configured: true,
+              source: "deployment" as const,
+              locked: true,
+              envVarName: `${S0_CONFIG_LOCATIONS.mcpcf}.adminApiToken`,
+              adminApiToken: Option.some(adminApiToken),
+            } satisfies McpcfAdminApiTokenPresence),
+        }),
+    })
+  })
 
   upsertConfig = Effect.fn("db.mcpcf.upsertConfig")(function* (
     this: McpcfRegistryStore,
@@ -647,13 +644,13 @@ export class McpcfRegistryStore {
       .sort((left, right) => left.label.localeCompare(right.label))
   })
 
-  listAvailableServers = Effect.fn("db.mcpcf.listAvailableServers")(
-    function* (this: McpcfRegistryStore) {
-      const servers = yield* this.listServers()
+  listAvailableServers = Effect.fn("db.mcpcf.listAvailableServers")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const servers = yield* this.listServers()
 
-      return servers.filter((server) => server.enabled && server.sourceStatus === "active")
-    },
-  )
+    return servers.filter((server) => server.enabled && server.sourceStatus === "active")
+  })
 
   getServer = Effect.fn("db.mcpcf.getServer")(function* (
     this: McpcfRegistryStore,
@@ -931,37 +928,37 @@ export class McpcfRegistryStore {
     )
   }
 
-  private getServerIndex = Effect.fn("db.mcpcf.getServerIndex")(
-    function* (this: McpcfRegistryStore) {
-      const presence = yield* this.getServerIndexWithPresence()
+  private getServerIndex = Effect.fn("db.mcpcf.getServerIndex")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const presence = yield* this.getServerIndexWithPresence()
 
-      return presence.serverIds
-    },
-  )
+    return presence.serverIds
+  })
 
-  getServerIndexWithPresence = Effect.fn("db.mcpcf.getServerIndexWithPresence")(
-    function* (this: McpcfRegistryStore) {
-      const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
+  getServerIndexWithPresence = Effect.fn("db.mcpcf.getServerIndexWithPresence")(function* (
+    this: McpcfRegistryStore,
+  ) {
+    const value = yield* this.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.serverIndex)
 
-      const serverIds = Option.match(value, {
-        onNone: () =>
-          /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
-        onSome: readStringArray,
-      })
+    const serverIds = Option.match(value, {
+      onNone: () =>
+        /* SAFETY: This branch has no string[] elements, so the array is empty. */ [] as string[],
+      onSome: readStringArray,
+    })
 
-      const source = Match.value(Option.isSome(value)).pipe(
-        Match.when(true, () => "kv" as const),
-        Match.orElse(() => "none" as const),
-      )
+    const source = Match.value(Option.isSome(value)).pipe(
+      Match.when(true, () => "kv" as const),
+      Match.orElse(() => "none" as const),
+    )
 
-      return {
-        serverIds,
-        source,
-        locked: false,
-        envVarName: null,
-      } satisfies McpcfServerIndexPresence
-    },
-  )
+    return {
+      serverIds,
+      source,
+      locked: false,
+      envVarName: null,
+    } satisfies McpcfServerIndexPresence
+  })
 
   private putServerIndex = Effect.fn("db.mcpcf.putServerIndex")(function* (
     this: McpcfRegistryStore,

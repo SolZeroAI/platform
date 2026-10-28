@@ -198,13 +198,11 @@ export class AgentSkillStore {
       catch: d1Error("db.agentSkills.listEffectiveGlobal"),
     })
 
-    return rows.map(
-      ({ skill, preferenceEnabled }): EffectiveAgentSkill => ({
-        ...rowToRecord(skill),
-        enabled: (preferenceEnabled ?? skill.defaultEnabled) === 1,
-        overridden: preferenceEnabled !== null,
-      }),
-    )
+    return rows.map(({ skill, preferenceEnabled }): EffectiveAgentSkill => ({
+      ...rowToRecord(skill),
+      enabled: (preferenceEnabled ?? skill.defaultEnabled) === 1,
+      overridden: preferenceEnabled !== null,
+    }))
   })
 
   getActive = Effect.fn("db.agentSkills.getActive")(function* (

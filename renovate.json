@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "postUpgradeTasks": {
+    "commands": ["nub install --no-frozen-lockfile --ignore-scripts"],
+    "fileFilters": ["nub.lock"],
+    "executionMode": "branch"
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "addLabels": ["release:none"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["release:none"]
+    },
+    {
+      "matchPackageNames": ["oxlint", "@oxlint/plugins", "oxfmt"],
+      "groupName": "oxc toolchain"
+    },
+    {
+      "matchPackageNames": ["node", "@types/node"],
+      "allowedVersions": "<25"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/renovate\\.yml$/"],
+      "matchStrings": ["renovate@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "renovate",
+      "datasourceTemplate": "npm"
+    }
+  ]
+}

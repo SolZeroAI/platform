@@ -52,7 +52,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "24.19.2",
     "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "^7.0.2"
   }

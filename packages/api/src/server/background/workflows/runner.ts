@@ -178,23 +178,16 @@ function redactWorkflowTriggerForEvent(trigger: WorkflowTriggerPayload): Workflo
 
 export function getTerminalWorkflowRunUpdate(status: WorkflowInstanceStatus) {
   return Match.value(status.status).pipe(
-    Match.when(
-      "complete",
-      (): TerminalWorkflowRunUpdate => ({
-        status: "completed",
-        output: Option.getOrNull(outputRecordOptionFromUnknown(status.output)),
-        error: null,
-      }),
-    ),
-    Match.whenOr(
-      "errored",
-      "terminated",
-      (): TerminalWorkflowRunUpdate => ({
-        status: "failed",
-        output: null,
-        error: formatWorkflowInstanceError(status),
-      }),
-    ),
+    Match.when("complete", (): TerminalWorkflowRunUpdate => ({
+      status: "completed",
+      output: Option.getOrNull(outputRecordOptionFromUnknown(status.output)),
+      error: null,
+    })),
+    Match.whenOr("errored", "terminated", (): TerminalWorkflowRunUpdate => ({
+      status: "failed",
+      output: null,
+      error: formatWorkflowInstanceError(status),
+    })),
     Match.orElse(() => null),
   )
 }

@@ -191,7 +191,7 @@ function processTable() {
 function descendants(pid: number) {
   const table = processTable()
   const ids = new Set([pid])
-  for (let changed = true; changed; ) {
+  for (let changed = true; changed;) {
     changed = false
     for (const item of table)
       if (ids.has(item.parent) && !ids.has(item.pid)) {
@@ -374,7 +374,7 @@ async function stopSnapshots(
         )
         .map((item) => item.pid),
     )
-    for (let changed = true; changed; ) {
+    for (let changed = true; changed;) {
       changed = false
       for (const item of table)
         if (matched.has(item.parent) && !matched.has(item.pid)) {
