@@ -412,7 +412,7 @@ async function summarize() {
     "#### Recorded-action replay (e2e cache)",
     "",
     `Action steps: ${replay.fullyReplayedSteps}/${replay.actionSteps} fully replayed, ${replay.partiallyReplayedSteps} handed off, ${replay.missedSteps} missed, ${replay.uncachedActionSteps} without cache; ${replay.replayedActions} actions replayed.`,
-    `Replay archive restored: ${display(summary.replayCacheRestored)}; SDK model calls: ${replay.modelCalls}; live judgment steps: ${replay.liveJudgmentSteps}; param collisions preventing recording: ${replay.notRecordedSteps}.`,
+    `Replay recordings present: ${display(summary.replayCacheRestored)}; SDK model calls: ${replay.modelCalls}; live judgment steps: ${replay.liveJudgmentSteps}; param collisions preventing recording: ${replay.notRecordedSteps}.`,
     `Replay miss/handoff reasons: ${
       Object.entries(replay.reasons)
         .sort(([a], [b]) => a.localeCompare(b))
