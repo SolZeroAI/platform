@@ -391,13 +391,6 @@ test("failed launch publication cannot allocate infrastructure or erase its rece
 
     expect(failed).toBe(true)
     expect(JSON.parse(readFileSync(manifest, "utf8")).completedAt).toBeUndefined()
-    const published = JSON.parse(readFileSync(".e2e/cleanup-ownership.json", "utf8"))
-    expect(
-      published.some(
-        (item: { owner: string; completed: boolean }) =>
-          item.owner === run.runId && !item.completed,
-      ),
-    ).toBe(true)
     expect(existsSync(resolve(root, run.runId, "stack"))).toBe(true)
   } finally {
     if (child && child.exitCode === null && child.signalCode === null) {

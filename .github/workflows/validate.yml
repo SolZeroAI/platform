@@ -138,14 +138,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
           nub install --frozen-lockfile
-      - name: Recover completed hosted ownership before allocations
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          nub exec tsx scripts/e2e/recover-hosted.ts
-          node <<'NODE'
-          const fs = require("node:fs"); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Hosted ownership recovery\n\n```json\n" + fs.readFileSync(".e2e/hosted-recovery-summary.json", "utf8") + "\n```\n")
-          NODE
       - name: Verify Docker for source-image harnesses
         run: docker info
       - name: Install browser
@@ -204,15 +196,6 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
-      - name: Preserve exact cleanup ownership for recovery
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: solzero-cleanup-ownership-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .e2e/cleanup-ownership.json
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: 30
       - name: Upload diagnostic reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
@@ -225,7 +208,6 @@ jobs:
             .e2e/cleanup-proof/junit.xml
             .e2e/cleanup-proof/summary.md
             .e2e/cleanup-summary.json
-            .e2e/hosted-recovery-summary.json
             .e2e/summary.md
             .e2e/failures
             .e2e/artifacts
