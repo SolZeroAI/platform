@@ -26,6 +26,7 @@ import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Tooltip, TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { Check, ChevronRight, ExternalLink, Plus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { runApi } from "@/lib/api-client"
 import { DialogPaginationPageSize } from "@/components/dialog-pagination-page-size"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
@@ -95,10 +96,10 @@ interface McpcfServer {
 }
 
 type McpcfToolPreviewState =
-  | { status: "idle"; tools: McpcfToolPreview[]; error: "" }
-  | { status: "loading"; tools: McpcfToolPreview[]; error: "" }
-  | { status: "loaded"; tools: McpcfToolPreview[]; error: "" }
-  | { status: "error"; tools: McpcfToolPreview[]; error: string }
+  | { status: "idle"; tools: readonly McpcfToolPreview[]; error: "" }
+  | { status: "loading"; tools: readonly McpcfToolPreview[]; error: "" }
+  | { status: "loaded"; tools: readonly McpcfToolPreview[]; error: "" }
+  | { status: "error"; tools: readonly McpcfToolPreview[]; error: string }
 
 function toggleDocSource(tools: SessionToolSpec[], sourceId: string): SessionToolSpec[] {
   const alreadySelected = tools.some(
@@ -272,10 +273,10 @@ export function HomeSessionToolsDialog({
   )
   const [customMcpError, setCustomMcpError] = useState("")
   const [stepLimitError, setStepLimitError] = useState("")
-  const [mcpcfServers, setMcpcfServers] = useState<McpcfServer[]>([])
+  const [mcpcfServers, setMcpcfServers] = useState<readonly McpcfServer[]>([])
   const [mcpcfServersLoading, setMcpcfServersLoading] = useState(false)
   const [mcpcfServersError, setMcpcfServersError] = useState("")
-  const [aiSearchSources, setAiSearchSources] = useState<AiSearchSessionSource[]>([])
+  const [aiSearchSources, setAiSearchSources] = useState<readonly AiSearchSessionSource[]>([])
   const [aiSearchSourcesLoading, setAiSearchSourcesLoading] = useState(false)
   const [aiSearchSourcesError, setAiSearchSourcesError] = useState("")
   const [expandedMcpcfServerIds, setExpandedMcpcfServerIds] = useState<Set<McpcfServerId>>(
@@ -384,43 +385,34 @@ export function HomeSessionToolsDialog({
       return
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setMcpcfServersLoading(true)
-    fetch("/api/sessions/mcpcf/servers")
-      .then(async (response) => {
-        // SAFETY: /api/sessions/mcpcf/servers returns the server list and an error string when response.ok is false.
-        const data = (await response.json().catch(() => ({}))) as {
-          servers?: McpcfServer[]
-          error?: string
-        }
-        if (!response.ok) {
-          throw new Error(
-            data.error || `Failed to load MCP Context Forge servers: ${response.status}`,
-          )
-        }
-        if (!cancelled) {
-          setMcpcfServers(data.servers ?? [])
-          setMcpcfServersError("")
-        }
+    runApi((client) => client.sessions.mcpcfServers(), {
+      signal: controller.signal,
+      fallbackMessage: "Failed to load MCP Context Forge servers",
+    })
+      .then((data) => {
+        setMcpcfServers(data.servers)
+        setMcpcfServersError("")
       })
       .catch((errorValue) => {
-        if (!cancelled) {
-          setMcpcfServers([])
-          setMcpcfServersError(
-            errorValue instanceof Error
-              ? errorValue.message
-              : "Failed to load MCP Context Forge servers",
-          )
-        }
+        if (controller.signal.aborted) return
+
+        setMcpcfServers([])
+        setMcpcfServersError(
+          errorValue instanceof Error
+            ? errorValue.message
+            : "Failed to load MCP Context Forge servers",
+        )
       })
       .finally(() => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setMcpcfServersLoading(false)
         }
       })
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
   }, [open])
 
@@ -429,39 +421,32 @@ export function HomeSessionToolsDialog({
       return
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setAiSearchSourcesLoading(true)
-    fetch("/api/sessions/ai-search/sources")
-      .then(async (response) => {
-        // SAFETY: /api/sessions/ai-search/sources returns the source list and an error string when response.ok is false.
-        const data = (await response.json().catch(() => ({}))) as {
-          sources?: AiSearchSessionSource[]
-          error?: string
-        }
-        if (!response.ok) {
-          throw new Error(data.error || `Failed to load AI Search sources: ${response.status}`)
-        }
-        if (!cancelled) {
-          setAiSearchSources(data.sources ?? [])
-          setAiSearchSourcesError("")
-        }
+    runApi((client) => client.sessions.aiSearchSources(), {
+      signal: controller.signal,
+      fallbackMessage: "Failed to load AI Search sources",
+    })
+      .then((data) => {
+        setAiSearchSources(data.sources)
+        setAiSearchSourcesError("")
       })
       .catch((errorValue) => {
-        if (!cancelled) {
-          setAiSearchSources([])
-          setAiSearchSourcesError(
-            errorValue instanceof Error ? errorValue.message : "Failed to load AI Search sources",
-          )
-        }
+        if (controller.signal.aborted) return
+
+        setAiSearchSources([])
+        setAiSearchSourcesError(
+          errorValue instanceof Error ? errorValue.message : "Failed to load AI Search sources",
+        )
       })
       .finally(() => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setAiSearchSourcesLoading(false)
         }
       })
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
   }, [open])
 
@@ -487,19 +472,13 @@ export function HomeSessionToolsDialog({
     }))
 
     try {
-      const response = await fetch(`/api/sessions/mcpcf/${encodeURIComponent(serverId)}/tools`)
-      // SAFETY: The MCP Context Forge tools response returns the tool list and an error string when response.ok is false.
-      const data = (await response.json().catch(() => ({}))) as {
-        tools?: McpcfToolPreview[]
-        error?: string
-      }
-      if (!response.ok) {
-        throw new Error(data.error || `Failed to load tools: ${response.status}`)
-      }
+      const data = await runApi((client) => client.sessions.mcpcfTools({ params: { serverId } }), {
+        fallbackMessage: "Failed to load tools",
+      })
 
       setMcpcfToolPreviews((previews) => ({
         ...previews,
-        [serverId]: { status: "loaded", tools: data.tools ?? [], error: "" },
+        [serverId]: { status: "loaded", tools: data.tools, error: "" },
       }))
     } catch (errorValue) {
       setMcpcfToolPreviews((previews) => ({

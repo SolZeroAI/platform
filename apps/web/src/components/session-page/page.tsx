@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
+import type { UpdateSessionToolsPayload } from "@solzero/api"
 import {
   getGitHubRepoTool,
   isAgentRuntimeCompatibleWithProvider,
@@ -17,6 +18,7 @@ import {
 } from "@/components/settings/okta-reconnect"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
 import { useSessionSocket } from "@/hooks/use-session-socket"
+import { runApi } from "@/lib/api-client"
 import { useAuthSession } from "@/lib/auth-client"
 import { isIdleRuntimeStatus } from "@/lib/runtime-status"
 import {
@@ -28,13 +30,6 @@ import {
 import { useSessionReplay } from "@/lib/use-session-replay"
 import { SessionContent } from "./content"
 import { getErrorMessage } from "./event-items"
-
-type SessionToolsPatchBody = {
-  tools: SessionToolSpec[]
-  customMcpServers: OpenCodeMcpServers
-  isolateStepLimit: number
-  subagents?: SubagentMode
-}
 
 export function SessionPage({
   search,
@@ -120,13 +115,9 @@ export function SessionPage({
 
   const handleArchive = useCallback(async () => {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/archive`, {
-        method: "POST",
+      await runApi((client) => client.sessions.archive({ params: { id: sessionId } }), {
+        fallbackMessage: "Failed to archive session",
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to archive session: ${response.status}`)
-      }
     } catch (errorValue) {
       setPromptError(getErrorMessage(errorValue))
     }
@@ -134,13 +125,9 @@ export function SessionPage({
 
   const handleUnarchive = useCallback(async () => {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/unarchive`, {
-        method: "POST",
+      await runApi((client) => client.sessions.unarchive({ params: { id: sessionId } }), {
+        fallbackMessage: "Failed to unarchive session",
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to unarchive session: ${response.status}`)
-      }
     } catch (errorValue) {
       setPromptError(getErrorMessage(errorValue))
     }
@@ -207,24 +194,14 @@ export function SessionPage({
       setToolsError(null)
 
       try {
-        const response = await fetch(`/api/sessions/${sessionId}/tools`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(
-            buildSessionToolsPatchBody(value, sessionState?.agentRuntime === "isolate"),
-          ),
-        })
-
-        if (!response.ok) {
-          const data = await response.json().catch(() => null)
-          throw new Error(
-            data && typeof data === "object" && "error" in data && typeof data.error === "string"
-              ? data.error
-              : "Failed to update agent tools",
-          )
-        }
+        await runApi(
+          (client) =>
+            client.sessions.tools({
+              params: { id: sessionId },
+              payload: buildSessionToolsPatchBody(value, sessionState?.agentRuntime === "isolate"),
+            }),
+          { fallbackMessage: "Failed to update agent tools" },
+        )
       } catch (errorValue) {
         setToolsError(
           errorValue instanceof Error ? errorValue.message : "Failed to update agent tools",
@@ -626,16 +603,12 @@ function buildSessionToolsPatchBody(
     subagents: SubagentMode
   },
   includeSubagents: boolean,
-): SessionToolsPatchBody {
-  const body: SessionToolsPatchBody = {
+): UpdateSessionToolsPayload {
+  const body = {
     tools: value.tools,
     customMcpServers: value.customMcpServers,
     isolateStepLimit: value.isolateStepLimit,
   }
 
-  if (includeSubagents) {
-    body.subagents = value.subagents
-  }
-
-  return body
+  return includeSubagents ? { ...body, subagents: value.subagents } : body
 }
