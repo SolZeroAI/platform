@@ -1,5 +1,6 @@
 "use client"
 
+import { GlobalSecretWrite } from "@solzero/api"
 import { useCallback, useEffect, useState } from "react"
 import { SecretsTable } from "@/components/secrets-table"
 import { secretsListQuery } from "@/hooks/use-secrets"
@@ -234,8 +235,11 @@ export function SecretsEditor({
         (client) =>
           client.secrets.set({
             payload: {
+              // The client encodes the payload, so each entry must be a GlobalSecretWrite instance.
               secrets: entries.map(({ key, value, tags }) =>
-                value === undefined ? { key, tags } : { key, value, tags },
+                value === undefined
+                  ? new GlobalSecretWrite({ key, tags })
+                  : new GlobalSecretWrite({ key, value, tags }),
               ),
             },
           }),
