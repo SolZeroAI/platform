@@ -123,19 +123,28 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
     outputs:
       skip: ${{ steps.diff.outputs.skip }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       # The Tegami version commit changes only VERSION, CHANGELOG.md and .tegami/. The pull
-      # requests it releases already ran their tests.
+      # requests it releases already ran their tests. A newer master commit cancels an older
+      # one's run, so compare with the last successful master run, not the parent commit.
+      # Without a known base, the suite runs.
       - id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          changed="$(git diff --name-only HEAD^ HEAD)"
-          others="$(printf '%s\n' "$changed" | grep -Ev '(^|/)(VERSION|CHANGELOG\.md)$|^\.tegami/' || true)"
-          if [ -n "$changed" ] && [ -z "$others" ]; then skip=true; else skip=false; fi
+          skip=false
+          base="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/validate.yml/runs?branch=master&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty' || true)"
+          if [ -n "$base" ] && git merge-base --is-ancestor "$base" HEAD; then
+            changed="$(git diff --name-only "$base" HEAD)"
+            others="$(printf '%s\n' "$changed" | grep -Ev '(^|/)(VERSION|CHANGELOG\.md)$|^\.tegami/' || true)"
+            if [ -n "$changed" ] && [ -z "$others" ]; then skip=true; fi
+          fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
   e2e:
