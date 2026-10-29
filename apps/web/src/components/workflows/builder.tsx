@@ -107,7 +107,7 @@ export function WorkflowBuilder({
   selectedNodeDefinition: WorkflowNodeDefinition | null
   selectedEdge: WorkflowCanvasEdge | null
   webhookUrl: string
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   providerCatalogLoading: boolean
   nodePickerCollapsed: boolean
   detailsCollapsed: boolean

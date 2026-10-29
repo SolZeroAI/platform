@@ -1,33 +1,25 @@
+import {
+  ModelProviderOverrideSchema,
+  ModelReasoningConfigSchema,
+  OpenCodePermissionActionSchema,
+  OpenCodePermissionSchema,
+  ProviderModelDefinitionSchema,
+  ProviderModelLimitSchema,
+} from "@solzero/shared"
 import { Schema } from "effect"
 import { JsonRecord } from "./common"
 
-export const ProviderModelLimit = Schema.Struct({
-  context: Schema.Number,
-  output: Schema.Number,
-})
-
-export const ModelReasoningConfig = Schema.Struct({
-  efforts: Schema.Array(Schema.String),
-  default: Schema.optionalKey(Schema.String),
-})
-
-export const ModelProviderOverride = Schema.Struct({
-  npm: Schema.optionalKey(Schema.String),
-  api: Schema.optionalKey(Schema.String),
-})
-
-export const ProviderModelDefinition = Schema.Struct({
-  name: Schema.String,
-  options: Schema.optionalKey(JsonRecord),
-  limit: Schema.optionalKey(ProviderModelLimit),
-  reasoning: Schema.optionalKey(ModelReasoningConfig),
-  provider: Schema.optionalKey(ModelProviderOverride),
-})
+// The provider contract reuses the shared provider schemas, so the API and the web app agree on
+// reasoning efforts, interleaved reasoning, and permission rules.
+export const ProviderModelLimit = ProviderModelLimitSchema
+export const ModelReasoningConfig = ModelReasoningConfigSchema
+export const ModelProviderOverride = ModelProviderOverrideSchema
+export const ProviderModelDefinition = ProviderModelDefinitionSchema
 
 export type ProviderModelDefinition = typeof ProviderModelDefinition.Type
 
-export const OpenCodePermissionAction = Schema.Literals(["allow", "ask", "deny"])
-export const OpenCodePermission = Schema.Union([OpenCodePermissionAction, JsonRecord])
+export const OpenCodePermissionAction = OpenCodePermissionActionSchema
+export const OpenCodePermission = OpenCodePermissionSchema
 
 export const SharedProviderOverridePayload = Schema.Struct({
   providerId: Schema.String,
@@ -90,13 +82,28 @@ export const RuntimeProvider = Schema.Struct({
   models: Schema.Array(RuntimeModelOption),
 })
 
+export const UserSharedProviderOverride = Schema.Struct({
+  providerId: Schema.String,
+  displayName: Schema.optionalKey(Schema.String),
+  hasApiKey: Schema.Boolean,
+})
+
+export const UserCustomProviderSettings = Schema.Struct({
+  providerId: Schema.String,
+  name: Schema.String,
+  npm: Schema.optionalKey(Schema.String),
+  options: Schema.optionalKey(JsonRecord),
+  models: Schema.Record(Schema.String, ProviderModelDefinition),
+  hasApiKey: Schema.Boolean,
+})
+
 export const ProviderSettingsSnapshot = Schema.Struct({
   defaultModel: Schema.NullOr(Schema.String),
   defaultIsolateStepLimit: Schema.Number,
   opencodePermission: Schema.NullOr(OpenCodePermission),
   defaultOpenCodePermission: OpenCodePermission,
-  sharedOverrides: Schema.Array(JsonRecord),
-  customProviders: Schema.Array(JsonRecord),
+  sharedOverrides: Schema.Array(UserSharedProviderOverride),
+  customProviders: Schema.Array(UserCustomProviderSettings),
 })
 
 export const RuntimeProviderCatalog = Schema.Struct({

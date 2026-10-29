@@ -19,6 +19,7 @@ import type {
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Archive, ChevronDown, ChevronsUpDown, Code2, Globe2, MessageSquare } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { SessionsListQuery } from "@solzero/api"
 import { AGENT_RUNTIMES, formatAgentRuntimeLabel, resolveAgentRuntime } from "@solzero/shared"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import {
@@ -28,6 +29,7 @@ import {
   type ArchiveSessionFailure,
   type SessionItem,
 } from "@/lib/session-list"
+import { runApi } from "@/lib/api-client"
 import { copyToClipboard } from "@/lib/format"
 import { formatRelativeTime } from "@/lib/time"
 import { appToastManager } from "@/lib/toast-manager"
@@ -37,10 +39,11 @@ const FILTER_ALL = "all"
 const SESSION_STATUS_OPTIONS = ["created", "active", "completed"] as const
 const SESSION_SOURCE_OPTIONS = ["web", "api", "slack"] as const
 
-interface SessionListResponse {
-  sessions?: SessionItem[]
-  total?: number
-  hasMore?: boolean
+/** The table columns whose filter value the session list query accepts. */
+const SESSION_FILTER_IDS = ["status", "agentRuntime", "source", "repoOwner", "repoName"] as const
+
+function isSessionFilterId(id: string): id is (typeof SESSION_FILTER_IDS)[number] {
+  return SESSION_FILTER_IDS.some((filterId) => filterId === id)
 }
 
 export function PreviousSessionsTable() {
@@ -296,51 +299,49 @@ export function PreviousSessionsTable() {
       setError("")
       setArchiveFailures([])
 
-      const params = new URLSearchParams({
+      const query: SessionsListQuery = {
         excludeStatus: "archived",
         limit: String(pagination.pageSize),
         offset: String(pagination.pageIndex * pagination.pageSize),
-      })
+      }
 
       const trimmedSearch = globalFilter.trim()
 
       if (trimmedSearch) {
-        params.set("q", trimmedSearch)
+        query.q = trimmedSearch
       }
 
       for (const filter of columnFilters) {
-        if (typeof filter.value === "string" && filter.value.trim()) {
-          params.set(filter.id, filter.value.trim())
+        if (
+          isSessionFilterId(filter.id) &&
+          typeof filter.value === "string" &&
+          filter.value.trim()
+        ) {
+          query[filter.id] = filter.value.trim()
         }
       }
 
       const [sort] = sorting
 
       if (sort) {
-        params.set("sortBy", sort.id)
-        params.set("sortDir", sort.desc ? "desc" : "asc")
+        query.sortBy = sort.id
+        query.sortDir = sort.desc ? "desc" : "asc"
       }
 
       try {
-        const response = await fetch(`/api/sessions?${params.toString()}`, { signal })
-
-        // SAFETY: /api/sessions returns SessionListResponse and an error string when response.ok is false.
-        const data = (await response.json().catch(() => ({}))) as SessionListResponse & {
-          error?: string
-        }
-
-        if (!response.ok) {
-          throw new Error(data.error ?? `Request failed with status ${response.status}`)
-        }
+        const data = await runApi((client) => client.sessions.list({ query }), {
+          signal,
+          fallbackMessage: "Failed to load agents",
+        })
 
         if (fetchSequenceRef.current !== sequence) {
           return
         }
 
-        setSessions(Array.isArray(data.sessions) ? data.sessions : [])
-        setTotal(typeof data.total === "number" ? data.total : 0)
+        setSessions([...data.sessions])
+        setTotal(data.total)
       } catch (errorValue) {
-        if (errorValue instanceof Error && errorValue.name === "AbortError") {
+        if (signal.aborted) {
           return
         }
 
@@ -382,7 +383,7 @@ export function PreviousSessionsTable() {
     }
 
     const key = archiveFailures
-      .map((failure) => `${failure.sessionId}:${failure.status ?? "network"}:${failure.message}`)
+      .map((failure) => `${failure.sessionId}:${failure.message}`)
       .join("|")
 
     if (lastArchiveFailureToastRef.current === key) {

@@ -1,5 +1,7 @@
 import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
+import * as Schema from "effect/Schema"
+import { ReposListResponse } from "../packages/api/src/http/schemas/repos"
 import { api, authErrorCode, authRequest, linkedAuthAccounts, uniqueName } from "./support/api"
 import { requireFixture } from "./support/external-fixtures"
 
@@ -10,13 +12,12 @@ test(
     const repo = requireFixture("E2E_GITHUB_REPOSITORY")
     const [, name] = repo.split("/")
 
-    const response = await api<{ repos: Array<{ full_name: string }> }>(
-      browser,
-      `/repos?q=${encodeURIComponent(name!)}`,
+    const response = Schema.decodeUnknownSync(ReposListResponse)(
+      await api<unknown>(browser, `/repos?q=${encodeURIComponent(name!)}`),
     )
 
     expect(
-      response.repos.some((item) => item.full_name === repo),
+      response.repos.some((item) => item.fullName === repo),
       "Link the disposable admin GitHub identity and grant its app access to E2E_GITHUB_REPOSITORY",
     ).toBe(true)
   },

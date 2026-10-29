@@ -293,7 +293,7 @@ export interface RuntimeProviderModelOption {
 export interface RuntimeModelCategory {
   category: string
   providerId: string
-  models: RuntimeProviderModelOption[]
+  models: ReadonlyArray<RuntimeProviderModelOption>
 }
 
 export interface RuntimeProviderCatalogEntry {
@@ -305,14 +305,14 @@ export interface RuntimeProviderCatalogEntry {
   hasApiKey: boolean
   globalCredentialConfigured: boolean
   credentialSource: "binding" | "shared" | "user_override" | "user_custom" | "missing"
-  models: RuntimeProviderModelOption[]
+  models: ReadonlyArray<RuntimeProviderModelOption>
 }
 
 export interface RuntimeProviderCatalog {
   defaultModel: string | null
   globalDefaultModel: string | null
-  modelOptions: RuntimeModelCategory[]
-  providers: RuntimeProviderCatalogEntry[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
+  providers: ReadonlyArray<RuntimeProviderCatalogEntry>
 }
 
 export interface UserSharedProviderOverride {
@@ -352,8 +352,8 @@ export interface ProviderSettingsSnapshot {
   defaultIsolateStepLimit: number
   opencodePermission: OpenCodePermission | null
   defaultOpenCodePermission: OpenCodePermission
-  sharedOverrides: UserSharedProviderOverride[]
-  customProviders: UserCustomProviderSettings[]
+  sharedOverrides: ReadonlyArray<UserSharedProviderOverride>
+  customProviders: ReadonlyArray<UserCustomProviderSettings>
 }
 
 export interface ProviderSettingsResponse {
