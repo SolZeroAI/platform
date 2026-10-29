@@ -9,6 +9,6 @@ export type D1DrizzleDatabase = DrizzleD1Database<typeof relations>
 
 export const D1Drizzle = Context.Service<D1DrizzleDatabase>("s0/api/D1Drizzle")
 
-export function makeD1Drizzle(db: D1Database): D1DrizzleDatabase {
+export function openD1Drizzle(db: D1Database): D1DrizzleDatabase {
   return drizzle(db, { relations })
 }

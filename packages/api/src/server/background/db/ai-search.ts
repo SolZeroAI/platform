@@ -1,16 +1,27 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/prefer-option-over-null, solzero/no-return-in-arrow, solzero/no-branch-in-object -- AI Search registry is a low-level S0_CONFIG and Cloudflare namespace boundary with compact JSON decoders and request builders. */
 import {
   AI_SEARCH_SESSION_TOOL_KIND,
   getSelectedAiSearchSourceIds,
   normalizeAiSearchSourceId,
   type SessionToolSpec,
 } from "@solzero/shared"
+import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
+import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { describeError, toError } from "../../lib/effect-errors"
 import type { Env } from "../types"
+import {
+  booleanField,
+  isRecord,
+  nonBlankStringField,
+  numberField,
+  readArray,
+  readStringArray,
+  stringField,
+} from "./record-fields"
 import { S0_CONFIG_KEYS, S0ConfigStore } from "./s0-config"
 
 export const DEFAULT_AI_SEARCH_MAX_RESULTS = 5
@@ -97,56 +108,35 @@ export class AiSearchSourceUnavailableError extends Schema.TaggedError<AiSearchS
   },
 ) {}
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function stringField(record: Record<string, unknown>, key: string, fallback = ""): string {
-  const value = record[key]
-
-  return typeof value === "string" ? value : fallback
-}
-
-function nullableStringField(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key]
-
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
-}
-
-function numberField(record: Record<string, unknown>, key: string, fallback: number): number {
-  const value = record[key]
-
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback
-}
-
-function booleanField(record: Record<string, unknown>, key: string, fallback: boolean): boolean {
-  const value = record[key]
-
-  return typeof value === "boolean" ? value : fallback
-}
-
-function readStringArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : []
+function trimmedStringField(record: Record<string, unknown>, key: string) {
+  return Option.getOrNull(Option.map(nonBlankStringField(record, key), (value) => value.trim()))
 }
 
 function normalizeStringList(values: readonly string[] | null | undefined): string[] {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))]
 }
 
+function isValidMaxResults(value: number) {
+  return Number.isInteger(value) && value >= 1 && value <= 20
+}
+
+function requireConfiguration<A>(value: A, valid: (value: A) => boolean, message: string): A {
+  return Option.liftPredicate(value, valid).pipe(
+    Option.getOrThrowWith(() => new AiSearchConfigurationError({ message })),
+  )
+}
+
 function normalizeMaxResults(value: number | null | undefined): number {
-  if (value === null || value === undefined) {
-    return DEFAULT_AI_SEARCH_MAX_RESULTS
-  }
-
-  if (!Number.isInteger(value) || value < 1 || value > 20) {
-    throw new AiSearchConfigurationError({
-      message: "AI Search max results must be an integer between 1 and 20",
-    })
-  }
-
-  return value
+  return Option.fromNullishOr(value).pipe(
+    Option.map((resolved) =>
+      requireConfiguration(
+        resolved,
+        isValidMaxResults,
+        "AI Search max results must be an integer between 1 and 20",
+      ),
+    ),
+    Option.getOrElse(() => DEFAULT_AI_SEARCH_MAX_RESULTS),
+  )
 }
 
 function normalizeDomain(value: string): string {
@@ -155,11 +145,7 @@ function normalizeDomain(value: string): string {
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "")
 
-  if (!trimmed) {
-    throw new AiSearchConfigurationError({ message: "Website domain is required" })
-  }
-
-  return trimmed
+  return requireConfiguration(trimmed, (domain) => domain.length > 0, "Website domain is required")
 }
 
 function normalizeDataSource(dataSource: AiSearchDataSourceRecord): AiSearchDataSourceRecord {
@@ -186,74 +172,65 @@ function normalizeDataSource(dataSource: AiSearchDataSourceRecord): AiSearchData
   }
 }
 
-function validateDataSource(dataSource: AiSearchDataSourceRecord) {
-  if (dataSource.type === "r2" && !dataSource.bucketName.trim()) {
-    throw new AiSearchConfigurationError({ message: "R2 bucket name is required" })
-  }
+function hasRequiredDataSourceFields(dataSource: AiSearchDataSourceRecord) {
+  return dataSource.type !== "r2" || dataSource.bucketName.trim().length > 0
 }
 
-function readAiSearchDataSourceRecord(value: unknown): AiSearchDataSourceRecord | null {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const type = stringField(value, "type")
-
-  return Match.value(type).pipe(
-    Match.when("built-in", () => ({ type: "built-in" }) satisfies AiSearchBuiltInDataSourceRecord),
-    Match.when(
-      "r2",
-      () =>
-        ({
-          type: "r2",
-          bucketName: stringField(value, "bucketName"),
-          prefix: nullableStringField(value, "prefix"),
-          r2Jurisdiction: nullableStringField(value, "r2Jurisdiction"),
-        }) satisfies AiSearchR2DataSourceRecord,
+function dataSourceFromRecord(value: Record<string, unknown>) {
+  return Match.value(stringField(value, "type")).pipe(
+    Match.when("built-in", () => Option.some<AiSearchDataSourceRecord>({ type: "built-in" })),
+    Match.when("r2", () =>
+      Option.some<AiSearchDataSourceRecord>({
+        type: "r2",
+        bucketName: stringField(value, "bucketName"),
+        prefix: trimmedStringField(value, "prefix"),
+        r2Jurisdiction: trimmedStringField(value, "r2Jurisdiction"),
+      }),
     ),
-    Match.when(
-      "website",
-      () =>
-        ({
-          type: "website",
-          domain: stringField(value, "domain"),
-          includePaths: readStringArray(value.includePaths),
-          excludePaths: readStringArray(value.excludePaths),
-          specificSitemaps: readStringArray(value.specificSitemaps),
-          useBrowserRendering: booleanField(value, "useBrowserRendering", false),
-          includeImages: booleanField(value, "includeImages", false),
-        }) satisfies AiSearchWebsiteDataSourceRecord,
+    Match.when("website", () =>
+      Option.some<AiSearchDataSourceRecord>({
+        type: "website",
+        domain: stringField(value, "domain"),
+        includePaths: readStringArray(value.includePaths),
+        excludePaths: readStringArray(value.excludePaths),
+        specificSitemaps: readStringArray(value.specificSitemaps),
+        useBrowserRendering: booleanField(value, "useBrowserRendering", false),
+        includeImages: booleanField(value, "includeImages", false),
+      }),
     ),
-    Match.orElse(() => null),
+    Match.orElse(() => Option.none<AiSearchDataSourceRecord>()),
   )
 }
 
+function aiSearchSourceFromRecord(
+  record: Record<string, unknown>,
+  dataSource: AiSearchDataSourceRecord,
+): AiSearchSourceRecord {
+  const id = normalizeAiSearchSourceId(stringField(record, "id"))
+  const now = Date.now()
+
+  return {
+    id,
+    label: stringField(record, "label", id),
+    description: stringField(record, "description"),
+    enabled: booleanField(record, "enabled", true),
+    maxResults: normalizeMaxResults(
+      numberField(record, "maxResults", DEFAULT_AI_SEARCH_MAX_RESULTS),
+    ),
+    dataSource: normalizeDataSource(dataSource),
+    createdAt: numberField(record, "createdAt", now),
+    updatedAt: numberField(record, "updatedAt", now),
+  }
+}
+
 export function readAiSearchSourceRecord(value: unknown): Option.Option<AiSearchSourceRecord> {
-  return Option.fromNullishOr(value).pipe(
-    Option.filter(isRecord),
-    Option.flatMap((record) => {
-      const dataSource = readAiSearchDataSourceRecord(record.dataSource)
-
-      if (!dataSource) {
-        return Option.none<AiSearchSourceRecord>()
-      }
-
-      const id = normalizeAiSearchSourceId(stringField(record, "id"))
-      const now = Date.now()
-
-      return Option.some({
-        id,
-        label: stringField(record, "label", id),
-        description: stringField(record, "description"),
-        enabled: booleanField(record, "enabled", true),
-        maxResults: normalizeMaxResults(
-          numberField(record, "maxResults", DEFAULT_AI_SEARCH_MAX_RESULTS),
-        ),
-        dataSource: normalizeDataSource(dataSource),
-        createdAt: numberField(record, "createdAt", now),
-        updatedAt: numberField(record, "updatedAt", now),
-      } satisfies AiSearchSourceRecord)
-    }),
+  return Option.liftPredicate(value, isRecord).pipe(
+    Option.flatMap((record) =>
+      Option.liftPredicate(record.dataSource, isRecord).pipe(
+        Option.flatMap(dataSourceFromRecord),
+        Option.map((dataSource) => aiSearchSourceFromRecord(record, dataSource)),
+      ),
+    ),
   )
 }
 
@@ -262,8 +239,13 @@ function buildAiSearchSourceRecord(
   existing: Option.Option<AiSearchSourceRecord>,
 ): AiSearchSourceRecord {
   const id = normalizeAiSearchSourceId(update.id)
-  const dataSource = normalizeDataSource(update.dataSource)
-  validateDataSource(dataSource)
+
+  const dataSource = requireConfiguration(
+    normalizeDataSource(update.dataSource),
+    hasRequiredDataSourceFields,
+    "R2 bucket name is required",
+  )
+
   const now = Date.now()
 
   return {
@@ -281,21 +263,31 @@ function buildAiSearchSourceRecord(
   }
 }
 
+function searchToolName(source: AiSearchSourceRecord) {
+  return getAiSearchMcpToolNames(source).search
+}
+
+function failDuplicateToolNames(existingId: string, sourceId: string): never {
+  throw new AiSearchConfigurationError({
+    message: `AI Search source IDs '${existingId}' and '${sourceId}' generate the same MCP tool names`,
+  })
+}
+
 function ensureUniqueToolNames(sources: readonly AiSearchSourceRecord[]) {
-  const seen = new Map<string, string>()
+  // Reversed, so the first source that claims a tool name owns it.
+  const owners = new Map(
+    [...sources].reverse().map((source) => [searchToolName(source), source.id] as const),
+  )
 
-  for (const source of sources) {
-    const toolNames = getAiSearchMcpToolNames(source)
-    const existing = seen.get(toolNames.search)
+  const owner = (source: AiSearchSourceRecord) => owners.get(searchToolName(source)) ?? source.id
 
-    if (existing && existing !== source.id) {
-      throw new AiSearchConfigurationError({
-        message: `AI Search source IDs '${existing}' and '${source.id}' generate the same MCP tool names`,
-      })
-    }
-
-    seen.set(toolNames.search, source.id)
-  }
+  Option.match(
+    Arr.findFirst(sources, (source) => owner(source) !== source.id),
+    {
+      onNone: () => undefined,
+      onSome: (source) => failDuplicateToolNames(owner(source), source.id),
+    },
+  )
 }
 
 type AiSearchNamespace = NonNullable<Env["AI_SEARCH"]>
@@ -324,58 +316,74 @@ interface WebsiteSourceParams {
   }
 }
 
-function sourceParamsFor(dataSource: AiSearchDataSourceRecord) {
-  if (dataSource.type === "built-in") return undefined
+function nonEmptyText(value: string | null) {
+  return Option.fromNullishOr(value).pipe(Option.filter((text) => text.length > 0))
+}
 
-  if (dataSource.type === "r2") {
-    const params: R2SourceParams = {}
+function nonEmptyList(values: readonly string[]) {
+  return Option.liftPredicate(values, Arr.isReadonlyArrayNonEmpty)
+}
 
-    if (dataSource.prefix) params.prefix = dataSource.prefix
-
-    if (dataSource.r2Jurisdiction) params.r2_jurisdiction = dataSource.r2Jurisdiction
-
-    return params
+function r2SourceParams(dataSource: AiSearchR2DataSourceRecord): R2SourceParams {
+  return {
+    ...Option.match(nonEmptyText(dataSource.prefix), {
+      onNone: () => ({}),
+      onSome: (prefix) => ({ prefix }),
+    }),
+    ...Option.match(nonEmptyText(dataSource.r2Jurisdiction), {
+      onNone: () => ({}),
+      onSome: (jurisdiction) => ({ r2_jurisdiction: jurisdiction }),
+    }),
   }
+}
 
-  const params: WebsiteSourceParams = {
+function websiteSourceParams(dataSource: AiSearchWebsiteDataSourceRecord): WebsiteSourceParams {
+  return {
     web_crawler: {
       parse_type: "sitemap",
       parse_options: {
         include_images: dataSource.includeImages,
         use_browser_rendering: dataSource.useBrowserRendering,
+        ...Option.match(nonEmptyList(dataSource.specificSitemaps), {
+          onNone: () => ({}),
+          onSome: (sitemaps) => ({ specific_sitemaps: [...sitemaps] }),
+        }),
       },
     },
+    ...Option.match(nonEmptyList(dataSource.includePaths), {
+      onNone: () => ({}),
+      onSome: (paths) => ({ include_items: [...paths] }),
+    }),
+    ...Option.match(nonEmptyList(dataSource.excludePaths), {
+      onNone: () => ({}),
+      onSome: (paths) => ({ exclude_items: [...paths] }),
+    }),
   }
+}
 
-  if (dataSource.includePaths.length > 0) params.include_items = [...dataSource.includePaths]
-
-  if (dataSource.excludePaths.length > 0) params.exclude_items = [...dataSource.excludePaths]
-
-  if (dataSource.specificSitemaps.length > 0) {
-    params.web_crawler.parse_options.specific_sitemaps = [...dataSource.specificSitemaps]
-  }
-
-  return params
+function sourceParamsFor(dataSource: AiSearchDataSourceRecord) {
+  return Match.value(dataSource).pipe(
+    Match.discriminatorsExhaustive("type")({
+      "built-in": () => undefined,
+      r2: r2SourceParams,
+      website: websiteSourceParams,
+    }),
+  )
 }
 
 function createInputFor(
   source: AiSearchSourceRecord,
   tokenId?: string | null,
 ): AiSearchCreateInput {
-  const trimmedToken = tokenId?.trim()
-
-  const base = trimmedToken
-    ? {
-        id: source.id,
-        enable: source.enabled,
-        max_num_results: source.maxResults,
-        token_id: trimmedToken,
-      }
-    : {
-        id: source.id,
-        enable: source.enabled,
-        max_num_results: source.maxResults,
-      }
+  const base = {
+    id: source.id,
+    enable: source.enabled,
+    max_num_results: source.maxResults,
+    ...Option.match(nonEmptyText(tokenId?.trim() ?? null), {
+      onNone: () => ({}),
+      onSome: (token) => ({ token_id: token }),
+    }),
+  }
 
   switch (source.dataSource.type) {
     case "built-in":
@@ -398,15 +406,18 @@ function createInputFor(
 }
 
 function updateInputFor(source: AiSearchSourceRecord): AiSearchUpdateInput {
-  const sourceParams = sourceParamsFor(source.dataSource)
-
   const update = {
     enable: source.enabled,
     max_num_results: source.maxResults,
   }
 
-  const withSource = sourceFields(update, source)
-  const withParams = sourceParams ? { ...withSource, source_params: sourceParams } : withSource
+  const withParams = {
+    ...sourceFields(update, source),
+    ...Option.match(Option.fromUndefinedOr(sourceParamsFor(source.dataSource)), {
+      onNone: () => ({}),
+      onSome: (sourceParams) => ({ source_params: sourceParams }),
+    }),
+  }
 
   // SAFETY: Cloudflare AI Search update accepts this enable, source, and source_params bag. Absent fields stay omitted.
   return withParams as AiSearchUpdateInput
@@ -416,36 +427,70 @@ function sourceFields(
   update: { enable: boolean; max_num_results: number },
   source: AiSearchSourceRecord,
 ) {
-  if (source.dataSource.type === "r2") {
-    return { ...update, source: source.dataSource.bucketName }
-  }
-
-  if (source.dataSource.type === "website") {
-    return { ...update, source: source.dataSource.domain }
-  }
-
-  return update
+  return Match.value(source.dataSource).pipe(
+    Match.discriminatorsExhaustive("type")({
+      "built-in": () => update,
+      r2: (r2) => ({ ...update, source: r2.bucketName }),
+      website: (website) => ({ ...update, source: website.domain }),
+    }),
+  )
 }
 
-function normalizeInstanceListItem(item: unknown): AiSearchInstanceListItem | null {
-  if (!isRecord(item)) {
-    return null
-  }
-
-  return {
-    id: stringField(item, "id"),
-    type: nullableStringField(item, "type"),
-    source: nullableStringField(item, "source"),
-    status: nullableStringField(item, "status"),
-    enabled: typeof item.enable === "boolean" ? item.enable : null,
-    namespace: nullableStringField(item, "namespace"),
-    createdAt: nullableStringField(item, "created_at"),
-    modifiedAt: nullableStringField(item, "modified_at"),
-  }
+function normalizeInstanceListItem(item: unknown): Option.Option<AiSearchInstanceListItem> {
+  return Option.liftPredicate(item, isRecord).pipe(
+    Option.map((record) => ({
+      id: stringField(record, "id"),
+      type: trimmedStringField(record, "type"),
+      source: trimmedStringField(record, "source"),
+      status: trimmedStringField(record, "status"),
+      enabled: Option.getOrNull(Option.liftPredicate(record.enable, P.isBoolean)),
+      namespace: trimmedStringField(record, "namespace"),
+      createdAt: trimmedStringField(record, "created_at"),
+      modifiedAt: trimmedStringField(record, "modified_at"),
+    })),
+  )
 }
 
-function isRecordEnv(env: Env): env is Env & { AI_SEARCH: NonNullable<Env["AI_SEARCH"]> } {
-  return Boolean(env.AI_SEARCH)
+function aiSearchNamespace(env: Env) {
+  return Effect.fromOption(Option.fromNullishOr(env.AI_SEARCH)).pipe(
+    Effect.mapError(
+      () =>
+        new AiSearchConfigurationError({
+          message: "AI Search namespace binding is not configured",
+        }),
+    ),
+  )
+}
+
+function ensureAiSearch(valid: boolean, message: string) {
+  return Effect.fromResult(
+    Result.liftPredicate(
+      valid,
+      (passed) => passed,
+      () => new AiSearchConfigurationError({ message }),
+    ),
+  )
+}
+
+function requireExistingSource(
+  presence: Option.Option<AiSearchSourceWithPresence>,
+  sourceId: string,
+) {
+  return Effect.fromOption(presence).pipe(
+    Effect.mapError(
+      () =>
+        new AiSearchConfigurationError({
+          message: `AI Search source '${sourceId}' does not exist`,
+        }),
+    ),
+  )
+}
+
+function listInstanceResponse(aiSearch: AiSearchNamespace) {
+  return Effect.tryPromise({
+    try: () => aiSearch.list({ per_page: 100 }),
+    catch: toError,
+  }).pipe(Effect.catch(() => Effect.succeed({ result: [] })))
 }
 
 function sourcePresenceOption(
@@ -503,14 +548,7 @@ export class AiSearchRegistryStore {
       { concurrency: "unbounded" },
     )
 
-    const kvSources = kvSourceOptions.flatMap((source) =>
-      Option.match(source, {
-        onNone: () => [],
-        onSome: (value) => [value],
-      }),
-    )
-
-    const sources = kvSources
+    const sources = Arr.getSomes(kvSourceOptions)
     ensureUniqueToolNames(sources.map((source) => source.source))
 
     return sources.sort((left, right) => left.source.label.localeCompare(right.source.label))
@@ -536,37 +574,37 @@ export class AiSearchRegistryStore {
   ) {
     const uniqueIds = [...new Set(sourceIds.map(normalizeAiSearchSourceId))]
 
-    if (uniqueIds.length === 0) {
-      return []
-    }
-
-    const available = yield* this.listAvailableSources()
-    const byId = new Map(available.map((source) => [source.id, source]))
-
-    return uniqueIds.flatMap((sourceId) => {
-      const source = byId.get(sourceId)
-
-      return source ? [source] : []
+    return yield* Option.match(Option.liftPredicate(uniqueIds, Arr.isArrayNonEmpty), {
+      onNone: () => Effect.succeed([]),
+      onSome: (ids) => this.listAvailableSourcesInOrder(ids),
     })
   })
+
+  private listAvailableSourcesInOrder = Effect.fn("db.aiSearch.listAvailableSourcesInOrder")(
+    function* (this: AiSearchRegistryStore, sourceIds: readonly string[]) {
+      const available = yield* this.listAvailableSources()
+      const byId = new Map(available.map((source) => [source.id, source]))
+
+      return Arr.getSomes(sourceIds.map((sourceId) => Option.fromUndefinedOr(byId.get(sourceId))))
+    },
+  )
 
   listSelectedAvailableSources = Effect.fn("db.aiSearch.listSelectedAvailableSources")(function* (
     this: AiSearchRegistryStore,
     tools: readonly SessionToolSpec[] | null | undefined,
   ) {
     const selectedSourceIds = getSelectedAiSearchSourceIds(tools)
-
-    if (selectedSourceIds.length === 0) {
-      return []
-    }
-
     const sources = yield* this.listAvailableSourcesByIds(selectedSourceIds)
     const availableIds = new Set(sources.map((source) => source.id))
     const missingIds = selectedSourceIds.filter((sourceId) => !availableIds.has(sourceId))
 
-    if (missingIds.length > 0) {
-      return yield* Effect.fail(new AiSearchSourceUnavailableError({ sourceIds: missingIds }))
-    }
+    yield* Effect.fromResult(
+      Result.liftPredicate(
+        missingIds,
+        Arr.isArrayEmpty,
+        (sourceIds) => new AiSearchSourceUnavailableError({ sourceIds }),
+      ),
+    )
 
     return sources
   })
@@ -578,13 +616,7 @@ export class AiSearchRegistryStore {
     const sourceId = normalizeAiSearchSourceId(update.id)
     const existing = yield* this.getSourceWithPresence(sourceId)
 
-    if (Option.isSome(existing)) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({
-          message: `AI Search source '${sourceId}' already exists`,
-        }),
-      )
-    }
+    yield* ensureAiSearch(Option.isNone(existing), `AI Search source '${sourceId}' already exists`)
 
     const record = buildAiSearchSourceRecord(update, Option.none())
     yield* this.createCloudflareInstance(record)
@@ -601,29 +633,13 @@ export class AiSearchRegistryStore {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
     const existingPresence = yield* this.getSourceWithPresence(normalizedSourceId)
 
-    const existing = yield* Option.match(existingPresence, {
-      onNone: () =>
-        Effect.fail(
-          new AiSearchConfigurationError({
-            message: `AI Search source '${normalizedSourceId}' does not exist`,
-          }),
-        ),
-      onSome: (resolved) => Effect.succeed(resolved),
-    })
+    const existing = yield* requireExistingSource(existingPresence, normalizedSourceId)
 
-    if (update.id !== normalizedSourceId) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({ message: "AI Search source id cannot be changed" }),
-      )
-    }
-
-    if (update.dataSource.type !== existing.source.dataSource.type) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({
-          message: "AI Search data source type cannot be changed; delete and recreate the source",
-        }),
-      )
-    }
+    yield* ensureAiSearch(update.id === normalizedSourceId, "AI Search source id cannot be changed")
+    yield* ensureAiSearch(
+      update.dataSource.type === existing.source.dataSource.type,
+      "AI Search data source type cannot be changed; delete and recreate the source",
+    )
 
     const record = buildAiSearchSourceRecord(update, Option.some(existing.source))
     yield* this.updateCloudflareInstance(record)
@@ -639,15 +655,7 @@ export class AiSearchRegistryStore {
     const normalizedSourceId = normalizeAiSearchSourceId(sourceId)
     const existingPresence = yield* this.getSourceWithPresence(normalizedSourceId)
 
-    const existing = yield* Option.match(existingPresence, {
-      onNone: () =>
-        Effect.fail(
-          new AiSearchConfigurationError({
-            message: `AI Search source '${normalizedSourceId}' does not exist`,
-          }),
-        ),
-      onSome: (resolved) => Effect.succeed(resolved),
-    })
+    const existing = yield* requireExistingSource(existingPresence, normalizedSourceId)
 
     yield* this.deleteCloudflareInstance(existing.source.id)
     yield* this.s0Config.delete(S0_CONFIG_KEYS.aiSearch.source(normalizedSourceId))
@@ -656,37 +664,24 @@ export class AiSearchRegistryStore {
   listCloudflareInstances = Effect.fn("db.aiSearch.listCloudflareInstances")(function* (
     this: AiSearchRegistryStore,
   ) {
-    if (!isRecordEnv(this.env)) {
-      return []
-    }
+    const response = yield* Effect.transposeOption(
+      Option.map(Option.fromNullishOr(this.env.AI_SEARCH), listInstanceResponse),
+    )
 
-    const aiSearch = this.env.AI_SEARCH
+    const result = response.pipe(
+      Option.filter(isRecord),
+      Option.map((record) => readArray(record.result)),
+      Option.getOrElse(() => []),
+    )
 
-    const response = yield* Effect.tryPromise({
-      try: () => aiSearch.list({ per_page: 100 }),
-      catch: toError,
-    }).pipe(Effect.catch(() => Effect.succeed({ result: [] })))
-
-    const result = isRecord(response) && Array.isArray(response.result) ? response.result : []
-
-    return result
-      .map(normalizeInstanceListItem)
-      .filter((item): item is AiSearchInstanceListItem => item !== null)
+    return Arr.getSomes(result.map(normalizeInstanceListItem))
   })
 
   private createCloudflareInstance = Effect.fn("db.aiSearch.createCloudflareInstance")(function* (
     this: AiSearchRegistryStore,
     source: AiSearchSourceRecord,
   ) {
-    if (!isRecordEnv(this.env)) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({
-          message: "AI Search namespace binding is not configured",
-        }),
-      )
-    }
-
-    const aiSearch = this.env.AI_SEARCH
+    const aiSearch = yield* aiSearchNamespace(this.env)
     yield* Effect.tryPromise({
       try: () => aiSearch.create(createInputFor(source, this.env.CF_AI_SEARCH_SERVICE_TOKEN_ID)),
       catch: (cause) =>
@@ -700,15 +695,7 @@ export class AiSearchRegistryStore {
     this: AiSearchRegistryStore,
     source: AiSearchSourceRecord,
   ) {
-    if (!isRecordEnv(this.env)) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({
-          message: "AI Search namespace binding is not configured",
-        }),
-      )
-    }
-
-    const aiSearch = this.env.AI_SEARCH
+    const aiSearch = yield* aiSearchNamespace(this.env)
     yield* Effect.tryPromise({
       try: () => aiSearch.get(source.id).update(updateInputFor(source)),
       catch: (cause) =>
@@ -722,15 +709,7 @@ export class AiSearchRegistryStore {
     this: AiSearchRegistryStore,
     sourceId: string,
   ) {
-    if (!isRecordEnv(this.env)) {
-      return yield* Effect.fail(
-        new AiSearchConfigurationError({
-          message: "AI Search namespace binding is not configured",
-        }),
-      )
-    }
-
-    const aiSearch = this.env.AI_SEARCH
+    const aiSearch = yield* aiSearchNamespace(this.env)
     yield* Effect.tryPromise({
       try: () => aiSearch.delete(sourceId),
       catch: (cause) =>
