@@ -2,7 +2,7 @@ import { test } from "@e2e-dev/web"
 import { expect } from "e2e"
 import * as Schema from "effect/Schema"
 import { CreatedApiKeyResponse, ApiKeysResponse } from "../packages/api/src/http/schemas/auth"
-import { SessionResponse } from "../packages/api/src/http/schemas/sessions"
+import { SessionListResponse, SessionResponse } from "../packages/api/src/http/schemas/sessions"
 import { ForbiddenError } from "../packages/api/src/http/errors"
 import { api, authRequest, uniqueName } from "./support/api"
 import { resolveOpenApiSchema } from "./support/openapi"
@@ -27,6 +27,8 @@ test(
       expect(Schema.decodeUnknownSync(ApiKeysResponse)(keys)).toBeDefined()
       const state = await api<unknown>(browser, `/sessions/${session.sessionId}`)
       expect(Schema.decodeUnknownSync(SessionResponse)(state)).toBeDefined()
+      const list = await api<unknown>(browser, "/sessions?limit=1")
+      expect(Schema.decodeUnknownSync(SessionListResponse)(list)).toBeDefined()
       // The isolated account has no GitHub App authorization, so the repository list is forbidden.
       const repos = await authRequest(browser, "/repos")
       expect(repos.status).toBe(403)
