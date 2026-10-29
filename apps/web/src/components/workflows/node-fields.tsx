@@ -509,7 +509,7 @@ export function WorkflowModelThinkingField({
 }: {
   modelValue: string
   reasoningEffort: string
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   loading?: boolean
   isAdmin: boolean
   onModelChange: (value: string, reasoningEffort: string) => void

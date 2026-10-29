@@ -93,7 +93,7 @@ export function NodeInspector({
   edges: WorkflowCanvasEdge[]
   nodes: WorkflowManifestNode[]
   webhookUrl: string
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   providerCatalogLoading: boolean
   isAdmin: boolean
   nodeIds: string[]

@@ -942,7 +942,7 @@ function buildLitellmDialogModelOptions(
   models: AdminLitellmModel[],
   adapterOverrides: Record<string, string>,
 ): RuntimeModelCategory[] {
-  const groups: RuntimeModelCategory[] = [
+  const groups: Array<RuntimeModelCategory & { models: RuntimeProviderModelOption[] }> = [
     { category: LITELLM_PROVIDER_NAME, providerId: LITELLM_PROVIDER_ID, models: [] },
     {
       category: LITELLM_ANTHROPIC_PROVIDER_NAME,

@@ -149,7 +149,7 @@ export function SessionContent({
   selectedModel: string
   selectedModelLabel: string
   selectedModelOption: RuntimeProviderModelOption | null
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   providerCatalogLoading: boolean
   providerDefaultModelConfigured: boolean
   reasoningEffort: string | undefined

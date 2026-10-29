@@ -1,78 +1,19 @@
 import type { ProviderSettingsResponse, ProviderSettingsUpdatePayload } from "@solzero/shared"
+import { runApi } from "@/lib/api-client"
 
-type ProviderSettingsErrorPayload = {
-  error?: unknown
-  message?: unknown
-  detail?: unknown
-}
-
-async function readResponseJson(response: Response): Promise<unknown> {
-  const text = await response.text()
-
-  if (!text.trim()) {
-    return null
-  }
-
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
-  }
-}
-
-function getResponseErrorMessage(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === "object") {
-    // SAFETY: payload was checked to be a non-null object, and only error, message, and detail are read.
-    const record = payload as ProviderSettingsErrorPayload
-
-    for (const value of [record.error, record.message, record.detail]) {
-      if (typeof value === "string" && value.trim().length > 0) {
-        return value
-      }
-    }
-  }
-
-  if (typeof payload === "string" && payload.trim().length > 0) {
-    return payload
-  }
-
-  return fallback
-}
-
-export async function fetchProviderSettings(init?: RequestInit): Promise<ProviderSettingsResponse> {
-  const response = await fetch("/api/providers", {
-    credentials: "include",
-    ...init,
+export function fetchProviderSettings(init?: {
+  signal?: AbortSignal
+}): Promise<ProviderSettingsResponse> {
+  return runApi((client) => client.providers.list(), {
+    signal: init?.signal,
+    fallbackMessage: "Failed to load provider settings",
   })
-
-  const payload = await readResponseJson(response)
-
-  if (!response.ok) {
-    throw new Error(getResponseErrorMessage(payload, "Failed to load provider settings"))
-  }
-
-  // SAFETY: GET /api/providers returns ProviderSettingsResponse after response.ok; error bodies are thrown above.
-  return payload as ProviderSettingsResponse
 }
 
-export async function saveProviderSettings(
+export function saveProviderSettings(
   input: ProviderSettingsUpdatePayload,
 ): Promise<ProviderSettingsResponse> {
-  const response = await fetch("/api/providers", {
-    method: "PUT",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
+  return runApi((client) => client.providers.replace({ payload: input }), {
+    fallbackMessage: "Failed to save provider settings",
   })
-
-  const payload = await readResponseJson(response)
-
-  if (!response.ok) {
-    throw new Error(getResponseErrorMessage(payload, "Failed to save provider settings"))
-  }
-
-  // SAFETY: PUT /api/providers returns ProviderSettingsResponse after response.ok; error bodies are thrown above.
-  return payload as ProviderSettingsResponse
 }

@@ -36,7 +36,7 @@ export function ModelThinkingDialog({
   onReasoningSelect,
   onClose,
 }: {
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   selectedModel: string
   selectedModelOption: RuntimeProviderModelOption | null
   reasoningEffort: string | undefined

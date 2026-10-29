@@ -77,7 +77,7 @@ export type HomeContentProps = {
   selectedModel: string
   setSelectedModel: (value: string) => void
   selectedModelOption: RuntimeProviderModelOption | null
-  modelOptions: RuntimeModelCategory[]
+  modelOptions: ReadonlyArray<RuntimeModelCategory>
   providerCatalogLoaded: boolean
   providerCatalogLoading: boolean
   providerDefaultModelConfigured: boolean
