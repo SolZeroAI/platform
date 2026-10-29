@@ -40,19 +40,23 @@ const isBotRoutineWatchCompleteWhen = Schema.is(BotRoutineWatchCompleteWhenSchem
 
 const UntilTimestampSchema = Schema.Union([Schema.Number, Schema.String])
 
-const StoredBotRoutineWatchSchema = Schema.Struct({
+class StoredBotRoutineWatchSchema extends Schema.Class<StoredBotRoutineWatchSchema>(
+  "StoredBotRoutineWatch",
+)({
   kind: Schema.optional(Schema.String),
   owner: Schema.optional(Schema.String),
   repo: Schema.optional(Schema.String),
   pullNumber: Schema.optional(Schema.Number),
   completeWhen: Schema.optional(Schema.String),
-})
+}) {}
 
-const StoredBotRoutineCadenceSchema = Schema.Struct({
+class StoredBotRoutineCadenceSchema extends Schema.Class<StoredBotRoutineCadenceSchema>(
+  "StoredBotRoutineCadence",
+)({
   kind: Schema.optional(Schema.String),
   cron: Schema.optional(Schema.String),
   intervalSeconds: Schema.optional(Schema.Number),
-})
+}) {}
 
 const decodeStoredBotRoutineWatch = Schema.decodeUnknownOption(
   Schema.fromJsonString(StoredBotRoutineWatchSchema),
