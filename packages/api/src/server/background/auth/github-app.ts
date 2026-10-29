@@ -9,8 +9,6 @@ import {
   buildPullRequestBody,
   buildRepositorySearchParams,
   buildRepositorySearchQuery,
-  clearGitHubAbortState,
-  createGitHubAbortState,
   filterInstallationsByOwner,
   formatGitHubApiError,
   GITHUB_API_BASE,
@@ -109,22 +107,16 @@ function fetchWithTimeout(
   init: RequestInit,
   timeoutMs = GITHUB_FETCH_TIMEOUT_MS,
 ) {
-  // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- Resource acquisition for the AbortController timeout used by fetchWithTimeout.
-  const acquireAbortState = Effect.sync(() => createGitHubAbortState(timeoutMs))
-
-  return Effect.acquireUseRelease(
-    acquireAbortState,
-    ({ controller }) =>
-      Effect.tryPromise({
-        try: () =>
-          // oxlint-disable-next-line effect/avoid-native-fetch -- GitHub App HTTP client boundary; Effect wraps timeout/cancellation and typed failures here.
-          fetch(input, { ...init, signal: controller.signal }),
-        catch: githubAppError("GitHub request failed"),
+  // The request aborts when the fiber is interrupted or when the timeout ends.
+  return Effect.tryPromise({
+    try: (interrupted) =>
+      // oxlint-disable-next-line effect/avoid-native-fetch -- GitHub App HTTP client boundary; Effect wraps timeout/cancellation and typed failures here.
+      fetch(input, {
+        ...init,
+        signal: AbortSignal.any([interrupted, AbortSignal.timeout(timeoutMs)]),
       }),
-    (state) =>
-      // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- Resource finalizer for the timeout created by acquireAbortState.
-      Effect.sync(() => clearGitHubAbortState(state)),
-  )
+    catch: githubAppError("GitHub request failed"),
+  })
 }
 
 function ensureSuccessfulResponse(response: Response, errorPrefix: string) {

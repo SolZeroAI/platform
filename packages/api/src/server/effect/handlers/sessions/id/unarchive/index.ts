@@ -1,9 +1,7 @@
-import type { ApiEnv } from "infra/types/env"
 import type { IdParams } from "@solzero/api"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- unarchive/index.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because unarchive repairs the session index.
-import { makeControlPlaneFromEnv } from "../../../../db/control-plane-db"
+import type { ControlPlaneDb } from "../../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
 import {
@@ -15,11 +13,11 @@ import {
 } from "../../../shared/control-plane"
 
 const handleStaleSessionIndex = Effect.fn("sessions.unarchive.stale")(function* (
-  env: ApiEnv,
+  db: ControlPlaneDb,
   sessionId: string,
   response: Response,
 ) {
-  const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
+  const store = new SessionIndexStore(db)
   const deleted = yield* store.delete(sessionId)
 
   return Match.value(deleted).pipe(
@@ -29,11 +27,11 @@ const handleStaleSessionIndex = Effect.fn("sessions.unarchive.stale")(function* 
 })
 
 const activateUnarchivedSession = Effect.fn("sessions.unarchive.activate")(function* (
-  env: ApiEnv,
+  db: ControlPlaneDb,
   sessionId: string,
   response: Response,
 ) {
-  const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
+  const store = new SessionIndexStore(db)
   const activate = store.updateStatus(sessionId, "active")
   const guard = Effect.succeed(response.ok)
   yield* Effect.when(activate, guard)
@@ -42,19 +40,19 @@ const activateUnarchivedSession = Effect.fn("sessions.unarchive.activate")(funct
 })
 
 const handleUnarchiveResponse = Effect.fn("sessions.unarchive.handle")(function* (
-  env: ApiEnv,
+  db: ControlPlaneDb,
   sessionId: string,
   response: Response,
 ) {
   return yield* Match.value(response.status === 404).pipe(
-    Match.when(true, () => handleStaleSessionIndex(env, sessionId, response)),
-    Match.orElse(() => activateUnarchivedSession(env, sessionId, response)),
+    Match.when(true, () => handleStaleSessionIndex(db, sessionId, response)),
+    Match.orElse(() => activateUnarchivedSession(db, sessionId, response)),
   )
 })
 
 export function unarchive({ params }: { params: IdParams }) {
   return runControlPlane(
-    Effect.fn("sessions.unarchive")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.unarchive")(function* ({ request, env, principal, db }) {
       const access = yield* requireSessionAccess(request, env, principal, params.id)
       const stub = getSessionStub(env, params.id)
       const internalRequests = yield* InternalRequests
@@ -65,7 +63,7 @@ export function unarchive({ params }: { params: IdParams }) {
         body: stringifyJson({ userId: access.userId }),
       })
 
-      return yield* handleUnarchiveResponse(env, params.id, response)
+      return yield* handleUnarchiveResponse(db, params.id, response)
     }),
   )
 }

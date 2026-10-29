@@ -1,5 +1,6 @@
 import { createMcpHandler } from "agents/mcp"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import { INTERNAL_AI_SEARCH_MCP_ROUTE } from "../background/session/mcp-config"
 import type { Env } from "../background/types"
 import { toError } from "../lib/effect-errors"
@@ -40,6 +41,5 @@ export function handleAiSearchMcpRequest(
   ctx: ExecutionContext,
   runtimeContext: AiSearchMcpRuntimeContext,
 ): Promise<Response> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker entry boundary: apps/api index is non-Effect and runs this Effect at the Promise edge.
-  return Effect.runPromise(handleAiSearchMcpRequestEffect(request, env, ctx, runtimeContext))
+  return runEffectPromise(handleAiSearchMcpRequestEffect(request, env, ctx, runtimeContext))
 }

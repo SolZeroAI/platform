@@ -438,7 +438,7 @@ function enqueuePromptWithResolvedModel(
   })
   host.broadcast({ type: "sandbox_event", event: userEvent })
 
-  const localParentContext = localSpanContextFromHeaders(request.headers)
+  const localParentContext = Option.getOrUndefined(localSpanContextFromHeaders(request.headers))
 
   return host.dispatchEnqueuedPrompt(executionMode, options, messageId, localParentContext)
 }

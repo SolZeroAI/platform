@@ -1,7 +1,7 @@
 import type { BetterAuthPlugin } from "better-auth"
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api"
 import { setSessionCookie } from "better-auth/cookies"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "./effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -162,8 +162,7 @@ function resolveSessionTransferAdmin(
   env: ApiEnv,
   email: string | null | undefined,
 ): Promise<boolean> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Better Auth plugin endpoints are Promise boundaries.
-  return Effect.runPromise(isAdminEmailForEnv(env, email))
+  return runEffectPromise(isAdminEmailForEnv(env, email))
 }
 
 class SessionTransferQuery extends Schema.Class<SessionTransferQuery>("SessionTransferQuery")({

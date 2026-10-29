@@ -10,7 +10,6 @@ import {
   AgentSkillValidationError,
   d1Error,
 } from "../db/errors"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- openD1Drizzle opens the skill catalog database from the Worker env at the catalog composition edge.
 import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,

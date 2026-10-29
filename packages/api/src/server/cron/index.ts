@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import type { ApiEnv } from "infra/types/env"
 import {
   LITELLM_MODEL_SYNC_CRONS,
@@ -22,32 +23,21 @@ const cronEffect = Effect.fn("cron.scheduled")(function* (
 })
 
 const cron = (controller: ScheduledController, env: ApiEnv, ctx: ExecutionContext) =>
-  // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare scheduled-handler boundary expects a Promise-returning handler.
-  Effect.runPromise(cronEffect(controller, env, ctx))
+  runEffectPromise(cronEffect(controller, env, ctx))
 
-type CronJobEffect = (
+// Every cron job gets the scheduled controller, the Worker env, and the execution context.
+const litellmModelSyncJob = (
   controller: ScheduledController,
   env: ApiEnv,
-  ctx: ExecutionContext,
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Cron dispatch stores heterogeneous Effect jobs in one static map.
-) => Effect.Effect<unknown, unknown>
+  _ctx: ExecutionContext,
+) =>
+  runScheduledLitellmSync(env, {
+    cron: controller.cron,
+    scheduledTime: controller.scheduledTime,
+  }).pipe(Effect.annotateLogs({ jobId: "litellm-model-sync" }))
 
-const CRON_JOBS: Record<string, readonly CronJobEffect[]> = {}
-
-Object.assign(
-  CRON_JOBS,
-  Object.fromEntries(
-    LITELLM_MODEL_SYNC_CRONS.map((cronExpression) => [
-      cronExpression,
-      [
-        (controller: ScheduledController, env: ApiEnv) =>
-          runScheduledLitellmSync(env, {
-            cron: controller.cron,
-            scheduledTime: controller.scheduledTime,
-          }).pipe(Effect.annotateLogs({ jobId: "litellm-model-sync" })),
-      ] satisfies readonly CronJobEffect[],
-    ]),
-  ),
+const CRON_JOBS = Object.fromEntries(
+  LITELLM_MODEL_SYNC_CRONS.map((cronExpression) => [cronExpression, [litellmModelSyncJob]]),
 )
 
 export const runCronByExpression = Effect.fn("cron.runByExpression")(function* (

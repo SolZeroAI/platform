@@ -9,7 +9,6 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import { toError } from "../../../lib/effect-errors"
 import { compileOpenCodeConfigForModel } from "../../provider-catalog"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the harness container provider resolves skill packages.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { resolveRuntimeSkillPackages } from "../../skills/catalog"
 import type { Env, SandboxEvent } from "../../types"

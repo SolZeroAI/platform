@@ -12,6 +12,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { McpcfConfigRecord, McpcfServerRecord } from "../background/db/mcpcf"
@@ -376,13 +377,11 @@ export function createMcpcfMcpServer(context: McpcfMcpContext): McpServer {
   )
 
   server.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request handler requires Promise; runs listMcpcfTools Effect at that boundary.
-    tools: await Effect.runPromise(listMcpcfTools(context)),
+    tools: await runEffectPromise(listMcpcfTools(context)),
   }))
 
   server.server.setRequestHandler(CallToolRequestSchema, async (request) =>
-    // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request handler requires Promise; runs callMcpcfTool Effect at that boundary.
-    Effect.runPromise(callMcpcfTool(context, request.params.name, request.params.arguments)),
+    runEffectPromise(callMcpcfTool(context, request.params.name, request.params.arguments)),
   )
 
   return server
