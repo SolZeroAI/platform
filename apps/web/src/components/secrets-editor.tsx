@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { SecretsTable } from "@/components/secrets-table"
+import { secretsListQuery } from "@/hooks/use-secrets"
 import {
   getUtf8Size,
   MAX_SECRETS_PER_USER,
@@ -10,7 +11,14 @@ import {
   validateKey,
 } from "@/lib/secrets-validation"
 import { SECRETS_SEARCH_DEBOUNCE_MS } from "@/components/secrets-search-filter"
-import { showErrorToast, showWarningToast } from "@/lib/toast-manager"
+import { runApi } from "@/lib/api-client"
+import { apiQueryKeys, queryClient } from "@/lib/api-hooks"
+import { showErrorToast } from "@/lib/toast-manager"
+
+/** Refreshes every other view of the secrets list after a write. */
+function invalidateSecrets() {
+  return queryClient.invalidateQueries({ queryKey: apiQueryKeys.secrets })
+}
 
 export type SecretRow = {
   id: string
@@ -50,78 +58,6 @@ function normalizeTags(tags: readonly string[]): string[] {
   ).sort()
 }
 
-type SecretsEditorData = {
-  rows: SecretRow[]
-  tags: string[]
-}
-
-function readSecretsResponse(raw: unknown): SecretsEditorData {
-  if (!raw || typeof raw !== "object" || !("secrets" in raw)) {
-    return { rows: [], tags: [] }
-  }
-
-  // SAFETY: raw was checked to contain secrets before that field is read.
-  const secrets = (raw as { secrets?: unknown }).secrets
-
-  if (!Array.isArray(secrets)) {
-    console.warn("[secrets-editor] Expected secrets to be an array", {
-      receivedType: typeof secrets,
-    })
-    showWarningToast("Unexpected secrets response", {
-      description: `Expected secrets to be a list but received ${typeof secrets}.`,
-    })
-
-    return { rows: [], tags: [] }
-  }
-
-  const rows: SecretRow[] = []
-
-  for (const secret of secrets) {
-    if (!secret || typeof secret !== "object") {
-      console.warn("[secrets-editor] Ignoring malformed secrets entry", {
-        entryType: typeof secret,
-      })
-      showWarningToast("Skipped a malformed secret", {
-        description: `A secrets entry was ${typeof secret} instead of an object and was ignored.`,
-      })
-      continue
-    }
-
-    // SAFETY: secret was checked to be a non-null object before key is read.
-    const key = (secret as { key?: unknown }).key
-    // SAFETY: secret was checked to be a non-null object before tags is read.
-    const tags = (secret as { tags?: unknown }).tags
-
-    if (typeof key !== "string" || !Array.isArray(tags)) {
-      console.warn("[secrets-editor] Ignoring malformed secrets entry", {
-        keyType: typeof key,
-        tagsType: Array.isArray(tags) ? "array" : typeof tags,
-      })
-      showWarningToast("Skipped a malformed secret", {
-        description: "A secrets entry was missing a string key or tag list and was ignored.",
-      })
-      continue
-    }
-
-    rows.push(
-      createRow({
-        key,
-        tags: normalizeTags(tags.filter((tag): tag is string => typeof tag === "string")),
-        existing: true,
-      }),
-    )
-  }
-
-  // SAFETY: raw was checked to be an object before the response tags field is read.
-  const responseTags = (raw as { tags?: unknown }).tags
-
-  const tags = Array.isArray(responseTags)
-    ? normalizeTags(responseTags.filter((tag): tag is string => typeof tag === "string"))
-    : normalizeTags(rows.flatMap((row) => row.tags))
-
-  return { rows, tags }
-}
-
 export function SecretsEditor({
   disabled = false,
   onRegisterAddSecret,
@@ -155,50 +91,25 @@ export function SecretsEditor({
     setError("")
     setSuccess("")
 
+    const trimmedQ = q.trim()
+
     try {
-      const params = new URLSearchParams()
-      const trimmedQ = q.trim()
-
-      if (trimmedQ) {
-        params.set("q", trimmedQ)
-      }
-
-      if (tags.length > 0) {
-        params.set("tags", tags.join(","))
-      }
-
-      const response = await fetch(
-        params.size > 0 ? `/api/secrets?${params.toString()}` : "/api/secrets",
+      const result = await runApi(
+        (client) => client.secrets.list({ query: secretsListQuery(trimmedQ, tags.join(",")) }),
+        { fallbackMessage: "Failed to load secrets" },
       )
 
-      // SAFETY: The secrets list body is checked as unknown before rows are parsed or the error field is read.
-      const data = (await response.json()) as unknown
-
-      if (!response.ok) {
-        // SAFETY: data was checked to be an object that contains error before that field is read.
-        const message =
-          data && typeof data === "object" && "error" in data
-            ? String((data as { error?: unknown }).error)
-            : "Failed to load secrets"
-
-        setError(message)
-        setRows([])
-        setAllTags([])
-
-        return
-      }
-
-      const parsed = readSecretsResponse(data)
-      setRows(parsed.rows)
-      setAllTags(parsed.tags)
+      setRows(
+        result.secrets.map((secret) =>
+          createRow({ key: secret.key, tags: normalizeTags(secret.tags), existing: true }),
+        ),
+      )
+      setAllTags(normalizeTags(result.tags))
     } catch (caught) {
-      console.error("[secrets-editor] Failed to load secrets", {
-        message: caught instanceof Error ? caught.message : String(caught),
-      })
-      showErrorToast("Failed to load secrets", {
-        description: caught instanceof Error ? caught.message : undefined,
-      })
-      setError("Failed to load secrets")
+      const message = caught instanceof Error ? caught.message : "Failed to load secrets"
+      console.error("[secrets-editor] Failed to load secrets", { message })
+      showErrorToast("Failed to load secrets", { description: message })
+      setError(message)
       setRows([])
       setAllTags([])
     } finally {
@@ -233,23 +144,14 @@ export function SecretsEditor({
     setSuccess("")
 
     try {
-      const response = await fetch(`/api/secrets/${encodeURIComponent(row.key)}`, {
-        method: "DELETE",
+      await runApi((client) => client.secrets.delete({ params: { key: row.key } }), {
+        fallbackMessage: "Failed to delete secret",
       })
-
-      // SAFETY: The secret delete response includes an error string when response.ok is false.
-      const data = (await response.json()) as { error?: string }
-
-      if (!response.ok) {
-        setError(data?.error || "Failed to delete secret")
-
-        return
-      }
-
       setSuccess(`Deleted ${row.key}`)
+      await invalidateSecrets()
       await loadSecrets(debouncedKeySearch, selectedTags)
-    } catch {
-      setError("Failed to delete secret")
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to delete secret")
     } finally {
       setDeletingKey(null)
     }
@@ -328,31 +230,27 @@ export function SecretsEditor({
     setSaving(true)
 
     try {
-      const response = await fetch("/api/secrets", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          secrets: entries.map(({ key, value, tags }) => ({ key, value, tags })),
-        }),
-      })
-
-      // SAFETY: The secret save response includes an error string when response.ok is false.
-      const data = (await response.json()) as { error?: string }
-
-      if (!response.ok) {
-        setError(data?.error || "Failed to update secrets")
-
-        return
-      }
+      await runApi(
+        (client) =>
+          client.secrets.set({
+            payload: {
+              secrets: entries.map(({ key, value, tags }) =>
+                value === undefined ? { key, tags } : { key, value, tags },
+              ),
+            },
+          }),
+        { fallbackMessage: "Failed to update secrets" },
+      )
 
       if (pendingUpdate) {
         setRows(effectiveRows)
       }
 
       setSuccess("Secrets updated")
+      await invalidateSecrets()
       await loadSecrets(debouncedKeySearch, selectedTags)
-    } catch {
-      setError("Failed to update secrets")
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to update secrets")
     } finally {
       setSaving(false)
     }
