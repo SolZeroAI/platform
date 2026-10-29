@@ -153,7 +153,8 @@ function createReleaseCardInputUnsafe(options: CreateReleaseCardInputOptions): R
     )
 
   const highlights: ReleaseHighlight[] = sections.map((section) => {
-    const title = section.social?.title ?? plainText(section.title)
+    // A changelog heading has no length limit, so fit it to the card title instead of failing the release.
+    const title = section.social?.title ?? firstSentences(section.title, 64)
     const fallbackBullets = releaseBullets(section.content)
 
     const bullets =
