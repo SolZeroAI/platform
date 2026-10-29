@@ -3,7 +3,7 @@ import { expect } from "e2e"
 import * as Schema from "effect/Schema"
 import { CreatedApiKeyResponse, ApiKeysResponse } from "../packages/api/src/http/schemas/auth"
 import { ProviderSettingsResponse } from "../packages/api/src/http/schemas/providers"
-import { SessionResponse } from "../packages/api/src/http/schemas/sessions"
+import { SessionListResponse, SessionResponse } from "../packages/api/src/http/schemas/sessions"
 import { api, uniqueName } from "./support/api"
 import { resolveOpenApiSchema } from "./support/openapi"
 
@@ -29,6 +29,8 @@ test(
       expect(Schema.decodeUnknownSync(SessionResponse)(state)).toBeDefined()
       const providers = await api<unknown>(browser, "/providers")
       expect(Schema.decodeUnknownSync(ProviderSettingsResponse)(providers)).toBeDefined()
+      const list = await api<unknown>(browser, "/sessions?limit=1")
+      expect(Schema.decodeUnknownSync(SessionListResponse)(list)).toBeDefined()
       const spec = await fetch("http://localhost:3100/openapi.json")
       expect(spec.status).toBe(200)
       const document = await spec.json()
