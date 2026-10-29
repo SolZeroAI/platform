@@ -35,6 +35,7 @@ const TOOL_INPUT_CHUNK_TYPES = new Set([
   "tool-input-available",
   "tool-input-error",
 ])
+
 const PROGRESS_CHUNK_TYPES = new Set(["data-agent-progress", "data-agent-milestone"])
 
 const SubagentProgressDataSchema = Schema.Struct({
