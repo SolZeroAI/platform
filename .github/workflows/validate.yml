@@ -105,9 +105,11 @@ jobs:
 
   e2e:
     name: Cloudflare end-to-end flows
+    # Each run boots its own local Alchemy stack and creates no remote resources, so only
+    # newer pushes to the same pull request supersede a run.
     concurrency:
-      group: solzero-e2e-cloudflare-${{ github.repository }}
-      cancel-in-progress: false
+      group: solzero-e2e-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
