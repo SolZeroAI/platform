@@ -1,6 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createTypeSafeAi } from "@ai-sdk/typesafe-ai"
+import * as P from "effect/Predicate"
 
 // Shared Project DNA: every SolZero repository keeps this file identical.
 // E2E_DECISION_MODEL and E2E_LANGUAGE_MODEL are SolZeroAI organization Actions
@@ -50,7 +51,7 @@ export function e2eModels(options: { accountId: string; gatewayId: string; token
         const url = String(input).replace(/\/systemone$/, `/${modelId}`)
         const response = await fetch(url, init)
 
-        if (!response.ok) return response
+        if (!response.ok) return cloudflareFailure(response)
 
         // SAFETY: Workers AI wraps every successful /ai/run answer as
         // { success, result }. The TypeSafe provider validates `result`.
@@ -79,4 +80,35 @@ export function e2eModels(options: { accountId: string; gatewayId: string; token
       ? anthropic(languageModelId)
       : openai.chat(languageModelId),
   }
+}
+
+/**
+ * Cloudflare names a failure in { errors: [{ code, message }] }. The TypeSafe
+ * provider reads only a top-level `message`, so without this every failure
+ * reads "TypeSafe request failed" and its reason is lost.
+ */
+async function cloudflareFailure(response: Response) {
+  const body: unknown = await response
+    .clone()
+    .json()
+    .catch(() => undefined)
+
+  if (P.isObject(body) && P.isString(body.message)) return response
+
+  const errors: ReadonlyArray<unknown> = P.isObject(body)
+    ? [body.errors, body.error].flatMap((list) => (Array.isArray(list) ? list : []))
+    : []
+
+  const reasons = errors.flatMap((error) =>
+    P.isObject(error) && P.isString(error.message)
+      ? [P.isNumber(error.code) ? `${error.code}: ${error.message}` : error.message]
+      : [],
+  )
+
+  const reason = reasons.length === 0 ? response.statusText : reasons.join("; ")
+
+  return Response.json(
+    { message: `Cloudflare ${response.status}: ${reason}` },
+    { status: response.status, statusText: response.statusText },
+  )
 }
