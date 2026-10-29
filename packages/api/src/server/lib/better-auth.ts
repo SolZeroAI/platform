@@ -1,12 +1,13 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Better Auth request hooks are an imperative adapter boundary whose path/body guards must reject before library route execution. */
 import { CREDENTIAL_AUTH_PROVIDER_ID, getStageMetadataSync } from "@solzero/shared"
 import { betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { hashPassword } from "better-auth/crypto"
 import { genericOAuth } from "better-auth/plugins"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "./effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
@@ -16,7 +17,6 @@ import type { ApiEnv } from "infra/types/env"
 import {
   databaseEngineFromEnv,
   hasControlPlane,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- better-auth.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the Better Auth adapter needs a database handle before an Effect layer is available.
   makeControlPlaneFromEnv,
   runControlPlaneSql,
   runControlPlaneSqlFirst,
@@ -144,23 +144,30 @@ function mapOidcProfile(profile: Record<string, unknown>) {
   }
 }
 
-function oidcConfig(providerId: string, config: ResolvedAuthProviderConfig) {
+type ResolvedOidcProviderConfig = Extract<ResolvedAuthProviderConfig, { kind: "oidc" }>
+
+function isEnabledOidcProvider(
+  config: ResolvedAuthProviderConfig,
+): config is ResolvedOidcProviderConfig {
   return config.kind === "oidc" && config.enabled
-    ? [
-        {
-          providerId,
-          discoveryUrl: `${config.issuer}/.well-known/openid-configuration`,
-          clientId: config.clientId,
-          clientSecret: config.clientSecret,
-          scopes: [...(config.scopes ?? [])],
-          pkce: true,
-          disableSignUp: !config.capabilities.provisionUsers,
-          // 1.7 would otherwise send users to the IdP end-session URL on sign-out.
-          disableProviderLogout: true,
-          mapProfileToUser: mapOidcProfile,
-        },
-      ]
-    : []
+}
+
+function oidcConfig(providerId: string, config: ResolvedAuthProviderConfig) {
+  return Option.liftPredicate(config, isEnabledOidcProvider).pipe(
+    Option.map((oidc) => ({
+      providerId,
+      discoveryUrl: `${oidc.issuer}/.well-known/openid-configuration`,
+      clientId: oidc.clientId,
+      clientSecret: oidc.clientSecret,
+      scopes: [...(oidc.scopes ?? [])],
+      pkce: true,
+      disableSignUp: !oidc.capabilities.provisionUsers,
+      // 1.7 would otherwise send users to the IdP end-session URL on sign-out.
+      disableProviderLogout: true,
+      mapProfileToUser: mapOidcProfile,
+    })),
+    Option.toArray,
+  )
 }
 
 const DISABLED_CREDENTIAL_PATHS = new Set([
@@ -182,62 +189,85 @@ function isAuthRequestBody(body: unknown): body is AuthRequestBody {
 }
 
 function requestString(body: unknown, field: "email" | "provider" | "providerId"): string {
-  if (!isAuthRequestBody(body)) return ""
+  return Option.liftPredicate(body, isAuthRequestBody).pipe(
+    Option.flatMap((request) => Option.liftPredicate(request[field], P.isString)),
+    Option.map((value) => value.trim().toLowerCase()),
+    Option.getOrElse(() => ""),
+  )
+}
 
-  const value = body[field]
+const CAPABILITY_ACTIONS = { signIn: "sign in", link: "link accounts" } as const
 
-  return typeof value === "string" ? value.trim().toLowerCase() : ""
+function forbidden(message: string): never {
+  throw new APIError("FORBIDDEN", { message })
 }
 
 function requireProviderCapability(
   registry: ResolvedAuthProviderRegistry,
   providerId: string,
   capability: "signIn" | "link",
-) {
-  const provider = registry.providers[providerId]
+): void {
+  const allowed = Option.fromUndefinedOr(registry.providers[providerId]).pipe(
+    Option.exists(
+      (provider) => provider.enabled === true && provider.capabilities[capability] === true,
+    ),
+  )
 
-  if (!provider?.enabled || !provider.capabilities[capability]) {
-    throw new APIError("FORBIDDEN", {
-      message: `Provider '${providerId || "unknown"}' is not allowed to ${capability === "signIn" ? "sign in" : "link accounts"}`,
-    })
-  }
+  // Fail closed: only an explicit true lets the request through.
+  Match.value(allowed).pipe(
+    Match.when(true, () => undefined),
+    Match.orElse(() =>
+      forbidden(
+        `Provider '${providerId || "unknown"}' is not allowed to ${CAPABILITY_ACTIONS[capability]}`,
+      ),
+    ),
+  )
+}
+
+async function rejectUnmanagedCredential(): Promise<never> {
+  // Hash anyway, so an unknown email takes as long as a wrong password.
+  await hashPassword("s0-invalid-managed-credential")
+  throw new APIError("UNAUTHORIZED", { message: "Invalid email or password" })
+}
+
+async function requireManagedAdminSignIn(
+  env: ApiEnv,
+  registry: ResolvedAuthProviderRegistry,
+  body: unknown,
+): Promise<void> {
+  requireProviderCapability(registry, CREDENTIAL_AUTH_PROVIDER_ID, "signIn")
+
+  const email = requestString(body, "email")
+  const adminConfig = await runEffectPromise(getAdminConfig(env))
+
+  await Match.value(new Set<string>(adminConfig.adminEmails).has(email)).pipe(
+    Match.when(true, () => Promise.resolve()),
+    Match.orElse(() => rejectUnmanagedCredential()),
+  )
 }
 
 function authPolicyHook(env: ApiEnv, registry: ResolvedAuthProviderRegistry) {
   return createAuthMiddleware(async (context) => {
-    if (DISABLED_CREDENTIAL_PATHS.has(context.path)) {
-      throw new APIError("FORBIDDEN", {
-        message: "Credential lifecycle is managed through deployment configuration",
-      })
-    }
-
-    if (context.path === "/sign-in/email") {
-      requireProviderCapability(registry, CREDENTIAL_AUTH_PROVIDER_ID, "signIn")
-      const email = requestString(context.body, "email")
-      // oxlint-disable-next-line effect/effect-run-in-body -- Better Auth requires a Promise-returning middleware callback at this boundary.
-      const adminConfig = await Effect.runPromise(getAdminConfig(env))
-
-      if (!new Set<string>(adminConfig.adminEmails).has(email)) {
-        await hashPassword("s0-invalid-managed-credential")
-        throw new APIError("UNAUTHORIZED", { message: "Invalid email or password" })
-      }
-    }
-
-    if (context.path === "/sign-in/social") {
-      requireProviderCapability(registry, requestString(context.body, "provider"), "signIn")
-    }
-
-    if (context.path === "/sign-in/oauth2") {
-      requireProviderCapability(registry, requestString(context.body, "providerId"), "signIn")
-    }
-
-    if (context.path === "/link-social") {
-      requireProviderCapability(registry, requestString(context.body, "provider"), "link")
-    }
-
-    if (context.path === "/oauth2/link") {
-      requireProviderCapability(registry, requestString(context.body, "providerId"), "link")
-    }
+    await Match.value(context.path).pipe(
+      Match.when(
+        (path: string) => DISABLED_CREDENTIAL_PATHS.has(path),
+        () => forbidden("Credential lifecycle is managed through deployment configuration"),
+      ),
+      Match.when("/sign-in/email", () => requireManagedAdminSignIn(env, registry, context.body)),
+      Match.when("/sign-in/social", () =>
+        requireProviderCapability(registry, requestString(context.body, "provider"), "signIn"),
+      ),
+      Match.when("/sign-in/oauth2", () =>
+        requireProviderCapability(registry, requestString(context.body, "providerId"), "signIn"),
+      ),
+      Match.when("/link-social", () =>
+        requireProviderCapability(registry, requestString(context.body, "provider"), "link"),
+      ),
+      Match.when("/oauth2/link", () =>
+        requireProviderCapability(registry, requestString(context.body, "providerId"), "link"),
+      ),
+      Match.orElse(() => undefined),
+    )
   })
 }
 

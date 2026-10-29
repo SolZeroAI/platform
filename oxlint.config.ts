@@ -138,6 +138,16 @@ export default defineConfig({
       rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
     },
     {
+      // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
+      // from the Worker env before the library or MCP SDK takes the request.
+      files: [
+        "packages/api/src/server/lib/better-auth.ts",
+        "packages/api/src/server/mcp/mcpcf-server/runtime.ts",
+        "packages/api/src/server/mcp/workflow-builder/server.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
       // The HTTP workflow node sends a user-authored request and reports the final URL, status
       // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
       files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
