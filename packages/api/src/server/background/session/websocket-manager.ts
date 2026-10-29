@@ -1,5 +1,6 @@
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Result from "effect/Result"
 import type { ClientInfo, ServerMessage } from "../types"
 import { stringifyJson } from "../../lib/json"
 import type { SessionRepository } from "./repository"
@@ -32,6 +33,13 @@ export interface SessionWebSocketManager {
   enableAutoPingPong(): void
   getAuthenticatedClients(): IterableIterator<ClientInfo>
   getConnectedClientCount(): number
+}
+
+function serializeMessage(message: string | ServerMessage): string {
+  return Match.value(message).pipe(
+    Match.when(Match.string, (value) => value),
+    Match.orElse((value) => stringifyJson(value)),
+  )
 }
 
 export class SessionWebSocketManagerImpl implements SessionWebSocketManager {
@@ -188,29 +196,14 @@ export class SessionWebSocketManagerImpl implements SessionWebSocketManager {
     )
   }
 
+  // WebSocket.send throws on a closed or errored socket. That degrades to `false`.
   private trySend(ws: WebSocket, message: string | ServerMessage): boolean {
-    // oxlint-disable-next-line effect/avoid-try-catch -- Sync platform boundary: WebSocket.send throws on a closed/errored socket and must degrade to `false`; this Promise-based DO helper has no Effect context to thread.
-    try {
-      const payload = Match.value(message).pipe(
-        Match.when(Match.string, (value) => value),
-        Match.orElse((value) => stringifyJson(value)),
-      )
-
-      ws.send(payload)
-
-      return true
-    } catch {
-      return false
-    }
+    return Result.isSuccess(Result.try(() => ws.send(serializeMessage(message))))
   }
 
+  // WebSocket.close throws when the socket is already closed. That is ignored.
   close(ws: WebSocket, code: number, reason: string): void {
-    // oxlint-disable-next-line effect/avoid-try-catch -- Sync platform boundary: WebSocket.close throws when already closed and must be ignored; this Promise-based DO helper has no Effect context to thread.
-    try {
-      ws.close(code, reason)
-    } catch {
-      // Ignore when already closed.
-    }
+    Result.try(() => ws.close(code, reason))
   }
 
   forEachClientSocket(

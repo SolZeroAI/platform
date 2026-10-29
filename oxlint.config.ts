@@ -122,6 +122,15 @@ export default defineConfig({
       },
     },
     {
+      // The session Durable Object is a composition root. It builds the tracing layer and the
+      // control plane from its Worker env, then runs Effects through lib/effect-promise.
+      files: [
+        "packages/api/src/server/background/session/durable-object.ts",
+        "packages/api/src/server/background/session/durable-object/*.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
       // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
       // them to the names Alchemy reads) before an Alchemy context exists.
       files: [

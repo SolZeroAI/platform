@@ -45,14 +45,13 @@ import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
 import { createApiRequestObserver } from "../../../effect/services/observability"
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object core is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -429,8 +428,7 @@ export function routeRequest(
 export async function alarm(host: SessionDODelegate): Promise<void> {
   host.ensureInitialized()
   await Match.value(host.getSessionKind()).pipe(
-    // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object alarm is a platform Promise boundary.
-    Match.when("sandbox", () => Effect.runPromise(host.lifecycleManager.handleAlarm())),
+    Match.when("sandbox", () => runEffectPromise(host.lifecycleManager.handleAlarm())),
     Match.orElse(() => host.handleIsolateInactivityAlarm()),
   )
 }

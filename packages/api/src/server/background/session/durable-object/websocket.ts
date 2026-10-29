@@ -45,14 +45,13 @@ import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
 import { createApiRequestObserver } from "../../../effect/services/observability"
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object websocket is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -474,8 +473,7 @@ export async function authorizeSubscribe(
   data: { token: string; clientId: string },
 ): Promise<void> {
   const now = Date.now()
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object websocket auth handler remains a Promise boundary.
-  const tokenHash = await Effect.runPromise(hashToken(data.token))
+  const tokenHash = await runEffectPromise(hashToken(data.token))
   const participant = host.repository.getParticipantByWsTokenHash(tokenHash, now, WS_TOKEN_TTL_MS)
   Option.match(participant, {
     onNone: () => host.rejectSubscribeInvalidToken(ws, parsed, data.clientId),
@@ -592,8 +590,7 @@ export function replayCursor(
 
 export async function handleTyping(host: SessionDODelegate): Promise<void> {
   await Match.value(host.getSessionKind()).pipe(
-    // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object websocket handler is a platform Promise boundary.
-    Match.when("sandbox", () => Effect.runPromise(host.lifecycleManager.warmSandbox())),
+    Match.when("sandbox", () => runEffectPromise(host.lifecycleManager.warmSandbox())),
     Match.orElse(() => host.syncIsolateRuntime()),
   )
 }

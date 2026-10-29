@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect"
+import { runOptionPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import type { D1Error } from "../db/errors"
-import type { SessionIndexRecord } from "../db/session-index"
+import type { SessionIndexRecord, SessionIndexStore } from "../db/session-index"
 
 export type SessionAccessRole = "owner"
 
@@ -13,8 +13,7 @@ export interface SessionAccessGrant {
 }
 
 export interface SessionAccessStore {
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Minimal store contract (decoupled from SessionIndexStore so tests can supply a fake); the D1Error channel must be named explicitly here.
-  getById(id: string): Effect.Effect<Option.Option<SessionIndexRecord>, D1Error>
+  getById(id: string): ReturnType<SessionIndexStore["getById"]>
 }
 
 /**
@@ -56,8 +55,5 @@ export function resolveSessionAccessPromise(
   sessionId: string,
   userId: string,
 ): Promise<SessionAccessGrant | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect session-access policy to the non-Effect preview-proxy router.
-  return Effect.runPromise(
-    resolveSessionAccess(store, sessionId, userId).pipe(Effect.map(Option.getOrNull)),
-  )
+  return runOptionPromise(resolveSessionAccess(store, sessionId, userId))
 }

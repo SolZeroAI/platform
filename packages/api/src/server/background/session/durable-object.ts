@@ -58,7 +58,6 @@ import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../observability/tracing"
@@ -342,9 +341,10 @@ export function parseAttachments(attachmentsJson: string | null) {
   )
 }
 
-// oxlint-disable-next-line solzero/prefer-option-over-null -- Promise-side Durable Object artifact reader; callers still branch on null until those surfaces convert to Effect.
-export function parseArtifactMetadata(value: string | null): SessionArtifactMetadata | null {
-  return Option.getOrNull(Option.flatMap(decodeJson(value), parseSessionArtifactMetadata))
+export function parseArtifactMetadata(
+  value: string | null,
+): Option.Option<SessionArtifactMetadata> {
+  return Option.flatMap(decodeJson(value), parseSessionArtifactMetadata)
 }
 
 export function getSessionTools(session: SessionRow | null) {
