@@ -40,8 +40,7 @@ const SESSION_SOURCE_OPTIONS = ["web", "api", "slack"] as const
 interface SessionListResponse {
   sessions?: SessionItem[]
   total?: number
-  limit?: number
-  offset?: number
+  hasMore?: boolean
 }
 
 export function PreviousSessionsTable() {
