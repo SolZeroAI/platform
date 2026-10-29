@@ -28,12 +28,11 @@ import {
   type UserCustomProviderSettings,
 } from "@solzero/shared"
 import * as Arr from "effect/Array"
-import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env while resolving the runtime provider catalog, which has no Layer context.
 import { hasControlPlane, makeControlPlaneFromEnv } from "../effect/db/control-plane-db"
+import { runEffectPromise } from "../lib/effect-promise"
 import type { Env } from "./types"
 import {
   buildCloudflareAiGatewayCatalogProvider,
@@ -94,7 +93,6 @@ interface ResolvedProviderRecord {
   providerId: string
   name: string
   npm?: string
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   source: "shared" | "custom"
@@ -482,7 +480,6 @@ async function compiledProviderOptions(
     selectedProviderId: string
     selectedModelId: string
   },
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
 ): Promise<Record<string, unknown>> {
   const cloudflareOptions = await compileCloudflareAiGatewayProviderOptions({
     env: selection.env,
@@ -503,8 +500,7 @@ async function compiledProviderOptions(
 function defaultCompiledProviderOptions(
   provider: ResolvedProviderRecord,
   sharedProviderCredentialMode: SharedProviderCredentialMode,
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. Compiled options stay an open bag so live provider configs keep working.
-): Record<string, unknown> {
+) {
   const credentialOptions = Match.value(provider.credentialSource).pipe(
     Match.when("binding", () =>
       Match.value(sharedProviderCredentialMode).pipe(
@@ -519,7 +515,6 @@ function defaultCompiledProviderOptions(
     })),
   )
 
-  // oxlint-disable-next-line anti-slop/no-known-value-widening -- Provider catalog owner is open provider JSON. The compiled options bag stays open so live provider configs keep working.
   return {
     ...provider.options,
     ...credentialOptions,
@@ -765,22 +760,19 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
 
   const cloudflareAiGateway = yieldCloudflareAiGatewayProvider(
     buildCloudflareAiGatewayCatalogProvider(env),
-    await runProviderCatalogEffect(getCloudflareAiGatewayRuntimeProviderKeys(env)),
+    await runEffectPromise(getCloudflareAiGatewayRuntimeProviderKeys(env)),
   )
 
   const deploymentProviders = [...staticProviders, ...cloudflareAiGateway.providers]
-  const litellmConfig = await runProviderCatalogEffect(getLitellmConfigWithPresence(env))
+  const litellmConfig = await runEffectPromise(getLitellmConfigWithPresence(env))
 
   return Match.value(litellmConfig.configured).pipe(
     Match.when(false, () => ({
       providers: deploymentProviders,
       configuredDefaultModel: cloudflareAiGateway.defaultModel,
     })),
-    Match.orElse(async () => {
-      const dynamicLitellm = await runProviderCatalogEffect(buildLitellmCatalogProviders(env))
-
-      // oxlint-disable-next-line solzero/no-return-in-arrow -- Async Match branch returns the computed shared-provider snapshot.
-      return Option.match(dynamicLitellm, {
+    Match.orElse(async () =>
+      Option.match(await runEffectPromise(buildLitellmCatalogProviders(env)), {
         onNone: () => ({
           providers: deploymentProviders,
           configuredDefaultModel: cloudflareAiGateway.defaultModel,
@@ -794,8 +786,8 @@ async function buildSharedProviders(env: Env): Promise<SharedProviderBuildResult
           ],
           configuredDefaultModel: snapshot.defaultModel ?? cloudflareAiGateway.defaultModel,
         }),
-      })
-    }),
+      }),
+    ),
   )
 }
 
@@ -832,14 +824,6 @@ function toResolvedBindingProviderRecord(
     credentialSource: "binding",
     cloudflareAiGatewayByokKeys: providerKeys,
   }
-}
-
-function runProviderCatalogEffect<A, E>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge for generic provider catalog Effects.
-  effect: Effect.Effect<A, E>,
-): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for provider catalog assembly.
-  return Effect.runPromise(effect)
 }
 
 function toResolvedLitellmProviderRecord(

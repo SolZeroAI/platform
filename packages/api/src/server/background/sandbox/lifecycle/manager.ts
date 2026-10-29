@@ -15,7 +15,6 @@ import type { GitHubCloneCredentials } from "../../auth/github-clone-auth"
 import { toError } from "../../../lib/effect-errors"
 import { parseJsonArray } from "../../../lib/json"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the sandbox manager decrypts stored secrets.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { SessionRuntimeRepository } from "../../session/repository"
 import { buildResolvedSessionMcpServers } from "../../session/runtime-mcp"
