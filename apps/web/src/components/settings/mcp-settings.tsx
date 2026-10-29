@@ -1,5 +1,6 @@
 "use client"
 
+import type { McpcfUserServerSettings, McpcfUserSettingsListQuery } from "@solzero/api"
 import { Banner } from "@cloudflare/kumo/components/banner"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Checkbox } from "@cloudflare/kumo/components/checkbox"
@@ -22,36 +23,15 @@ import { AlertCircle, CheckCircle2, ChevronDown, ChevronsUpDown, Pencil, Save } 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { Dialog } from "@/components/ui/dialog"
+import { runApi } from "@/lib/api-client"
 
-interface McpToolPreview {
-  name: string
-  description?: string
-}
+type McpServerSettings = McpcfUserServerSettings
 
-interface McpServerSettings {
-  id: string
-  slug: string
-  label: string
-  description: string
-  authType: string | null
-  authLabel: string | null
-  gatewayAuthType?: string | null
-  gatewayAuthLabel?: string | null
-  upstreamAuthType?: string | null
-  upstreamAuthLabel?: string | null
-  gatewayAuthTokenRequired: boolean
-  gatewayAuthTokenConfigured: boolean
-  upstreamAuthTokenRequired: boolean
-  upstreamAuthTokenConfigured: boolean
-  authTokenRequired: boolean
-  authTokenConfigured: boolean
-  configuredForUser: boolean
-  contextForgeUrl?: string
-  contextForgeApiKeysUrl?: string
-  toolCount: number
-  defaultToolsEnabled: boolean
-  disabledTools: string[]
-  tools: McpToolPreview[]
+const SERVER_FILTER_IDS = new Set(["auth", "configured", "defaultTools"])
+
+/** The table column filters that the MCP settings list query accepts. */
+function isServerFilterId(id: string): id is "auth" | "configured" | "defaultTools" {
+  return SERVER_FILTER_IDS.has(id)
 }
 
 interface DraftState {
@@ -65,14 +45,6 @@ interface McpSettingsProps {
   initialQuery?: string
   selectedServerId?: string
   selectedServerLabel?: string
-}
-
-interface McpSettingsListResponse {
-  servers?: McpServerSettings[]
-  total?: number
-  limit?: number
-  offset?: number
-  error?: string
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
@@ -133,7 +105,7 @@ function createDraft(server: McpServerSettings): DraftState {
     upstreamAuthToken: "",
     clearUpstreamAuthToken: false,
     defaultToolsEnabled: server.defaultToolsEnabled,
-    disabledTools: server.disabledTools,
+    disabledTools: [...server.disabledTools],
   }
 }
 
@@ -444,48 +416,46 @@ export function McpSettings({
       setLoading(true)
       setErrorMessage(null)
 
-      const params = new URLSearchParams({
+      const query: McpcfUserSettingsListQuery = {
         limit: String(pagination.pageSize),
         offset: String(pagination.pageIndex * pagination.pageSize),
-      })
+      }
 
       const trimmedSearch = globalFilter.trim()
 
       if (trimmedSearch) {
-        params.set("q", trimmedSearch)
+        query.q = trimmedSearch
       }
 
       for (const filter of columnFilters) {
-        if (typeof filter.value === "string" && filter.value.trim()) {
-          params.set(filter.id, filter.value.trim())
+        if (
+          isServerFilterId(filter.id) &&
+          typeof filter.value === "string" &&
+          filter.value.trim()
+        ) {
+          query[filter.id] = filter.value.trim()
         }
       }
 
       const [sort] = sorting
 
       if (sort) {
-        params.set("sortBy", sort.id)
-        params.set("sortDir", sort.desc ? "desc" : "asc")
+        query.sortBy = sort.id
+        query.sortDir = sort.desc ? "desc" : "asc"
       }
 
       try {
-        const response = await fetch(`/api/sessions/mcpcf/settings?${params.toString()}`, {
+        const payload = await runApi((client) => client.sessions.mcpcfSettings({ query }), {
           signal,
+          fallbackMessage: "Failed to load MCP settings.",
         })
-
-        // SAFETY: /api/sessions/mcpcf/settings returns McpSettingsListResponse, including an error when response.ok is false.
-        const payload = (await response.json().catch(() => ({}))) as McpSettingsListResponse
-
-        if (!response.ok) {
-          throw new Error(formatApiError(payload.error, "Failed to load MCP settings."))
-        }
 
         if (fetchSequenceRef.current !== sequence) {
           return
         }
 
-        setServers(Array.isArray(payload.servers) ? payload.servers : [])
-        setTotal(typeof payload.total === "number" ? payload.total : 0)
+        setServers([...payload.servers])
+        setTotal(payload.total)
       } catch (errorValue) {
         if (errorValue instanceof Error && errorValue.name === "AbortError") {
           return
@@ -590,31 +560,24 @@ export function McpSettings({
     setErrorMessage(null)
 
     try {
-      const response = await fetch(
-        `/api/sessions/mcpcf/${encodeURIComponent(selectedServer.id)}/settings`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            authToken: draft.upstreamAuthToken.trim() || undefined,
-            clearAuthToken: draft.clearUpstreamAuthToken,
-            defaultToolsEnabled: draft.defaultToolsEnabled,
-            disabledTools: draft.defaultToolsEnabled
-              ? draft.disabledTools
-              : selectedServer.tools.map((tool) => tool.name),
+      const authToken = draft.upstreamAuthToken.trim()
+
+      const settings = {
+        clearAuthToken: draft.clearUpstreamAuthToken,
+        defaultToolsEnabled: draft.defaultToolsEnabled,
+        disabledTools: draft.defaultToolsEnabled
+          ? draft.disabledTools
+          : selectedServer.tools.map((tool) => tool.name),
+      }
+
+      const payload = await runApi(
+        (client) =>
+          client.sessions.updateMcpcfSettings({
+            params: { serverId: selectedServer.id },
+            payload: authToken ? { ...settings, authToken } : settings,
           }),
-        },
+        { fallbackMessage: "Failed to save MCP settings." },
       )
-
-      // SAFETY: PUT MCP server settings returns the updated server and an error string when the save fails.
-      const payload = (await response.json().catch(() => ({}))) as {
-        server?: McpServerSettings
-        error?: string
-      }
-
-      if (!response.ok || !payload.server) {
-        throw new Error(formatApiError(payload.error, "Failed to save MCP settings."))
-      }
 
       setSelectedServer(payload.server)
       setDraft(createDraft(payload.server))
