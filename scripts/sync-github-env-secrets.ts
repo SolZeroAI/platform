@@ -18,13 +18,13 @@ function isMappedSecretName(name: string): name is keyof typeof githubSecretName
   return Object.hasOwn(githubSecretNameMap, name)
 }
 
-const repoSecretNames = [
-  "CLOUDFLARE_ACCOUNT_ID",
-  "CLOUDFLARE_API_TOKEN",
-  "CF_AI_SEARCH_SERVICE_TOKEN_ID",
-] as const
+// SolZeroAI organization Actions secrets. Repository or Environment copies would override them,
+// and CLOUDFLARE_API_TOKEN must stay off this public repository.
+const orgSecretNames = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"] as const
 
-const repoSecretNameSet = new Set<string>(repoSecretNames)
+const repoSecretNames = ["CF_AI_SEARCH_SERVICE_TOKEN_ID"] as const
+
+const skippedRuntimeSecretNameSet = new Set<string>([...orgSecretNames, ...repoSecretNames])
 
 interface Args {
   repo: string
@@ -63,6 +63,9 @@ Options:
   --help                    Show this help.
 
 Notes:
+  - CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are SolZeroAI organization secrets.
+    This script never uploads them, because a repository or Environment copy would
+    override the organization value.
   - GITHUB_APP_* values are uploaded as GH_APP_* because GitHub rejects secret names
     beginning with GITHUB_.
   - Secret values are sent to gh over stdin and are never printed.
@@ -150,7 +153,7 @@ function runtimeUploads(environment: string, path: string): SecretUpload[] {
   const parsed = parseDotenvFile(path)
 
   return Object.entries(parsed).flatMap(([sourceName, value]) => {
-    if (repoSecretNameSet.has(sourceName)) {
+    if (skippedRuntimeSecretNameSet.has(sourceName)) {
       return []
     }
 
