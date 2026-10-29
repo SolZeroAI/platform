@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 const EMPTY_SELECT_VALUE = "__s0_admin_empty__"
 
@@ -319,8 +320,7 @@ export function LitellmSyncStatusIndicator({
           <Button
             type="button"
             variant="ghost"
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="square"
+            {...squareIconButton}
             size="sm"
             onClick={() => setFailureDialogOpen(true)}
             aria-label="View latest LiteLLM sync failure"
