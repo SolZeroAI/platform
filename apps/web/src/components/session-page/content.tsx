@@ -60,6 +60,7 @@ import {
 } from "./status"
 import { EventItem, ThinkingIndicator } from "./event-items"
 import { SubagentGroup } from "./subagent-group"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export function SessionContent({
   sessionId,
@@ -863,8 +864,7 @@ export function SessionContent({
                 <Button
                   type="submit"
                   disabled={!canSubmitPrompt}
-                  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                  shape="circle"
+                  {...circleIconButton}
                   variant="secondary"
                   aria-label="Send"
                   title={

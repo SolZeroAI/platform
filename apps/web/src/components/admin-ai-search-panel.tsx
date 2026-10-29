@@ -24,6 +24,7 @@ import {
   SelectField,
 } from "@/components/admin-ai-provider-panel-ui"
 import { getDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 type SourceDraft = {
   id: string
@@ -274,8 +275,7 @@ export function AdminAiSearchPanel({
                             <Button
                               type="button"
                               size="sm"
-                              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                              shape="circle"
+                              {...circleIconButton}
                               variant="secondary"
                               aria-label={`Edit ${source.label}`}
                               icon={<Edit3 className="h-4 w-4" aria-hidden />}
@@ -286,8 +286,7 @@ export function AdminAiSearchPanel({
                             <Button
                               type="button"
                               size="sm"
-                              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                              shape="circle"
+                              {...circleIconButton}
                               variant="secondary-destructive"
                               aria-label={`Delete ${source.label}`}
                               icon={<Trash2 className="h-4 w-4" aria-hidden />}
@@ -334,8 +333,7 @@ export function AdminAiSearchPanel({
               <Button
                 type="button"
                 variant="ghost"
-                // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                shape="circle"
+                {...circleIconButton}
                 icon={<X className="h-4 w-4" aria-hidden />}
                 aria-label="Close AI Search source dialog"
                 onClick={closeSourceDialog}

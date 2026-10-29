@@ -6,6 +6,7 @@ import { CodeSurface } from "@/components/code"
 import { type WorkflowRunDetail } from "@/lib/admin-console"
 import { IconButton } from "./table-controls"
 import { findSessionIds, formatDuration, formatTime, readNumber, readString } from "./utils"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export function SessionDetailDrawer({
   detail,
@@ -145,8 +146,7 @@ export function Drawer({
         <Button
           type="button"
           onClick={onClose}
-          // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-          shape="circle"
+          {...circleIconButton}
           size="sm"
           variant="secondary"
           title="Close"

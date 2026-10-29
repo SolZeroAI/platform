@@ -25,11 +25,7 @@ import {
 } from "@solzero/shared"
 import { describeError } from "../../../lib/effect-errors"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
-import {
-  BackgroundTracing,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent-controller.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
-  makeBackgroundTracingLayer,
-} from "../../observability/tracing"
+import { BackgroundTracing, makeBackgroundTracingLayer } from "../../observability/tracing"
 import {
   delegateToSubagentInputSchema,
   parseAgentToolEventMessage,
@@ -69,6 +65,7 @@ import {
   trustedConfigFromRunInput,
   type IsolateSubagentTrustedConfig,
 } from "./subagent-trusted-config"
+import { runEffectPromise } from "../../../lib/effect-promise"
 
 export function createInitialIsolateSessionAgentState(): IsolateSessionAgentState {
   return {
@@ -382,10 +379,7 @@ export class IsolateSubagentController {
 
     const result = await this.host
       .registerSubagentTrustedConfig(runId, trustedConfigFromRunInput(input))
-      .then(() =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute is the Promise boundary for the awaited child span.
-        Effect.runPromise(runEffect),
-      )
+      .then(() => runEffectPromise(runEffect))
       .then((resolved) =>
         cancelInterruptedSubagentStillRunning(runId, resolved, (id, reason) =>
           this.host.cancelAgentTool(id, reason),

@@ -28,12 +28,12 @@ import {
 import { Dialog } from "@/components/ui/dialog"
 import type { McpDiscoveryErrorEvent } from "@/lib/session-events"
 import { formatToolCall } from "@/lib/tool-formatters"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 const TOOL_CALL_ACTION_BUTTON_PROPS = {
   type: "button" as const,
   size: "sm" as const,
-  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-  shape: "square" as const,
+  ...squareIconButton,
   variant: "secondary" as const,
 }
 

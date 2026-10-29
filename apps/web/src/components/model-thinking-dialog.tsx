@@ -18,6 +18,7 @@ import {
 import { Dialog } from "@/components/ui/dialog"
 import { getDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
 import { recessedInputGroupClassName } from "@/lib/recessed-field"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 const ALL_PROVIDERS_FILTER = "__all_providers__"
 const MODEL_SCROLL_ANIMATION_MS = 260
@@ -203,8 +204,7 @@ export function ModelThinkingDialog({
           <Button
             type="button"
             onClick={onClose}
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="circle"
+            {...circleIconButton}
             variant="ghost"
             aria-label={showThinking ? "Close model and thinking dialog" : "Close model dialog"}
             icon={<X className="h-4 w-4" aria-hidden />}

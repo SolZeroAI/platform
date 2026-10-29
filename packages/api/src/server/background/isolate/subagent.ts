@@ -31,11 +31,8 @@ import {
 } from "./model"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { buildResolvedIsolateSkillSources } from "./skills"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds the control-plane handle for IsolateToolContext.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
 import { makeBackgroundTracingLayer } from "../observability/tracing"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate subagent.ts is a composition root. It selects the AI Gateway layer at the Effect.runPromise edge.
 import { aiGatewayLayer } from "../../effect/services/ai-gateway"
 import { buildIsolateTools, type IsolateWorkspaceRuntime } from "./tools"
 import { IsolateSessionAgent } from "./agent"
@@ -48,6 +45,7 @@ import {
   withIsolateSubagentFinalizationPrompt,
 } from "./subagent-turn-policy"
 import { ISOLATE_SUBAGENT_PERSISTENCE_PROMPT } from "./subagent-prompts"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 export interface IsolateSubagentDelegation {
   task: string
@@ -259,12 +257,12 @@ export class IsolateSubAgent extends Think<Env> {
       Match.when(
         true,
         (): StepConfig =>
-          // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Think and the app resolve distinct AI SDK type identities, while the runtime StepConfig accepts these fields.
+          /* SAFETY: Think and the app resolve distinct AI SDK type identities. The runtime StepConfig accepts these fields. */
           ({
             activeTools: [],
             toolChoice: "none",
             messages: withIsolateSubagentFinalizationPrompt(ctx.messages),
-          }) as unknown as StepConfig,
+          }) as StepConfig,
       ),
       Match.orElse(() => undefined),
     )
@@ -293,7 +291,6 @@ export class IsolateSubAgent extends Think<Env> {
   ): Promise<Awaited<ReturnType<Think<Env>["startAgentToolRun"]>>> {
     const startedAt = Date.now()
 
-    // oxlint-disable-next-line effect/avoid-try-catch -- The SDK adapter must turn every preparation failure into a terminal inspection instead of rejecting and stranding the parent run.
     try {
       assertRunInput(input)
       const trustedConfig = await this.loadTrustedConfig(options.runId)
@@ -329,7 +326,6 @@ export class IsolateSubAgent extends Think<Env> {
   protected async onChatRecovery(
     context: ChatRecoveryContext,
   ): Promise<ChatRecoveryOptions | void> {
-    // oxlint-disable-next-line effect/avoid-try-catch -- Recovery errors cross an SDK callback boundary and must be replaced with a fixed, non-secret message.
     try {
       const trustedConfig = await this.loadTrustedConfig(this.name)
       await this.prepareRuntime(this.name, trustedConfig, "Recovered delegated sub-agent turn")
@@ -358,11 +354,9 @@ export class IsolateSubAgent extends Think<Env> {
   ): Promise<void> {
     this.preparingInput = input
 
-    // oxlint-disable-next-line effect/avoid-try-catch -- The transient preparation context must be cleared after both successful and failed Promise-based SDK setup.
     try {
       const [model, mcpTurn] = await Promise.all([
-        // oxlint-disable-next-line effect/effect-run-in-body -- Think lifecycle hooks are Promise APIs; this is the Effect-to-SDK boundary.
-        Effect.runPromise(
+        runEffectPromise(
           compileIsolateModelContext({
             env: this.env,
             observability: { tracing: workerTracing },
@@ -371,8 +365,7 @@ export class IsolateSubAgent extends Think<Env> {
             reasoningEffort: input.reasoningEffort,
           }).pipe(Effect.provide(aiGatewayLayer(this.env))),
         ),
-        // oxlint-disable-next-line effect/effect-run-in-body -- Think lifecycle hooks are Promise APIs; this is the Effect-to-SDK boundary.
-        Effect.runPromise(
+        runEffectPromise(
           prepareIsolateMcpTurn({
             env: this.env,
             manager: this.mcp,

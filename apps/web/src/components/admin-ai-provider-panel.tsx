@@ -61,6 +61,7 @@ import {
 } from "./admin-ai-provider-panel-ui"
 import { LitellmResetConfigDialog } from "./admin-litellm-reset-config-dialog"
 import { formatReasoningEffortLabel, ModelThinkingDialog } from "./model-thinking-dialog"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 type LitellmFieldErrors = {
   apiKey?: string
@@ -633,8 +634,7 @@ export function AdminAiProviderPanel({
                     <DropdownMenu.Trigger>
                       <Button
                         type="button"
-                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                        shape="circle"
+                        {...circleIconButton}
                         variant="ghost"
                         disabled={busy !== null || loading}
                         loading={busy === "litellm-export" || busy === "litellm-reset"}
