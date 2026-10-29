@@ -61,9 +61,7 @@ export function stringifyTemplateValue(value: unknown): string {
     Match.when(Match.undefined, () => ""),
     Match.when(Match.string, (stringValue) => stringValue),
     // JSON.stringify gave undefined for a function or symbol, and the template showed "undefined".
-    Match.orElse((other) =>
-      Option.getOrElse(stringifyJsonPrettyOption(other), () => "undefined"),
-    ),
+    Match.orElse((other) => Option.getOrElse(stringifyJsonPrettyOption(other), () => "undefined")),
   )
 }
 
