@@ -35,7 +35,7 @@ export function DataControlsSettings() {
 
       const fetched = data.sessions.flatMap((row) => (isSessionItem(row) ? [row] : []))
       setSessions((prev) => (append ? [...prev, ...fetched] : fetched))
-      setHasMore(data.sessions.length === PAGE_SIZE)
+      setHasMore(data.hasMore)
       setOffset(currentOffset + data.sessions.length)
     } catch (error) {
       console.error("Failed to fetch archived sessions:", error)
