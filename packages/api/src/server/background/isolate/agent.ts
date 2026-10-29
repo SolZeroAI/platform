@@ -35,10 +35,8 @@ import {
 import {
   BackgroundTracing,
   aiTelemetrySettings,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate agent.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
 } from "../observability/tracing"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate agent.ts is a composition root. It selects the AI Gateway layer at the Effect.runPromise edge.
 import { aiGatewayLayer } from "../../effect/services/ai-gateway"
 import {
   resolveIsolateOutputTokenLimit,
@@ -49,7 +47,10 @@ import { getLatestAssistantText } from "./message-chunks"
 import { prepareIsolateMcpTurn } from "./mcpcf-turn"
 import { runChatWithStepLimitRecovery } from "./step-limit-recovery"
 import type { IsolateWorkspaceRuntime } from "./tools"
-import { ensureRepositoryWorkspace } from "./agent/repository-workspace"
+import {
+  ensureRepositoryWorkspace,
+  type RepositoryWorkspacePreparation,
+} from "./agent/repository-workspace"
 import {
   createInitialIsolateSessionAgentState,
   IsolateSubagentController,
@@ -83,6 +84,7 @@ import {
   type IsolateSessionConfig,
   type IsolateWarmResult,
 } from "./agent/types"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 export type {
   IsolateCloneAuth,
@@ -429,8 +431,7 @@ export class IsolateSessionAgent
       lastError: null,
     })
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget entrypoint boundary; runs the repository-preparation span Effect at the Durable Object RPC edge.
-    const repoPreparation = await Effect.runPromise(
+    const repoPreparation = await runEffectPromise(
       ensureRepositoryWorkspace({ workspace: this.workspace, state: this.state, auth }),
     )
 
@@ -491,8 +492,7 @@ export class IsolateSessionAgent
       Effect.provide(aiGatewayLayer(this.env)),
     )
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget entrypoint boundary; runs the run_prompt span Effect at the Durable Object RPC edge.
-    return Effect.runPromise(promptEffect)
+    return runEffectPromise(promptEffect)
   }
 
   private runPromptEffect(request: IsolatePromptRequest, callback?: StreamCallback) {
@@ -590,7 +590,7 @@ export class IsolateSessionAgent
     callback: StreamCallback | undefined,
     model: IsolateModelContext,
     selectedTools: readonly SessionToolSpec[],
-    repoPreparation: { error?: string },
+    repoPreparation: RepositoryWorkspacePreparation,
   ) {
     return Effect.gen({ self: this }, function* () {
       const backgroundTracing = yield* BackgroundTracing
@@ -872,8 +872,7 @@ export class IsolateSessionAgent
   }
 
   private async summarizeCompaction(prompt: string): Promise<string> {
-    // oxlint-disable-next-line effect/effect-run-in-body -- agents memory compaction callback boundary requires a Promise; runs the model-resolution span Effect at that edge.
-    const model = await Effect.runPromise(
+    const model = await runEffectPromise(
       this.resolveCompactionModel().pipe(Effect.provide(aiGatewayLayer(this.env))),
     )
 

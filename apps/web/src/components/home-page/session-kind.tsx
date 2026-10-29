@@ -4,6 +4,7 @@ import { formatAgentRuntimeLabel, getErrorMessage, type AgentRuntime } from "@so
 import { Dialog } from "@/components/ui/dialog"
 import { copyToClipboard } from "@/lib/format"
 import { appToastManager } from "@/lib/toast-manager"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export function AgentRuntimeDialog({
   selectedAgentRuntime,
@@ -29,8 +30,7 @@ export function AgentRuntimeDialog({
           <Button
             type="button"
             onClick={onClose}
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="circle"
+            {...circleIconButton}
             variant="ghost"
             aria-label="Close agent runtime dialog"
             icon={<X className="h-4 w-4" aria-hidden />}

@@ -21,6 +21,7 @@ import { useSidebarContext } from "@/components/sidebar-layout"
 import { WorkflowSummary, WorkflowViewTab } from "./types"
 import { formatTime } from "./run-utils"
 import { SlackMarkIcon } from "./slack-mark-icon"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export function WorkflowBuilderSidebarCloser({
   activeTab,
@@ -422,8 +423,7 @@ export function WorkflowDialogFrame({
                   type="button"
                   onClick={onClose}
                   disabled={closeDisabled}
-                  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                  shape="circle"
+                  {...circleIconButton}
                   variant="ghost"
                   aria-label={closeLabel}
                   icon={<X className="h-4 w-4" aria-hidden />}

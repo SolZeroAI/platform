@@ -5,23 +5,29 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { requiredConfigString, withWorkersDevOrigins, type StageMetadata } from "@solzero/shared"
 
-const CloudflareSubdomainPayload = Schema.Struct({
-  success: Schema.optional(Schema.Boolean),
-  errors: Schema.optional(
-    Schema.Array(
-      Schema.Struct({
-        message: Schema.optional(Schema.String),
-      }),
-    ),
-  ),
-  result: Schema.optional(
-    Schema.Struct({
-      subdomain: Schema.optional(Schema.String),
-    }),
-  ),
-})
+class CloudflareApiError extends Schema.Class<CloudflareApiError>("CloudflareApiError")({
+  message: Schema.optional(Schema.String),
+}) {}
 
-type CloudflareSubdomainPayload = typeof CloudflareSubdomainPayload.Type
+class CloudflareSubdomainResult extends Schema.Class<CloudflareSubdomainResult>(
+  "CloudflareSubdomainResult",
+)({
+  subdomain: Schema.optional(Schema.String),
+}) {}
+
+class CloudflareSubdomainPayload extends Schema.Class<CloudflareSubdomainPayload>(
+  "CloudflareSubdomainPayload",
+)({
+  success: Schema.optional(Schema.Boolean),
+  errors: Schema.optional(Schema.Array(CloudflareApiError)),
+  result: Schema.optional(CloudflareSubdomainResult),
+}) {}
+
+class CloudflareSubdomainBody extends Schema.Class<CloudflareSubdomainBody>(
+  "CloudflareSubdomainBody",
+)({
+  subdomain: Schema.String,
+}) {}
 
 function cloudflareErrorMessage(status: number, payload: CloudflareSubdomainPayload): string {
   const details = (payload.errors ?? [])
@@ -54,13 +60,7 @@ const decodeSubdomainPayload = Schema.decodeUnknownSync(
   Schema.fromJsonString(CloudflareSubdomainPayload),
 )
 
-const encodeSubdomainBody = Schema.encodeUnknownSync(
-  Schema.fromJsonString(
-    Schema.Struct({
-      subdomain: Schema.String,
-    }),
-  ),
-)
+const encodeSubdomainBody = Schema.encodeSync(Schema.fromJsonString(CloudflareSubdomainBody))
 
 function toError(error: unknown): Error {
   return Match.value(error instanceof Error).pipe(
@@ -95,7 +95,7 @@ function readAccountSubdomain(accountId: string, token: string) {
 function createAccountSubdomain(accountId: string, token: string, subdomain: string) {
   return requestSubdomain(accountId, token, {
     method: "PUT",
-    body: encodeSubdomainBody({ subdomain }),
+    body: encodeSubdomainBody(new CloudflareSubdomainBody({ subdomain })),
   })
 }
 

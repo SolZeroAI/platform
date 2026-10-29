@@ -5,7 +5,7 @@ function decodeSqlRows<A>(decode: (value: unknown) => A, rows: unknown[]): A[] {
   return rows.map((row) => decode(row))
 }
 
-export const SessionRowSchema = Schema.Struct({
+export class SessionRowSchema extends Schema.Class<SessionRowSchema>("SessionRow")({
   id: Schema.String,
   session_name: Schema.NullOr(Schema.String),
   session_kind: Schema.Literals(["isolate", "sandbox"]),
@@ -27,9 +27,9 @@ export const SessionRowSchema = Schema.Struct({
   status: Schema.Literals(["created", "active", "completed", "archived"]),
   created_at: Schema.Number,
   updated_at: Schema.Number,
-})
+}) {}
 
-export const SandboxRowSchema = Schema.Struct({
+export class SandboxRowSchema extends Schema.Class<SandboxRowSchema>("SandboxRow")({
   id: Schema.String,
   sandbox_id: Schema.NullOr(Schema.String),
   auth_token: Schema.NullOr(Schema.String),
@@ -51,9 +51,9 @@ export const SandboxRowSchema = Schema.Struct({
   last_spawn_error: Schema.NullOr(Schema.String),
   last_spawn_error_at: Schema.NullOr(Schema.Number),
   created_at: Schema.Number,
-})
+}) {}
 
-export const ParticipantRowSchema = Schema.Struct({
+export class ParticipantRowSchema extends Schema.Class<ParticipantRowSchema>("ParticipantRow")({
   id: Schema.String,
   user_id: Schema.String,
   github_login: Schema.NullOr(Schema.String),
@@ -63,9 +63,9 @@ export const ParticipantRowSchema = Schema.Struct({
   ws_token_created_at: Schema.NullOr(Schema.Number),
   role: Schema.Literals(["owner", "member"]),
   joined_at: Schema.Number,
-})
+}) {}
 
-export const MessageRowSchema = Schema.Struct({
+export class MessageRowSchema extends Schema.Class<MessageRowSchema>("MessageRow")({
   id: Schema.String,
   author_id: Schema.String,
   content: Schema.String,
@@ -80,17 +80,19 @@ export const MessageRowSchema = Schema.Struct({
   created_at: Schema.Number,
   started_at: Schema.NullOr(Schema.Number),
   completed_at: Schema.NullOr(Schema.Number),
-})
+}) {}
 
-export const EventRowSchema = Schema.Struct({
+export class EventRowSchema extends Schema.Class<EventRowSchema>("EventRow")({
   id: Schema.String,
   type: Schema.String,
   data: Schema.String,
   message_id: Schema.NullOr(Schema.String),
   created_at: Schema.Number,
-})
+}) {}
 
-export const SandboxActivityRowSchema = Schema.Struct({
+export class SandboxActivityRowSchema extends Schema.Class<SandboxActivityRowSchema>(
+  "SandboxActivityRow",
+)({
   id: Schema.String,
   sandbox_id: Schema.NullOr(Schema.String),
   type: Schema.String,
@@ -101,42 +103,46 @@ export const SandboxActivityRowSchema = Schema.Struct({
   reason: Schema.NullOr(Schema.String),
   data: Schema.String,
   created_at: Schema.Number,
-})
+}) {}
 
-export const ArtifactRowSchema = Schema.Struct({
+export class ArtifactRowSchema extends Schema.Class<ArtifactRowSchema>("ArtifactRow")({
   id: Schema.String,
   type: Schema.String,
   url: Schema.NullOr(Schema.String),
   metadata: Schema.NullOr(Schema.String),
   created_at: Schema.Number,
-})
+}) {}
 
-export const RuntimeActivityCreatedAtSchema = Schema.Struct({
+export class RuntimeActivityCreatedAtSchema extends Schema.Class<RuntimeActivityCreatedAtSchema>(
+  "RuntimeActivityCreatedAt",
+)({
   created_at: Schema.Number,
-})
+}) {}
 
-export const SqlChangeCountSchema = Schema.Struct({
+export class SqlChangeCountSchema extends Schema.Class<SqlChangeCountSchema>("SqlChangeCount")({
   count: Schema.optional(Schema.Union([Schema.Number, Schema.String])),
-})
+}) {}
 
-export const WsClientIdSchema = Schema.Struct({
+export class WsClientIdSchema extends Schema.Class<WsClientIdSchema>("WsClientId")({
   ws_id: Schema.String,
-})
+}) {}
 
-export const WsClientMappingSchema = Schema.Struct({
+export class WsClientMappingSchema extends Schema.Class<WsClientMappingSchema>("WsClientMapping")({
   participant_id: Schema.String,
   client_id: Schema.String,
   user_id: Schema.String,
   github_name: Schema.NullOr(Schema.String),
   github_login: Schema.NullOr(Schema.String),
-})
+}) {}
 
-export const ParticipantTokenStatsSchema = Schema.Struct({
+export class ParticipantTokenStatsSchema extends Schema.Class<ParticipantTokenStatsSchema>(
+  "ParticipantTokenStats",
+)({
   participant_count: Schema.optional(Schema.Number),
   active_token_count: Schema.optional(Schema.Number),
   stored_token_count: Schema.optional(Schema.Number),
   latest_token_created_at: Schema.optional(Schema.NullOr(Schema.Number)),
-})
+}) {}
 
 const decodeSessionRow = Schema.decodeUnknownSync(SessionRowSchema, { onExcessProperty: "ignore" })
 const decodeSandboxRow = Schema.decodeUnknownSync(SandboxRowSchema, { onExcessProperty: "ignore" })
