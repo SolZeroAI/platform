@@ -14,8 +14,8 @@ import {
   type S0DatabaseEngine,
 } from "@solzero/shared"
 import type { ApiEnv } from "infra/types/env"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- control-plane-db.ts builds makeD1Drizzle from the D1 binding at the composition edge because d1ControlPlane owns drizzle construction.
-import { makeD1Drizzle, type D1DrizzleDatabase } from "./d1-drizzle"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- control-plane-db.ts builds openD1Drizzle from the D1 binding at the composition edge because d1ControlPlane owns drizzle construction.
+import { openD1Drizzle, type D1DrizzleDatabase } from "./d1-drizzle"
 import {
   asFiniteNumber,
   countStar,
@@ -301,7 +301,7 @@ function d1ControlPlane(env: ApiEnv): ControlPlaneDb {
     engine: "d1",
     dialect: "sqlite",
     get drizzle() {
-      return makeD1Drizzle(requireD1Database(env))
+      return openD1Drizzle(requireD1Database(env))
     },
     schema: sqliteSchema,
   }

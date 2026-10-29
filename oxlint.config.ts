@@ -112,6 +112,16 @@ export default defineConfig({
       rules: { "effect/effect-run-in-body": "off", "effect/avoid-native-fetch": "off" },
     },
     {
+      // The one Promise bridge for the non-Effect background runtime. Its helpers take the caller's
+      // effect, so they name the Effect channels, and they return null for the Promise-facing views.
+      files: ["packages/api/src/server/lib/effect-promise.ts"],
+      rules: {
+        "effect/effect-run-in-body": "off",
+        "solzero/no-manual-effect-channels": "off",
+        "solzero/prefer-option-over-null": "off",
+      },
+    },
+    {
       // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
       // them to the names Alchemy reads) before an Alchemy context exists.
       files: [

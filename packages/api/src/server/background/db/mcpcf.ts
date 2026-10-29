@@ -1,7 +1,7 @@
-/* oxlint-disable max-lines -- MCPCF registry is already at the lint ceiling; keep registry storage changes localized. */
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
 import type { S0McpcfConfig, McpcfServerDefinition, SessionToolSpec } from "@solzero/shared"
 import { getSelectedMcpcfServerIds, normalizeMcpcfServerSlug } from "@solzero/shared"
 import { stringifyJson } from "../../lib/json"
@@ -23,6 +23,16 @@ import {
 } from "../mcpcf/metadata"
 import { defaultMcpcfRefreshClient, type McpcfRefreshClient } from "../mcpcf/refresh-client"
 import { McpcfConfigurationError, McpcfServerUnavailableError } from "./errors"
+import { runEffectPromise } from "../../lib/effect-promise"
+import {
+  booleanField,
+  isRecord,
+  nonBlankStringField,
+  numberField,
+  readArray,
+  readStringArray,
+  stringField,
+} from "./record-fields"
 
 export const MCPCF_CONFIG_ID = "default"
 export const MCPCF_ADMIN_API_TOKEN_SECRET_KEY = "mcpcf.admin-api-token"
@@ -136,7 +146,7 @@ interface McpcfRefreshContext {
   result: McpcfRefreshResult
 }
 
-type McpcfRegistryEnv = Pick<Env, "S0_CONFIG" | "REPO_SECRETS_ENCRYPTION_KEY">
+type McpcfRegistryEnv = Env
 
 function normalizeStringList(values: readonly string[] | null | undefined): string[] {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].sort((a, b) =>
@@ -172,64 +182,28 @@ function defaultMcpcfConfig(now = Date.now()): McpcfConfigRecord {
   }
 }
 
-/* oxlint-disable solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null -- S0_CONFIG migration/registry decoders normalize untrusted JSON at a narrow boundary. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function stringField(record: Record<string, unknown>, key: string, fallback = ""): string {
-  const value = record[key]
-
-  return typeof value === "string" ? value : fallback
-}
-
-function nullableStringField(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key]
-
-  return typeof value === "string" && value.trim().length > 0 ? value : null
-}
-
-function numberField(record: Record<string, unknown>, key: string, fallback: number): number {
-  const value = record[key]
-
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback
-}
-
-function booleanField(record: Record<string, unknown>, key: string, fallback: boolean): boolean {
-  const value = record[key]
-
-  return typeof value === "boolean" ? value : fallback
-}
-
-function readStringArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : []
+function mcpcfConfigFromRecord(record: Record<string, unknown>, now: number): McpcfConfigRecord {
+  return {
+    id: stringField(record, "id", MCPCF_CONFIG_ID),
+    enabled: booleanField(record, "enabled", false),
+    baseUrl: stringField(record, "baseUrl"),
+    adminApiTokenSecretKey: stringField(
+      record,
+      "adminApiTokenSecretKey",
+      MCPCF_ADMIN_API_TOKEN_SECRET_KEY,
+    ),
+    userOauthProviderId: stringField(record, "userOauthProviderId"),
+    expectedIssuer: Option.getOrNull(nonBlankStringField(record, "expectedIssuer")),
+    authTypeAllowlist: readStringArray(record.authTypeAllowlist),
+    serverBlacklist: readStringArray(record.serverBlacklist),
+    createdAt: numberField(record, "createdAt", now),
+    updatedAt: numberField(record, "updatedAt", now),
+  }
 }
 
 function readMcpcfConfigRecord(value: unknown): Option.Option<McpcfConfigRecord> {
-  return Option.fromNullishOr(value).pipe(
-    Option.filter(isRecord),
-    Option.map((record) => {
-      const now = Date.now()
-
-      return {
-        id: stringField(record, "id", MCPCF_CONFIG_ID),
-        enabled: booleanField(record, "enabled", false),
-        baseUrl: stringField(record, "baseUrl"),
-        adminApiTokenSecretKey: stringField(
-          record,
-          "adminApiTokenSecretKey",
-          MCPCF_ADMIN_API_TOKEN_SECRET_KEY,
-        ),
-        userOauthProviderId: stringField(record, "userOauthProviderId"),
-        expectedIssuer: nullableStringField(record, "expectedIssuer"),
-        authTypeAllowlist: readStringArray(record.authTypeAllowlist),
-        serverBlacklist: readStringArray(record.serverBlacklist),
-        createdAt: numberField(record, "createdAt", now),
-        updatedAt: numberField(record, "updatedAt", now),
-      } satisfies McpcfConfigRecord
-    }),
+  return Option.liftPredicate(value, isRecord).pipe(
+    Option.map((record) => mcpcfConfigFromRecord(record, Date.now())),
   )
 }
 
@@ -239,44 +213,39 @@ function readMcpcfConfig(value: Option.Option<unknown>, now = Date.now()): Mcpcf
   )
 }
 
+function mcpcfServerFromRecord(record: Record<string, unknown>): McpcfServerRecord {
+  const tools = readArray(record.tools)
+    .map((item) => normalizeMcpcfToolPreview(item))
+    .filter(P.isNotNull)
+
+  return {
+    id: stringField(record, "id"),
+    slug: stringField(record, "slug"),
+    label: stringField(record, "label"),
+    description: stringField(record, "description"),
+    authType: Option.getOrNull(nonBlankStringField(record, "authType")),
+    toolCount: numberField(record, "toolCount", tools.length),
+    tools,
+    // SAFETY: sourceStatus is stored only as McpcfSourceStatus.
+    sourceStatus: stringField(record, "sourceStatus", "active") as McpcfSourceStatus,
+    filterReason: Option.getOrNull(nonBlankStringField(record, "filterReason")),
+    enabled: booleanField(record, "enabled", true),
+    rawMetadata: Option.liftPredicate(record.rawMetadata, isRecord).pipe(
+      Option.getOrElse(() => ({})),
+    ),
+    firstSeenAt: numberField(record, "firstSeenAt", 0),
+    lastSeenAt: numberField(record, "lastSeenAt", 0),
+    verifiedAt: numberField(record, "verifiedAt", 0) || null,
+    updatedAt: numberField(record, "updatedAt", 0),
+  }
+}
+
 function readMcpcfServerRecord(value: unknown): Option.Option<McpcfServerRecord> {
-  return Option.fromNullishOr(value).pipe(
-    Option.filter(isRecord),
-    Option.map((record) => {
-      const rawMetadata = isRecord(record.rawMetadata) ? record.rawMetadata : {}
-
-      const tools = Array.isArray(record.tools)
-        ? record.tools
-            .map((item) => normalizeMcpcfToolPreview(item))
-            .filter((item): item is McpcfToolPreview => item !== null)
-        : []
-
-      return {
-        id: stringField(record, "id"),
-        slug: stringField(record, "slug"),
-        label: stringField(record, "label"),
-        description: stringField(record, "description"),
-        authType: nullableStringField(record, "authType"),
-        toolCount: numberField(record, "toolCount", tools.length),
-        tools,
-        sourceStatus: /* SAFETY: sourceStatus is stored only as McpcfSourceStatus. */ stringField(
-          record,
-          "sourceStatus",
-          "active",
-        ) as McpcfSourceStatus,
-        filterReason: nullableStringField(record, "filterReason"),
-        enabled: booleanField(record, "enabled", true),
-        rawMetadata,
-        firstSeenAt: numberField(record, "firstSeenAt", 0),
-        lastSeenAt: numberField(record, "lastSeenAt", 0),
-        verifiedAt: numberField(record, "verifiedAt", 0) || null,
-        updatedAt: numberField(record, "updatedAt", 0),
-      } satisfies McpcfServerRecord
-    }),
+  return Option.liftPredicate(value, isRecord).pipe(
+    Option.map(mcpcfServerFromRecord),
     Option.filter((record) => record.id.length > 0),
   )
 }
-/* oxlint-enable solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null */
 
 function trimmedServerIds(serverIds: readonly string[]): string[] {
   return serverIds.flatMap((serverId) =>
@@ -979,14 +948,6 @@ export class McpcfRegistryStore {
   })
 }
 
-function runMcpcfRegistryEffect<A, E>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge for the generic Effect returned by the registry methods.
-  effect: Effect.Effect<A, E>,
-): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect McpcfRegistryStore to non-Effect runtime consumers (session MCP resolution and the MCP Context Forge server).
-  return Effect.runPromise(effect)
-}
-
 /**
  * Promise-facing view of {@link McpcfRegistryStore} for the non-Effect MCP runtime (session MCP
  * server resolution and the MCP Context Forge server). Runs the underlying Effect at this boundary.
@@ -1003,10 +964,10 @@ export function createMcpcfRegistryStoreFromEnv(env: McpcfRegistryEnv): McpcfReg
   const registry = new McpcfRegistryStore(env)
 
   return {
-    getConfigOrDefault: () => runMcpcfRegistryEffect(registry.getConfigOrDefault()),
+    getConfigOrDefault: () => runEffectPromise(registry.getConfigOrDefault()),
     listAvailableServersByIds: (serverIds) =>
-      runMcpcfRegistryEffect(registry.listAvailableServersByIds(serverIds)),
+      runEffectPromise(registry.listAvailableServersByIds(serverIds)),
     listSelectedAvailableServers: (tools) =>
-      runMcpcfRegistryEffect(registry.listSelectedAvailableServers(tools)),
+      runEffectPromise(registry.listSelectedAvailableServers(tools)),
   }
 }

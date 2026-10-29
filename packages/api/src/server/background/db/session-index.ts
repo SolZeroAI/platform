@@ -17,8 +17,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the session index database from the Worker env at the repository composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   controlPlaneSql,
   isControlPlaneDb,
@@ -28,7 +27,8 @@ import {
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
 import type { SessionStatus } from "../types"
-import { d1Error, type D1Error } from "./errors"
+import { d1Error } from "./errors"
+import { runEffectPromise, runOptionPromise } from "../../lib/effect-promise"
 
 export interface SessionIndexRecord {
   id: string
@@ -530,20 +530,6 @@ function normalizeSessionSource(value: string | null | undefined): SessionInitia
   )
 }
 
-// oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-function runSessionIndexEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.
-  return Effect.runPromise(effect)
-}
-
-function runSessionIndexOption<A>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-  effect: Effect.Effect<Option.Option<A>, D1Error>,
-): Promise<A | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect SessionIndexStore to the non-Effect workflow session node and workflow-builder MCP server.
-  return Effect.runPromise(effect.pipe(Effect.map(Option.getOrNull)))
-}
-
 /**
  * Promise-facing view of {@link SessionIndexStore} for the non-Effect workflow session node and
  * workflow-builder MCP server. Runs the underlying Effect at this boundary and re-surfaces nullable
@@ -561,15 +547,15 @@ export function createSessionIndexStoreFromD1(
   const store = new SessionIndexStore(
     Match.value(db).pipe(
       Match.when(isControlPlaneDb, (handle) => handle),
-      Match.orElse((d1) => makeD1Drizzle(d1)),
+      Match.orElse((d1) => openD1Drizzle(d1)),
     ),
   )
 
   return {
-    getById: (id) => runSessionIndexOption(store.getById(id)),
+    getById: (id) => runOptionPromise(store.getById(id)),
     getWorkflowSessionReuseSessionId: (input) =>
-      runSessionIndexOption(store.getWorkflowSessionReuseSessionId(input)),
+      runOptionPromise(store.getWorkflowSessionReuseSessionId(input)),
     upsertWorkflowSessionReuseKey: (input) =>
-      runSessionIndexEffect(store.upsertWorkflowSessionReuseKey(input)),
+      runEffectPromise(store.upsertWorkflowSessionReuseKey(input)),
   }
 }

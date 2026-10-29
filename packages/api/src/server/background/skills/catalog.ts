@@ -10,8 +10,8 @@ import {
   AgentSkillValidationError,
   d1Error,
 } from "../db/errors"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the skill catalog database from the Worker env at the catalog composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- openD1Drizzle opens the skill catalog database from the Worker env at the catalog composition edge.
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
   resolveControlPlaneHandle,
@@ -666,7 +666,7 @@ export async function createAdminGlobalSkill(input: {
 }): Promise<AgentSkillRecord> {
   const parsed = parseAgentSkillMarkdown(input.skillMd)
   const contentHash = await hashSkillContent(input.skillMd)
-  const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db))
+  const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : openD1Drizzle(input.db))
   const existing = await Effect.runPromise(store.getActiveGlobalBySlug(parsed.name))
 
   if (Option.isSome(existing)) {
@@ -706,7 +706,7 @@ export async function resolveRuntimeSkillPackages(input: {
   bucket: R2Bucket
   userId: string
 }): Promise<RuntimeSkillPackage[]> {
-  const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db))
+  const store = new AgentSkillStore(isControlPlaneDb(input.db) ? input.db : openD1Drizzle(input.db))
   const effective = await Effect.runPromise(store.listEffectiveGlobal(input.userId, "harness"))
 
   return Promise.all(
@@ -733,7 +733,7 @@ export async function listEffectiveGlobalSkills(input: {
 }): Promise<EffectiveAgentSkill[]> {
   return Effect.runPromise(
     new AgentSkillStore(
-      isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db),
+      isControlPlaneDb(input.db) ? input.db : openD1Drizzle(input.db),
     ).listEffectiveGlobal(input.userId, "harness"),
   )
 }
@@ -742,7 +742,7 @@ export async function listAdminGlobalSkills(
   db: D1Database | ControlPlaneDb,
 ): Promise<AgentSkillRecord[]> {
   return Effect.runPromise(
-    new AgentSkillStore(isControlPlaneDb(db) ? db : makeD1Drizzle(db)).listActiveGlobal("harness"),
+    new AgentSkillStore(isControlPlaneDb(db) ? db : openD1Drizzle(db)).listActiveGlobal("harness"),
   )
 }
 
@@ -752,7 +752,7 @@ export async function listIsolateGlobalSkillNames(input: {
 }): Promise<string[]> {
   const effective = await Effect.runPromise(
     new AgentSkillStore(
-      isControlPlaneDb(input.db) ? input.db : makeD1Drizzle(input.db),
+      isControlPlaneDb(input.db) ? input.db : openD1Drizzle(input.db),
     ).listEffectiveGlobal(input.userId, "isolate"),
   )
 

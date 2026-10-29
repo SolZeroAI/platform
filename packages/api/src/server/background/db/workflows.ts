@@ -2,8 +2,7 @@ import { and, asc, desc, eq, gte, ne, or, sql, type AnyColumn, type SQL } from "
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens workflow tables from the Worker env inside createWorkflowStoreFromD1, the store composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
   resolveControlPlaneHandle,
@@ -12,7 +11,8 @@ import {
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
 import { stringifyJson } from "../../lib/json"
-import { d1Error, type D1Error } from "./errors"
+import { d1Error } from "./errors"
+import { runEffectPromise, runOptionPromise } from "../../lib/effect-promise"
 
 export type WorkflowStatus = "active" | "disabled" | "archived"
 export type WorkflowRunStatus = "queued" | "running" | "completed" | "failed"
@@ -884,20 +884,6 @@ export class WorkflowStore {
   })
 }
 
-// oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-function runWorkflowStoreEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowStore to non-Effect background workflow runtime modules (runner, alarm, routers, nodes, lifecycle).
-  return Effect.runPromise(effect)
-}
-
-function runWorkflowStoreOption<A>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-  effect: Effect.Effect<Option.Option<A>, D1Error>,
-): Promise<A | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowStore to non-Effect background workflow runtime modules (runner, alarm, routers, nodes, lifecycle).
-  return Effect.runPromise(effect.pipe(Effect.map(Option.getOrNull)))
-}
-
 /**
  * Promise-facing view of {@link WorkflowStore} for the non-Effect background workflow runtime
  * (durable runner, alarm scheduler, public webhook/Slack routers, workflow nodes, lifecycle).
@@ -950,35 +936,33 @@ export function createWorkflowStoreFromD1(db: D1Database | ControlPlaneDb): Work
   const store = new WorkflowStore(
     Match.value(db).pipe(
       Match.when(isControlPlaneDb, (handle) => handle),
-      Match.orElse((d1) => makeD1Drizzle(d1)),
+      Match.orElse((d1) => openD1Drizzle(d1)),
     ),
   )
   return {
-    createWorkflow: (input) => runWorkflowStoreEffect(store.createWorkflow(input)),
-    updateWorkflow: (input) => runWorkflowStoreOption(store.updateWorkflow(input)),
-    updateWorkflowName: (input) => runWorkflowStoreOption(store.updateWorkflowName(input)),
+    createWorkflow: (input) => runEffectPromise(store.createWorkflow(input)),
+    updateWorkflow: (input) => runOptionPromise(store.updateWorkflow(input)),
+    updateWorkflowName: (input) => runOptionPromise(store.updateWorkflowName(input)),
     disableWorkflow: (id, userId, updatedAt) =>
-      runWorkflowStoreEffect(store.disableWorkflow(id, userId, updatedAt)),
+      runEffectPromise(store.disableWorkflow(id, userId, updatedAt)),
     enableWorkflow: (id, userId, updatedAt) =>
-      runWorkflowStoreEffect(store.enableWorkflow(id, userId, updatedAt)),
+      runEffectPromise(store.enableWorkflow(id, userId, updatedAt)),
     archiveWorkflow: (id, userId, updatedAt) =>
-      runWorkflowStoreEffect(store.archiveWorkflow(id, userId, updatedAt)),
+      runEffectPromise(store.archiveWorkflow(id, userId, updatedAt)),
     unarchiveWorkflow: (id, userId, updatedAt) =>
-      runWorkflowStoreEffect(store.unarchiveWorkflow(id, userId, updatedAt)),
-    getWorkflow: (id) => runWorkflowStoreOption(store.getWorkflow(id)),
-    getWorkflowForUser: (id, userId) =>
-      runWorkflowStoreOption(store.getWorkflowForUser(id, userId)),
+      runEffectPromise(store.unarchiveWorkflow(id, userId, updatedAt)),
+    getWorkflow: (id) => runOptionPromise(store.getWorkflow(id)),
+    getWorkflowForUser: (id, userId) => runOptionPromise(store.getWorkflowForUser(id, userId)),
     getWorkflowByWebhookId: (webhookId) =>
-      runWorkflowStoreOption(store.getWorkflowByWebhookId(webhookId)),
-    listWorkflows: (input) => runWorkflowStoreEffect(store.listWorkflows(input)),
-    createRun: (input) => runWorkflowStoreEffect(store.createRun(input)),
-    updateRunInstance: (input) => runWorkflowStoreEffect(store.updateRunInstance(input)),
-    completeRun: (input) => runWorkflowStoreEffect(store.completeRun(input)),
-    getRun: (workflowId, runId) => runWorkflowStoreOption(store.getRun(workflowId, runId)),
-    listRuns: (workflowId, limit) => runWorkflowStoreEffect(store.listRuns(workflowId, limit)),
-    deleteRun: (workflowId, runId) => runWorkflowStoreEffect(store.deleteRun(workflowId, runId)),
-    addRunEvent: (input) => runWorkflowStoreEffect(store.addRunEvent(input)),
-    listRunEvents: (workflowId, runId) =>
-      runWorkflowStoreEffect(store.listRunEvents(workflowId, runId)),
+      runOptionPromise(store.getWorkflowByWebhookId(webhookId)),
+    listWorkflows: (input) => runEffectPromise(store.listWorkflows(input)),
+    createRun: (input) => runEffectPromise(store.createRun(input)),
+    updateRunInstance: (input) => runEffectPromise(store.updateRunInstance(input)),
+    completeRun: (input) => runEffectPromise(store.completeRun(input)),
+    getRun: (workflowId, runId) => runOptionPromise(store.getRun(workflowId, runId)),
+    listRuns: (workflowId, limit) => runEffectPromise(store.listRuns(workflowId, limit)),
+    deleteRun: (workflowId, runId) => runEffectPromise(store.deleteRun(workflowId, runId)),
+    addRunEvent: (input) => runEffectPromise(store.addRunEvent(input)),
+    listRunEvents: (workflowId, runId) => runEffectPromise(store.listRunEvents(workflowId, runId)),
   }
 }

@@ -1,11 +1,15 @@
-/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-manual-effect-channels, solzero/no-match-effect-branch, solzero/no-ternary -- S0_CONFIG is a low-level KV JSON/secret boundary; the Promise bridge, paginated KV listing, and compact decoders intentionally stay local to this module. */
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
+import * as Schema from "effect/Schema"
+import * as Stream from "effect/Stream"
 import type { SecretReference } from "@solzero/shared"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { toError } from "../../lib/effect-errors"
 import { parseJson, stringifyJson } from "../../lib/json"
+import { runEffectPromise } from "../../lib/effect-promise"
+import type { Env } from "../types"
 
 export const S0_CONFIG_KEYS = {
   admin: {
@@ -52,18 +56,17 @@ export const S0_CONFIG_LOCATIONS = {
   mcpcf: "active stage config:mcpcf",
 } as const
 
-function readDeploymentBinding(
-  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Bindings are read by name.
-  source: object,
-  bindingName: string,
-): unknown {
-  // SAFETY: Worker env objects keep deployment config and secrets on string binding names. bindingName is one of those names.
-  return (source as { readonly [name: string]: unknown })[bindingName]
+type DeploymentBindings = { readonly [bindingName: string]: unknown }
+
+function readDeploymentBinding(env: Env, bindingName: string): unknown {
+  // Worker env objects keep deployment config and secrets on string binding names.
+  const bindings: DeploymentBindings = env
+
+  return bindings[bindingName]
 }
 
 export function getS0DeploymentConfig<Config>(
-  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Bindings are read by name.
-  env: object,
+  env: Env,
   bindingName: string,
 ): Option.Option<Config> {
   const value = readDeploymentBinding(env, bindingName)
@@ -77,8 +80,7 @@ export function getS0DeploymentConfig<Config>(
 }
 
 export function getS0DeploymentSecret(
-  // oxlint-disable-next-line anti-slop/no-object-parameters -- Worker env objects do not share one interface. Secret bindings are read by name.
-  env: object,
+  env: Env,
   reference: SecretReference | null | undefined,
 ): Option.Option<string> {
   return Option.fromNullishOr(reference).pipe(
@@ -94,11 +96,24 @@ export interface S0ConfigEncryptedSecretRecord {
   updatedAt: number
 }
 
-function requireEncryptionKey(encryptionKey: string | undefined): Effect.Effect<string, Error> {
-  return Option.match(Option.fromNullishOr(encryptionKey).pipe(Option.filter(Boolean)), {
-    onNone: () => Effect.fail(new Error("REPO_SECRETS_ENCRYPTION_KEY not configured")),
-    onSome: (resolved) => Effect.succeed(resolved),
-  })
+export class S0ConfigEncryptionKeyMissingError extends Schema.TaggedError<S0ConfigEncryptionKeyMissingError>()(
+  "S0ConfigEncryptionKeyMissingError",
+  { message: Schema.String },
+) {}
+
+function requireEncryptionKey(encryptionKey: string | undefined) {
+  return Effect.fromOption(Option.fromNullishOr(encryptionKey).pipe(Option.filter(Boolean))).pipe(
+    Effect.mapError(
+      () =>
+        new S0ConfigEncryptionKeyMissingError({
+          message: "REPO_SECRETS_ENCRYPTION_KEY not configured",
+        }),
+    ),
+  )
+}
+
+function timestampOrZero(value: unknown) {
+  return Option.liftPredicate(value, P.isNumber).pipe(Option.getOrElse(() => 0))
 }
 
 function readEncryptedSecretRecord(value: unknown): Option.Option<S0ConfigEncryptedSecretRecord> {
@@ -113,36 +128,33 @@ function readEncryptedSecretRecord(value: unknown): Option.Option<S0ConfigEncryp
     ),
     Option.map((record) => ({
       encryptedValue: record.encryptedValue,
-      createdAt: typeof record.createdAt === "number" ? record.createdAt : 0,
-      updatedAt: typeof record.updatedAt === "number" ? record.updatedAt : 0,
+      createdAt: timestampOrZero(record.createdAt),
+      updatedAt: timestampOrZero(record.updatedAt),
     })),
   )
 }
 
-function listKvKeyNames(
-  kv: KVNamespace,
-  prefix: string,
-  cursor: Option.Option<string>,
-): Effect.Effect<string[], Error> {
-  return Effect.tryPromise({
-    try: () =>
-      kv.list({
-        prefix,
-        ...Option.match(cursor, {
-          onNone: () => ({}),
-          onSome: (value) => ({ cursor: value }),
-        }),
-      }),
-    catch: toError,
-  }).pipe(
-    Effect.flatMap((page) =>
-      page.list_complete
-        ? Effect.succeed(page.keys.map((key) => key.name))
-        : listKvKeyNames(kv, prefix, Option.some(page.cursor)).pipe(
-            Effect.map((remaining) => [...page.keys.map((key) => key.name), ...remaining]),
-          ),
-    ),
+function nextKvCursor(page: KVNamespaceListResult<unknown, string>) {
+  return Match.value(page).pipe(
+    Match.when({ list_complete: false }, (more) => Option.some(Option.some(more.cursor))),
+    Match.orElse(() => Option.none<Option.Option<string>>()),
   )
+}
+
+function listKvKeyNames(kv: KVNamespace, prefix: string) {
+  return Stream.paginate(Option.none<string>(), (cursor) =>
+    Effect.tryPromise({
+      try: () =>
+        kv.list({
+          prefix,
+          ...Option.match(cursor, {
+            onNone: () => ({}),
+            onSome: (value) => ({ cursor: value }),
+          }),
+        }),
+      catch: toError,
+    }).pipe(Effect.map((page) => [page.keys.map((key) => key.name), nextKvCursor(page)] as const)),
+  ).pipe(Stream.runCollect)
 }
 
 export class S0ConfigStore {
@@ -160,21 +172,19 @@ export class S0ConfigStore {
       catch: toError,
     })
 
-    return yield* Option.match(Option.fromNullishOr(raw), {
-      onNone: () => Effect.succeed(Option.none<T>()),
-      onSome: (resolved) =>
+    return yield* Effect.transposeOption(
+      Option.map(Option.fromNullishOr(raw), (resolved) =>
         Effect.try({
-          try: () =>
-            /* SAFETY: parseJson(resolved) was stored by this service in the T shape. */ parseJson(
-              resolved,
-            ) as T,
+          // SAFETY: parseJson(resolved) was stored by this service in the T shape.
+          try: () => parseJson(resolved) as T,
           catch: toError,
-        }).pipe(Effect.map(Option.some)),
-    })
+        }),
+      ),
+    )
   })
 
   listKeys = Effect.fn("db.s0Config.listKeys")(function* (this: S0ConfigStore, prefix: string) {
-    return yield* listKvKeyNames(this.kv, prefix, Option.none())
+    return yield* listKvKeyNames(this.kv, prefix)
   })
 
   putJson = Effect.fn("db.s0Config.putJson")(function* (
@@ -212,11 +222,9 @@ export class S0ConfigStore {
     const encryptionKey = yield* requireEncryptionKey(this.encryptionKey)
     const record = yield* this.getEncryptedSecretRecord(key)
 
-    return yield* Option.match(record, {
-      onNone: () => Effect.succeed(Option.none<string>()),
-      onSome: (resolved) =>
-        decryptSecret(resolved.encryptedValue, encryptionKey).pipe(Effect.map(Option.some)),
-    })
+    return yield* Effect.transposeOption(
+      Option.map(record, (resolved) => decryptSecret(resolved.encryptedValue, encryptionKey)),
+    )
   })
 
   setEncryptedSecret = Effect.fn("db.s0Config.setEncryptedSecret")(function* (
@@ -256,11 +264,6 @@ export class S0ConfigStore {
   })
 }
 
-function runS0ConfigEffect<A>(effect: Effect.Effect<A, Error>): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for non-Effect runtime consumers.
-  return Effect.runPromise(effect)
-}
-
 export interface S0ConfigStorePromise {
   getJson<T = unknown>(key: string): Promise<Option.Option<T>>
   putJson(key: string, value: unknown): Promise<void>
@@ -273,11 +276,11 @@ export function createS0ConfigStore(kv: KVNamespace, encryptionKey?: string): S0
   const store = new S0ConfigStore(kv, encryptionKey)
 
   return {
-    getJson: (key) => runS0ConfigEffect(store.getJson(key)),
-    putJson: (key, value) => runS0ConfigEffect(store.putJson(key, value)),
-    encryptedSecretConfigured: (key) => runS0ConfigEffect(store.encryptedSecretConfigured(key)),
-    getEncryptedSecret: (key) => runS0ConfigEffect(store.getEncryptedSecret(key)),
+    getJson: (key) => runEffectPromise(store.getJson(key)),
+    putJson: (key, value) => runEffectPromise(store.putJson(key, value)),
+    encryptedSecretConfigured: (key) => runEffectPromise(store.encryptedSecretConfigured(key)),
+    getEncryptedSecret: (key) => runEffectPromise(store.getEncryptedSecret(key)),
     setEncryptedSecret: (key, plaintext) =>
-      runS0ConfigEffect(store.setEncryptedSecret(key, plaintext)),
+      runEffectPromise(store.setEncryptedSecret(key, plaintext)),
   }
 }

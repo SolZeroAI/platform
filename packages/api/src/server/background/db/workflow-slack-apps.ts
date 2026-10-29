@@ -3,8 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens Slack app tables from the Worker env at the store composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
   resolveControlPlaneHandle,
@@ -12,7 +11,8 @@ import {
   type AppSchema,
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
-import { d1Error, WorkflowSlackDeliveryError, type D1Error } from "./errors"
+import { d1Error, WorkflowSlackDeliveryError } from "./errors"
+import { runEffectPromise, runOptionPromise } from "../../lib/effect-promise"
 
 export type WorkflowSlackTriggerSurface = "event" | "command" | "interaction"
 
@@ -633,22 +633,6 @@ export class WorkflowSlackAppStore {
   })
 }
 
-function runSlackAppStoreEffect<A>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
-  effect: Effect.Effect<A, D1Error | WorkflowSlackDeliveryError>,
-): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowSlackAppStore to the non-Effect Slack registration sync and public Slack router.
-  return Effect.runPromise(effect)
-}
-
-function runSlackAppStoreOption<A>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-  effect: Effect.Effect<Option.Option<A>, D1Error>,
-): Promise<A | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect WorkflowSlackAppStore to the non-Effect Slack registration sync and public Slack router.
-  return Effect.runPromise(effect.pipe(Effect.map(Option.getOrNull)))
-}
-
 /**
  * Promise-facing view of {@link WorkflowSlackAppStore} for the non-Effect Slack integration
  * runtime (trigger registration sync and the public Slack request router). Runs the underlying
@@ -719,29 +703,27 @@ export function createWorkflowSlackAppStoreFromD1(
   const store = new WorkflowSlackAppStore(
     Match.value(db).pipe(
       Match.when(isControlPlaneDb, (handle) => handle),
-      Match.orElse((d1) => makeD1Drizzle(d1)),
+      Match.orElse((d1) => openD1Drizzle(d1)),
     ),
   )
 
   return {
-    createApp: (input) => runSlackAppStoreEffect(store.createApp(input)),
-    getAppById: (id) => runSlackAppStoreOption(store.getAppById(id)),
-    getAppByWorkflowId: (workflowId) =>
-      runSlackAppStoreOption(store.getAppByWorkflowId(workflowId)),
-    updateAppMetadata: (input) => runSlackAppStoreOption(store.updateAppMetadata(input)),
+    createApp: (input) => runEffectPromise(store.createApp(input)),
+    getAppById: (id) => runOptionPromise(store.getAppById(id)),
+    getAppByWorkflowId: (workflowId) => runOptionPromise(store.getAppByWorkflowId(workflowId)),
+    updateAppMetadata: (input) => runOptionPromise(store.updateAppMetadata(input)),
     disableTriggerRegistrations: (workflowId, updatedAt) =>
-      runSlackAppStoreEffect(store.disableTriggerRegistrations(workflowId, updatedAt)),
+      runEffectPromise(store.disableTriggerRegistrations(workflowId, updatedAt)),
     upsertTriggerRegistrations: (input) =>
-      runSlackAppStoreEffect(store.upsertTriggerRegistrations(input)),
+      runEffectPromise(store.upsertTriggerRegistrations(input)),
     listEnabledRegistrationsForApp: (input) =>
-      runSlackAppStoreEffect(store.listEnabledRegistrationsForApp(input)),
+      runEffectPromise(store.listEnabledRegistrationsForApp(input)),
     listEnabledRegistrationsForWorkflow: (workflowId) =>
-      runSlackAppStoreEffect(store.listEnabledRegistrationsForWorkflow(workflowId)),
+      runEffectPromise(store.listEnabledRegistrationsForWorkflow(workflowId)),
     listRegistrationsForWorkflow: (workflowId) =>
-      runSlackAppStoreEffect(store.listRegistrationsForWorkflow(workflowId)),
-    createDeliveryIfAbsent: (input) => runSlackAppStoreEffect(store.createDeliveryIfAbsent(input)),
-    updateDelivery: (input) => runSlackAppStoreEffect(store.updateDelivery(input)),
-    getRecentDeliveryForNode: (input) =>
-      runSlackAppStoreOption(store.getRecentDeliveryForNode(input)),
+      runEffectPromise(store.listRegistrationsForWorkflow(workflowId)),
+    createDeliveryIfAbsent: (input) => runEffectPromise(store.createDeliveryIfAbsent(input)),
+    updateDelivery: (input) => runEffectPromise(store.updateDelivery(input)),
+    getRecentDeliveryForNode: (input) => runOptionPromise(store.getRecentDeliveryForNode(input)),
   }
 }
