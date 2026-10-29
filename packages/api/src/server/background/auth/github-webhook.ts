@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { stringifyJson } from "../../lib/json"
+import { runEffectPromise } from "../../lib/effect-promise"
 import { getGitHubAppConfig, GitHubAppError, verifyGitHubWebhookSignature } from "./github-app"
 
 function json(data: unknown, status = 200): Response {
@@ -64,6 +65,5 @@ export const handleGitHubAppWebhookRequestEffect = Effect.fn("githubApp.handleWe
 )
 
 export function handleGitHubAppWebhookRequest(request: Request, env: ApiEnv): Promise<Response> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker fetch boundary for the GitHub webhook route.
-  return Effect.runPromise(handleGitHubAppWebhookRequestEffect(request, env))
+  return runEffectPromise(handleGitHubAppWebhookRequestEffect(request, env))
 }
