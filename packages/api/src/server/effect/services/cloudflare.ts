@@ -2,7 +2,6 @@ import type { ApiEnv } from "infra/types/env"
 import * as Context from "effect/Context"
 import * as Match from "effect/Match"
 import { D1Drizzle } from "../db/d1-drizzle"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- cloudflare.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because CloudflareContext layers the control plane beside the request services.
 import { ControlPlane, hasControlPlane, makeControlPlaneFromEnv } from "../db/control-plane-db"
 import "../db/postgres-promise-drizzle"
 import {

@@ -138,6 +138,19 @@ export default defineConfig({
       rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
     },
     {
+      // The HTTP composition roots. The runtime installs the logger layer, CloudflareContext and
+      // the API key check build the control plane from the Worker env, and the control-plane
+      // modules open the D1 and Hyperdrive drizzle handles.
+      files: [
+        "packages/api/src/server/effect/db/control-plane-db.ts",
+        "packages/api/src/server/effect/db/postgres-promise-drizzle.ts",
+        "packages/api/src/server/effect/runtime.ts",
+        "packages/api/src/server/effect/services/auth.ts",
+        "packages/api/src/server/effect/services/cloudflare.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
       // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
       // from the Worker env before the library or MCP SDK takes the request.
       files: [

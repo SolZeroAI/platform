@@ -1,10 +1,8 @@
-import type { ApiEnv } from "infra/types/env"
 import type { IdParams, UpdateSessionToolsPayload } from "@solzero/api"
 import type { OpenCodeMcpServers, SessionToolSpec, SubagentMode } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- tools/index.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the tools handler updates the session index.
-import { makeControlPlaneFromEnv } from "../../../../db/control-plane-db"
+import type { ControlPlaneDb } from "../../../../db/control-plane-db"
 import { SessionIndexStore } from "../../../../../background/db/session-index"
 import { stringifyJson } from "../../../../../lib/json"
 import {
@@ -22,7 +20,7 @@ import {
 } from "../../../shared/control-plane"
 
 const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
-  env: ApiEnv,
+  db: ControlPlaneDb,
   sessionId: string,
   response: Response,
 ) {
@@ -40,7 +38,7 @@ const finalizeToolsUpdate = Effect.fn("sessions.tools.finalize")(function* (
       }>,
   )
 
-  const store = new SessionIndexStore(makeControlPlaneFromEnv(env))
+  const store = new SessionIndexStore(db)
   // SAFETY: customMcpServers on the tools response is the stored OpenCode MCP server map.
   yield* store.updateTooling({
     id: sessionId,
@@ -64,7 +62,7 @@ export function tools({
   payload: UpdateSessionToolsPayload
 }) {
   return runControlPlane(
-    Effect.fn("sessions.tools")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.tools")(function* ({ request, env, principal, db }) {
       const access = yield* requireSessionAccess(request, env, principal, params.id)
 
       const resolved = yield* Effect.try({
@@ -98,7 +96,7 @@ export function tools({
 
       return yield* Match.value(response.ok).pipe(
         Match.when(false, () => Effect.succeed(response)),
-        Match.orElse(() => finalizeToolsUpdate(env, params.id, response)),
+        Match.orElse(() => finalizeToolsUpdate(db, params.id, response)),
       )
     }),
   )

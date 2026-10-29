@@ -19,6 +19,7 @@ import {
   ControlPlaneFailure,
   describeError,
   json,
+  logControlPlaneError,
   runControlPlane,
   type ControlPlaneContext,
 } from "../shared/control-plane"
@@ -179,14 +180,11 @@ export function deleteAgentSkill({ params }: { params: AdminIdParams }) {
               deleteGlobalSkillPackage(context.env.AGENT_SKILLS, skill.slug),
             ).pipe(
               Effect.tapError((cause) =>
-                // oxlint-disable-next-line solzero/warn-effect-sync-wrapper -- The request-scoped logger is an imperative service and the effect keeps it ordered with the failed cleanup.
-                Effect.sync(() =>
-                  context.log.error(cause, {
-                    event: "admin.agent_skill.r2_cleanup_failed",
-                    skillId: skill.id,
-                    skillSlug: skill.slug,
-                  }),
-                ),
+                logControlPlaneError(cause, {
+                  event: "admin.agent_skill.r2_cleanup_failed",
+                  skillId: skill.id,
+                  skillSlug: skill.slug,
+                }),
               ),
               Effect.orElseSucceed(() => undefined),
             ),
