@@ -70,6 +70,7 @@ import {
   groupWorkflowSubagentEvents,
   WorkflowSubagentRunDisclosure,
 } from "./subagent-run-disclosure"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 export function WorkflowCreationDialog({
   open,
@@ -634,8 +635,7 @@ export function RunDetailsSidebar({
             disabled={deleting}
             loading={deleting}
             size="lg"
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="square"
+            {...squareIconButton}
             variant="ghost"
             className="bg-transparent! text-kumo-danger! shadow-none! ring-0! hover:bg-kumo-danger-tint/20! focus:ring-0! focus-visible:ring-0!"
             aria-label={`Delete run ${run.id}`}
@@ -646,8 +646,7 @@ export function RunDetailsSidebar({
             type="button"
             onClick={onClose}
             size="lg"
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="square"
+            {...squareIconButton}
             variant="secondary"
             aria-label="Close run details"
             title="Close run details"

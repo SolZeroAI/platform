@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog"
 import { copyToClipboard } from "@/lib/format"
 import { CodeEditor } from "./code-editor"
 import { formatJsonText, getCodeSurfaceActionLabel, type CodeLanguage } from "./code-utils"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export interface CodeSurfaceTriggerProps {
   actionLabel: ReturnType<typeof getCodeSurfaceActionLabel>
@@ -255,8 +256,7 @@ export function CodeSurface({
                   <Button
                     type="button"
                     onClick={() => setOpen(false)}
-                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                    shape="circle"
+                    {...circleIconButton}
                     variant="ghost"
                     aria-label="Close code dialog"
                     icon={<X className="h-4 w-4" aria-hidden />}

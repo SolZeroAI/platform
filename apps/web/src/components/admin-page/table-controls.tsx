@@ -24,6 +24,7 @@ import {
   getTableFilter,
   setTableFilter,
 } from "./utils"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export const FILTER_ALL = "all"
 
@@ -332,8 +333,7 @@ export function IconButton({
       disabled={busy || disabled}
       title={title}
       aria-label={title}
-      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-      shape="circle"
+      {...circleIconButton}
       size="sm"
       variant={danger ? "secondary-destructive" : "secondary"}
       loading={busy}

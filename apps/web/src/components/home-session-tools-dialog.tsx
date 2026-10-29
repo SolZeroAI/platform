@@ -31,6 +31,7 @@ import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
 import { IsolateAgentControls } from "@/components/isolate-agent-controls"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 const MCPCF_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 const DEFAULT_MCPCF_PER_PAGE = 10
@@ -903,8 +904,7 @@ export function HomeSessionToolsDialog({
                       <Button
                         type="button"
                         onClick={() => setDraftTools(toggleDocSource(draftTools, source.id))}
-                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                        shape="circle"
+                        {...circleIconButton}
                         variant={isSelected ? "primary" : "secondary"}
                         aria-label={`${isSelected ? "Remove" : "Add"} ${source.label}`}
                         icon={

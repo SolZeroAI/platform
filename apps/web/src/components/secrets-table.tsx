@@ -23,6 +23,7 @@ import {
   recessedInputGroupWithButtonClassName,
 } from "@/lib/recessed-field"
 import { getUtf8Size, MAX_VALUE_SIZE, validateKey } from "@/lib/secrets-validation"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 export type SecretsTableRow = {
   id: string
@@ -386,8 +387,7 @@ export function SecretsTable({
             type="button"
             variant="ghost"
             size="sm"
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="square"
+            {...squareIconButton}
             aria-label={`Edit ${row.original.key}`}
             icon={<Pencil className="h-3 w-3" aria-hidden />}
             onClick={() => {

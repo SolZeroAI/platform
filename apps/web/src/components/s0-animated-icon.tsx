@@ -44,8 +44,6 @@ export function S0AnimatedIcon({ size = 20, className = "" }: S0AnimatedIconProp
         colors={["#0078d7", "#4da6e8", "#ffffff"]}
         colorBack="rgba(0, 0, 0, 0)"
         colorInner={isDark ? "#000000" : "#FFFFFF"}
-        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @paper-design/shaders-react GemSmoke requires the prop name shape.
-        shape={undefined}
         innerDistortion={1}
         outerDistortion={0.8}
         outerGlow={0}
