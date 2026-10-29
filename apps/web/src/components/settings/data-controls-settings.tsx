@@ -4,7 +4,7 @@ import { summarizeSessionTools } from "@solzero/shared"
 import { Link } from "@tanstack/react-router"
 import { useCallback, useEffect, useState } from "react"
 import { runApi } from "@/lib/api-client"
-import { isSessionItem, type SessionItem } from "@/lib/session-list"
+import type { SessionItem } from "@/lib/session-list"
 import { formatRelativeTime } from "@/lib/time"
 import { S0Loader } from "@/components/s0-loader"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
@@ -33,8 +33,7 @@ export function DataControlsSettings() {
         }),
       )
 
-      const fetched = data.sessions.flatMap((row) => (isSessionItem(row) ? [row] : []))
-      setSessions((prev) => (append ? [...prev, ...fetched] : fetched))
+      setSessions((prev) => (append ? [...prev, ...data.sessions] : [...data.sessions]))
       setHasMore(data.hasMore)
       setOffset(currentOffset + data.sessions.length)
     } catch (error) {

@@ -289,8 +289,51 @@ export class SlackSetupLinkResponse extends Schema.Class<SlackSetupLinkResponse>
 
 export const SlackSetupLinkError = SlackSetupLinkResponse.pipe(HttpApiSchema.status(403))
 
+export const SessionInitiationSource = Schema.Literals(["web", "slack", "api"])
+
+export const UnavailableSessionTool = Schema.Struct({
+  kind: Schema.NullOr(Schema.String),
+  toolId: Schema.optionalKey(Schema.String),
+  reason: Schema.Literals([
+    "unknown_kind",
+    "invalid_config",
+    "invalid_storage",
+    "disabled",
+    "missing_resource",
+    "availability_unknown",
+  ]),
+})
+
+/** One row of the session index, as `GET /sessions` lists it. */
+export const SessionListItem = Schema.Struct({
+  id: Schema.String,
+  sessionKind: SessionKind,
+  agentRuntime: AgentRuntime,
+  source: SessionInitiationSource,
+  incognito: Schema.Boolean,
+  title: Schema.NullOr(Schema.String),
+  repoOwner: Schema.String,
+  repoName: Schema.String,
+  githubInstallationId: Schema.NullOr(Schema.Number),
+  githubRepoId: Schema.NullOr(Schema.Number),
+  repoDefaultBranch: Schema.NullOr(Schema.String),
+  branchName: Schema.NullOr(Schema.String),
+  tools: Schema.Array(SessionToolSpec),
+  unavailableTools: Schema.Array(UnavailableSessionTool),
+  customMcpServers: OpenCodeMcpServers,
+  isolateStepLimit: Schema.Number,
+  subagents: Schema.optionalKey(SubagentMode),
+  model: Schema.String,
+  reasoningEffort: Schema.optionalKey(Schema.String),
+  status: SessionStatus,
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+export type SessionListItem = typeof SessionListItem.Type
+
 export class SessionListResponse extends Schema.Class<SessionListResponse>("SessionListResponse")({
-  sessions: Schema.Array(JsonRecord),
+  sessions: Schema.Array(SessionListItem),
   total: Schema.Number,
   hasMore: Schema.Boolean,
 }) {}
