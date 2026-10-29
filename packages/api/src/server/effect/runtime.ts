@@ -9,7 +9,6 @@ import { HttpApiBuilder, HttpApiScalar } from "effect/http-api"
 import { stringifyJson } from "../lib/json"
 import { HttpRoutesLive } from "./routes"
 import { CloudflareContext } from "./services/cloudflare"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- runtime.ts builds makeEffectLoggerLayer from stage metadata at the composition edge because createWebHandler installs the logger before the web handler runs.
 import { makeEffectLoggerLayer, observeEffectHttpApi } from "./services/observability"
 
 type ScalarReferenceConfig = HttpApiScalar.ScalarConfig & {
