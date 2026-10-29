@@ -1,9 +1,7 @@
 import { tracing as workerTracing } from "cloudflare:workers"
 import type { ToolSet } from "ai"
 import * as Option from "effect/Option"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate turn-surface.ts is a composition root. It builds the control-plane handle for IsolateToolContext.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate turn-surface.ts is a composition root. It builds the tracing layer for IsolateToolContext.
 import { makeBackgroundTracingLayer } from "../../observability/tracing"
 import type { SessionToolSpec } from "@solzero/shared"
 import type { ApiRequestObserver } from "../../../effect/services/observability"

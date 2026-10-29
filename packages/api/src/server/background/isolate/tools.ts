@@ -25,6 +25,7 @@ import {
 import { AiSearchRegistryStore, AiSearchSourceUnavailableError } from "../db/ai-search"
 import { BackgroundTracing, type BackgroundTracingLayer } from "../observability/tracing"
 import type { Env } from "../types"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 const DEFAULT_GLOB_PATTERN = "**/*"
 
@@ -149,7 +150,6 @@ function requireSessionBot(context: IsolateToolContext) {
 }
 
 function inputSchema<S extends Schema.Decoder<unknown, never>>(schema: S) {
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- AI SDK tool input arrives as unknown. Schema.decodeUnknownResult already parses it at this boundary.
   const validate = (value: unknown): ValidationResult<S["Type"]> =>
     Schema.decodeUnknownResult(schema)(value).pipe(
       Result.match({
@@ -278,8 +278,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Read a file from the attached repository workspace.",
         inputSchema: inputSchema(ReadFileToolInput),
         execute: ({ path }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "read_file",
@@ -295,8 +294,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Write a file in the attached repository workspace.",
         inputSchema: inputSchema(WriteFileToolInput),
         execute: ({ path, content }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "write_file",
@@ -312,8 +310,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "List files from the attached repository workspace using a glob pattern.",
         inputSchema: inputSchema(GlobFilesToolInput),
         execute: ({ pattern, limit }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "glob_files",
@@ -337,8 +334,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Search repository files for text matches and return short excerpts.",
         inputSchema: inputSchema(SearchFilesToolInput),
         execute: ({ query, pattern, limit }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "search_files",
@@ -364,8 +360,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Get git status for the attached repository workspace.",
         inputSchema: inputSchema(EmptyToolInput),
         execute: () =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "git_status",
@@ -381,8 +376,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Get changed files from git diff for the attached repository workspace.",
         inputSchema: inputSchema(EmptyToolInput),
         execute: () =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "git_diff",
@@ -398,8 +392,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         description: "Get recent git commits from the attached repository workspace.",
         inputSchema: inputSchema(GitLogToolInput),
         execute: ({ depth }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "git_log",
@@ -416,8 +409,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
           "Commit all current workspace changes, push the s0-managed branch, and create a GitHub pull request against the repository default branch.",
         inputSchema: inputSchema(GitCreatePullRequestToolInput),
         execute: ({ title, body, commitMessage }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "git_create_pull_request",
@@ -449,8 +441,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
           "Search the configured internal knowledge sources available to this isolate session.",
         inputSchema: inputSchema(DocsSearchToolInput),
         execute: ({ query }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "docs_search",
@@ -478,8 +469,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
           "Return the workflow node catalog, port definitions, and bundled workflow templates.",
         inputSchema: inputSchema(EmptyToolInput),
         execute: () =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "get_workflow_node_catalog",
@@ -496,8 +486,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
           "Validate a workflow manifest draft and return errors, warnings, execution order, and the normalized manifest.",
         inputSchema: inputSchema(WorkflowManifestToolInput),
         execute: ({ manifest }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "validate_workflow_manifest",
@@ -513,8 +502,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
           "Submit the final workflow manifest draft after validation. The UI will load this draft for user review before saving.",
         inputSchema: inputSchema(WorkflowManifestToolInput),
         execute: ({ manifest }) =>
-          // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-          Effect.runPromise(
+          runEffectPromise(
             runIsolateTool(
               context,
               "submit_workflow_draft",
@@ -541,8 +529,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         "Create a standing or temporary routine for the bot that owns this session. Temporary routines need an until deadline or a GitHub pull request watch and are deleted when the work is done or the deadline passes.",
       inputSchema: inputSchema(CreateBotRoutineToolInput),
       execute: (input) =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-        Effect.runPromise(
+        runEffectPromise(
           runIsolateTool(
             context,
             "create_bot_routine",
@@ -567,8 +554,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
       description: "List standing and temporary routines owned by the bot for this session.",
       inputSchema: inputSchema(EmptyToolInput),
       execute: () =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-        Effect.runPromise(
+        runEffectPromise(
           runIsolateTool(
             context,
             "list_bot_routines",
@@ -586,8 +572,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
         "Mark a routine done and delete it. Use this when a temporary watch such as pull request checks has finished.",
       inputSchema: inputSchema(BotRoutineIdToolInput),
       execute: ({ routineId }) =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-        Effect.runPromise(
+        runEffectPromise(
           runIsolateTool(
             context,
             "complete_bot_routine",
@@ -604,8 +589,7 @@ export function buildIsolateTools(context: IsolateToolContext): ToolSet {
       description: "Delete a standing or temporary routine owned by the bot for this session.",
       inputSchema: inputSchema(BotRoutineIdToolInput),
       execute: ({ routineId }) =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK tool.execute requires a Promise; runs the tool span Effect at that boundary.
-        Effect.runPromise(
+        runEffectPromise(
           runIsolateTool(
             context,
             "delete_bot_routine",
