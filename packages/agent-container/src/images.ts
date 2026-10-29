@@ -19,9 +19,9 @@ export const AGENT_CONTAINER_IMAGE_NAMES = {
 /** Prebuilt linux/amd64 images. Release CI publishes these digests to GHCR. */
 export const AGENT_CONTAINER_IMAGES = {
   opencode:
-    "ghcr.io/solzeroai/opencode-agent@sha256:274c3c937ab591a4a51328e51114813319e64d989219dc3b60fead40f0bb4f5d",
+    "ghcr.io/solzeroai/opencode-agent@sha256:257bd9cd440441d322a33daba38d8b0f9a064da968db48fcc39b4b2cc2e60dc8",
   codex:
-    "ghcr.io/solzeroai/codex-agent@sha256:47917ce67e5adb1db8e74bbebb9558fea59a7c84e8e2caf507b793a3373ec223",
+    "ghcr.io/solzeroai/codex-agent@sha256:aba9e68a0ad535c054d603673b5d570b1f4f0779fa821fadc435aaaca4355c30",
   "claude-code":
-    "ghcr.io/solzeroai/claude-code-agent@sha256:3b18a6a120e1d0dd6db9145f99ffb627c4260f3dfd58a906ca8ce50f93edbcc0",
+    "ghcr.io/solzeroai/claude-code-agent@sha256:00f0e3ea3340d9760c605f6c5d5c8cd09c70949428cb310f8193a89a600cd8d6",
 } as const
