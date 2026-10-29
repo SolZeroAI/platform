@@ -5,10 +5,9 @@ import {
   type WorkflowNodeOptions,
   type WorkflowStorageEncoding,
 } from "@solzero/shared"
-import { parseJson } from "../../../lib/json"
+import { parseJson, stringifyJsonPretty } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env so storage nodes can read repo secrets outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import type { Env } from "../../types"
 import { prefixStorageKeyWithUserId } from "../../../lib/better-auth"
@@ -122,8 +121,7 @@ function serializeStorageContent(content: unknown): { body: string; contentType:
       contentType: "text/plain; charset=utf-8",
     })),
     Match.orElse(() => ({
-      // oxlint-disable-next-line effect/avoid-direct-json -- Serializes non-string content as 2-space pretty-printed JSON that is persisted as the stored object body; the sanctioned `stringifyJson` helper is compact and would change persisted storage bytes.
-      body: JSON.stringify(content ?? null, null, 2),
+      body: stringifyJsonPretty(content ?? null),
       contentType: "application/json",
     })),
   )

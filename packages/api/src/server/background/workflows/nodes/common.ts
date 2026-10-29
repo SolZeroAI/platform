@@ -1,5 +1,5 @@
 import type { WorkflowNodeOptions } from "@solzero/shared"
-import { stringifyJson } from "../../../lib/json"
+import { stringifyJson, stringifyJsonOption, stringifyJsonPrettyOption } from "../../../lib/json"
 import { raise } from "../../../lib/effect-errors"
 import type { RequestLogger } from "../../../effect/services/observability"
 import type { Env } from "../../types"
@@ -55,17 +55,15 @@ export function getPositiveInteger(value: unknown): Option.Option<number> {
   )
 }
 
-function prettyPrintTemplateJson(value: unknown): string {
-  // oxlint-disable-next-line effect/avoid-direct-json -- Renders non-string template values as 2-space pretty-printed JSON into user-visible workflow output; the sanctioned `stringifyJson` helper is compact and would change rendered template text.
-  return JSON.stringify(value, null, 2)
-}
-
 export function stringifyTemplateValue(value: unknown): string {
   return Match.value(value).pipe(
     Match.when(Match.null, () => ""),
     Match.when(Match.undefined, () => ""),
     Match.when(Match.string, (stringValue) => stringValue),
-    Match.orElse((other) => prettyPrintTemplateJson(other)),
+    // JSON.stringify gave undefined for a function or symbol, and the template showed "undefined".
+    Match.orElse((other) =>
+      Option.getOrElse(stringifyJsonPrettyOption(other), () => "undefined"),
+    ),
   )
 }
 
@@ -103,16 +101,7 @@ export function renderTemplate(template: string, context: Record<string, unknown
 }
 
 function stringifyJsonTemplateValue(value: unknown): string {
-  // oxlint-disable-next-line effect/avoid-direct-json -- Intentionally relies on `JSON.stringify` returning `undefined` for non-serializable values so the explicit `"null"` fallback applies; the sanctioned `stringifyJson` helper throws instead, changing behavior.
-  const json =
-    /* SAFETY: JSON.stringify returns undefined for functions and symbols, so this value includes undefined. */ JSON.stringify(
-      value ?? null,
-    ) as string | undefined
-
-  return Match.value(json).pipe(
-    Match.when(Match.undefined, () => "null"),
-    Match.orElse((resolved) => resolved),
-  )
+  return Option.getOrElse(stringifyJsonOption(value ?? null), () => "null")
 }
 
 function escapeJsonStringTemplateValue(value: unknown): string {

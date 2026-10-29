@@ -1,4 +1,4 @@
-import { parseJson } from "../../../lib/json"
+import { parseJson, stringifyJsonPretty } from "../../../lib/json"
 import { describeError, toError } from "../../../lib/effect-errors"
 import {
   createNodeContext,
@@ -426,10 +426,7 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
             baseHeaders,
           ),
         ),
-        Match.orElse(() =>
-          // oxlint-disable-next-line effect/avoid-direct-json -- Serializes a non-string request body as 2-space pretty-printed JSON sent on the wire; the sanctioned `stringifyJson` helper is compact and would change the outbound request payload bytes.
-          JSON.stringify(bodyValue, null, 2),
-        ),
+        Match.orElse(() => stringifyJsonPretty(bodyValue)),
       ),
     ),
   )
@@ -495,9 +492,7 @@ const runHttpRequestNode = Effect.fn("workflows.runHttpRequestNode")(function* (
   })
 
   const response = yield* Effect.tryPromise({
-    try: () =>
-      // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (user-authored workflow request) inside a workflow node executor; native fetch is required at this external API edge.
-      fetch(url, { method, headers, body, signal }),
+    try: () => fetch(url, { method, headers, body, signal }),
     catch: toError,
   }).pipe(Effect.catch((error) => failHttpFetch({ input, requestLog, requestStartedAt, error })))
 
