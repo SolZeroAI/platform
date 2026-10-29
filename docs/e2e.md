@@ -322,8 +322,13 @@ are deleted in cleanup; all mutations are limited to the isolated profile.
 ## CI and artifacts
 
 `Validate` runs static checks and discovers all e2e tests without secrets. Its dedicated
-Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes and manual
-runs, including the canonical repository. Fork pull requests cannot access its credentials.
+Cloudflare end-to-end job runs on trusted pull requests, pushes and manual runs, including
+the canonical repository. Fork pull requests cannot access its credentials.
+On a pull request, the job runs `test:e2e:cache-strict --changed-since origin/<base>`: the
+decision filter keeps only the tests the diff can affect. A change to `e2e.config.ts` or a
+lockfile keeps every test, and a diff that affects no test passes with no tests. Pushes
+and manual runs run every core test. Preview the pull request selection with
+`nub run test:e2e:list --changed-since origin/master` after you commit.
 `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN` are SolZeroAI organization secrets. Do not add
 repository copies, because they override the organization values.
 The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic
