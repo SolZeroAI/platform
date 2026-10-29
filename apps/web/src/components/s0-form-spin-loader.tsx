@@ -20,6 +20,16 @@ const MORPH_IN_DURATION = CYCLE_DURATION * 0.35
 const MORPH_OUT_START = CYCLE_DURATION * 0.58
 const MORPH_OUT_DURATION = CYCLE_DURATION * 0.32
 
+// The MorphSVGPlugin options that morph the outer path into `path`.
+function morphSvgTarget(path: string) {
+  return {
+    map: "complexity",
+    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- GSAP MorphSVGPlugin names this option.
+    shape: path,
+    type: "rotational",
+  } as const
+}
+
 function sanitizeSvgId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, "")
 }
@@ -80,12 +90,7 @@ export function S0FormSpinLoader({
                 {
                   duration: MORPH_IN_DURATION,
                   ease: "power2.inOut",
-                  morphSVG: {
-                    map: "complexity",
-                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- GSAP MorphSVGPlugin requires the option name shape.
-                    shape: SOLZERO_MORPH_OVAL_PATH,
-                    type: "rotational",
-                  },
+                  morphSVG: morphSvgTarget(SOLZERO_MORPH_OVAL_PATH),
                 },
                 MORPH_START,
               )
@@ -104,12 +109,7 @@ export function S0FormSpinLoader({
                 {
                   duration: MORPH_OUT_DURATION,
                   ease: "power2.inOut",
-                  morphSVG: {
-                    map: "complexity",
-                    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- GSAP MorphSVGPlugin requires the option name shape.
-                    shape: SOLZERO_MORPH_STAR_PATH,
-                    type: "rotational",
-                  },
+                  morphSVG: morphSvgTarget(SOLZERO_MORPH_STAR_PATH),
                 },
                 MORPH_OUT_START,
               )

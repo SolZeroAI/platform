@@ -2,7 +2,9 @@ import type { AgentToolEventMessage } from "agents"
 import * as Option from "effect/Option"
 import type { Env } from "../../types"
 
-interface SessionSubagentEventStub {
+// The session Durable Object's RPC surface used here. Importing SessionDO would create a
+// session<->isolate module cycle.
+interface SessionSubagentEventTarget extends Rpc.DurableObjectBranded {
   persistIsolateSubagentToolEvent(
     messageId: string,
     message: AgentToolEventMessage,
@@ -22,8 +24,10 @@ export function persistSubagentToolEventToSession(
     () => new Error("SESSION binding is required for durable sub-agent event relay"),
   )
 
-  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- DurableObjectStub<unknown> carries no RPC surface; importing SessionDO here would create a session<->isolate module cycle.
-  const stub = namespace.get(namespace.idFromName(sessionId)) as unknown as SessionSubagentEventStub
+  /* SAFETY: env.SESSION is the SessionDO namespace binding, and SessionDO implements persistIsolateSubagentToolEvent. */
+  const sessions = namespace as DurableObjectNamespace<SessionSubagentEventTarget>
+
+  const stub = sessions.get(sessions.idFromName(sessionId))
 
   return stub.persistIsolateSubagentToolEvent(messageId, message, lifecycleTimestampMs)
 }

@@ -62,6 +62,7 @@ import {
   parseWorkflowHeaderDraftRows,
   toDateTimeLocal,
 } from "./header-utils"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 export function NodeInspector({
   node,
@@ -411,8 +412,7 @@ export function NodeInspector({
                     />
                     <InputGroup.Addon align="end">
                       <InputGroup.Button
-                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                        shape="square"
+                        {...squareIconButton}
                         icon={<Copy className="h-4 w-4" aria-hidden />}
                         aria-label="Copy webhook endpoint"
                         tooltip="Copy webhook endpoint"

@@ -14,12 +14,12 @@ import {
 import { compileOpenCodeConfigForModel } from "../provider-catalog"
 import {
   BackgroundTracing,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- isolate model.ts is a composition root. It builds the tracing layer at the Effect.runPromise edge.
   makeBackgroundTracingLayer,
   type CloudflareTracing,
 } from "../observability/tracing"
 import type { Env } from "../types"
 import { AiGateway, type AiGatewayService } from "../../effect/services/ai-gateway"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 interface IsolateModelObservability {
   readonly tracing?: CloudflareTracing
@@ -187,7 +187,6 @@ async function executeProviderFetch(
   init?: Parameters<typeof fetch>[1],
 ): Promise<Response> {
   const response = await Option.match(Option.fromNullishOr(input.fetchImplementation), {
-    // oxlint-disable-next-line effect/avoid-native-fetch -- This IS the AI provider HTTP passthrough being traced; the AI SDK requires a native fetch implementation and no HttpClient layer is provisioned on this path.
     onNone: () => fetch(request, init),
     onSome: (fetchImplementation) => fetchImplementation(request, init),
   })
@@ -261,8 +260,7 @@ function createProviderFetch(input: {
       )
     }).pipe(Effect.provide(makeBackgroundTracingLayer(input.observability)))
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- AI SDK provider fetch boundary requires a Promise; runs the ai.provider.fetch span Effect at that edge.
-    return Effect.runPromise(span)
+    return runEffectPromise(span)
   }
 
   return tracedFetch

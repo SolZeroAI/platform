@@ -57,9 +57,7 @@ export default defineConfig({
         "effect/avoid-process-env": "warn",
         "effect/effect-run-in-body": "warn",
         "effect/effect-promise-vs-trypromise": "warn",
-        // The rule flags every Schema.Struct. Plain JSON DTOs (config, bindings, wire formats) stay
-        // Structs because Schema.Class decodes to instances and rejects plain objects on encode.
-        "effect/prefer-schema-class": "off",
+        "effect/prefer-schema-class": "error",
         "effect/avoid-any": "warn",
         "effect/avoid-non-null-assertion": "warn",
         "effect/avoid-native-fetch": "warn",
@@ -68,6 +66,27 @@ export default defineConfig({
         "effect/prefer-redacted-config": "warn",
         "effect/no-barrel-imports": "warn",
       },
+    },
+    {
+      // Plain JSON DTOs: config, manifests, provider settings, stage metadata, and values stored in
+      // KV or Durable Object storage. Code builds and spreads them as object literals and writes
+      // them back as JSON. A Schema.Class rejects a plain object on encode while TypeScript still
+      // accepts the literal, and Durable Object RPC cannot serialize a class instance. So these
+      // schemas stay Structs. Decode-only schemas elsewhere are classes.
+      files: [
+        "packages/api/src/server/background/db/errors.ts",
+        "packages/api/src/server/background/workflows/alarm.ts",
+        "packages/api/src/server/mcp/workflow-builder/runtime.ts",
+        "packages/shared/src/admin.ts",
+        "packages/shared/src/auth.ts",
+        "packages/shared/src/provider-config.ts",
+        "packages/shared/src/s0-config.ts",
+        "packages/shared/src/secret-reference.ts",
+        "packages/shared/src/session-artifact-schema.ts",
+        "packages/shared/src/stageMetadata.ts",
+        "packages/shared/src/workflows/manifest-schema.ts",
+      ],
+      rules: { "effect/prefer-schema-class": "off" },
     },
     {
       files: ["apps/api/index.ts", "apps/api/infra/**", "packages/api/src/server/**"],
@@ -92,7 +111,6 @@ export default defineConfig({
         "apps/web/src/components/admin-ai-provider-panel.tsx",
         "apps/web/src/components/home-session-tools-dialog.tsx",
         "apps/web/src/components/workflows/page.tsx",
-        "packages/api/src/server/background/ai-providers/litellm.ts",
         "packages/api/src/server/background/db/admin.ts",
         "packages/api/src/server/background/db/workflows.ts",
         "packages/api/src/server/background/workflows/slack-apps.ts",
@@ -163,6 +181,20 @@ export default defineConfig({
       rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
     },
     {
+      // The isolate Durable Objects (session agent and sub-agent) and their turn setup run outside
+      // the HTTP Layer. Each builds the tracing layer, the control plane, and the AI Gateway layer
+      // from its Worker env, then runs Effects through lib/effect-promise.
+      files: [
+        "packages/api/src/server/background/isolate/agent.ts",
+        "packages/api/src/server/background/isolate/agent/subagent-controller.ts",
+        "packages/api/src/server/background/isolate/agent/turn-surface.ts",
+        "packages/api/src/server/background/isolate/model.ts",
+        "packages/api/src/server/background/isolate/runtime.ts",
+        "packages/api/src/server/background/isolate/subagent.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
       // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
       // from the Worker env before the library or MCP SDK takes the request.
       files: [
@@ -176,6 +208,12 @@ export default defineConfig({
       // The HTTP workflow node sends a user-authored request and reports the final URL, status
       // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
       files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
+      rules: { "effect/avoid-native-fetch": "off" },
+    },
+    {
+      // The isolate model fetch is the traced AI provider HTTP passthrough. The AI SDK takes a native
+      // fetch implementation, and no HttpClient layer exists on this path.
+      files: ["packages/api/src/server/background/isolate/model.ts"],
       rules: { "effect/avoid-native-fetch": "off" },
     },
     {

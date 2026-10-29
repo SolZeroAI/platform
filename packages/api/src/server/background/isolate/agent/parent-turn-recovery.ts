@@ -4,7 +4,6 @@ import * as Option from "effect/Option"
 import type { ApiRequestObserver } from "../../../effect/services/observability"
 import type { Env } from "../../types"
 import { compileIsolateModelContext } from "../model"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- Parent-turn recovery is a Think lifecycle edge. It selects the AI Gateway layer at Effect.runPromise.
 import { aiGatewayLayer } from "../../../effect/services/ai-gateway"
 import { prepareIsolateMcpTurn, type IsolateMcpTurnManager } from "../mcpcf-turn"
 import {
@@ -16,6 +15,7 @@ import {
   type ParentTurnEnvelopeSql,
 } from "./parent-turn-envelope"
 import type { ActiveTurn, IsolatePromptRequest, IsolateSessionAgentState } from "./types"
+import { runEffectPromise } from "../../../lib/effect-promise"
 
 const PARENT_TURN_RECOVERY_ERROR = "Unable to recover the interrupted Isolate turn."
 
@@ -54,8 +54,7 @@ export class IsolateParentTurnRecovery {
 
   /** Rebuild the active turn from the durable envelope before Think replays a recovered chat. */
   recoverParentTurn(): Promise<void> {
-    // oxlint-disable-next-line effect/effect-run-in-body -- Think's recovery lifecycle is a Promise boundary; runtime reconstruction remains expressed as one Effect below it.
-    return Effect.runPromise(
+    return runEffectPromise(
       this.prepareRecoveredParentTurn().pipe(
         Effect.provide(aiGatewayLayer(this.host.getEnv())),
         Effect.catchCause(() => Effect.die(new Error(PARENT_TURN_RECOVERY_ERROR))),

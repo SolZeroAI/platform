@@ -6,6 +6,7 @@ import { TriangleAlert, X } from "lucide-react"
 import { useState } from "react"
 import { S0Loader } from "@/components/s0-loader"
 import { Dialog } from "@/components/ui/dialog"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export function AiProviderRequiredButton({
   isAdmin,
@@ -98,8 +99,7 @@ function AiProviderRequiredDialog({ isAdmin, onClose }: { isAdmin: boolean; onCl
           <Button
             type="button"
             onClick={onClose}
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="circle"
+            {...circleIconButton}
             variant="ghost"
             aria-label={`Close ${title} dialog`}
             icon={<X className="h-4 w-4" aria-hidden />}

@@ -27,6 +27,7 @@ import { WorkflowDialogFrame } from "./detail-chrome"
 import { formatSlackRegistrationMatch } from "./save-utils"
 import { getErrorMessage, requestJson } from "./run-utils"
 import { formatJson } from "./header-utils"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 type SlackCredentialPayload = {
   signingSecret?: string
@@ -138,8 +139,7 @@ export function WorkflowSlackAppSetupModal({
           type="button"
           onClick={() => void loadSetup()}
           disabled={loading}
-          // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-          shape="circle"
+          {...circleIconButton}
           variant="ghost"
           aria-label="Refresh Slack app setup"
           title="Refresh setup"

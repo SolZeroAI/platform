@@ -50,6 +50,7 @@ import {
   addCopyableToast,
   formatRuntimeLabel,
 } from "./session-kind"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export type HomeContentProps = {
   isAuthenticated: boolean
@@ -569,8 +570,7 @@ export function HomeContent({
                         disabled={
                           !prompt.trim() || creating || !selectedModel || modelOptions.length === 0
                         }
-                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                        shape="circle"
+                        {...circleIconButton}
                         variant="secondary"
                         aria-label="Send"
                         title="Send"

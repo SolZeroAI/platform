@@ -20,6 +20,7 @@ import {
   WorkflowTemplateReferenceOption,
 } from "./types"
 import { WorkflowTemplateReferenceDescription } from "./modals"
+import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
 export function FieldLabel({
   label,
@@ -425,8 +426,7 @@ export function LabeledNodeIdInput({
         />
         <InputGroup.Addon align="end">
           <InputGroup.Button
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="square"
+            {...squareIconButton}
             icon={<Copy className="h-4 w-4" aria-hidden />}
             aria-label="Copy node ID"
             tooltip="Copy node ID"

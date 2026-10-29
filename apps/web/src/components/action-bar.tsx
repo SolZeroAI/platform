@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react"
 import { Dialog } from "@/components/ui/dialog"
 import type { Artifact } from "@/types/session"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 interface SessionMoreActionsMenuProps {
   sessionId: string
@@ -134,8 +135,7 @@ export function SessionMoreActionsMenu({
         <DropdownMenu.Trigger>
           <Button
             type="button"
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="circle"
+            {...circleIconButton}
             variant="ghost"
             disabled={disabled}
             aria-label="More actions"
