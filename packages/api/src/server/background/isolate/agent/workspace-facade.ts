@@ -29,7 +29,7 @@ import {
 export interface IsolateWorkspaceHost {
   readonly workspace: Workspace
   readonly state: IsolateSessionAgentState
-  readonly activeTurn: ActiveTurn | null
+  readonly isolateTurn: ActiveTurn | null
 }
 
 /**
@@ -233,7 +233,7 @@ export class IsolateAgentWorkspace {
     )
 
     const accessToken = Option.fromNullishOr(
-      this.host.activeTurn?.auth?.githubAccessToken?.trim(),
+      this.host.isolateTurn?.auth?.githubAccessToken?.trim(),
     ).pipe(Option.filter((value) => value.length > 0))
 
     const token = Option.getOrThrowWith(

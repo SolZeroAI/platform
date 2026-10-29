@@ -25,7 +25,7 @@ import type { Env } from "../types"
 export { CLOUDFLARE_AI_GATEWAY_PROVIDER_ID } from "@solzero/shared"
 
 export const CLOUDFLARE_AI_GATEWAY_PROVIDER_NAME = "Cloudflare AI Gateway"
-export const CLOUDFLARE_AI_GATEWAY_PROVIDER_PACKAGE = "workers-ai-provider"
+export const CLOUDFLARE_AI_GATEWAY_PROVIDER_PACKAGE = "agents/models/ai-sdk"
 export const CLOUDFLARE_AI_GATEWAY_API_HOST = "api.cloudflare.com"
 export const CLOUDFLARE_AI_GATEWAY_PROVIDER_NATIVE_HOST = "gateway.ai.cloudflare.com"
 export const CLOUDFLARE_AI_GATEWAY_RUN_TOKEN_SECRET = "CLOUDFLARE_AI_GATEWAY_RUN_TOKEN"

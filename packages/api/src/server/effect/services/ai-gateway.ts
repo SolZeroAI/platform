@@ -1,3 +1,4 @@
+import { createAI } from "agents/models/ai-sdk"
 import type { LanguageModel } from "ai"
 import * as Arr from "effect/Array"
 import * as Context from "effect/Context"
@@ -6,7 +7,6 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import type { ApiEnv } from "infra/types/env"
-import { createWorkersAI } from "workers-ai-provider"
 
 /** The deployment's Cloudflare AI Gateway, as the isolate and container runtimes reach it. */
 export interface AiGatewayService {
@@ -37,10 +37,10 @@ function requireAiGatewayId(env: ApiEnv): string {
 function liveAiGateway(env: ApiEnv): AiGatewayService {
   return {
     workersAi: (modelId) =>
-      createWorkersAI({
+      createAI({
         binding: requireAiGatewayBinding(env),
-        gateway: { id: requireAiGatewayId(env) },
-      })(modelId),
+        id: requireAiGatewayId(env),
+      }).languageModel(modelId),
     // oxlint-disable-next-line effect/avoid-native-fetch -- The AI SDK and container outbound hooks need a Promise fetch at the AI Gateway boundary.
     fetch: (input, init) => fetch(input, init),
   }
@@ -71,10 +71,8 @@ function messageText(content: WorkersAiMessageContent): string {
   )
 }
 
-async function lastUserMessage(request: Request): Promise<string> {
-  const body: unknown = await request.json().catch(() => undefined)
-
-  return Schema.decodeUnknownOption(WorkersAiRunInput)(body).pipe(
+function lastUserMessage(input: unknown): string {
+  return Schema.decodeUnknownOption(WorkersAiRunInput)(input).pipe(
     Option.flatMap(({ messages }) => Arr.findLast(messages, (message) => message.role === "user")),
     Option.map(({ content }) => messageText(content)),
     Option.getOrElse(() => ""),
@@ -82,9 +80,34 @@ async function lastUserMessage(request: Request): Promise<string> {
 }
 
 /**
- * Answers a Workers AI run request with the last user message, in the OpenAI chat shape
- * Workers AI returns for chat models. It reads no prompt instructions and calls no tools.
+ * A chat completion that repeats the last user message, in the OpenAI chat shape Workers AI
+ * returns for chat models. It reads no prompt instructions and calls no tools.
  */
+function echoCompletion(input: unknown) {
+  return {
+    id: `chatcmpl-mock-${crypto.randomUUID()}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: "mock",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: lastUserMessage(input) },
+        finish_reason: "stop",
+      },
+    ],
+    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+  }
+}
+
+function unsupportedPath(path: string): Response {
+  return Response.json(
+    { success: false, errors: [{ message: `The mock AI Gateway does not serve ${path}` }] },
+    { status: 501 },
+  )
+}
+
+/** Answers a Workers AI REST run request with the echo completion, in the REST envelope. */
 async function mockAiGatewayFetch(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
@@ -93,36 +116,36 @@ async function mockAiGatewayFetch(
   const path = new URL(request.url).pathname
 
   return Match.value(/\/ai\/run\//.test(path)).pipe(
-    Match.when(false, () =>
-      Response.json(
-        { success: false, errors: [{ message: `The mock AI Gateway does not serve ${path}` }] },
-        { status: 501 },
-      ),
-    ),
+    Match.when(false, () => unsupportedPath(path)),
     Match.orElse(async () =>
       Response.json({
         success: true,
-        result: {
-          id: `chatcmpl-mock-${crypto.randomUUID()}`,
-          object: "chat.completion",
-          created: Math.floor(Date.now() / 1000),
-          model: "mock",
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: await lastUserMessage(request) },
-              finish_reason: "stop",
-            },
-          ],
-          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-        },
+        result: echoCompletion(await request.json().catch(() => undefined)),
       }),
     ),
   )
 }
 
+/**
+ * The `AI` binding surface that `createAI` calls for a Workers AI model id: `run` with a raw
+ * response, and `fetch` for the provider-native path, which the mock does not serve.
+ */
+const mockAiBinding = {
+  aiGatewayLogId: null,
+  run: (_model: string, inputs: unknown) => Promise.resolve(Response.json(echoCompletion(inputs))),
+  fetch: (input: Parameters<typeof fetch>[0]) =>
+    Promise.resolve(unsupportedPath(new URL(new Request(input).url).pathname)),
+}
+
+const mockAi = createAI({
+  // SAFETY: mockAiBinding implements every binding member that createAI calls.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- The mock stands in for the AI binding stub, which has no constructor; createAI reaches it only through run, fetch, and aiGatewayLogId.
+  binding: mockAiBinding as unknown as Ai,
+  id: "mock",
+})
+
 const mockAiGateway: AiGatewayService = {
-  workersAi: createWorkersAI({ accountId: "mock", apiKey: "mock", fetch: mockAiGatewayFetch }),
+  workersAi: (modelId) => mockAi.languageModel(modelId),
   fetch: mockAiGatewayFetch,
 }
 

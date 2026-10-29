@@ -89,7 +89,7 @@ export function createInitialIsolateSessionAgentState(): IsolateSessionAgentStat
 
 export interface IsolateSubagentHost extends SubagentStateHost {
   readonly maxSteps: number
-  readonly activeTurn: ActiveTurn | null
+  readonly isolateTurn: ActiveTurn | null
   createInternalRequestObserver(path: string, routeBranch: string): ApiRequestObserver
   runAgentTool<Input = unknown, Output = unknown>(
     cls: ChatCapableAgentClass,
@@ -295,7 +295,7 @@ export class IsolateSubagentController {
     signal?: AbortSignal,
   ) {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.host.activeTurn),
+      Option.fromNullishOr(this.host.isolateTurn),
       () => new Error("Sub-agent delegation is only available during an active Isolate turn"),
     )
 
@@ -322,7 +322,7 @@ export class IsolateSubagentController {
     signal?: AbortSignal,
   ) {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.host.activeTurn),
+      Option.fromNullishOr(this.host.isolateTurn),
       () => new Error("Sub-agent delegation is only available during an active Isolate turn"),
     )
 
@@ -566,7 +566,7 @@ export class IsolateSubagentController {
     return resolveSubagentMessageId(
       runId,
       this.host.state.subagentDispatch,
-      this.host.activeTurn?.messageId,
+      this.host.isolateTurn?.messageId,
     )
   }
 
@@ -575,9 +575,9 @@ export class IsolateSubagentController {
       messageId: resolveSubagentMessageId(
         message.event.runId,
         this.host.state.subagentDispatch,
-        this.host.activeTurn?.messageId,
+        this.host.isolateTurn?.messageId,
       ),
-      turn: Option.fromNullishOr(this.host.activeTurn),
+      turn: Option.fromNullishOr(this.host.isolateTurn),
     }).pipe(
       Option.filter(({ messageId, turn }) => messageId === turn.messageId),
       Option.flatMap(({ turn }) => Option.fromNullishOr(turn.callback)),
