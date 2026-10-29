@@ -36,7 +36,10 @@ export function apiErrorMessage(cause: unknown, fallback: string): string {
     : fallback
 }
 
-/** Runs one typed API request at a React boundary. Rejects with an `Error` that carries the server message. */
+/**
+ * Runs one typed API request at a React boundary. Rejects with an `Error` that carries the server
+ * message, or with the signal's reason (an `AbortError`, as `fetch` does) when the caller aborts.
+ */
 export function runApi<A>(
   request: ApiRequest<A>,
   options: { readonly signal?: AbortSignal; readonly fallbackMessage?: string } = {},
@@ -50,5 +53,7 @@ export function runApi<A>(
       ),
     ),
     { signal: options.signal },
+  ).catch((cause: unknown) =>
+    Promise.reject(options.signal?.aborted ? options.signal.reason : cause),
   )
 }

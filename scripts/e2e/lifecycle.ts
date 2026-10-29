@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process"
-import { createHash, randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import {
   existsSync,
   mkdirSync,
@@ -72,48 +72,10 @@ const Resource = Schema.Struct({
     }),
   ),
 })
-function publishOwnership(value: unknown, owner: string) {
-  const path = resolve(repo, ".e2e/cleanup-ownership.json")
-  const temporary = `${path}.tmp-${owner}-${process.pid}-${randomUUID()}`
-  try {
-    writeFileSync(temporary, JSON.stringify(value), { mode: 0o600, flag: "wx" })
-    renameSync(temporary, path)
-  } finally {
-    rmSync(temporary, { force: true })
-  }
-}
-function removeOwnedPublicationTemps(run: RunManifest) {
-  if (!readRun(run).completedAt) throw new Error("Cannot remove pending ownership publication.")
-  const directory = resolve(repo, ".e2e")
-  const prefix = `cleanup-ownership.json.tmp-${run.runId}-`
-  for (const name of readdirSync(directory)) {
-    if (name.startsWith(prefix) && /^[1-9][0-9]*-[0-9a-f-]{36}$/.test(name.slice(prefix.length)))
-      rmSync(resolve(directory, name), { force: true })
-  }
-}
 function save(manifest: RunManifest) {
   const path = resolve(root, manifest.runId, "manifest.json")
   writeFileSync(`${path}.tmp`, JSON.stringify(manifest), { mode: 0o600 })
   renameSync(`${path}.tmp`, path)
-  const publicPath = resolve(repo, ".e2e/cleanup-ownership.json")
-  const ledger = existsSync(publicPath) ? JSON.parse(readFileSync(publicPath, "utf8")) : []
-  const previous = ledger.find((item: { owner: string }) => item.owner === manifest.runId)
-  const bounded = {
-    schemaVersion: 1,
-    repository: process.env.GITHUB_REPOSITORY ?? "SolZeroAI/platform",
-    run: previous?.run ?? process.env.GITHUB_RUN_ID ?? null,
-    attempt: previous?.attempt ?? process.env.GITHUB_RUN_ATTEMPT ?? null,
-    profile: manifest.profile,
-    ci: manifest.ci,
-    accountHash: createHash("sha256").update(manifest.account).digest("hex"),
-    owner: manifest.runId,
-    createdAt: manifest.createdAt,
-    completed: Boolean(manifest.completedAt),
-  }
-  publishOwnership(
-    [...ledger.filter((item: { owner: string }) => item.owner !== manifest.runId), bounded],
-    manifest.runId,
-  )
 }
 export function createRun() {
   if (!/^s0-e2e(?:-[a-z0-9-]+)?$/.test(appName) || !account)
@@ -676,7 +638,6 @@ export async function cleanRun(run: RunManifest, ownLauncher = false) {
   const dockerReceipt = cleanDocker(run)
   rmSync(stackDirectory(run), { recursive: true, force: true })
   save({ ...readRun(run), completedAt: new Date().toISOString() })
-  removeOwnedPublicationTemps(run)
   const receipt = {
     cleanup: "verified",
     verified: true,
@@ -699,8 +660,7 @@ export async function recoverRuns() {
     if (!existsSync(path)) continue
     const run = Schema.decodeUnknownSync(Manifest)(JSON.parse(readFileSync(path, "utf8")))
     if (run.profile === profile && run.ci === ci && run.account === account) {
-      if (run.completedAt) removeOwnedPublicationTemps(run)
-      else await cleanRun(run)
+      if (!run.completedAt) await cleanRun(run)
     }
   }
 }
@@ -724,58 +684,4 @@ export async function waitForOwnLaunchers(runnerPid: number) {
     if (!active) return
     await new Promise((accept) => setTimeout(accept, 100))
   }
-}
-
-export const hostedOwnershipScope = {
-  repo,
-  profile,
-  ci,
-  appName,
-  accountHash: createHash("sha256").update(account).digest("hex"),
-}
-export async function restoreVerifiedOwnership(
-  pending: readonly import("./hosted-ownership").OwnershipReceipt[],
-) {
-  for (const item of pending) {
-    if (
-      item.profile !== profile ||
-      item.ci !== ci ||
-      item.accountHash !== hostedOwnershipScope.accountHash
-    )
-      throw new Error("Restored ownership scope mismatch.")
-  }
-  if (pending.length === 0) {
-    await recoverRuns()
-    return
-  }
-  const publicPath = resolve(repo, ".e2e/cleanup-ownership.json")
-  const ledger = existsSync(publicPath) ? JSON.parse(readFileSync(publicPath, "utf8")) : []
-  // Keep original producer identity when recovery publishes a newer receipt. Older pending
-  // evidence is verified live even when a newer archive reports completion or has an empty list.
-  publishOwnership(
-    [
-      ...ledger.filter(
-        (item: { owner: string }) => !pending.some((saved) => saved.owner === item.owner),
-      ),
-      ...pending,
-    ],
-    pending[0].owner,
-  )
-  for (const item of pending) {
-    const path = resolve(root, item.owner, "manifest.json")
-    if (existsSync(path)) continue
-    mkdirSync(resolve(root, item.owner, "stack"), { recursive: true, mode: 0o700 })
-    save({
-      version: 1,
-      runId: item.owner,
-      account,
-      profile,
-      ci,
-      appName,
-      launcherPid: 0,
-      createdAt: item.createdAt,
-      resources: [],
-    })
-  }
-  await recoverRuns()
 }
