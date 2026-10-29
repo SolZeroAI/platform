@@ -29,7 +29,6 @@ export type {
 export type { LocalSpanContext }
 
 interface IsolateSessionAgentStub {
-  setName?(name: string): Promise<void> | void
   initializeSession(config: IsolateSessionConfig): Promise<{ runtimeId: string }>
   updateSessionConfig(config: Omit<IsolateSessionConfig, "userId">): Promise<{ runtimeId: string }>
   warm(auth?: IsolateCloneAuth): Promise<IsolateWarmResult>
@@ -87,26 +86,13 @@ export class IsolateSessionRuntime {
         onSome: (resolved) => Effect.succeed(resolved),
       })
 
+      // Agents reads the session name from ctx.id.name, so idFromName is the only setup a stub needs.
       const id = resolvedNamespace.idFromName(sessionId)
 
       const stub =
         /* SAFETY: resolvedNamespace.get(id) has the IsolateSessionAgentStub shape established by the check or writer around this read. */ resolvedNamespace.get(
           id,
         ) as IsolateSessionAgentStub
-
-      yield* Option.match(
-        Option.fromNullishOr(stub.setName).pipe(
-          Option.filter((setName) => typeof setName === "function"),
-        ),
-        {
-          onNone: () => Effect.void,
-          onSome: () =>
-            Effect.tryPromise({
-              try: () => Promise.resolve(stub.setName?.(sessionId)),
-              catch: (cause) => cause,
-            }),
-        },
-      )
 
       return stub
     })

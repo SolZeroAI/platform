@@ -24,16 +24,16 @@ const ISOLATE_FALLBACK_SYSTEM_PROMPT =
 export function buildIsolateTurnSystemPrompt(input: {
   brandName: string
   state: IsolateSessionAgentState
-  activeTurn: ActiveTurn | null
+  isolateTurn: ActiveTurn | null
 }): string {
-  return Option.match(Option.fromNullishOr(input.activeTurn?.model), {
+  return Option.match(Option.fromNullishOr(input.isolateTurn?.model), {
     onNone: () => ISOLATE_FALLBACK_SYSTEM_PROMPT,
     onSome: (model) => promptForModel(input, model),
   })
 }
 
 function promptForModel(
-  input: { brandName: string; state: IsolateSessionAgentState; activeTurn: ActiveTurn | null },
+  input: { brandName: string; state: IsolateSessionAgentState; isolateTurn: ActiveTurn | null },
   model: IsolateModelContext,
 ): string {
   const facts = buildIsolateSystemPromptFacts({
@@ -49,8 +49,8 @@ function promptForModel(
     hasRepoWorkspace: facts.hasRepoWorkspace,
     hasDocs: facts.hasDocs,
     hasWorkflowBuilder: facts.hasWorkflowBuilder,
-    customMcpServerNames: input.activeTurn?.customMcpServerNames ?? facts.customMcpServerNames,
-    mcpcfMcpServers: input.activeTurn?.mcpcfMcpServers,
+    customMcpServerNames: input.isolateTurn?.customMcpServerNames ?? facts.customMcpServerNames,
+    mcpcfMcpServers: input.isolateTurn?.mcpcfMcpServers,
   })
 }
 

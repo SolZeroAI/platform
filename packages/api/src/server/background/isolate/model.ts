@@ -46,7 +46,7 @@ type SupportedProviderPackage =
   | "@ai-sdk/openai"
   | "@ai-sdk/openai-compatible"
   | "@ai-sdk/anthropic"
-  | "workers-ai-provider"
+  | "agents/models/ai-sdk"
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 
@@ -58,7 +58,7 @@ function toSupportedProviderPackage(value: string | undefined): SupportedProvide
       "@ai-sdk/openai",
       "@ai-sdk/openai-compatible",
       "@ai-sdk/anthropic",
-      "workers-ai-provider",
+      "agents/models/ai-sdk",
       (resolved) => resolved,
     ),
     Match.orElse(() => "@ai-sdk/openai-compatible" as const),
@@ -138,13 +138,13 @@ function buildProviderOptions(input: {
 }): Option.Option<Record<string, JsonObject>> {
   const reasoningOption = Match.value(input.providerPackage).pipe(
     Match.when("@ai-sdk/anthropic", (): JsonObject => ({})),
-    Match.when("workers-ai-provider", () =>
+    Match.when("agents/models/ai-sdk", () =>
       Option.getOrElse(
         Option.fromNullishOr(input.reasoningEffort).pipe(
           Option.filter((effort) => effort.length > 0),
           Option.map((effort) =>
             jsonObject({
-              reasoning_effort: Match.value(effort).pipe(
+              reasoningEffort: Match.value(effort).pipe(
                 Match.when("none", () => null),
                 Match.orElse((value) => value),
               ),
@@ -169,7 +169,7 @@ function buildProviderOptions(input: {
   Object.assign(options, input.modelOptions, reasoningOption)
 
   const providerOptionsKey = Match.value(input.providerPackage).pipe(
-    Match.when("workers-ai-provider", () => "workers-ai"),
+    Match.when("agents/models/ai-sdk", () => "cloudflare"),
     Match.orElse(() => input.providerId),
   )
 
@@ -305,7 +305,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
 
   const cloudflareProviderNativeFetch = Match.value(
     input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID &&
-      providerPackage !== "workers-ai-provider",
+      providerPackage !== "agents/models/ai-sdk",
   ).pipe(
     Match.when(true, () =>
       Option.some(
@@ -332,7 +332,7 @@ function resolveLanguageModel(input: CompiledProviderContext): LanguageModel {
   const resolvedBaseUrl = baseURL
 
   return Match.value(providerPackage).pipe(
-    Match.when("workers-ai-provider", () => input.aiGateway.workersAi(input.modelId)),
+    Match.when("agents/models/ai-sdk", () => input.aiGateway.workersAi(input.modelId)),
     Match.when("@ai-sdk/openai", () =>
       createOpenAI({
         name: input.providerId,

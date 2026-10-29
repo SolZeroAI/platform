@@ -149,11 +149,11 @@ export class IsolateSubAgent extends Think<Env> {
     mkdir: async (path, options) => (await this.parent()).subagentWorkspaceMkdir(path, options),
     stat: async (path) => (await this.parent()).subagentWorkspaceStat(path),
   }
-  private activeTurn: IsolateSubagentTurn | null = null
+  private isolateTurn: IsolateSubagentTurn | null = null
   private preparingInput: IsolateSubagentTrustedConfig | null = null
 
   getModel() {
-    return Option.fromNullishOr(this.activeTurn).pipe(
+    return Option.fromNullishOr(this.isolateTurn).pipe(
       Option.map((turn) => turn.model.model),
       Option.getOrThrowWith(() => new Error("No model is prepared for this Isolate sub-agent run")),
     )
@@ -161,7 +161,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   getSystemPrompt(): string {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn),
+      Option.fromNullishOr(this.isolateTurn),
       () => new Error("No context is prepared for this Isolate sub-agent run"),
     )
 
@@ -195,7 +195,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   getTools() {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn),
+      Option.fromNullishOr(this.isolateTurn),
       () => new Error("No tools are prepared for this Isolate sub-agent run"),
     )
 
@@ -213,7 +213,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   async getSkills() {
     const input =
-      this.activeTurn?.input ?? this.preparingInput ?? (await this.loadTrustedConfig(this.name))
+      this.isolateTurn?.input ?? this.preparingInput ?? (await this.loadTrustedConfig(this.name))
 
     return buildResolvedIsolateSkillSources({
       brandName: this.env.S0_BRAND_NAME,
@@ -226,7 +226,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   beforeTurn(ctx: TurnContext): TurnConfig {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn),
+      Option.fromNullishOr(this.isolateTurn),
       () => new Error("No turn is prepared for this Isolate sub-agent run"),
     )
 
@@ -249,7 +249,7 @@ export class IsolateSubAgent extends Think<Env> {
 
   beforeStep(ctx: PrepareStepContext): StepConfig | void {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn),
+      Option.fromNullishOr(this.isolateTurn),
       () => new Error("No turn is prepared for this Isolate sub-agent run"),
     )
 
@@ -301,7 +301,7 @@ export class IsolateSubAgent extends Think<Env> {
 
       return await super.startAgentToolRun(input, options)
     } catch {
-      this.activeTurn = null
+      this.isolateTurn = null
       this.preparingInput = null
 
       return {
@@ -345,7 +345,7 @@ export class IsolateSubAgent extends Think<Env> {
     input: IsolateSubagentTrustedConfig,
     requestContent: string,
   ): Promise<void> {
-    return Match.value(this.activeTurn?.runId === runId).pipe(
+    return Match.value(this.isolateTurn?.runId === runId).pipe(
       Match.when(true, () => Promise.resolve()),
       Match.orElse(() => this.prepareFreshRuntime(runId, input, requestContent)),
     )
@@ -394,7 +394,7 @@ export class IsolateSubAgent extends Think<Env> {
         ),
       ])
 
-      this.activeTurn = {
+      this.isolateTurn = {
         runId,
         input,
         model,
@@ -416,13 +416,13 @@ export class IsolateSubAgent extends Think<Env> {
   }
 
   private clearActiveRuntime(): void {
-    this.activeTurn = null
+    this.isolateTurn = null
     this.preparingInput = null
   }
 
   private createInternalRequestObserver(path: string, routeBranch: string) {
     const input = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn?.input ?? this.preparingInput),
+      Option.fromNullishOr(this.isolateTurn?.input ?? this.preparingInput),
       () => new Error("No request context is prepared for this Isolate sub-agent run"),
     )
 

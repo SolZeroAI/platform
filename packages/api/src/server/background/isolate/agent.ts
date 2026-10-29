@@ -10,7 +10,7 @@ import {
   type TurnConfig,
   type TurnContext,
 } from "@cloudflare/think"
-import { createCompactFunction } from "agents/experimental/memory/utils"
+import { createCompactFunction } from "agents/sessions"
 import type { AgentToolLifecycleResult, AgentToolRunInfo } from "agents"
 import { Workspace, type FileInfo } from "@cloudflare/shell"
 import { generateText, type ToolSet } from "ai"
@@ -103,7 +103,7 @@ export class IsolateSessionAgent
     return durableMigration(this.ctx, request, {
       empty: !this.state.sessionId,
       quiescent:
-        this.activeTurn === null &&
+        this.isolateTurn === null &&
         (!this.state.sessionId ||
           !["running", "pending", "warming"].includes(this.state.runtimeStatus)),
     })
@@ -113,7 +113,7 @@ export class IsolateSessionAgent
   maxConcurrentAgentTools = 4
   sendReasoning = false
   waitForMcpConnections = { timeout: 15_000 }
-  activeTurn: ActiveTurn | null = null
+  isolateTurn: ActiveTurn | null = null
   private stopRequested = false
   private readonly subagents = new IsolateSubagentController(this)
   private readonly turnRecovery = new IsolateParentTurnRecovery(this, this.ctx.storage.sql)
@@ -198,7 +198,7 @@ export class IsolateSessionAgent
   }
 
   getModel() {
-    return Option.fromNullishOr(this.activeTurn).pipe(
+    return Option.fromNullishOr(this.isolateTurn).pipe(
       Option.map((turn) => turn.model.model),
       Option.getOrThrowWith(() => new Error("No isolate model is prepared for this Think turn")),
     )
@@ -208,7 +208,7 @@ export class IsolateSessionAgent
     const basePrompt = buildIsolateTurnSystemPrompt({
       brandName: this.env.S0_BRAND_NAME,
       state: this.state,
-      activeTurn: this.activeTurn,
+      isolateTurn: this.isolateTurn,
     })
 
     return [basePrompt, ...this.subagents.promptSections()].join("\n\n")
@@ -275,11 +275,11 @@ export class IsolateSessionAgent
     const baseSystem = this.getSystemPrompt()
     const contextSystem = ctx.system.trim()
     const fallbackSystem = baseSystem.trim()
-    const finalizing = this.activeTurn?.finalizingAfterStepLimit === true
+    const finalizing = this.isolateTurn?.finalizingAfterStepLimit === true
 
     const optionalSections = Arr.getSomes([
       Option.liftPredicate(contextSystem, (value) => value.length > 0 && value !== fallbackSystem),
-      Option.fromNullishOr(this.activeTurn?.repoWarning).pipe(
+      Option.fromNullishOr(this.isolateTurn?.repoWarning).pipe(
         Option.filter((warning) => warning.length > 0),
         Option.map((warning) => ["Repository warning:", warning].join("\n")),
       ),
@@ -323,21 +323,21 @@ export class IsolateSessionAgent
     const turnConfig: TurnConfig = {
       system: systemSections.join("\n\n"),
       maxOutputTokens: resolveIsolateOutputTokenLimit(
-        this.activeTurn?.model.modelId ?? "",
+        this.isolateTurn?.model.modelId ?? "",
         ctx.body?.maxOutputTokens,
       ).pipe(Option.getOrUndefined),
-      providerOptions: this.activeTurn?.model.providerOptions,
+      providerOptions: this.isolateTurn?.model.providerOptions,
       telemetry: aiTelemetrySettings("isolate.think.turn", {
         "session.id": this.getRuntimeId(),
         "user.id": this.state.userId,
         "repo.owner": this.state.repoOwner ?? "",
         "repo.name": this.state.repoName ?? "",
-        "ai.provider": this.activeTurn?.model.providerId ?? "",
-        "ai.model": this.activeTurn?.model.modelId ?? "",
-        "ai.runtime_model": this.activeTurn?.model.runtimeModelId ?? "",
+        "ai.provider": this.isolateTurn?.model.providerId ?? "",
+        "ai.model": this.isolateTurn?.model.modelId ?? "",
+        "ai.runtime_model": this.isolateTurn?.model.runtimeModelId ?? "",
         "tool.count": Object.keys(ctx.tools).length,
-        "mcp.custom_server_count": this.activeTurn?.customMcpServerNames?.length ?? 0,
-        "mcp.mcpcf_server_count": this.activeTurn?.mcpcfMcpServers?.length ?? 0,
+        "mcp.custom_server_count": this.isolateTurn?.customMcpServerNames?.length ?? 0,
+        "mcp.mcpcf_server_count": this.isolateTurn?.mcpcfMcpServers?.length ?? 0,
         "isolate.finalizing_after_step_limit": finalizing,
       }),
       maxSteps: Match.value(finalizing).pipe(
@@ -568,7 +568,7 @@ export class IsolateSessionAgent
         }),
       )
 
-      this.activeTurn = {
+      this.isolateTurn = {
         model,
         requestedModel: request.model,
         reasoningEffort: request.reasoningEffort,
@@ -666,7 +666,7 @@ export class IsolateSessionAgent
   private resetActiveTurn() {
     return Effect.sync(() => {
       this.turnRecovery.clearEnvelope()
-      this.activeTurn = null
+      this.isolateTurn = null
       this.stopRequested = false
     })
   }
@@ -700,11 +700,11 @@ export class IsolateSessionAgent
 
   private enableFinalizationMode(): void {
     const turn = Option.getOrThrowWith(
-      Option.fromNullishOr(this.activeTurn),
+      Option.fromNullishOr(this.isolateTurn),
       () => new Error("No isolate model is prepared for step-limit recovery"),
     )
 
-    this.activeTurn = {
+    this.isolateTurn = {
       ...turn,
       finalizingAfterStepLimit: true,
     }
@@ -860,7 +860,7 @@ export class IsolateSessionAgent
   }
 
   private resolveCompactionModel() {
-    return Option.match(Option.fromNullishOr(this.activeTurn?.model), {
+    return Option.match(Option.fromNullishOr(this.isolateTurn?.model), {
       onNone: () =>
         compileIsolateModelContext({
           env: this.env,

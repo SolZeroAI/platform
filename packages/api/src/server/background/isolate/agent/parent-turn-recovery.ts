@@ -22,7 +22,7 @@ const PARENT_TURN_RECOVERY_ERROR = "Unable to recover the interrupted Isolate tu
 export interface ParentTurnRecoveryHost {
   readonly state: IsolateSessionAgentState
   readonly mcp: IsolateMcpTurnManager
-  activeTurn: ActiveTurn | null
+  isolateTurn: ActiveTurn | null
   getEnv(): Env
   getRuntimeId(): string
   createInternalRequestObserver(path: string, routeBranch: string): ApiRequestObserver
@@ -66,12 +66,12 @@ export class IsolateParentTurnRecovery {
   /** Clear recovery state once a recovered turn produced its chat response. */
   completeRecoveredTurn(): void {
     Option.match(
-      Option.liftPredicate(this.host.activeTurn, (turn) => turn?.recovered === true),
+      Option.liftPredicate(this.host.isolateTurn, (turn) => turn?.recovered === true),
       {
         onNone: () => undefined,
         onSome: () => {
           this.clearEnvelope()
-          this.host.activeTurn = null
+          this.host.isolateTurn = null
         },
       },
     )
@@ -87,7 +87,7 @@ export class IsolateParentTurnRecovery {
       )
 
       const selectedTools = host.state.tools ?? []
-      const callback = host.activeTurn?.callback
+      const callback = host.isolateTurn?.callback
 
       const [model, mcpTurn] = yield* Effect.all(
         [
@@ -121,7 +121,7 @@ export class IsolateParentTurnRecovery {
         { concurrency: "unbounded" },
       )
 
-      host.activeTurn = {
+      host.isolateTurn = {
         model,
         requestedModel: envelope.requestedModel,
         reasoningEffort: envelope.reasoningEffort,
