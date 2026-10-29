@@ -92,7 +92,6 @@ export default defineConfig({
         "apps/web/src/components/admin-ai-provider-panel.tsx",
         "apps/web/src/components/home-session-tools-dialog.tsx",
         "apps/web/src/components/workflows/page.tsx",
-        "packages/api/src/server/background/ai-providers/litellm.ts",
         "packages/api/src/server/background/db/admin.ts",
         "packages/api/src/server/background/db/workflows.ts",
         "packages/api/src/server/background/workflows/slack-apps.ts",
