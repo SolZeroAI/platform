@@ -7,9 +7,14 @@
 // service, so there is no nullable `log` parameter to thread.
 import type { ApiEnv } from "infra/types/env"
 import {
+  BadRequestError,
+  ConflictError,
   CurrentPrincipal,
+  ForbiddenError,
   InternalServerError,
+  NotFoundError,
   UnauthorizedError,
+  UpstreamError,
   type AuthPrincipal,
 } from "@solzero/api"
 import type { EnrichedRepository, InstallationRepository, RepoMetadata } from "@solzero/shared"
@@ -17,6 +22,7 @@ import { getWebUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 import { HttpServerRequest, HttpServerResponse } from "effect/http"
 import { describeError } from "../../../lib/effect-errors"
@@ -115,8 +121,45 @@ export function json(data: unknown, status = 200): Response {
   })
 }
 
+/** Encodes a message as the `S0Api` error class that each status maps to. */
+const encodeHttpApiError = new Map<number, (message: string) => unknown>([
+  [400, (message) => Schema.encodeSync(BadRequestError)(new BadRequestError({ message }))],
+  [401, (message) => Schema.encodeSync(UnauthorizedError)(new UnauthorizedError({ message }))],
+  [403, (message) => Schema.encodeSync(ForbiddenError)(new ForbiddenError({ message }))],
+  [404, (message) => Schema.encodeSync(NotFoundError)(new NotFoundError({ message }))],
+  [409, (message) => Schema.encodeSync(ConflictError)(new ConflictError({ message }))],
+  [500, (message) => Schema.encodeSync(InternalServerError)(new InternalServerError({ message }))],
+  [502, (message) => Schema.encodeSync(UpstreamError)(new UpstreamError({ message }))],
+])
+
+// oxlint-disable-next-line effect/prefer-schema-class -- Reads only the legacy error message of a failure payload.
+const LegacyErrorPayload = Schema.Struct({ error: Schema.String })
+
+/**
+ * Adds the encoded `S0Api` error (`_tag` and `message`) beside the legacy `error` field. A typed
+ * `HttpApiClient` then decodes the failure as the declared error, and existing clients keep
+ * reading `error`.
+ */
+function failureBody(payload: unknown, status: number): unknown {
+  return Option.all({
+    encode: Option.fromNullishOr(encodeHttpApiError.get(status)),
+    legacy: Schema.decodeUnknownOption(LegacyErrorPayload)(payload),
+    fields: Option.liftPredicate(payload, Predicate.isObject),
+  }).pipe(
+    Option.match({
+      onNone: () => payload,
+      onSome: ({ encode, legacy, fields }) => Object.assign({}, fields, encode(legacy.error)),
+    }),
+  )
+}
+
+/** Renders a short-circuit failure payload with its status. */
+export function failureResponse(payload: unknown, status: number): Response {
+  return json(failureBody(payload, status), status)
+}
+
 export function error(message: string, status = 400): Response {
-  return json({ error: message }, status)
+  return failureResponse({ error: message }, status)
 }
 
 const failWith = (payload: unknown, status: number) =>
@@ -649,7 +692,7 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
   return widenedErrors.pipe(
     Effect.catchIf(
       (cause): cause is ControlPlaneFailure => cause instanceof ControlPlaneFailure,
-      (failure) => Effect.succeed(json(failure.payload, failure.status)),
+      (failure) => Effect.succeed(failureResponse(failure.payload, failure.status)),
     ),
     Effect.catch(respondUnhandledError),
     Effect.map(toEffectResponse),
@@ -682,7 +725,8 @@ export function authorizeSessionProxyRequest(
     authorizeSessionProxy(request, env, sessionId).pipe(
       Effect.catchIf(
         (cause): cause is ControlPlaneFailure => cause instanceof ControlPlaneFailure,
-        (failure) => Effect.succeed<Response | null>(json(failure.payload, failure.status)),
+        (failure) =>
+          Effect.succeed<Response | null>(failureResponse(failure.payload, failure.status)),
       ),
       Effect.catchIf(UnauthorizedError.is, (cause) =>
         Effect.succeed<Response | null>(error(cause.message, 401)),

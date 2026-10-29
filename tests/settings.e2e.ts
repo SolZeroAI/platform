@@ -1,6 +1,8 @@
 import { test } from "@e2e-dev/web"
+import { NotFoundError } from "@solzero/api"
+import * as Schema from "effect/Schema"
 import { expect, secrets } from "e2e"
-import { api, uniqueName } from "./support/api"
+import { api, authRequest, uniqueName } from "./support/api"
 
 test("all settings categories load real data", { session: "admin" }, async ({ app, screen }) => {
   for (const [category, title] of [
@@ -86,6 +88,15 @@ test(
       await expect(screen.getByText(key, { exact: true })).toBeVisible()
       const listed = await api<{ secrets: object[] }>(browser, `/secrets?q=${key}`)
       expect(listed.secrets).toEqual([{ key, tags: [] }])
+      await api(browser, `/secrets/${key}`, "DELETE")
+      created = false
+      // A failure decodes as the declared S0Api error and keeps the legacy error field.
+      const missing = await authRequest(browser, `/secrets/${key}`, "DELETE")
+      expect(missing.status).toBe(404)
+      expect(missing.payload).toMatchObject({ error: "Secret not found" })
+      expect(Schema.decodeUnknownSync(NotFoundError)(missing.payload).message).toBe(
+        "Secret not found",
+      )
     } finally {
       if (created) await api(browser, `/secrets/${key}`, "DELETE")
     }

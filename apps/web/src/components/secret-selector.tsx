@@ -3,9 +3,12 @@
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Combobox } from "@cloudflare/kumo/components/combobox"
 import { Tag, X } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import type { SecretMetadata } from "@/hooks/use-secrets"
+import { apiQueryKeys, useApiQuery } from "@/lib/api-hooks"
 import { recessedComboboxTriggerClassName } from "@/lib/recessed-field"
+
+const noPopularTags: readonly string[] = []
 
 type SecretTagGroup = {
   value: string
@@ -60,38 +63,17 @@ export function SecretTagFilter({
   onChange: (tags: string[]) => void
   className?: string
 }) {
-  const [popularTags, setPopularTags] = useState<string[]>([])
   const [inputValue, setInputValue] = useState("")
   const { contains } = Combobox.useFilter()
   const isSearching = inputValue.trim().length > 0
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        const response = await fetch("/api/secrets/tags")
-        // SAFETY: /api/secrets/tags returns JSON that is checked as unknown before popularTags is read.
-        const data = (await response.json()) as unknown
+  // Popular tag suggestions are optional; search still uses the full tag list.
+  const { data: tagStats } = useApiQuery({
+    key: [...apiQueryKeys.secrets, "tags"],
+    request: (client) => client.secrets.tags(),
+  })
 
-        if (!response.ok || cancelled) {
-          return
-        }
-
-        // SAFETY: data was checked to be an object before popularTags is read.
-        const popular = (data as { popularTags?: unknown }).popularTags
-
-        if (Array.isArray(popular)) {
-          setPopularTags(popular.filter((tag): tag is string => typeof tag === "string"))
-        }
-      } catch {
-        // Popular tag suggestions are optional; search still uses the full tag list.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const popularTags = tagStats?.popularTags ?? noPopularTags
 
   const comboboxItems = useMemo((): string[] | SecretTagGroup[] => {
     if (isSearching) {
