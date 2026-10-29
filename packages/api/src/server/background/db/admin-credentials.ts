@@ -179,8 +179,8 @@ async function reconcileAdmin(env: Env, email: string, plaintextPassword: string
   const passwordCurrent = await isPasswordCurrent(account, plaintextPassword)
 
   await Match.value(passwordCurrent).pipe(
-    Match.when(false, () => rotateAdminPassword(env, userId, account, plaintextPassword, now)),
-    Match.orElse(() => Promise.resolve()),
+    Match.when(true, () => Promise.resolve()),
+    Match.orElse(() => rotateAdminPassword(env, userId, account, plaintextPassword, now)),
   )
 
   await runControlPlaneSql(
