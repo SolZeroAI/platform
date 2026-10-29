@@ -445,9 +445,7 @@ const handleScheduledAlarm = Effect.fn("workflows.handleScheduledAlarm")(functio
   storage: WorkflowAlarmStorage
   schedule: StoredSchedule
 }) {
-  const parsedRoutineId = Option.fromNullishOr(
-    parseRoutineAlarmWorkflowId(input.schedule.workflowId),
-  )
+  const parsedRoutineId = parseRoutineAlarmWorkflowId(input.schedule.workflowId)
 
   const targetedRoutineId = Match.value(input.schedule.target).pipe(
     Match.when("routine", () =>

@@ -57,7 +57,9 @@ export default defineConfig({
         "effect/avoid-process-env": "warn",
         "effect/effect-run-in-body": "warn",
         "effect/effect-promise-vs-trypromise": "warn",
-        "effect/prefer-schema-class": "warn",
+        // The rule flags every Schema.Struct. Plain JSON DTOs (config, bindings, wire formats) stay
+        // Structs because Schema.Class decodes to instances and rejects plain objects on encode.
+        "effect/prefer-schema-class": "off",
         "effect/avoid-any": "warn",
         "effect/avoid-non-null-assertion": "warn",
         "effect/avoid-native-fetch": "warn",

@@ -1,13 +1,13 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-return-in-arrow -- Auth JSON normalization is a synchronous validation boundary; explicit discriminant branches keep invalid configuration errors adjacent to their fields. */
-import * as Schema from "effect/Schema"
 import * as Match from "effect/Match"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
+import { ensureConfig, invalidAuthConfig, normalizeUrl } from "./config-error"
 import { normalizeSecretReference, SecretReferenceSchema } from "./secret-reference"
 
 export const AUTH_PROVIDER_ID_PATTERN = /^[a-z][a-z0-9_-]*$/
 export const CREDENTIAL_AUTH_PROVIDER_ID = "credential"
 export const DEFAULT_OIDC_SCOPES = ["openid", "profile", "email", "offline_access"] as const
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment config is plain JSON shared by infra and the Worker
 export const AuthProviderCapabilitiesSchema = Schema.Struct({
   signIn: Schema.Boolean,
   provisionUsers: Schema.Boolean,
@@ -16,13 +16,11 @@ export const AuthProviderCapabilitiesSchema = Schema.Struct({
 
 export type AuthProviderCapabilities = typeof AuthProviderCapabilitiesSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment config is plain JSON shared by infra and the Worker
 export const CredentialAuthProviderConfigSchema = Schema.Struct({
   kind: Schema.Literal("credential"),
   enabled: Schema.Boolean,
   displayName: Schema.String,
   capabilities: AuthProviderCapabilitiesSchema,
-  // oxlint-disable-next-line effect/prefer-schema-class -- nested deployment DTO has no class behavior
   provisioning: Schema.Struct({
     scope: Schema.Literal("configured-admins"),
   }),
@@ -30,7 +28,6 @@ export const CredentialAuthProviderConfigSchema = Schema.Struct({
 
 export type CredentialAuthProviderConfig = typeof CredentialAuthProviderConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment config is plain JSON shared by infra and the Worker
 export const SocialAuthProviderConfigSchema = Schema.Struct({
   kind: Schema.Literal("social"),
   enabled: Schema.Boolean,
@@ -43,7 +40,6 @@ export const SocialAuthProviderConfigSchema = Schema.Struct({
 
 export type SocialAuthProviderConfig = typeof SocialAuthProviderConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment config is plain JSON shared by infra and the Worker
 export const OidcAuthProviderConfigSchema = Schema.Struct({
   kind: Schema.Literal("oidc"),
   enabled: Schema.Boolean,
@@ -65,7 +61,6 @@ export const AuthProviderConfigSchema = Schema.Union([
 
 export type AuthProviderConfig = typeof AuthProviderConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment config is plain JSON shared by infra and the Worker
 export const AuthProviderRegistrySchema = Schema.Struct({
   defaultSignInProviderId: Schema.String,
   providers: Schema.Record(Schema.String, AuthProviderConfigSchema),
@@ -86,22 +81,12 @@ export interface PublicAuthProviderRegistry {
   configurationFile: string
 }
 
-function failConfig(message: string): never {
-  throw new Error(`Invalid auth configuration: ${message}`)
-}
-
-function normalizeIssuerUrl(issuer: string, providerId: string): string {
-  try {
-    return new URL(issuer).toString().replace(/\/+$/, "")
-  } catch {
-    return failConfig(`providers.${providerId}.issuer must be a valid URL`)
-  }
-}
-
-function requireNonEmpty(value: string, field: string): string {
-  const normalized = value.trim()
-
-  return normalized || failConfig(`${field} must not be empty`)
+function requireNonEmpty(value: string, field: string) {
+  return Result.liftPredicate(
+    value.trim(),
+    (normalized) => normalized !== "",
+    () => invalidAuthConfig(`${field} must not be empty`),
+  )
 }
 
 function normalizeScopes(scopes: readonly string[] | undefined, defaults: readonly string[]) {
@@ -114,98 +99,125 @@ function normalizeScopes(scopes: readonly string[] | undefined, defaults: readon
   )
 }
 
-export function normalizeAuthProviderRegistry(value: unknown): AuthProviderRegistry {
-  const decoded = Schema.decodeUnknownSync(AuthProviderRegistrySchema)(value)
+const normalizeCredentialProvider = (providerId: string, provider: CredentialAuthProviderConfig) =>
+  Result.gen(function* () {
+    yield* ensureConfig(providerId === CREDENTIAL_AUTH_PROVIDER_ID, () =>
+      invalidAuthConfig(`the credential provider id must be '${CREDENTIAL_AUTH_PROVIDER_ID}'`),
+    )
 
-  const providers: AuthProviderRegistry["providers"] = Object.fromEntries(
-    Object.entries(decoded.providers).map(([rawProviderId, provider]) => {
-      const providerId = rawProviderId.trim().toLowerCase()
+    const { signIn, provisionUsers, link } = provider.capabilities
 
-      if (!AUTH_PROVIDER_ID_PATTERN.test(providerId)) {
-        failConfig(`provider id '${rawProviderId}' must match ${AUTH_PROVIDER_ID_PATTERN}`)
-      }
+    yield* ensureConfig(!provider.enabled || (signIn && provisionUsers && !link), () =>
+      invalidAuthConfig(
+        "the credential provider must sign in and provision configured admins, and cannot link",
+      ),
+    )
 
-      if (providerId !== rawProviderId) {
-        failConfig(`provider id '${rawProviderId}' must already be normalized`)
-      }
+    return provider
+  })
 
-      if (provider.capabilities.provisionUsers && !provider.capabilities.signIn) {
-        failConfig(`provider '${providerId}' cannot provision users without sign-in capability`)
-      }
+const normalizeClientCredentials = (
+  providerId: string,
+  provider: SocialAuthProviderConfig | OidcAuthProviderConfig,
+) =>
+  Result.all({
+    clientId: requireNonEmpty(provider.clientId, `providers.${providerId}.clientId`),
+    clientSecret: normalizeSecretReference(
+      provider.clientSecret,
+      `auth.providers.${providerId}.clientSecret`,
+    ),
+  })
 
-      const common = {
-        ...provider,
-        displayName: requireNonEmpty(provider.displayName, `providers.${providerId}.displayName`),
-      }
-
-      if (provider.kind === "credential") {
-        if (providerId !== CREDENTIAL_AUTH_PROVIDER_ID) {
-          failConfig(`the credential provider id must be '${CREDENTIAL_AUTH_PROVIDER_ID}'`)
-        }
-
-        if (
-          provider.enabled &&
-          (!provider.capabilities.signIn ||
-            !provider.capabilities.provisionUsers ||
-            provider.capabilities.link)
-        ) {
-          failConfig(
-            "the credential provider must sign in and provision configured admins, and cannot link",
-          )
-        }
-
-        return [providerId, common]
-      }
-
-      const clientId = requireNonEmpty(provider.clientId, `providers.${providerId}.clientId`)
-
-      const clientSecret = normalizeSecretReference(
-        provider.clientSecret,
-        `auth.providers.${providerId}.clientSecret`,
-      )
-
-      if (provider.kind === "social") {
-        return [
-          providerId,
-          {
-            ...common,
-            clientId,
-            clientSecret,
-            scopes: normalizeScopes(provider.scopes, []),
-          },
-        ]
-      }
-
-      const issuer = requireNonEmpty(provider.issuer, `providers.${providerId}.issuer`)
-
-      return [
-        providerId,
-        {
-          ...common,
-          clientId,
-          clientSecret,
-          issuer: normalizeIssuerUrl(issuer, providerId),
-          scopes: normalizeScopes(provider.scopes, DEFAULT_OIDC_SCOPES),
-        },
-      ]
-    }),
+const normalizeSocialProvider = (providerId: string, provider: SocialAuthProviderConfig) =>
+  normalizeClientCredentials(providerId, provider).pipe(
+    Result.map((credentials) => ({
+      ...provider,
+      ...credentials,
+      scopes: normalizeScopes(provider.scopes, []),
+    })),
   )
 
-  const signInProviderIds = Object.entries(providers)
-    .filter(([, provider]) => provider.enabled && provider.capabilities.signIn)
-    .map(([providerId]) => providerId)
+const normalizeOidcProvider = (providerId: string, provider: OidcAuthProviderConfig) =>
+  Result.gen(function* () {
+    const credentials = yield* normalizeClientCredentials(providerId, provider)
+    const issuer = yield* requireNonEmpty(provider.issuer, `providers.${providerId}.issuer`)
 
-  if (signInProviderIds.length === 0) {
-    failConfig("at least one provider must allow sign-in")
-  }
+    return {
+      ...provider,
+      ...credentials,
+      issuer: yield* normalizeUrl(issuer, () =>
+        invalidAuthConfig(`providers.${providerId}.issuer must be a valid URL`),
+      ),
+      scopes: normalizeScopes(provider.scopes, DEFAULT_OIDC_SCOPES),
+    }
+  })
 
-  const defaultSignInProviderId = decoded.defaultSignInProviderId.trim().toLowerCase()
+const normalizeProvider = (rawProviderId: string, provider: AuthProviderConfig) =>
+  Result.gen(function* () {
+    const providerId = rawProviderId.trim().toLowerCase()
 
-  if (!signInProviderIds.includes(defaultSignInProviderId)) {
-    failConfig("defaultSignInProviderId must reference an enabled sign-in provider")
-  }
+    yield* ensureConfig(AUTH_PROVIDER_ID_PATTERN.test(providerId), () =>
+      invalidAuthConfig(`provider id '${rawProviderId}' must match ${AUTH_PROVIDER_ID_PATTERN}`),
+    )
 
-  return { defaultSignInProviderId, providers }
+    yield* ensureConfig(providerId === rawProviderId, () =>
+      invalidAuthConfig(`provider id '${rawProviderId}' must already be normalized`),
+    )
+
+    yield* ensureConfig(!provider.capabilities.provisionUsers || provider.capabilities.signIn, () =>
+      invalidAuthConfig(
+        `provider '${providerId}' cannot provision users without sign-in capability`,
+      ),
+    )
+
+    const displayName = yield* requireNonEmpty(
+      provider.displayName,
+      `providers.${providerId}.displayName`,
+    )
+
+    const normalized: AuthProviderConfig = yield* Match.value({ ...provider, displayName }).pipe(
+      Match.discriminatorsExhaustive("kind")({
+        credential: (credential) => normalizeCredentialProvider(providerId, credential),
+        social: (social) => normalizeSocialProvider(providerId, social),
+        oidc: (oidc) => normalizeOidcProvider(providerId, oidc),
+      }),
+    )
+
+    return [providerId, normalized] as const
+  })
+
+/** Validates a decoded registry and normalizes provider ids, names, client ids, and scopes. */
+export const validateAuthProviderRegistry = (decoded: AuthProviderRegistry) =>
+  Result.gen(function* () {
+    const providers: AuthProviderRegistry["providers"] = Object.fromEntries(
+      yield* Result.all(
+        Object.entries(decoded.providers).map(([providerId, provider]) =>
+          normalizeProvider(providerId, provider),
+        ),
+      ),
+    )
+
+    const signInProviderIds = Object.entries(providers)
+      .filter(([, provider]) => provider.enabled && provider.capabilities.signIn)
+      .map(([providerId]) => providerId)
+
+    yield* ensureConfig(signInProviderIds.length > 0, () =>
+      invalidAuthConfig("at least one provider must allow sign-in"),
+    )
+
+    const defaultSignInProviderId = decoded.defaultSignInProviderId.trim().toLowerCase()
+
+    yield* ensureConfig(signInProviderIds.includes(defaultSignInProviderId), () =>
+      invalidAuthConfig("defaultSignInProviderId must reference an enabled sign-in provider"),
+    )
+
+    return { defaultSignInProviderId, providers }
+  })
+
+export function normalizeAuthProviderRegistry(value: unknown): AuthProviderRegistry {
+  return Result.getOrThrow(
+    validateAuthProviderRegistry(Schema.decodeUnknownSync(AuthProviderRegistrySchema)(value)),
+  )
 }
 
 export function publicAuthProviderRegistry(

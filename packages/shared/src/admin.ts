@@ -1,4 +1,4 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Admin configuration normalization is a synchronous untrusted-data boundary with explicit fallback behavior. */
+import * as Arr from "effect/Array"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
@@ -7,7 +7,6 @@ export interface AdminConfig {
   readonly adminDomains: readonly string[]
 }
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment and runtime configuration is a plain JSON DTO
 export const AdminConfigSchema = Schema.Struct({
   adminEmails: Schema.Array(Schema.String),
   adminDomains: Schema.Array(Schema.String),
@@ -29,29 +28,21 @@ function normalizeEmail(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase()
 }
 
+const dropLeading = (characters: readonly string[], character: string) =>
+  Arr.dropWhile(characters, (candidate) => candidate === character)
+
+// Character scans, not regexes, so admin-controlled input cannot trigger regex backtracking.
 function normalizeDomain(value: string): string {
-  const normalized = value.trim().toLowerCase()
-  let start = 0
-  let end = normalized.length
+  const withoutLeadingAt = dropLeading(Array.from(value.trim().toLowerCase()), "@")
 
-  // oxlint-disable-next-line effect/imperative-loops -- A linear scan avoids regex backtracking on admin-controlled configuration input.
-  while (normalized[start] === "@") {
-    start += 1
-  }
-
-  // oxlint-disable-next-line effect/imperative-loops -- A linear scan avoids regex backtracking on admin-controlled configuration input.
-  while (end > start && normalized[end - 1] === ".") {
-    end -= 1
-  }
-
-  return normalized.slice(start, end)
+  return Arr.reverse(dropLeading(Arr.reverse(withoutLeadingAt), ".")).join("")
 }
 
 function normalizeStringArray(
   value: readonly string[] | undefined,
   normalize: (input: string) => string,
 ): string[] {
-  return value === undefined ? [] : [...new Set(value.map(normalize))].filter(Boolean).sort()
+  return [...new Set((value ?? []).map(normalize))].filter(Boolean).sort()
 }
 
 export function normalizeAdminConfig(value: unknown): AdminConfig {
@@ -69,15 +60,11 @@ export function isAdminEmail(
   config: AdminConfig = EMPTY_ADMIN_CONFIG,
 ): boolean {
   const normalized = normalizeEmail(email)
-
-  if (!normalized) {
-    return false
-  }
-
   const emailDomain = normalized.split("@")[1] ?? ""
 
   return (
-    new Set(config.adminEmails.map(normalizeEmail)).has(normalized) ||
-    new Set(config.adminDomains.map(normalizeDomain)).has(emailDomain)
+    normalized !== "" &&
+    (new Set(config.adminEmails.map(normalizeEmail)).has(normalized) ||
+      new Set(config.adminDomains.map(normalizeDomain)).has(emailDomain))
   )
 }
