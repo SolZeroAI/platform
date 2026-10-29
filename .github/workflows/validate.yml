@@ -38,8 +38,9 @@ permissions:
   actions: read
 
 # A new push to a pull request cancels the run on the commit it replaces. Pushes to master
-# and dispatches each get their own group, so they never cancel or replace a run. The group
-# names the calling workflow, so a Deploy Preview call never cancels a direct Validate run.
+# and dispatches each get their own group here; on master the jobs below cancel the older
+# commit's checks. Groups name the calling workflow, so a Deploy Preview call never cancels
+# a direct Validate run.
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -47,6 +48,11 @@ concurrency:
 jobs:
   validate:
     name: Repository validation
+    # A newer master commit holds every change in an older one, so it cancels the older
+    # commit's validation.
+    concurrency:
+      group: ${{ github.event_name == 'push' && format('{0}-validate-master', github.workflow) || format('{0}-validate-{1}', github.workflow, github.run_id) }}
+      cancel-in-progress: ${{ github.event_name == 'push' }}
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     env:
@@ -110,14 +116,37 @@ jobs:
         if: github.repository != 'SolZeroAI/platform'
         run: nub run build
 
+  release-only:
+    name: Detect release-only commit
+    if: github.event_name == 'push'
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.diff.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      # The Tegami version commit changes only VERSION, CHANGELOG.md and .tegami/. The pull
+      # requests it releases already ran their tests.
+      - id: diff
+        run: |
+          changed="$(git diff --name-only HEAD^ HEAD)"
+          others="$(printf '%s\n' "$changed" | grep -Ev '(^|/)(VERSION|CHANGELOG\.md)$|^\.tegami/' || true)"
+          if [ -n "$changed" ] && [ -z "$others" ]; then skip=true; else skip=false; fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
   e2e:
     name: Cloudflare end-to-end flows
-    # Each run boots its own local Alchemy stack and creates no remote resources, so only
-    # newer pushes to the same pull request supersede a run.
+    needs: release-only
+    # Each run boots its own local Alchemy stack and creates no remote resources. A newer push
+    # to the same pull request, or a newer master commit, supersedes a run.
     concurrency:
-      group: solzero-e2e-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+      group: ${{ github.event_name == 'push' && format('{0}-e2e-master', github.workflow) || format('{0}-e2e-{1}', github.workflow, github.event.pull_request.number || github.run_id) }}
+      cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ !cancelled() && needs.release-only.outputs.skip != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     # The github reporter edits one pull request comment. Artifact recovery reads Actions APIs.
