@@ -324,7 +324,8 @@ are deleted in cleanup; all mutations are limited to the isolated profile.
 `Validate` runs static checks and discovers all e2e tests without secrets. Its dedicated
 Cloudflare end-to-end job runs `nub run test` on trusted pull requests, pushes and manual
 runs, including the canonical repository. Fork pull requests cannot access its credentials.
-Configure repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN`.
+`CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN` are SolZeroAI organization secrets. Do not add
+repository copies, because they override the organization values.
 The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic
 model uses the account default AI Gateway, with response caching off. The workflow generates and masks a
 fresh disposable account password. Do not use production identity or integration secrets
