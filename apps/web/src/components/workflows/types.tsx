@@ -342,8 +342,8 @@ export interface WorkflowSlackAppRequestUrls {
 
 export interface WorkflowSlackManifestValidation {
   valid: boolean
-  errors: string[]
-  warnings: string[]
+  errors: readonly string[]
+  warnings: readonly string[]
 }
 
 export interface WorkflowSlackTriggerRegistrationSummary {
@@ -367,7 +367,7 @@ export interface WorkflowSlackAppSetup {
   requestUrls: WorkflowSlackAppRequestUrls
   manifest: Record<string, unknown>
   validation: WorkflowSlackManifestValidation
-  registrations: WorkflowSlackTriggerRegistrationSummary[]
+  registrations: readonly WorkflowSlackTriggerRegistrationSummary[]
 }
 
 export interface WorkflowManifestMigrationStep {

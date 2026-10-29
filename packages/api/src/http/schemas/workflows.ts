@@ -191,16 +191,69 @@ export class WorkflowApprovalResponse extends Schema.Class<WorkflowApprovalRespo
   approved: Schema.Boolean,
 }) {}
 
+/**
+ * The latest manifest a workflow builder session submitted. The server stores only manifests that
+ * pass the current manifest schema; clients parse `manifest` with `parseWorkflowManifest`.
+ */
+export const WorkflowBuilderDraft = Schema.Struct({
+  sessionId: Schema.String,
+  manifest: JsonRecord,
+  validation: Schema.Struct({
+    valid: Schema.Boolean,
+    errors: Schema.Array(Schema.String),
+    warnings: Schema.Array(Schema.String),
+    executionOrder: Schema.Array(Schema.String),
+  }),
+  submittedAt: Schema.String,
+})
+
 export class WorkflowBuilderDraftResponse extends Schema.Class<WorkflowBuilderDraftResponse>(
   "WorkflowBuilderDraftResponse",
 )({
-  draft: Schema.NullOr(JsonRecord),
+  draft: Schema.NullOr(WorkflowBuilderDraft),
 }) {}
+
+export const WorkflowSlackTriggerRegistration = Schema.Struct({
+  id: Schema.String,
+  workflowId: Schema.String,
+  workflowVersion: Schema.Number,
+  nodeId: Schema.String,
+  surface: Schema.Literals(["event", "command", "interaction"]),
+  commandName: Schema.NullOr(Schema.String),
+  eventTypes: JsonValue,
+  channelNamePattern: Schema.NullOr(Schema.String),
+  keywordRules: JsonValue,
+  actionIds: JsonValue,
+  cooldownSeconds: Schema.Number,
+  dedupeWindowSeconds: Schema.Number,
+  enabled: Schema.Boolean,
+  updatedAt: Schema.Number,
+})
+
+/** A workflow's Slack app: credential status, request URLs, manifest and trigger registrations. */
+export const WorkflowSlackAppSetup = Schema.Struct({
+  id: Schema.String,
+  workflowId: Schema.String,
+  appName: Schema.String,
+  status: Schema.Struct({ hasSigningSecret: Schema.Boolean, hasBotToken: Schema.Boolean }),
+  requestUrls: Schema.Struct({
+    events: Schema.String,
+    interactions: Schema.String,
+    commands: Schema.Record(Schema.String, Schema.String),
+  }),
+  manifest: JsonRecord,
+  validation: Schema.Struct({
+    valid: Schema.Boolean,
+    errors: Schema.Array(Schema.String),
+    warnings: Schema.Array(Schema.String),
+  }),
+  registrations: Schema.Array(WorkflowSlackTriggerRegistration),
+})
 
 export class WorkflowSlackAppResponse extends Schema.Class<WorkflowSlackAppResponse>(
   "WorkflowSlackAppResponse",
 )({
-  slackApp: JsonRecord,
+  slackApp: WorkflowSlackAppSetup,
 }) {}
 
 export class DeletedWorkflowResponse extends Schema.Class<DeletedWorkflowResponse>(
