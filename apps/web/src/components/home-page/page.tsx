@@ -24,7 +24,7 @@ import { SidebarLayout } from "@/components/sidebar-layout"
 import { fetchGitHubRepos, toGitHubRepos } from "@/hooks/use-github-repos"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
 import { useAuthSession } from "@/lib/auth-client"
-import { stashSessionPromptError } from "@/lib/session-prompt"
+import { stashSessionPromptError, submitSessionPrompt } from "@/lib/session-prompt"
 import { HomeContentWithSidebar } from "./content"
 import { getDefaultVisibleModel } from "./model-selection"
 import { getErrorMessage } from "./session-kind"
@@ -520,28 +520,17 @@ export function HomePage({
 
       void (async () => {
         try {
-          const res = await fetch(`/api/sessions/${sessionId}/prompt`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: prompt,
-              model: selectedModel,
-              reasoningEffort,
-            }),
+          await submitSessionPrompt({
+            sessionId,
+            content: prompt,
+            model: selectedModel,
+            reasoningEffort,
           })
-
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}))
-
-            const message =
-              data && typeof data === "object" && "error" in data && typeof data.error === "string"
-                ? data.error
-                : "Failed to send prompt"
-
-            stashSessionPromptError(sessionId, message)
-          }
-        } catch {
-          stashSessionPromptError(sessionId, "Failed to send prompt")
+        } catch (errorValue) {
+          stashSessionPromptError(
+            sessionId,
+            errorValue instanceof Error ? errorValue.message : "Failed to send prompt",
+          )
         }
       })()
 

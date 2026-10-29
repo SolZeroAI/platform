@@ -1,4 +1,6 @@
+import type { PromptPayload } from "@solzero/api"
 import type { AgentRuntime, SessionKind } from "@solzero/shared"
+import { runApi } from "@/lib/api-client"
 
 const fallbackPromptErrors = new Map<string, string>()
 
@@ -50,7 +52,6 @@ export interface SubmitSessionPromptInput {
   content: string
   model?: string
   reasoningEffort?: string
-  stream?: boolean
 }
 
 export interface SubmitSessionResumeInput {
@@ -67,40 +68,58 @@ export function shouldUsePromptHttpStream(input: {
   return (input.agentRuntime === "isolate" || input.sessionKind === "isolate") && !input.connected
 }
 
-export async function submitSessionPrompt(input: SubmitSessionPromptInput): Promise<Response> {
-  const searchParams = new URLSearchParams()
+/** The prompt payload while its optional keys are set. */
+interface PromptPayloadDraft {
+  content: string
+  model?: string
+  reasoningEffort?: string
+}
 
-  if (input.stream) {
-    searchParams.set("stream", "1")
-  }
+function promptPayload(input: SubmitSessionPromptInput): PromptPayload {
+  const payload: PromptPayloadDraft = { content: input.content }
 
-  const path =
-    searchParams.size > 0
-      ? `/api/sessions/${input.sessionId}/prompt?${searchParams.toString()}`
-      : `/api/sessions/${input.sessionId}/prompt`
+  if (input.model !== undefined) payload.model = input.model
 
-  return fetch(path, {
+  if (input.reasoningEffort !== undefined) payload.reasoningEffort = input.reasoningEffort
+
+  return payload
+}
+
+/** Queues a prompt. The reply arrives on the session socket. */
+export function submitSessionPrompt(input: SubmitSessionPromptInput) {
+  return runApi(
+    (client) =>
+      client.sessions.prompt({ params: { id: input.sessionId }, payload: promptPayload(input) }),
+    { fallbackMessage: "Failed to send prompt" },
+  )
+}
+
+/**
+ * Runs an isolate prompt and streams the reply text in the response body. `S0Api` declares only
+ * the queued JSON reply, so this request stays on `fetch`.
+ */
+export function streamSessionPrompt(input: SubmitSessionPromptInput): Promise<Response> {
+  return fetch(`/api/sessions/${input.sessionId}/prompt?stream=1`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      content: input.content,
-      model: input.model,
-      reasoningEffort: input.reasoningEffort,
-    }),
+    body: JSON.stringify(promptPayload(input)),
   })
 }
 
-export async function submitSessionResume(input: SubmitSessionResumeInput): Promise<Response> {
-  return fetch(`/api/sessions/${input.sessionId}/resume`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+export function submitSessionResume(input: SubmitSessionResumeInput) {
+  return runApi(
+    (client) =>
+      client.sessions.resume({
+        params: { id: input.sessionId },
+        payload:
+          input.messageId === undefined
+            ? { reason: input.reason }
+            : { messageId: input.messageId, reason: input.reason },
+      }),
+    {
+      fallbackMessage: "Okta authentication completed, but no resumable failed request was found.",
     },
-    body: JSON.stringify({
-      messageId: input.messageId,
-      reason: input.reason,
-    }),
-  })
+  )
 }

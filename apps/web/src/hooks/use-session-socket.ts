@@ -9,9 +9,9 @@ import type {
   SessionState,
 } from "@solzero/shared"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { hasApiErrorTag, runApi } from "@/lib/api-client"
 import { getWebSocketOrigin } from "@/lib/runtime-config"
 import { shouldClearProcessingForRuntimeStatus } from "@/lib/runtime-status"
-import { fetchSessionWsToken } from "@/lib/session-ws-token"
 import type { Artifact } from "@/types/session"
 
 // WebSocket close codes
@@ -450,24 +450,18 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     }
 
     const request = (async () => {
-      const response = await fetchSessionWsToken(sessionId)
+      const data = await runApi(
+        (client) => client.sessions.wsToken({ params: { id: sessionId }, payload: {} }),
+        { fallbackMessage: "Failed to create websocket token" },
+      ).catch((caught: unknown) =>
+        Promise.reject(
+          hasApiErrorTag(caught, "UnauthorizedError")
+            ? new WsTokenRequestError(401, "Please sign in to connect")
+            : caught,
+        ),
+      )
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new WsTokenRequestError(response.status, "Please sign in to connect")
-        }
-
-        const error = await response.text()
-        throw new WsTokenRequestError(
-          response.status,
-          error || `Failed to create websocket token (${response.status})`,
-        )
-      }
-
-      // SAFETY: The websocket token response includes token, which is checked to be a non-empty string below.
-      const data = (await response.json()) as { token?: unknown }
-
-      if (typeof data.token !== "string" || data.token.length === 0) {
+      if (data.token.length === 0) {
         throw new WsTokenRequestError(null, "Websocket token response did not include a token")
       }
 
