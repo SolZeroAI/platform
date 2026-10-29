@@ -37,6 +37,13 @@ permissions:
   contents: read
   actions: read
 
+# A new push to a pull request cancels the run on the commit it replaces. Pushes to master
+# and dispatches each get their own group, so they never cancel or replace a run. The group
+# names the calling workflow, so a Deploy Preview call never cancels a direct Validate run.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate:
     name: Repository validation
