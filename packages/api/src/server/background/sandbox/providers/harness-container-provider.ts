@@ -1,13 +1,18 @@
-/* oxlint-disable solzero/no-if-statement, solzero/prefer-option-over-null, solzero/no-ternary, solzero/no-return-in-arrow, solzero/avoid-untagged-errors -- Container HTTP and AI SDK event adapters validate untrusted JSON at an imperative boundary before entering the Effect lifecycle. */
 import {
   humanizeCloudflareAiGatewayError,
   resolveAgentRuntime,
   type AgentRuntime,
   type CompiledOpenCodeConfig,
 } from "@solzero/shared"
+import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
+import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
+import * as Result from "effect/Result"
+import * as Schema from "effect/Schema"
 import { toError } from "../../../lib/effect-errors"
+import { stringifyJson } from "../../../lib/json"
 import { compileOpenCodeConfigForModel } from "../../provider-catalog"
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { resolveRuntimeSkillPackages } from "../../skills/catalog"
@@ -105,25 +110,26 @@ interface RuntimeSessionState {
   reasoningById: Map<string, string>
 }
 
-function runtimeForConfig(config: CreateSandboxConfig | { agentRuntime?: AgentRuntime | null }) {
-  const agentRuntime = resolveAgentRuntime({
-    agentRuntime: config.agentRuntime,
-    sessionKind: "sandbox",
-  })
-
-  if (agentRuntime === "isolate") {
-    throw new Error("Harness container provider cannot run isolate sessions")
-  }
-
-  return agentRuntime
-}
+class HarnessRuntimeError extends Schema.TaggedError<HarnessRuntimeError>()("HarnessRuntimeError", {
+  message: Schema.String,
+}) {}
 
 function harnessRuntime(agentRuntime: AgentRuntime): AgentContainerRuntime {
-  if (agentRuntime === "isolate") {
-    throw new Error("Harness container provider cannot run isolate sessions")
-  }
+  return Match.value(agentRuntime).pipe(
+    Match.when("isolate", () => {
+      throw new Error("Harness container provider cannot run isolate sessions")
+    }),
+    Match.orElse((runtime) => runtime),
+  )
+}
 
-  return agentRuntime
+function runtimeForConfig(config: CreateSandboxConfig | { agentRuntime?: AgentRuntime | null }) {
+  return harnessRuntime(
+    resolveAgentRuntime({
+      agentRuntime: config.agentRuntime,
+      sessionKind: "sandbox",
+    }),
+  )
 }
 
 function namespaceForRuntime(env: Env, runtime: AgentContainerRuntime): DurableObjectNamespace {
@@ -134,11 +140,10 @@ function namespaceForRuntime(env: Env, runtime: AgentContainerRuntime): DurableO
     Match.exhaustive,
   )
 
-  if (!binding) {
-    throw new Error(`Agent runtime '${runtime}' is not bound to the API Worker`)
-  }
-
-  return binding
+  return Option.getOrThrowWith(
+    Option.fromNullishOr(binding),
+    () => new Error(`Agent runtime '${runtime}' is not bound to the API Worker`),
+  )
 }
 
 function agentStub(env: Env, runtime: AgentContainerRuntime, runtimeId: string): DurableObjectStub {
@@ -159,17 +164,27 @@ async function postJson(stub: DurableObjectStub, path: string, body: unknown): P
   return fetchContainer(stub, path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: stringifyJson(body),
   })
 }
 
 async function requireOk(response: Response, action: string): Promise<void> {
-  if (response.ok) {
-    return
-  }
+  return Match.value(response.ok).pipe(
+    Match.when(true, () => Promise.resolve()),
+    Match.orElse(() =>
+      response
+        .text()
+        .catch(() => "")
+        .then((body) =>
+          Promise.reject(new Error(`${action} failed (${response.status}): ${body}`)),
+        ),
+    ),
+  )
+}
 
-  const body = await response.text().catch(() => "")
-  throw new Error(`${action} failed (${response.status}): ${body}`)
+/** Fails like requireOk on a non-2xx response, then reads the JSON body. */
+async function readOkJson(response: Response, action: string): Promise<unknown> {
+  return requireOk(response, action).then(() => response.json())
 }
 
 function requireProviderOption(
@@ -177,13 +192,13 @@ function requireProviderOption(
   providerId: string,
   optionName: string,
 ): string {
-  const value = config.provider[providerId]?.options?.[optionName]
-
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`Provider '${providerId}' is missing '${optionName}'`)
-  }
-
-  return value
+  return Option.getOrThrowWith(
+    Option.liftPredicate(
+      config.provider[providerId]?.options?.[optionName],
+      (value): value is string => typeof value === "string" && value.length > 0,
+    ),
+    () => new Error(`Provider '${providerId}' is missing '${optionName}'`),
+  )
 }
 
 function runtimeProviderConfig(input: {
@@ -280,11 +295,14 @@ function assertRuntimeProviderCompatibility(
     Match.exhaustive,
   )
 
-  if (!ok) {
-    throw new Error(
-      `Model '${provider.providerId}/${provider.modelId}' is not compatible with ${runtime}`,
-    )
-  }
+  Match.value(ok).pipe(
+    Match.when(true, () => undefined),
+    Match.orElse(() => {
+      throw new Error(
+        `Model '${provider.providerId}/${provider.modelId}' is not compatible with ${runtime}`,
+      )
+    }),
+  )
 }
 
 function timestampSeconds(event: { timestamp: number }): number {
@@ -292,102 +310,169 @@ function timestampSeconds(event: { timestamp: number }): number {
 }
 
 function stringifyOutput(value: unknown): string {
-  if (typeof value === "string") {
-    return value
-  }
+  return Match.value(value).pipe(
+    Match.when(Match.string, (text) => text),
+    Match.orElse((other) =>
+      Result.getOrElse(
+        Result.try(() => JSON.stringify(other)),
+        () => String(other),
+      ),
+    ),
+  )
+}
 
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
+type RuntimeEventOf<T extends RuntimeEvent["type"]> = Extract<RuntimeEvent, { type: T }>
+
+function textDeltaEvent(
+  event: RuntimeEventOf<"text-delta">,
+  sandboxId: string,
+  state: RuntimeSessionState,
+): SandboxEvent {
+  state.text += event.text
+
+  return {
+    type: "token",
+    content: state.text,
+    messageId: event.messageId,
+    sandboxId,
+    timestamp: timestampSeconds(event),
   }
 }
 
+function reasoningDeltaEvent(
+  event: RuntimeEventOf<"reasoning-delta">,
+  sandboxId: string,
+  state: RuntimeSessionState,
+): SandboxEvent {
+  const next = `${state.reasoningById.get(event.id) ?? ""}${event.text}`
+  state.reasoningById.set(event.id, next)
+
+  return {
+    type: "reasoning",
+    content: next,
+    messageId: event.messageId,
+    assistantMessageId: event.id,
+    sandboxId,
+    timestamp: timestampSeconds(event),
+  }
+}
+
+function toolCallArgs(input: unknown): Record<string, unknown> {
+  return Option.match(Option.liftPredicate(input, P.isObjectOrArray), {
+    // SAFETY: the input is a non-null object, so it is read as a string-keyed record.
+    onSome: (record) => record as Record<string, unknown>,
+    onNone: () => ({ input }),
+  })
+}
+
+/** Maps one container event. Event types this Worker does not know map to `None`. */
 export function mapRuntimeEvent(
   event: RuntimeEvent,
   sandboxId: string,
   state: RuntimeSessionState,
-): SandboxEvent | null {
-  switch (event.type) {
-    case "text-delta": {
-      state.text += event.text
-
-      return {
-        type: "token",
-        content: state.text,
-        messageId: event.messageId,
-        sandboxId,
-        timestamp: timestampSeconds(event),
-      }
-    }
-
-    case "reasoning-delta": {
-      const next = `${state.reasoningById.get(event.id) ?? ""}${event.text}`
-      state.reasoningById.set(event.id, next)
-
-      return {
-        type: "reasoning",
-        content: next,
-        messageId: event.messageId,
-        assistantMessageId: event.id,
-        sandboxId,
-        timestamp: timestampSeconds(event),
-      }
-    }
-
-    case "tool-call":
-      // SAFETY: event.input was checked to be a non-null object before it is read as a string-keyed record.
-      return {
+): Option.Option<SandboxEvent> {
+  return Match.value(event).pipe(
+    Match.when({ type: "text-delta" }, (delta) =>
+      Option.some(textDeltaEvent(delta, sandboxId, state)),
+    ),
+    Match.when({ type: "reasoning-delta" }, (delta) =>
+      Option.some(reasoningDeltaEvent(delta, sandboxId, state)),
+    ),
+    Match.when({ type: "tool-call" }, (call) =>
+      Option.some<SandboxEvent>({
         type: "tool_call",
-        messageId: event.messageId,
+        messageId: call.messageId,
         sandboxId,
-        tool: event.toolName,
-        args:
-          typeof event.input === "object" && event.input !== null
-            ? (event.input as Record<string, unknown>)
-            : { input: event.input },
-        callId: event.toolCallId,
-        timestamp: timestampSeconds(event),
-      }
-    case "tool-result":
-      return {
+        tool: call.toolName,
+        args: toolCallArgs(call.input),
+        callId: call.toolCallId,
+        timestamp: timestampSeconds(call),
+      }),
+    ),
+    Match.when({ type: "tool-result" }, (result) =>
+      Option.some<SandboxEvent>({
         type: "tool_result",
-        messageId: event.messageId,
+        messageId: result.messageId,
         sandboxId,
-        tool: event.toolName ?? "tool",
-        result: stringifyOutput(event.output),
-        callId: event.toolCallId,
-        success: event.isError !== true,
-        timestamp: timestampSeconds(event),
-      }
-    case "file-change":
-      return {
+        tool: result.toolName ?? "tool",
+        result: stringifyOutput(result.output),
+        callId: result.toolCallId,
+        success: result.isError !== true,
+        timestamp: timestampSeconds(result),
+      }),
+    ),
+    Match.when({ type: "file-change" }, (change) =>
+      Option.some<SandboxEvent>({
         type: "tool_call",
-        messageId: event.messageId,
+        messageId: change.messageId,
         sandboxId,
         tool: "file_change",
-        args: { event: event.event, path: event.path },
-        callId: `file-change:${event.path}:${event.timestamp}`,
-        timestamp: timestampSeconds(event),
-      }
-    case "error":
-      return {
+        args: { event: change.event, path: change.path },
+        callId: `file-change:${change.path}:${change.timestamp}`,
+        timestamp: timestampSeconds(change),
+      }),
+    ),
+    Match.when({ type: "error" }, (failure) =>
+      Option.some<SandboxEvent>({
         type: "error",
-        messageId: event.messageId,
+        messageId: failure.messageId,
         sandboxId,
-        error: humanizeCloudflareAiGatewayError(event.error),
-        timestamp: timestampSeconds(event),
-      }
-    case "finish":
-      return {
+        error: humanizeCloudflareAiGatewayError(failure.error),
+        timestamp: timestampSeconds(failure),
+      }),
+    ),
+    Match.when({ type: "finish" }, (finish) =>
+      Option.some<SandboxEvent>({
         type: "execution_complete",
-        messageId: event.messageId,
-        success: event.success,
-        error: event.error ? humanizeCloudflareAiGatewayError(event.error) : event.error,
+        messageId: finish.messageId,
+        success: finish.success,
+        error: Option.fromNullishOr(finish.error).pipe(
+          Option.filter((error) => error.length > 0),
+          Option.map(humanizeCloudflareAiGatewayError),
+          Option.getOrElse(() => finish.error),
+        ),
         sandboxId,
-        timestamp: timestampSeconds(event),
-      }
-  }
+        timestamp: timestampSeconds(finish),
+      }),
+    ),
+    Match.orElse(() => Option.none()),
+  )
+}
+
+const isFinishEvent = (event: RuntimeEvent): event is RuntimeEventOf<"finish"> =>
+  event.type === "finish"
+
+interface PollOutcome {
+  readonly finished: boolean
+  readonly success: boolean
+  readonly error?: string
+}
+
+const PENDING_POLL: PollOutcome = { finished: false, success: false }
+
+/** The events up to and including the first finish event. Later events in the batch are dropped. */
+function eventsThroughFinish(events: readonly RuntimeEvent[]): readonly RuntimeEvent[] {
+  return Option.match(Arr.findFirstIndex(events, isFinishEvent), {
+    onNone: () => events,
+    onSome: (index) => events.slice(0, index + 1),
+  })
+}
+
+function pollOutcome(events: readonly RuntimeEvent[]): PollOutcome {
+  return Option.match(Arr.findFirst(events, isFinishEvent), {
+    onNone: () => PENDING_POLL,
+    onSome: (finish) => ({ finished: true, success: finish.success, error: finish.error }),
+  })
+}
+
+function validCursor(cursor: number) {
+  return Effect.fromResult(
+    Result.liftPredicate(
+      cursor,
+      (value) => Number.isInteger(value) && value >= 0,
+      () => new HarnessRuntimeError({ message: "Agent runtime returned an invalid event cursor" }),
+    ),
+  )
 }
 
 export class HarnessContainerProvider implements SandboxProvider {
@@ -460,9 +545,9 @@ export class HarnessContainerProvider implements SandboxProvider {
 
       const stub = agentStub(this.env, runtime, sandboxId)
 
-      const cursor = yield* Effect.tryPromise({
-        try: async () => {
-          const response = await postJson(stub, "/send", {
+      const sent = yield* Effect.tryPromise({
+        try: () =>
+          postJson(stub, "/send", {
             messageId: request.messageId,
             sessionId,
             content: request.content,
@@ -471,21 +556,12 @@ export class HarnessContainerProvider implements SandboxProvider {
             mcpServers: request.mcpServers ?? {},
             secretEnv: request.secretEnv ?? {},
             skills,
-          })
-
-          await requireOk(response, "send prompt")
-
-          const body =
-            /* SAFETY: The JSON body is the RuntimeSendResponse shape read by this caller after the response arrives. */ (await response.json()) as RuntimeSendResponse
-
-          if (!Number.isInteger(body.cursor) || body.cursor < 0) {
-            throw new Error("Agent runtime returned an invalid event cursor")
-          }
-
-          return body.cursor
-        },
+          }).then((response) => readOkJson(response, "send prompt")),
         catch: toError,
       })
+
+      // SAFETY: The JSON body is the RuntimeSendResponse shape read by this caller after the response arrives.
+      const cursor = yield* validCursor((sent as RuntimeSendResponse).cursor)
 
       return yield* this.pollPrompt(stub, sandboxId, cursor, onEvent)
     }).pipe(
@@ -548,39 +624,41 @@ export class HarnessContainerProvider implements SandboxProvider {
   ) {
     return Effect.gen(function* () {
       let cursor = initialCursor
+      let outcome = PENDING_POLL
 
       const state: RuntimeSessionState = {
         text: "",
         reasoningById: new Map(),
       }
 
-      for (;;) {
-        const payload = yield* Effect.tryPromise({
-          try: async () => {
-            const response = await fetchContainer(stub, `/poll?cursor=${cursor}`)
-            await requireOk(response, "poll events")
+      const pause = Effect.sleep("500 millis")
 
-            return /* SAFETY: The JSON body is the RuntimePollResponse shape read by this caller after the response arrives. */ (await response.json()) as RuntimePollResponse
-          },
+      const deliver = (runtimeEvent: RuntimeEvent) =>
+        Option.match(mapRuntimeEvent(runtimeEvent, sandboxId, state), {
+          onNone: () => Effect.void,
+          onSome: (event) => Effect.tryPromise({ try: () => onEvent(event), catch: toError }),
+        })
+
+      while (!outcome.finished) {
+        const polled = yield* Effect.tryPromise({
+          try: () =>
+            fetchContainer(stub, `/poll?cursor=${cursor}`).then((response) =>
+              readOkJson(response, "poll events"),
+            ),
           catch: toError,
         })
 
+        // SAFETY: The JSON body is the RuntimePollResponse shape read by this caller after the response arrives.
+        const payload = polled as RuntimePollResponse
         cursor = payload.cursor
 
-        for (const runtimeEvent of payload.events) {
-          const event = mapRuntimeEvent(runtimeEvent, sandboxId, state)
-
-          if (event) {
-            yield* Effect.tryPromise({ try: () => onEvent(event), catch: toError })
-          }
-
-          if (runtimeEvent.type === "finish") {
-            return { success: runtimeEvent.success, error: runtimeEvent.error }
-          }
-        }
-
-        yield* Effect.sleep("500 millis")
+        yield* Effect.forEach(eventsThroughFinish(payload.events), deliver, { discard: true })
+        outcome = pollOutcome(payload.events)
+        const stillPolling = Effect.succeed(!outcome.finished)
+        yield* Effect.when(pause, stillPolling)
       }
+
+      return { success: outcome.success, error: outcome.error }
     })
   }
 
@@ -590,7 +668,10 @@ export class HarnessContainerProvider implements SandboxProvider {
     sandboxId: string,
     onEvent: (event: SandboxEvent) => Promise<void>,
   ) {
-    const error = errorValue instanceof Error ? errorValue.message : String(errorValue)
+    const error = Match.value(errorValue).pipe(
+      Match.when(Match.instanceOf(Error), (failure) => failure.message),
+      Match.orElse((other) => String(other)),
+    )
 
     return Effect.gen(function* () {
       yield* Effect.tryPromise({
