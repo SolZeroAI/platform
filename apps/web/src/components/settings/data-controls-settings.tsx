@@ -3,7 +3,8 @@
 import { summarizeSessionTools } from "@solzero/shared"
 import { Link } from "@tanstack/react-router"
 import { useCallback, useEffect, useState } from "react"
-import type { SessionItem } from "@/lib/session-list"
+import { runApi } from "@/lib/api-client"
+import { isSessionItem, type SessionItem } from "@/lib/session-list"
 import { formatRelativeTime } from "@/lib/time"
 import { S0Loader } from "@/components/s0-loader"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
@@ -26,17 +27,16 @@ export function DataControlsSettings() {
     }
 
     try {
-      const res = await fetch(
-        `/api/sessions?status=archived&limit=${PAGE_SIZE}&offset=${currentOffset}`,
+      const data = await runApi((client) =>
+        client.sessions.list({
+          query: { status: "archived", limit: String(PAGE_SIZE), offset: String(currentOffset) },
+        }),
       )
 
-      if (res.ok) {
-        const data = await res.json()
-        const fetched = Array.isArray(data.sessions) ? data.sessions : []
-        setSessions((prev) => (append ? [...prev, ...fetched] : fetched))
-        setHasMore(fetched.length === PAGE_SIZE)
-        setOffset(currentOffset + fetched.length)
-      }
+      const fetched = data.sessions.flatMap((row) => (isSessionItem(row) ? [row] : []))
+      setSessions((prev) => (append ? [...prev, ...fetched] : fetched))
+      setHasMore(data.sessions.length === PAGE_SIZE)
+      setOffset(currentOffset + data.sessions.length)
     } catch (error) {
       console.error("Failed to fetch archived sessions:", error)
     } finally {
@@ -58,15 +58,9 @@ export function DataControlsSettings() {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))
 
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/unarchive`, {
-        method: "POST",
-      })
-
-      if (!res.ok) {
-        // Re-fetch on failure to restore correct state
-        void fetchArchivedSessions(0, false)
-      }
+      await runApi((client) => client.sessions.unarchive({ params: { id: sessionId } }))
     } catch {
+      // Re-fetch on failure to restore correct state
       void fetchArchivedSessions(0, false)
     }
   }
