@@ -21,6 +21,7 @@ import {
 import { S0Loader } from "@/components/s0-loader"
 import { type RepoQueryState } from "@/components/home-session-tools-dialog"
 import { SidebarLayout } from "@/components/sidebar-layout"
+import { fetchGitHubRepos, toGitHubRepos } from "@/hooks/use-github-repos"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
 import { useAuthSession } from "@/lib/auth-client"
 import { stashSessionPromptError } from "@/lib/session-prompt"
@@ -183,58 +184,21 @@ export function HomePage({
     async (options: { query?: RepoQueryState } = {}) => {
       const activeQuery = options.query ?? repoQuery
 
-      const params = new URLSearchParams({
-        page: String(activeQuery.page),
-        perPage: String(activeQuery.perPage),
-      })
-
-      const trimmedQuery = activeQuery.q.trim()
-
-      if (trimmedQuery) {
-        params.set("q", trimmedQuery)
-      }
-
-      if (activeQuery.owner !== "all") {
-        params.set("owner", activeQuery.owner)
-      }
-
-      if (activeQuery.visibility !== "all") {
-        params.set("visibility", activeQuery.visibility)
-      }
-
-      if (activeQuery.sort !== "best-match") {
-        params.set("sort", activeQuery.sort)
-        params.set("order", activeQuery.order)
-      }
-
       setLoadingRepos(true)
       setRepoLoadError("")
       setNeedsGitHubLink(false)
 
       try {
-        const res = await fetch(`/api/repos?${params.toString()}`)
+        const data = await fetchGitHubRepos(activeQuery)
 
-        // SAFETY: /api/repos returns the repository list, pagination, and GitHub install URL for the current query.
-        const data = (await res.json().catch(() => ({}))) as {
-          repos?: Repo[]
-          pagination?: RepoPagination
-          error?: string
-          githubAppInstallUrl?: string | null
+        if (data === null) {
+          setNeedsGitHubLink(true)
+          setRepos([])
+
+          return
         }
 
-        if (!res.ok) {
-          if (res.status === 403) {
-            setNeedsGitHubLink(true)
-            setRepos([])
-
-            return
-          }
-
-          throw new Error(data.error ?? `Request failed with status ${res.status}`)
-        }
-
-        const repoList = Array.isArray(data.repos) ? data.repos : []
-        setRepos(repoList)
+        setRepos(toGitHubRepos(data.repos))
         setRepoPagination(data.pagination ?? null)
         setGithubAppInstallUrl(data.githubAppInstallUrl ?? null)
       } catch (errorValue) {

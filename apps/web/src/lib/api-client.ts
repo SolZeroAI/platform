@@ -36,6 +36,11 @@ export function apiErrorMessage(cause: unknown, fallback: string): string {
     : fallback
 }
 
+/** Whether `caught`, a `runApi` rejection, carries the declared `S0Api` error with `tag`. */
+export function hasApiErrorTag(caught: unknown, tag: string): boolean {
+  return Predicate.hasProperty(caught, "cause") && Predicate.isTagged(caught.cause, tag)
+}
+
 /** Runs one typed API request at a React boundary. Rejects with an `Error` that carries the server message. */
 export function runApi<A>(
   request: ApiRequest<A>,
