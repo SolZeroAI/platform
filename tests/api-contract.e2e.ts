@@ -4,7 +4,8 @@ import * as Schema from "effect/Schema"
 import { CreatedApiKeyResponse, ApiKeysResponse } from "../packages/api/src/http/schemas/auth"
 import { ProviderSettingsResponse } from "../packages/api/src/http/schemas/providers"
 import { SessionListResponse, SessionResponse } from "../packages/api/src/http/schemas/sessions"
-import { api, uniqueName } from "./support/api"
+import { ForbiddenError } from "../packages/api/src/http/errors"
+import { api, authRequest, uniqueName } from "./support/api"
 import { resolveOpenApiSchema } from "./support/openapi"
 
 test(
@@ -31,6 +32,10 @@ test(
       expect(Schema.decodeUnknownSync(ProviderSettingsResponse)(providers)).toBeDefined()
       const list = await api<unknown>(browser, "/sessions?limit=1")
       expect(Schema.decodeUnknownSync(SessionListResponse)(list)).toBeDefined()
+      // The isolated account has no GitHub App authorization, so the repository list is forbidden.
+      const repos = await authRequest(browser, "/repos")
+      expect(repos.status).toBe(403)
+      expect(Schema.decodeUnknownSync(ForbiddenError)(repos.payload)).toBeDefined()
       const spec = await fetch("http://localhost:3100/openapi.json")
       expect(spec.status).toBe(200)
       const document = await spec.json()

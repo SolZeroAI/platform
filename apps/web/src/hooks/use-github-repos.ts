@@ -1,8 +1,10 @@
 "use client"
 
+import type { EnrichedRepositorySummary, ReposListQuery, ReposListResponse } from "@solzero/api"
 import { getErrorMessage } from "@solzero/shared"
 import { useCallback, useEffect, useState } from "react"
 import type { RepoQueryState } from "@/components/home-git-repo-dialog"
+import { hasApiErrorTag, runApi } from "@/lib/api-client"
 
 export interface GitHubRepo {
   id: number
@@ -30,6 +32,43 @@ export const INITIAL_GITHUB_REPO_QUERY: RepoQueryState = {
   perPage: 10,
 }
 
+/** The repository page for `query`, or `null` when the user has not authorized the GitHub App. */
+export async function fetchGitHubRepos(query: RepoQueryState): Promise<ReposListResponse | null> {
+  const params: ReposListQuery = { page: String(query.page), perPage: String(query.perPage) }
+  const q = query.q.trim()
+
+  if (q) params.q = q
+
+  if (query.owner !== "all") params.owner = query.owner
+
+  if (query.visibility !== "all") params.visibility = query.visibility
+
+  if (query.sort !== "best-match") {
+    params.sort = query.sort
+    params.order = query.order
+  }
+
+  try {
+    return await runApi((client) => client.repos.list({ query: params }))
+  } catch (caught) {
+    if (hasApiErrorTag(caught, "ForbiddenError")) return null
+
+    throw caught
+  }
+}
+
+/** Copies decoded repositories into the mutable shape that repository pickers keep in state. */
+export function toGitHubRepos(repos: ReadonlyArray<EnrichedRepositorySummary>): GitHubRepo[] {
+  return repos.map(({ id, fullName, owner, name, description, private: isPrivate }) => ({
+    id,
+    fullName,
+    owner,
+    name,
+    description,
+    private: isPrivate,
+  }))
+}
+
 export function useGitHubRepos(options: { enabled?: boolean } = {}) {
   const enabled = options.enabled ?? true
   const [repos, setRepos] = useState<GitHubRepo[]>([])
@@ -41,58 +80,22 @@ export function useGitHubRepos(options: { enabled?: boolean } = {}) {
   const [repoPagination, setRepoPagination] = useState<GitHubRepoPagination | null>(null)
 
   const fetchRepos = useCallback(async (activeQuery: RepoQueryState) => {
-    const params = new URLSearchParams({
-      page: String(activeQuery.page),
-      perPage: String(activeQuery.perPage),
-    })
-
-    const trimmedQuery = activeQuery.q.trim()
-
-    if (trimmedQuery) {
-      params.set("q", trimmedQuery)
-    }
-
-    if (activeQuery.owner !== "all") {
-      params.set("owner", activeQuery.owner)
-    }
-
-    if (activeQuery.visibility !== "all") {
-      params.set("visibility", activeQuery.visibility)
-    }
-
-    if (activeQuery.sort !== "best-match") {
-      params.set("sort", activeQuery.sort)
-      params.set("order", activeQuery.order)
-    }
-
     setLoadingRepos(true)
     setRepoLoadError("")
     setNeedsGitHubLink(false)
 
     try {
-      const res = await fetch(`/api/repos?${params.toString()}`)
+      const data = await fetchGitHubRepos(activeQuery)
 
-      // SAFETY: /api/repos returns the repository list and pagination for the current query.
-      const data = (await res.json().catch(() => ({}))) as {
-        repos?: GitHubRepo[]
-        pagination?: GitHubRepoPagination
-        error?: string
-        githubAppInstallUrl?: string | null
+      if (data === null) {
+        setNeedsGitHubLink(true)
+        setRepos([])
+        setRepoPagination(null)
+
+        return
       }
 
-      if (!res.ok) {
-        if (res.status === 403) {
-          setNeedsGitHubLink(true)
-          setRepos([])
-          setRepoPagination(null)
-
-          return
-        }
-
-        throw new Error(data.error ?? `Request failed with status ${res.status}`)
-      }
-
-      setRepos(Array.isArray(data.repos) ? data.repos : [])
+      setRepos(toGitHubRepos(data.repos))
       setRepoPagination(data.pagination ?? null)
       setGithubAppInstallUrl(data.githubAppInstallUrl ?? null)
     } catch (errorValue) {
