@@ -110,10 +110,9 @@ interface RuntimeSessionState {
   reasoningById: Map<string, string>
 }
 
-class HarnessRuntimeError extends Schema.TaggedError<HarnessRuntimeError>()(
-  "HarnessRuntimeError",
-  { message: Schema.String },
-) {}
+class HarnessRuntimeError extends Schema.TaggedError<HarnessRuntimeError>()("HarnessRuntimeError", {
+  message: Schema.String,
+}) {}
 
 function harnessRuntime(agentRuntime: AgentRuntime): AgentContainerRuntime {
   return Match.value(agentRuntime).pipe(
