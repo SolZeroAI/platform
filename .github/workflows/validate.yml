@@ -129,6 +129,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
+          # The decision filter needs the base branch and the merge base.
+          fetch-depth: 0
       - uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
@@ -164,10 +166,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           E2E_RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.e2e_record }}
+          # Pull requests run the tests the decision filter says the diff can affect.
+          # Pushes and manual runs run every test.
+          E2E_CHANGED_SINCE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
         # Committed recordings replay strictly. A stale recording fails the run.
         run: |
           if [ "$E2E_RECORD" = "true" ]; then
             nub run test
+          elif [ -n "$E2E_CHANGED_SINCE" ]; then
+            nub run test:e2e:cache-strict --changed-since "$E2E_CHANGED_SINCE" --pass-with-no-tests
           else
             nub run test:e2e:cache-strict
           fi
