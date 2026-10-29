@@ -1,48 +1,15 @@
+import type { SessionListItem } from "@solzero/api"
 import {
+  getErrorMessage,
   summarizeSessionTools,
-  type AgentRuntime,
-  type OpenCodeMcpServers,
   type SessionInitiationSource,
-  type SessionKind,
-  type SessionStatus,
-  type SessionToolSpec,
-  type UnavailableSessionTool,
 } from "@solzero/shared"
-import * as Predicate from "effect/Predicate"
+import { runApi } from "@/lib/api-client"
 
-export interface SessionItem {
-  id: string
-  sessionKind?: SessionKind
-  agentRuntime?: AgentRuntime
-  source?: SessionInitiationSource
-  title: string | null
-  repoOwner: string
-  repoName: string
-  branchName?: string | null
-  tools?: SessionToolSpec[]
-  unavailableTools?: UnavailableSessionTool[]
-  customMcpServers?: OpenCodeMcpServers
-  model?: string
-  reasoningEffort?: string
-  incognito?: boolean
-  status: SessionStatus | string
-  createdAt: number
-  updatedAt: number
-}
-
-/** Narrows one session-list row from the API's JSON record contract. */
-export function isSessionItem(value: unknown): value is SessionItem {
-  return (
-    Predicate.hasProperty(value, "id") &&
-    Predicate.isString(value.id) &&
-    Predicate.hasProperty(value, "status") &&
-    Predicate.isString(value.status)
-  )
-}
+export type SessionItem = SessionListItem
 
 export interface ArchiveSessionFailure {
   sessionId: string
-  status: number | null
   message: string
 }
 
@@ -80,57 +47,13 @@ export function getSessionSourceLabel(source: SessionInitiationSource | undefine
   }
 }
 
+/** Archives one session. Resolves with the failure instead of rejecting, so callers can batch archives. */
 export async function archiveSession(sessionId: string): Promise<ArchiveSessionFailure | null> {
-  let response: Response
-
   try {
-    response = await fetch(`/api/sessions/${sessionId}/archive`, {
-      method: "POST",
-    })
-  } catch (errorValue) {
-    return {
-      sessionId,
-      status: null,
-      message: errorValue instanceof Error ? errorValue.message : "Network request failed",
-    }
-  }
+    await runApi((client) => client.sessions.archive({ params: { id: sessionId } }))
 
-  if (response.ok) {
     return null
+  } catch (errorValue) {
+    return { sessionId, message: getErrorMessage(errorValue, "Request failed") }
   }
-
-  return {
-    sessionId,
-    status: response.status,
-    message: await getArchiveFailureMessage(response),
-  }
-}
-
-async function getArchiveFailureMessage(response: Response): Promise<string> {
-  try {
-    const contentType = response.headers.get("content-type") ?? ""
-
-    if (contentType.includes("application/json")) {
-      // SAFETY: A failed session response JSON carries error or message text.
-      const body = (await response.json()) as { error?: unknown; message?: unknown }
-
-      if (typeof body.error === "string" && body.error.length > 0) {
-        return body.error
-      }
-
-      if (typeof body.message === "string" && body.message.length > 0) {
-        return body.message
-      }
-    } else {
-      const text = await response.text()
-
-      if (text.trim().length > 0) {
-        return text.trim()
-      }
-    }
-  } catch {
-    // Fall back to the HTTP status text below.
-  }
-
-  return response.statusText || "Request failed"
 }

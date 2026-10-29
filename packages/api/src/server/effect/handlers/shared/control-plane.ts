@@ -635,6 +635,35 @@ const toHandlerResponse = (value: unknown): Response =>
     Match.orElse((data) => json(data)),
   )
 
+const isJsonFailure = (response: Response) =>
+  !response.ok && (response.headers.get("Content-Type") ?? "").includes("application/json")
+
+/**
+ * Adds the typed `S0Api` error to a JSON failure that a handler returns as a Response, such as a
+ * session Durable Object reply, so typed clients read its message.
+ */
+const withTypedFailureBody = Effect.fn("controlPlane.withTypedFailureBody")(function* (
+  response: Response,
+) {
+  const jsonFailure = Effect.succeed(isJsonFailure(response))
+
+  const payload = yield* Effect.tryPromise(() => response.clone().json()).pipe(
+    Effect.option,
+    Effect.when(jsonFailure),
+    Effect.map(Option.flatten),
+  )
+
+  return Option.match(payload, {
+    onNone: () => response,
+    onSome: (body: unknown) =>
+      new Response(JSON.stringify(failureBody(body, response.status)), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      }),
+  })
+})
+
 const annotateRequestIdentity = Effect.fn("controlPlane.annotateRequestIdentity")(function* (
   context: ControlPlaneContext,
 ) {
@@ -684,6 +713,7 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
       Effect.provideService(InternalRequests, internalRequests),
       Effect.provideService(EffectRequestLogger, observability.effectLog),
       Effect.map(toHandlerResponse),
+      Effect.flatMap(withTypedFailureBody),
     )
   })
 
