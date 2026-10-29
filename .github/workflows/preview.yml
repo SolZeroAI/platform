@@ -44,7 +44,10 @@ permissions: {}
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('pre-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral' && (github.event.inputs.stage || 'destroy-ephemeral')) || 'pre' }}
-  cancel-in-progress: false
+  # A new push to a pull request cancels the run on the commit it replaces, so
+  # the current commit's checks start at once. The close event never cancels:
+  # the preview cleanup must finish. Pushes to master and dispatches wait their turn.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
   validate:
