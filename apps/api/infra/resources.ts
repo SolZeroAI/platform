@@ -12,7 +12,8 @@ import type {
   StageMetadata,
   S0PlanetscaleConfig,
 } from "@solzero/shared"
-import { AGENT_CONTAINER_IMAGES } from "../../../packages/agent-container/src/images"
+import { PUBLISHED_AGENT_CONTAINER_IMAGES } from "../../../packages/agent-container/src/published-images"
+import { prepareAgentContainerContext } from "../../../scripts/agent-container-build"
 import { createAppPostgresHyperdrive } from "../../../packages/infra/src/app-postgres-hyperdrive"
 import { createPlanetscaleAppDatabase } from "../../../packages/infra/src/stacks/db"
 import {
@@ -51,6 +52,19 @@ export function createAgentContainerNamespace(runtime: AgentContainerRuntime) {
   })
 }
 
+type AgentContainerImageSource = { image: string } | { context: string; dockerfile: string }
+
+function buildContext(context: string): AgentContainerImageSource {
+  return { context, dockerfile: resolve(context, "Dockerfile") }
+}
+
+/** Bundles a stable build context, so Alchemy rebuilds the image only when its inputs change. */
+function bundledContext(runtime: AgentContainerRuntime) {
+  return Effect.tryPromise(() => prepareAgentContainerContext(runtime)).pipe(
+    Effect.map(buildContext),
+  )
+}
+
 export function createAgentContainerApplication(
   options: CreateAgentContainerOptions & { runtime: AgentContainerRuntime },
 ) {
@@ -60,12 +74,19 @@ export function createAgentContainerApplication(
     // Each runtime is a subdirectory that contains a Dockerfile.
     const localContexts = yield* Config.String("S0_LOCAL_CONTAINER_CONTEXTS").pipe(Config.option)
 
-    const imageSource = Option.match(localContexts, {
-      onNone: () => ({ image: AGENT_CONTAINER_IMAGES[options.runtime] }),
-      onSome: (contexts) => ({
-        context: resolve(contexts, options.runtime),
-        dockerfile: resolve(contexts, options.runtime, "Dockerfile"),
-      }),
+    // Only the release package on alchemy.new has prebuilt images. Its deploy sandbox has no Docker.
+    const readySource = Option.orElse(
+      Option.map(localContexts, (contexts) => buildContext(resolve(contexts, options.runtime))),
+      () =>
+        Option.map(
+          Option.fromUndefinedOr(PUBLISHED_AGENT_CONTAINER_IMAGES[options.runtime]),
+          (image): AgentContainerImageSource => ({ image }),
+        ),
+    )
+
+    const imageSource = yield* Option.match(readySource, {
+      onSome: (source) => Effect.succeed(source),
+      onNone: () => bundledContext(options.runtime),
     })
 
     return yield* Cloudflare.ContainerPlatform(AGENT_CONTAINER_RESOURCE_IDS[options.runtime], {

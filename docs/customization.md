@@ -53,8 +53,9 @@ The same name appears in OpenAPI/Scalar documentation, agent instructions, workf
 the selected command and product name, while existing skill IDs and preference references remain
 unchanged. Both the original c0 built-in ID and the SolZero built-in ID are recognized.
 
-The helper requires an agent-container image built from this source. Publish the normal upstream
-images and update their release pins before relying on a new alias in deployed containers. A brand
+The helper requires an agent-container image built from this source. A deploy from your checkout
+builds that image from `packages/agent-container/Dockerfile`, so a new alias reaches deployed
+containers on the next deploy. A brand
 change does not require a separate per-company image.
 
 ## Auth, providers, and integrations

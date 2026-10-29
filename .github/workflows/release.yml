@@ -23,23 +23,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  images:
-    name: Publish agent container images
-    if: >-
-      github.repository == 'SolZeroAI/platform' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    uses: ./.github/workflows/agent-container-images.yml
-    cache-mode: read
-    permissions:
-      contents: read
-      packages: write
-
   release:
     name: Version or release SolZero
-    needs: images
     if: >-
       github.repository == 'SolZeroAI/platform' &&
       github.event.workflow_run.conclusion == 'success' &&
@@ -112,9 +97,7 @@ jobs:
   # The only job that requests id-token or uses environment alchemy-new.
   registry:
     name: Publish alchemy.new registry package
-    needs:
-      - images
-      - release
+    needs: release
     if: >-
       github.repository == 'SolZeroAI/platform' &&
       github.ref == 'refs/heads/master' &&
@@ -124,15 +107,16 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.conclusion == 'success' &&
       needs.release.outputs.published == 'true' &&
-      needs.images.result == 'success' &&
       needs.release.result == 'success' &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     environment: alchemy-new
+    # docker push writes the release's agent images to GHCR.
     permissions:
       contents: read
       id-token: write
+      packages: write
     steps:
       - name: Check out release commit
         uses: actions/checkout@v7
@@ -151,9 +135,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
 
-      - name: Install, build, and prune production dependencies
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      # The alchemy.new deploy sandbox has no Docker, so the package pins prebuilt images.
+      - name: Publish agent container images
+        run: nub exec tsx scripts/publish-agent-container-images.ts --tag "$RELEASE_TAG"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+
+      - name: Build and prune production dependencies
         run: |
-          nub install --frozen-lockfile
           nub run build
           nub prune --prod
 

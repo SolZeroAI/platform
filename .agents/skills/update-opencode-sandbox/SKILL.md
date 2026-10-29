@@ -25,10 +25,12 @@ Update the OpenCode harness and Cloudflare Containers agent-container stack, val
 - `packages/agent-container/src/harness-runtime.ts`
 - `nub.lock`
 - `packages/api/src/server/background/sandbox/providers/harness-container-provider.ts`
-- `packages/agent-container/src/images.ts` (`AGENT_CONTAINER_IMAGES`, `AGENT_CONTAINER_EXTERNAL_PACKAGES`)
-- `apps/api/infra/resources.ts` (pins `AGENT_CONTAINER_IMAGES`)
+- `packages/agent-container/src/images.ts` (`AGENT_CONTAINER_ENTRYPOINTS`, `AGENT_CONTAINER_EXTERNAL_PACKAGES`)
+- `packages/agent-container/src/published-images.ts` (empty in git; the Release registry job fills it in the alchemy.new package)
+- `apps/api/infra/resources.ts` (builds each image from the Dockerfile unless a release pin exists)
+- `scripts/agent-container-build.ts`
 - `scripts/publish-agent-container-images.ts`
-- `.github/workflows/agent-container-images.yml`
+- `.github/workflows/release.yml` (registry job)
 - `tests/workflows.e2e.ts`
 - `tests/sessions.e2e.ts`
 - If the newer OpenCode harness or Containers SDK changes client method signatures or event formats, update `packages/api/src/server/background/sandbox/providers/harness-container-provider.ts` and `packages/agent-container/src/harness-runtime.ts` to match the current SDK instead of preserving old call shapes.

@@ -57,8 +57,7 @@ combined version and release-note preview. A change with no observable effect ca
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
 2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
-   workflow first runs the agent-container images job, then runs `nub run tegami ci` and opens or
-   updates `tegami/version-packages`. Preview
+   workflow runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
    YAML in the tree. Deploy Preview and Deploy jobs run only when the repository variable
@@ -88,6 +87,14 @@ it with `SolZeroAI/alchemy-new-publish-action@v1` when the version tag does not 
 registry job checks out that release commit, uses GitHub Environment `alchemy-new`, and requests
 `id-token: write`. Pull requests pack the archive with `dry-run: true` and do not request a token.
 
+Before it packs the archive, the registry job builds the OpenCode, Codex and Claude Code agent
+images and pushes them to `ghcr.io/solzeroai/<runtime>-agent:vX.Y.Z`. It writes their digests into
+`packages/agent-container/src/published-images.ts` in the archive only. The alchemy.new deploy
+sandbox has no Docker, so the release deploys these prebuilt images. The repository keeps that
+object empty. A deploy from a git checkout builds each image from
+`packages/agent-container/Dockerfile` with Alchemy and rebuilds it only when the bundled context
+changes. Do not commit image digests.
+
 Allow this publisher before the first deploy. The OIDC `job_workflow_ref` must equal
 `SolZeroAI/platform/.github/workflows/release.yml@refs/heads/master`, and the `ref` claim must equal
 `refs/heads/master`.
@@ -110,7 +117,8 @@ Checkout and `nub run tegami ci` use that token for the version pull request, th
 the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
 
 Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. The release job has
-`contents: read`. The image publish job has `contents: read` and `packages: write`.
+`contents: read`. The registry job has `contents: read`, `id-token: write`, and `packages: write`
+for the agent image push.
 
 Create the `release:none` label for pull requests that have no user-visible release note. Enable
 immutable releases after the repository supports that GitHub setting. Create the `alchemy-new`
