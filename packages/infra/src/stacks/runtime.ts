@@ -1,4 +1,3 @@
-/* oxlint-disable effect/imperative-loops -- Deployment compilation resolves and deduplicates a bounded list of secret references sequentially so Alchemy outputs retain stable identities. */
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
@@ -10,12 +9,14 @@ import * as Match from "effect/Match"
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser"
 import {
   APP_DB_MODE_ENV,
+  DATABASE_ENV,
   s0ActiveSecretReferences,
   s0ConfigPathForStage,
   s0ConfigStageForStage,
   canonicalS0ConfigJson,
   configSecretWithDefault,
   getStageMetadataFromConfig,
+  optionalConfigString,
   requiredConfigString,
   resolveS0Config,
   type S0ResolvedConfig,
@@ -95,18 +96,18 @@ function generatedSecretLogicalId(environmentVariable: string): string {
 function uniqueSecretReferences(
   references: readonly SecretReference[],
 ): readonly SecretReference[] {
-  const byEnvironmentVariable = new Map<string, SecretReference>()
+  const byEnvironmentVariable = new Map(references.map((reference) => [reference.env, reference]))
 
-  for (const reference of references) {
-    const existing = byEnvironmentVariable.get(reference.env)
+  const conflicting = references.find(
+    (reference) =>
+      Boolean(byEnvironmentVariable.get(reference.env)?.generateIfMissing) !==
+      Boolean(reference.generateIfMissing),
+  )
 
-    if (existing && Boolean(existing.generateIfMissing) !== Boolean(reference.generateIfMissing)) {
-      throw new Error(
-        `Secret reference ${reference.env} has conflicting generateIfMissing declarations in the stage config file`,
-      )
-    }
-
-    byEnvironmentVariable.set(reference.env, reference)
+  if (conflicting) {
+    throw new Error(
+      `Secret reference ${conflicting.env} has conflicting generateIfMissing declarations in the stage config file`,
+    )
   }
 
   return [...byEnvironmentVariable.values()]
@@ -130,16 +131,13 @@ function resolveSecretReference(reference: SecretReference) {
   })
 }
 
+// Sequential resolution keeps the Alchemy random-secret outputs in a stable order.
 function resolveConfigSecrets(config: S0ResolvedConfig) {
-  return Effect.gen(function* () {
-    const entries: [string, ApiSecretInput][] = []
-
-    for (const reference of uniqueSecretReferences(s0ActiveSecretReferences(config))) {
-      entries.push([reference.env, yield* resolveSecretReference(reference)])
-    }
-
-    return Object.fromEntries(entries)
-  })
+  return Effect.forEach(uniqueSecretReferences(s0ActiveSecretReferences(config)), (reference) =>
+    resolveSecretReference(reference).pipe(
+      Effect.map((value): [string, ApiSecretInput] => [reference.env, value]),
+    ),
+  ).pipe(Effect.map(Object.fromEntries<ApiSecretInput>))
 }
 
 function deploymentConfigDigest(config: S0ResolvedConfig): string {
@@ -155,8 +153,9 @@ export function s0StackRuntime() {
     const stage = yield* Alchemy.Stage
     const context = yield* Alchemy.AlchemyContext
     loadStageVars(stageVarsTag(stage))
-    // oxlint-disable-next-line effect/avoid-process-env -- An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
-    const configProfile = process.env.S0_CONFIG_PROFILE
+
+    // An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
+    const configProfile = yield* optionalConfigString("S0_CONFIG_PROFILE")
     const configFile = s0ConfigPathForStage(stage, configProfile)
     const s0Config = loadS0ConfigFile(REPO_ROOT, stage, configProfile)
 
@@ -176,10 +175,18 @@ export function s0StackRuntime() {
       ).pipe(Effect.orDie),
     })
 
-    // oxlint-disable-next-line effect/avoid-process-env -- DATABASE is the alchemy.new engine select. Missing or empty stays d1.
-    const databaseEngine = databaseEngineFromProcessEnv()
-    // oxlint-disable-next-line effect/avoid-process-env -- APP_DB_MODE is a local-vs-remote operator switch for the PlanetScale flavor only.
-    const appDbMode = appDbModeForStage(stage, process.env[APP_DB_MODE_ENV], context.dev)
+    // DATABASE is the alchemy.new engine select. Missing or empty stays d1.
+    const databaseEngine = databaseEngineFromProcessEnv(yield* optionalConfigString(DATABASE_ENV))
+
+    // APP_DB_MODE is a local-vs-remote operator switch for the PlanetScale flavor only.
+    const appDbMode = appDbModeForStage(
+      stage,
+      yield* optionalConfigString(APP_DB_MODE_ENV),
+      context.dev,
+    )
+
+    // Local PGLite Hyperdrive origin is an operator-supplied URL, not a Worker secret.
+    const databaseUrl = yield* optionalConfigString("DATABASE_URL")
 
     return {
       appName: s0Config.deployment.appName,
@@ -190,8 +197,7 @@ export function s0StackRuntime() {
       deploymentMetadata: createDeploymentMetadata({ repoRoot: REPO_ROOT }),
       databaseEngine,
       appDbMode,
-      // oxlint-disable-next-line effect/avoid-process-env -- Local PGLite Hyperdrive origin is an operator-supplied URL, not a Worker secret.
-      databaseUrl: process.env.DATABASE_URL,
+      databaseUrl,
       dev: context.dev,
       infraDir: INFRA_DIR,
       repoRoot: REPO_ROOT,

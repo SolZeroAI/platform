@@ -5,8 +5,7 @@ import { fork } from "node:child_process"
 import { once } from "node:events"
 import postgres from "postgres"
 import { drizzle } from "drizzle-orm/postgres-js"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeDrizzleCopyDestination builds the migration fixture destination, not an Effect service layer.
-import { makeDrizzleCopyDestination } from "../../packages/api/src/cli/d1-to-planetscale-copy"
+import { drizzleCopyDestination } from "../../packages/api/src/cli/d1-to-planetscale-copy"
 import { stopFixture } from "./fixture-process"
 
 export async function withMigrationDatabases<T>(
@@ -16,7 +15,7 @@ export async function withMigrationDatabases<T>(
       exec: (statement: string) => Promise<unknown>
       query: (statement: string) => Promise<{ rows: readonly Record<string, unknown>[] }>
     }
-    destination: ReturnType<typeof makeDrizzleCopyDestination>
+    destination: ReturnType<typeof drizzleCopyDestination>
     queryParameterCounts: number[]
     url: string
   }) => Promise<T>,
@@ -93,7 +92,7 @@ export async function withMigrationDatabases<T>(
         exec: (statement) => connection.unsafe(statement),
         query: async (statement) => ({ rows: [...(await connection.unsafe(statement))] }),
       },
-      destination: makeDrizzleCopyDestination(database),
+      destination: drizzleCopyDestination(database),
       queryParameterCounts,
       url,
     })

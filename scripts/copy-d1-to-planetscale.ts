@@ -1,4 +1,3 @@
-/* oxlint-disable effect/avoid-process-env -- Operator CLI entry reads argv through Effect CLI and Node services. */
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import * as Effect from "effect/Effect"
 import { Command } from "effect/cli"

@@ -109,7 +109,7 @@ function releaseOffsetLabel(repoRoot: string, version: string): string {
 export function createDeploymentMetadata(
   options: CreateDeploymentMetadataOptions,
 ): DeploymentMetadata {
-  // oxlint-disable-next-line effect/avoid-process-env -- CLI callers may omit env; tests pass explicit env.
+  // CLI callers may omit env; tests pass explicit env.
   const env = options.env ?? process.env
 
   const packageVersion = normalizePackageVersion(

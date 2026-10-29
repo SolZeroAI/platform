@@ -1,4 +1,3 @@
-/* oxlint-disable no-console -- Reports artifact counts, never private contents. */
 import { mkdirSync, writeFileSync, unlinkSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 

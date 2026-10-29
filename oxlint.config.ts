@@ -75,7 +75,12 @@ export default defineConfig({
     },
     {
       files: nonEffectBoundaryFiles,
-      rules: { ...effectRules("off"), ...observabilityRules("off") },
+      rules: {
+        ...effectRules("off"),
+        ...observabilityRules("off"),
+        // Alchemy Stack.make takes an Effect value. Effect.fn changes its inference.
+        "effect/prefer-effect-fn": "off",
+      },
     },
     {
       // Carried over from the s0-lint allowlist: the runner imports @cloudflare/dynamic-workflows on demand.
@@ -99,6 +104,22 @@ export default defineConfig({
         // These files are already at the 1000-line max-lines cap. The spacing fix pushes them over it.
         "anti-slop/require-readable-spacing": "off",
       },
+    },
+    {
+      // The Worker entrypoint is the Effect runtime edge. Its container outbound handlers proxy raw
+      // requests, so they forward with the Worker fetch instead of an Effect HttpClient.
+      files: ["apps/api/index.ts"],
+      rules: { "effect/effect-run-in-body": "off", "effect/avoid-native-fetch": "off" },
+    },
+    {
+      // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
+      // them to the names Alchemy reads) before an Alchemy context exists.
+      files: [
+        "packages/infra/src/database-engine.ts",
+        "packages/infra/src/deploymentMetadata.ts",
+        "packages/infra/src/stack-flags.ts",
+      ],
+      rules: { "effect/avoid-process-env": "off" },
     },
     {
       files: ["packages/infra/alchemy.run.ts", "packages/infra/src/index.ts"],

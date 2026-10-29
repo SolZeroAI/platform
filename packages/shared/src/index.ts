@@ -12,6 +12,8 @@ export * from "./cloudflare-ai-gateway-errors"
 
 export * from "./cloudflare-ai-gateway"
 
+export * from "./config-error"
+
 export * from "./database-engine"
 
 export * from "./s0-config"

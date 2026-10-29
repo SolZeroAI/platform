@@ -18,8 +18,7 @@ import { pgRelations } from "../server/effect/db/control-plane-db"
 import {
   CopyConflictError,
   copyControlPlane,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- copy-d1-to-planetscale-command.ts builds makeDrizzleCopyDestination from the destination client at the composition edge because the CLI opens the copy destination before any Effect layer.
-  makeDrizzleCopyDestination,
+  drizzleCopyDestination,
   type CopyReport,
 } from "./d1-to-planetscale-copy"
 import { planPlanetscaleCutoverEdits } from "./d1-to-planetscale-cutover-diff"
@@ -233,7 +232,7 @@ export const copyD1ToPlanetscaleCommand = Command.make(
 
       const destDrizzle = drizzle({ client, relations: pgRelations })
 
-      const dest = makeDrizzleCopyDestination(destDrizzle, {
+      const dest = drizzleCopyDestination(destDrizzle, {
         sizeBytes: async () => {
           const rows = await client.unsafe("SELECT pg_database_size(current_database()) AS bytes")
           // SAFETY: pg_database_size returns one row whose bytes column is the numeric database size.
