@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { build } from "alchemy/Bundle"
@@ -12,6 +12,19 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dockerfilePath = resolve(repoRoot, "packages/agent-container/Dockerfile")
 
 type RuntimeName = keyof typeof AGENT_CONTAINER_ENTRYPOINTS
+
+/**
+ * Bundles the runtime into a stable build context under `.alchemy/`. Alchemy hashes this context,
+ * so a deploy rebuilds the image only when the bundle, the Dockerfile, or the patch changes.
+ */
+export async function prepareAgentContainerContext(runtime: RuntimeName): Promise<string> {
+  const contextDir = resolve(repoRoot, ".alchemy/agent-containers", runtime)
+  await rm(contextDir, { recursive: true, force: true })
+  await mkdir(contextDir, { recursive: true })
+  await bundleAgentContainer(runtime, contextDir)
+
+  return contextDir
+}
 
 export async function bundleAgentContainer(
   runtime: RuntimeName,

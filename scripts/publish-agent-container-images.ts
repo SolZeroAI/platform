@@ -7,11 +7,10 @@ import { bundleAgentContainer } from "./agent-container-build"
 import {
   AGENT_CONTAINER_ENTRYPOINTS,
   AGENT_CONTAINER_IMAGE_NAMES,
-  AGENT_CONTAINER_IMAGES,
 } from "../packages/agent-container/src/images"
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const imagesPath = resolve(repoRoot, "packages/agent-container/src/images.ts")
+const publishedImagesPath = resolve(repoRoot, "packages/agent-container/src/published-images.ts")
 const registry = "ghcr.io/solzeroai"
 
 type RuntimeName = keyof typeof AGENT_CONTAINER_ENTRYPOINTS
@@ -68,27 +67,38 @@ function loginRegistry(): void {
   }
 }
 
-async function publishImage(runtime: RuntimeName, contextDir: string): Promise<string> {
+function releaseTag(): string {
+  const index = process.argv.indexOf("--tag")
+  const tag = index === -1 ? undefined : process.argv[index + 1]
+
+  if (!tag?.match(/^v\d+\.\d+\.\d+$/)) {
+    throw new Error("Pass the release tag, for example --tag v1.2.3")
+  }
+
+  return tag
+}
+
+async function publishImage(
+  runtime: RuntimeName,
+  contextDir: string,
+  tag: string,
+): Promise<string> {
   const imageName = AGENT_CONTAINER_IMAGE_NAMES[runtime]
   const metadataPath = resolve(tmpdir(), `s0-${runtime}-image-metadata.json`)
-  run(
-    "docker",
-    [
-      "buildx",
-      "build",
-      "--platform",
-      "linux/amd64",
-      "--provenance=false",
-      "--sbom=false",
-      "--metadata-file",
-      metadataPath,
-      "--push",
-      "--tag",
-      `${registry}/${imageName}:release`,
-      contextDir,
-    ],
-    { SOURCE_DATE_EPOCH: "0" },
-  )
+  run("docker", [
+    "buildx",
+    "build",
+    "--platform",
+    "linux/amd64",
+    "--provenance=false",
+    "--sbom=false",
+    "--metadata-file",
+    metadataPath,
+    "--push",
+    "--tag",
+    `${registry}/${imageName}:${tag}`,
+    contextDir,
+  ])
 
   // SAFETY: docker buildx --metadata-file writes containerimage.digest as an optional string field.
   const metadata = JSON.parse(await readFile(metadataPath, "utf8")) as {
@@ -101,103 +111,47 @@ async function publishImage(runtime: RuntimeName, contextDir: string): Promise<s
     throw new Error(`Docker did not report a digest for ${imageName}`)
   }
 
-  return digest
+  return `${registry}/${imageName}@${digest}`
 }
 
-function makePackagePublic(imageName: string): void {
-  const token = ghToken()
+async function writePublishedImages(references: Record<RuntimeName, string>): Promise<void> {
+  const source = await readFile(publishedImagesPath, "utf8")
+  const marker = "> = {}"
 
-  const result = spawnSync(
-    "gh",
-    [
-      "api",
-      "--method",
-      "PATCH",
-      `/orgs/SolZeroAI/packages/container/${imageName}`,
-      "-H",
-      "Accept: application/vnd.github+json",
-      "--input",
-      "-",
-    ],
-    {
-      input: JSON.stringify({ visibility: "public" }),
-      encoding: "utf8",
-      env: { ...process.env, GH_TOKEN: token },
-    },
+  if (!source.includes(marker)) {
+    throw new Error(`${publishedImagesPath} no longer ends with an empty image map`)
+  }
+
+  await writeFile(
+    publishedImagesPath,
+    source.replace(marker, `> = ${JSON.stringify(references, null, 2)}`),
   )
-
-  if (result.status === 0) return
-  const details = result.stderr || result.stdout
-
-  if (details.includes("404")) {
-    console.error(
-      `GitHub cannot change org package visibility through the API. Make ghcr.io/solzeroai/${imageName} public at https://github.com/orgs/SolZeroAI/packages/container/${imageName}/settings`,
-    )
-
-    return
-  }
-
-  throw new Error(`Unable to make ghcr.io/solzeroai/${imageName} public\n${details}`)
 }
 
-function referenceFor(runtime: RuntimeName, digest: string): string {
-  return `${registry}/${AGENT_CONTAINER_IMAGE_NAMES[runtime]}@${digest}`
-}
-
-async function writeDigests(digests: Record<RuntimeName, string>): Promise<void> {
-  let source = await readFile(imagesPath, "utf8")
-
-  for (const runtime of Object.keys(AGENT_CONTAINER_IMAGES).filter(isRuntimeName)) {
-    const current = AGENT_CONTAINER_IMAGES[runtime]
-    const next = referenceFor(runtime, digests[runtime])
-
-    if (!source.includes(current)) {
-      throw new Error(`images.ts is missing the ${runtime} reference ${current}`)
-    }
-
-    source = source.replace(current, next)
-  }
-
-  await writeFile(imagesPath, source)
-}
-
+/**
+ * Pushes the agent images for one release and writes their digests into published-images.ts.
+ * Release runs this only in the registry job, so the digests ship in the alchemy.new package
+ * and never get committed.
+ */
 async function main(): Promise<void> {
-  const write = process.argv.includes("--write")
+  const tag = releaseTag()
   loginRegistry()
-  // SAFETY: the loop assigns a digest for every RuntimeName before digests is read.
-  const digests = {} as Record<RuntimeName, string>
+  // SAFETY: the loop assigns a reference for every RuntimeName before references is read.
+  const references = {} as Record<RuntimeName, string>
 
   for (const runtime of Object.keys(AGENT_CONTAINER_ENTRYPOINTS).filter(isRuntimeName)) {
     const contextDir = await mkdtemp(resolve(tmpdir(), `s0-${runtime}-image-`))
 
     try {
       await bundleAgentContainer(runtime, contextDir)
-      const digest = await publishImage(runtime, contextDir)
-      digests[runtime] = digest
-      console.log(referenceFor(runtime, digest))
-      makePackagePublic(AGENT_CONTAINER_IMAGE_NAMES[runtime])
+      references[runtime] = await publishImage(runtime, contextDir, tag)
+      console.log(references[runtime])
     } finally {
       await rm(contextDir, { recursive: true, force: true })
     }
   }
 
-  const mismatches = Object.keys(digests)
-    .filter(isRuntimeName)
-    .filter(
-      (runtime) => AGENT_CONTAINER_IMAGES[runtime] !== referenceFor(runtime, digests[runtime]),
-    )
-
-  if (write) {
-    await writeDigests(digests)
-
-    return
-  }
-
-  if (mismatches.length > 0) {
-    throw new Error(
-      `Image digests differ from packages/agent-container/src/images.ts: ${mismatches.join(", ")}. Run with --write and commit the digest.`,
-    )
-  }
+  await writePublishedImages(references)
 }
 
 await main()
