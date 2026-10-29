@@ -51,14 +51,13 @@ import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
 import { createApiRequestObserver } from "../../../effect/services/observability"
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object rpc is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -242,8 +241,7 @@ function initializeSession(
 export function warmRuntimeForKind(host: SessionDODelegate, sessionKind: SessionKind): void {
   Match.value(sessionKind).pipe(
     Match.when("sandbox", () =>
-      // oxlint-disable-next-line effect/effect-run-in-body -- ctx.waitUntil requires a Promise at the Durable Object boundary.
-      host.ctx.waitUntil(Effect.runPromise(host.lifecycleManager.warmSandbox())),
+      host.ctx.waitUntil(runEffectPromise(host.lifecycleManager.warmSandbox())),
     ),
     Match.orElse(() => host.ctx.waitUntil(host.syncIsolateRuntime())),
   )
@@ -440,7 +438,7 @@ function enqueuePromptWithResolvedModel(
   })
   host.broadcast({ type: "sandbox_event", event: userEvent })
 
-  const localParentContext = localSpanContextFromHeaders(request.headers)
+  const localParentContext = Option.getOrUndefined(localSpanContextFromHeaders(request.headers))
 
   return host.dispatchEnqueuedPrompt(executionMode, options, messageId, localParentContext)
 }
@@ -695,8 +693,7 @@ export function syncToolingRuntime(host: SessionDODelegate, session: SessionRow)
 
 export function syncRuntimeForKind(host: SessionDODelegate, session: SessionRow): Promise<unknown> {
   return Match.value(session.session_kind).pipe(
-    // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object sync entrypoint returns Promise.
-    Match.when("sandbox", () => Effect.runPromise(host.lifecycleManager.syncRuntimeConfig())),
+    Match.when("sandbox", () => runEffectPromise(host.lifecycleManager.syncRuntimeConfig())),
     Match.orElse(() => host.syncIsolateRuntime()),
   )
 }

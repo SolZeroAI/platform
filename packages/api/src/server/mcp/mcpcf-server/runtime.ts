@@ -15,7 +15,6 @@ import {
   type McpcfServerRecord,
 } from "../../background/db/mcpcf"
 import { createGlobalSecretsStoreFromD1 } from "../../background/db/repo-secrets"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- mcpcf-server/runtime.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because MCP Context Forge reads control-plane rows outside a request layer.
 import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../effect/db/control-plane-db"
 import {
   createUserMcpcfServerConfigStoreFromD1,

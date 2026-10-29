@@ -1,4 +1,3 @@
-/* oxlint-disable effect/avoid-process-env -- Local PGLite Hyperdrive origin is an operator-selected process. */
 import { readdirSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { PGlite } from "@electric-sql/pglite"

@@ -28,7 +28,7 @@ D1 remains the OSS default when PlanetScale code is not on the branch.
 
 Cloudflare D1 is the OSS default control plane.
 The Worker binding is `DB`.
-The runtime adapter is `drizzle-orm/d1` through `makeD1Drizzle` in `packages/api/src/server/effect/db/d1-drizzle.ts`.
+The runtime adapter is `drizzle-orm/d1` through `openD1Drizzle` in `packages/api/src/server/effect/db/d1-drizzle.ts`.
 Better Auth uses native D1.
 `createBetterAuth` in `packages/api/src/server/lib/better-auth.ts` sets `database: env.DB`.
 
@@ -49,7 +49,7 @@ The `migrations` field is the directory path.
 `createS0Api` resolves that path to `packages/infra/d1-migrations`.
 
 The Worker D1 path is query-only.
-`makeD1Drizzle` wraps the binding.
+`openD1Drizzle` wraps the binding.
 There is no `ensureD1Schema`.
 There is no Worker apply-on-read for control-plane D1.
 There is no Drizzle.Schema apply.

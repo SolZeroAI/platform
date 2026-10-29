@@ -62,28 +62,27 @@ function redactedSecret(value: ApiSecretInput): Redacted.Redacted<string> {
   ) as Redacted.Redacted<string>
 }
 
-function createCloudflareAiGateway(input: {
+interface CloudflareAiGatewayInput {
   appName: string
   stageMetadata: StageMetadata
   apiEnv: ApiInfraEnv
   cloudflareAccountId: string
-}) {
+}
+
+/** The mock AI Gateway layer answers model calls inside the Worker, so it needs the binding shape without account resources. */
+function mockCloudflareAiGateway(input: CloudflareAiGatewayInput): ApiAiGatewayBinding {
+  return {
+    resource: Cloudflare.Workers.AI("AI_GATEWAY"),
+    gatewayId: `${input.appName}-${input.stageMetadata.name}-ai-gateway`,
+    runToken: "mock-ai-gateway-run-token",
+    secretsStoreId: "mock-ai-gateway-secrets-store",
+  }
+}
+
+function liveCloudflareAiGateway(input: CloudflareAiGatewayInput) {
   const config = input.apiEnv.S0_CONFIG_CLOUDFLARE_AI_GATEWAY
 
   return Effect.gen(function* () {
-    // oxlint-disable-next-line solzero/no-if-statement -- deployment selection stays adjacent to resource creation so disabled and mock stacks never call the Cloudflare Gateway API.
-    if (!config.enabled) return undefined
-
-    // oxlint-disable-next-line solzero/no-if-statement -- The mock AI Gateway layer answers model calls inside the Worker, so it needs the binding shape without account resources.
-    if (input.apiEnv.S0_AI_GATEWAY_LAYER === "mock") {
-      return {
-        resource: Cloudflare.Workers.AI("AI_GATEWAY"),
-        gatewayId: `${input.appName}-${input.stageMetadata.name}-ai-gateway`,
-        runToken: "mock-ai-gateway-run-token",
-        secretsStoreId: "mock-ai-gateway-secrets-store",
-      } satisfies ApiAiGatewayBinding
-    }
-
     const secretsStore = yield* Cloudflare.SecretsStore.Store("ai-gateway-secrets")
 
     const gatewayProps = {
@@ -137,6 +136,19 @@ function createCloudflareAiGateway(input: {
       secretsStoreId: secretsStore.storeId,
     } satisfies ApiAiGatewayBinding
   })
+}
+
+/** Disabled and mock stacks never call the Cloudflare Gateway API. */
+function createCloudflareAiGateway(input: CloudflareAiGatewayInput) {
+  return Match.value(input.apiEnv).pipe(
+    Match.when({ S0_CONFIG_CLOUDFLARE_AI_GATEWAY: { enabled: false } }, () =>
+      Effect.succeed(undefined),
+    ),
+    Match.when({ S0_AI_GATEWAY_LAYER: "mock" }, () =>
+      Effect.succeed(mockCloudflareAiGateway(input)),
+    ),
+    Match.orElse(() => liveCloudflareAiGateway(input)),
+  )
 }
 
 export function createS0Api(options: CreateS0ApiOptions) {

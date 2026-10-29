@@ -1,4 +1,3 @@
-/* oxlint-disable no-console -- Prints only lifecycle decisions and stage identifiers. */
 import { appendFileSync, readFileSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 

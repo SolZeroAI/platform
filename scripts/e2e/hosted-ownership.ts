@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Immutable GitHub ownership artifact verification before guarded recovery. */
 import { spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs"

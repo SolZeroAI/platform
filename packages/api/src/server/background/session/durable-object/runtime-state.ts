@@ -50,18 +50,17 @@ import { createApiRequestObserver } from "../../../effect/services/observability
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object runtime-state is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the session Durable Object env when decrypting stored secrets.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import {
   decodeJson,
@@ -282,8 +281,7 @@ export async function decryptSecretEnv(
 export function getIsolateCloneAuth(host: SessionDODelegate): Promise<{
   githubAccessToken?: string | null
 }> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise callback boundary for isolate prompt bridge getCloneAuth.
-  return Effect.runPromise(host.getIsolateCloneAuthEffect())
+  return runEffectPromise(host.getIsolateCloneAuthEffect())
 }
 
 export function getIsolateCloneAuthEffect(host: SessionDODelegate) {
@@ -298,8 +296,7 @@ export function getIsolateCloneAuthEffect(host: SessionDODelegate) {
 export function getSandboxCloneCredentials(
   host: SessionDODelegate,
 ): Promise<GitHubCloneCredentials | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object sandbox lifecycle boundary; the lifecycle manager is still Promise-shaped while GitHub clone auth is Effect-native.
-  return Effect.runPromise(host.getSandboxCloneCredentialsEffect())
+  return runEffectPromise(host.getSandboxCloneCredentialsEffect())
 }
 
 export function getSandboxCloneCredentialsEffect(host: SessionDODelegate) {
@@ -357,8 +354,7 @@ export function resolveCloneCredentialsEffect(
 }
 
 export function syncIsolateRuntime(host: SessionDODelegate): Promise<IsolateWarmResult> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object background boundary; runs the isolate warm Effect from Promise-typed session handlers (typing/init/update-tools).
-  return Effect.runPromise(host.syncIsolateRuntimeEffect())
+  return runEffectPromise(host.syncIsolateRuntimeEffect())
 }
 
 export function syncIsolateRuntimeEffect(host: SessionDODelegate) {

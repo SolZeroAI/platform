@@ -17,6 +17,10 @@ const decodeValueOption = Schema.decodeUnknownOption(Schema.fromJsonString(Schem
 const decodeValueSync = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
 const encodeJsonString = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown))
 
+const encodePrettyJsonString = Schema.encodeUnknownSync(
+  Schema.fromJsonString(Schema.Unknown, { space: 2 }),
+)
+
 const emptyRecord = (): Record<string, unknown> => ({})
 const emptyArray = (): readonly unknown[] => []
 
@@ -46,3 +50,18 @@ export const parseJsonOrText = (value: string): unknown =>
 
 /** Serialize a value to a compact JSON string (throws on cycles, like `JSON.stringify`). */
 export const stringifyJson = (value: unknown): string => encodeJsonString(value)
+
+/** True when `JSON.stringify` gives a string for the value (not undefined, a function, or a symbol). */
+const hasJsonForm = (value: unknown): boolean =>
+  value !== undefined && typeof value !== "function" && typeof value !== "symbol"
+
+/** Serialize like `JSON.stringify`: `None` where it would return undefined. */
+export const stringifyJsonOption = (value: unknown): Option.Option<string> =>
+  Option.map(Option.liftPredicate(value, hasJsonForm), encodeJsonString)
+
+/** Like {@link stringifyJsonOption}, with 2-space indentation. */
+export const stringifyJsonPrettyOption = (value: unknown): Option.Option<string> =>
+  Option.map(Option.liftPredicate(value, hasJsonForm), encodePrettyJsonString)
+
+/** Serialize a value to 2-space indented JSON for prompts and displayed tool output. */
+export const stringifyJsonPretty = (value: unknown): string => encodePrettyJsonString(value)

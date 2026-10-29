@@ -9,7 +9,6 @@ import {
 } from "@solzero/shared"
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
 import { BotStore } from "../db/bots"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env when the workflow alarm Durable Object fires, which has no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { stringifyJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -18,6 +17,8 @@ import type { Env } from "../types"
 import { startWorkflowRun, type WorkflowTriggerPayload } from "./runner"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
+import * as Iterable from "effect/Iterable"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -217,21 +218,13 @@ export function nextCronDate(expression: string, after: Date): Date {
   candidate.setUTCMinutes(candidate.getUTCMinutes() + 1)
 
   const maxAttempts = 366 * 24 * 60 * 5
-  let found = Option.none<Date>()
+  const start = candidate.getTime()
 
-  // oxlint-disable-next-line effect/imperative-loops -- Bounded minute-by-minute scan over up to ~2.6M candidates that returns at the first match. Recursion would overflow the stack on the worst case, and materializing the full candidate array would be a memory regression, so the imperative scan is retained.
-  for (let attempt = 0; attempt < maxAttempts && Option.isNone(found); attempt += 1) {
-    found = Match.value(cronMatches(cron, candidate)).pipe(
-      Match.when(true, () => Option.some(new Date(candidate))),
-      Match.orElse(() => Option.none<Date>()),
-    )
-    Match.value(Option.isNone(found)).pipe(
-      Match.when(true, () => {
-        candidate.setUTCMinutes(candidate.getUTCMinutes() + 1)
-      }),
-      Match.orElse(() => undefined),
-    )
-  }
+  // Iterable.makeBy is lazy, so the scan stops at the first match without building the list.
+  const found = Iterable.findFirst(
+    Iterable.makeBy((attempt) => new Date(start + attempt * 60_000), { length: maxAttempts }),
+    (minute) => cronMatches(cron, minute),
+  )
 
   return Option.match(found, {
     onNone: () => {
@@ -344,8 +337,7 @@ export function handleWorkflowAlarmFetch(input: {
   request: Request
   storage: WorkflowAlarmStorage
 }): Promise<Response> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker/DO fetch boundary bridging the Effect alarm handler to the Promise-based Durable Object entrypoint.
-  return Effect.runPromise(handleWorkflowAlarmFetchEffect(input))
+  return runEffectPromise(handleWorkflowAlarmFetchEffect(input))
 }
 
 async function rescheduleCronPromise(
@@ -680,8 +672,7 @@ export function handleWorkflowAlarm(input: {
   env: Env
   storage: WorkflowAlarmStorage
 }): Promise<void> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker/DO alarm boundary bridging the Effect alarm handler to the Promise-based Durable Object entrypoint.
-  return Effect.runPromise(handleWorkflowAlarmEffect(input))
+  return runEffectPromise(handleWorkflowAlarmEffect(input))
 }
 
 function getWorkflowAlarmStub(env: Env, workflowId: string, nodeId: string) {

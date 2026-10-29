@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-match-effect-branch -- Auth config resolution is a small env/KV adapter boundary; keeping source precedence and provider discriminants explicit makes fail-closed behavior auditable. */
 import {
   normalizeAuthProviderRegistry,
   publicAuthProviderRegistry,
@@ -10,6 +9,7 @@ import {
   type SocialAuthProviderConfig,
 } from "@solzero/shared"
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import {
   S0_CONFIG_BINDINGS,
@@ -61,22 +61,32 @@ const resolveProviderClientSecret = Effect.fn("authConfig.resolveProviderClientS
   })
 })
 
+function enabledSecretProvider(provider: AuthProviderConfig) {
+  return Option.liftPredicate(
+    provider,
+    (candidate): candidate is SocialAuthProviderConfig | OidcAuthProviderConfig =>
+      candidate.kind !== "credential" && candidate.enabled,
+  )
+}
+
 const resolveProvider = Effect.fn("authConfig.resolveProvider")(function* (
   env: Env,
   providerId: string,
   provider: AuthProviderConfig,
 ) {
-  if (provider.kind === "credential") {
-    return provider
-  }
+  const clientSecret = yield* Effect.transposeOption(
+    Option.map(enabledSecretProvider(provider), (secretProvider) =>
+      resolveProviderClientSecret(env, providerId, secretProvider),
+    ),
+  )
 
-  if (!provider.enabled) {
-    return { ...provider, clientSecret: "" }
-  }
-
-  const clientSecret = yield* resolveProviderClientSecret(env, providerId, provider)
-
-  return { ...provider, clientSecret }
+  return Match.value(provider).pipe(
+    Match.when({ kind: "credential" }, (credential): ResolvedAuthProviderConfig => credential),
+    Match.orElse((secretProvider): ResolvedAuthProviderConfig => ({
+      ...secretProvider,
+      clientSecret: Option.getOrElse(clientSecret, () => ""),
+    })),
+  )
 })
 
 export const getAuthProviderRegistry = Effect.fn("authConfig.getAuthProviderRegistry")(function* (

@@ -13,8 +13,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- UserProviderConfigsStore is a D1 factory. Production callers import at module scope; replacing this constructor needs a Layer-owned D1 capability.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
   resolveControlPlaneHandle,
@@ -24,6 +23,7 @@ import {
 } from "../../effect/db/control-plane-db"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { D1Error, UserProviderPreferenceMigrationError, d1Error, getErrorMessages } from "./errors"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 export type UserProviderScope = "shared_override" | "custom_provider"
 
@@ -38,7 +38,6 @@ export interface UserProviderCustomInput {
   providerId: string
   name: string
   npm?: string
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
   apiKey?: string
@@ -62,7 +61,6 @@ type UserProviderPreferenceRow = AppSchema["userProviderPreferences"]["$inferSel
 interface StoredCustomProviderPayload {
   name: string
   npm?: string
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models: Record<string, ProviderModelDefinition>
 }
@@ -86,7 +84,6 @@ export interface UserProviderSettingsSnapshot {
     providerId: string
     name: string
     npm?: string
-    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
     options?: Record<string, unknown>
     models: Record<string, ProviderModelDefinition>
     hasApiKey: boolean
@@ -98,7 +95,6 @@ export interface RuntimeUserProviderRecord {
   scope: UserProviderScope
   displayName: string
   npm?: string
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider catalog owner is open provider JSON. A closed options schema would reject live provider configs.
   options?: Record<string, unknown>
   models?: Record<string, ProviderModelDefinition>
   apiKey: string | null
@@ -665,17 +661,11 @@ type UserProviderRuntimeConfigs = Effect.Success<
   ReturnType<UserProviderConfigsStore["listRuntimeConfigs"]>
 >
 
-// oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the DB error channel must be named explicitly here.
-function runUserProviderConfigsEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect UserProviderConfigsStore to the non-Effect provider catalog module.
-  return Effect.runPromise(effect).catch((errorValue: unknown) => {
-    const error = Match.value(errorValue).pipe(
-      Match.when(isD1Error, (d1) => new Error(describeUserProviderD1Error(d1))),
-      Match.orElse((other) => other),
-    )
-
-    throw error
-  })
+function rethrowUserProviderD1Error(errorValue: unknown): never {
+  throw Match.value(errorValue).pipe(
+    Match.when(isD1Error, (d1) => new Error(describeUserProviderD1Error(d1))),
+    Match.orElse((other) => other),
+  )
 }
 
 /**
@@ -698,7 +688,7 @@ export function createUserProviderConfigsStoreFromD1(
       d1: undefined,
     })),
     Match.orElse((d1) => ({
-      db: makeD1Drizzle(d1),
+      db: openD1Drizzle(d1),
       d1,
     })),
   )
@@ -707,10 +697,11 @@ export function createUserProviderConfigsStoreFromD1(
 
   return {
     getSettingsSnapshot: (userId) =>
-      runUserProviderConfigsEffect(store.getSettingsSnapshot(userId)),
-    listRuntimeConfigs: (userId) => runUserProviderConfigsEffect(store.listRuntimeConfigs(userId)),
+      runEffectPromise(store.getSettingsSnapshot(userId)).catch(rethrowUserProviderD1Error),
+    listRuntimeConfigs: (userId) =>
+      runEffectPromise(store.listRuntimeConfigs(userId)).catch(rethrowUserProviderD1Error),
     replaceSettings: (userId, input) =>
-      runUserProviderConfigsEffect(store.replaceSettings(userId, input)),
+      runEffectPromise(store.replaceSettings(userId, input)).catch(rethrowUserProviderD1Error),
   }
 }
 

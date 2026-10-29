@@ -5,8 +5,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Order from "effect/Order"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens the repo-secrets database from the Worker env at the store composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   controlPlaneSql,
   isControlPlaneDb,
@@ -16,7 +15,8 @@ import {
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
-import { d1Error, type D1Error } from "./errors"
+import { d1Error } from "./errors"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 const MCPCF_KEY_PREFIX = "mcpcf/"
 const LIKE_ESCAPE_CHAR = "\\"
@@ -461,12 +461,6 @@ export class GlobalSecretsStore {
   })
 }
 
-// oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the D1Error channel must be named explicitly here.
-function runGlobalSecretsEffect<A>(effect: Effect.Effect<A, D1Error>): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect GlobalSecretsStore to non-Effect runtime consumers (Slack credential sync, durable object, sandbox/storage nodes, MCP forge server).
-  return Effect.runPromise(effect)
-}
-
 /**
  * Promise-facing view of {@link GlobalSecretsStore} for the non-Effect runtime consumers that read
  * or write user secrets outside an Effect program (Slack credential sync, the session durable
@@ -489,14 +483,14 @@ export function createGlobalSecretsStoreFromD1(
   const store = new GlobalSecretsStore(
     Match.value(db).pipe(
       Match.when(isControlPlaneDb, (handle) => handle),
-      Match.orElse((d1) => makeD1Drizzle(d1)),
+      Match.orElse((d1) => openD1Drizzle(d1)),
     ),
     encryptionKey,
   )
 
   return {
-    setSecrets: (secrets, options) => runGlobalSecretsEffect(store.setSecrets(secrets, options)),
-    listSecretKeys: (options) => runGlobalSecretsEffect(store.listSecretKeys(options)),
-    getDecryptedSecrets: (options) => runGlobalSecretsEffect(store.getDecryptedSecrets(options)),
+    setSecrets: (secrets, options) => runEffectPromise(store.setSecrets(secrets, options)),
+    listSecretKeys: (options) => runEffectPromise(store.listSecretKeys(options)),
+    getDecryptedSecrets: (options) => runEffectPromise(store.getDecryptedSecrets(options)),
   }
 }

@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Isolated process lifecycle boundary. */
 import { spawn } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import {

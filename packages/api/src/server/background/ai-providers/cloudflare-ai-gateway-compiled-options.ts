@@ -3,9 +3,9 @@ import {
   CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   type CloudflareAiGatewayByokKeyMap,
 } from "@solzero/shared"
-import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import { runEffectPromise } from "../../lib/effect-promise"
 import { encryptSecret } from "../auth/crypto"
 import type { Env } from "../types"
 import {
@@ -29,8 +29,7 @@ async function encryptContainerCredential(env: Env, apiKey: string): Promise<str
     () => new Error("TOKEN_ENCRYPTION_KEY not configured"),
   )
 
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for OpenCode config compilation.
-  const encrypted = await Effect.runPromise(encryptSecret(apiKey, encryptionKey))
+  const encrypted = await runEffectPromise(encryptSecret(apiKey, encryptionKey))
 
   return `${CLOUDFLARE_AI_GATEWAY_BYOK_PROXY_PREFIX}${encrypted}`
 }

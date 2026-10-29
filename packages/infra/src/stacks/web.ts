@@ -11,7 +11,6 @@ type S0WebStackServices = Effect.Services<typeof S0WebProgram>
 
 export class S0Web extends Alchemy.Stack<S0Web, S0WebStackOutput>()("S0Web") {}
 
-// oxlint-disable-next-line effect/prefer-effect-fn -- Alchemy Stack.make expects an Effect value; Effect.fn changes inference here.
 export const S0WebProgram = Effect.gen(function* () {
   const runtime = yield* s0StackRuntime()
 

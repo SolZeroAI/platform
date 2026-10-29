@@ -45,14 +45,13 @@ import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
 import { createApiRequestObserver } from "../../../effect/services/observability"
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object query-archive is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -242,8 +241,7 @@ export async function issueWsToken(
   host.repository.pruneExpiredParticipantWsTokens(now)
 
   const plainToken = generateId(32)
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object HTTP handler remains a Promise boundary.
-  const tokenHash = await Effect.runPromise(hashToken(plainToken))
+  const tokenHash = await runEffectPromise(hashToken(plainToken))
   host.repository.createParticipantWsToken({
     id: generateId(),
     participantId: participant.id,
@@ -311,14 +309,19 @@ export function serializeArtifact(host: SessionDODelegate, artifact: ArtifactRow
   const metadata = parseArtifactMetadata(artifact.metadata)
 
   const prNumber = Option.getOrUndefined(
-    Option.liftPredicate(metadata?.prNumber, (value): value is number => typeof value === "number"),
+    Option.flatMap(metadata, (resolved) =>
+      Option.liftPredicate(
+        resolved.prNumber,
+        (value): value is number => typeof value === "number",
+      ),
+    ),
   )
 
   return {
     id: artifact.id,
     type: artifact.type,
     url: artifact.url,
-    metadata,
+    metadata: Option.getOrNull(metadata),
     prNumber,
     createdAt: artifact.created_at,
   }
@@ -390,12 +393,10 @@ export async function teardownArchivedRuntime(
 ): Promise<void> {
   await Match.value(session.session_kind).pipe(
     Match.when("sandbox", () =>
-      // oxlint-disable-next-line effect/effect-run-in-body -- archive teardown is an async Durable Object workflow boundary.
-      Effect.runPromise(host.lifecycleManager.destroySandbox(session.session_name ?? session.id)),
+      runEffectPromise(host.lifecycleManager.destroySandbox(session.session_name ?? session.id)),
     ),
     Match.orElse(async () => {
-      // oxlint-disable-next-line effect/effect-run-in-body -- archive teardown is an async Durable Object workflow boundary and must cancel awaited child facets before retaining history.
-      await Effect.runPromise(host.isolateRuntime.stopPrompt(session.id))
+      await runEffectPromise(host.isolateRuntime.stopPrompt(session.id))
       host.repository.resetSandbox("stopped")
     }),
   )

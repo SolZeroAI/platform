@@ -1,5 +1,4 @@
 import { createWorkflowStoreFromD1, type WorkflowRecord } from "../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the public webhook composition edge.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
@@ -10,6 +9,7 @@ import type { WorkflowTriggerPayload } from "./runner"
 import { handleWorkflowSlackAppRequest } from "./slack-public-router"
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 
@@ -319,6 +319,5 @@ export function handleWorkflowPublicRequest(
   env: Env,
   options: WorkflowPublicRequestOptions = {},
 ): Promise<Response | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker public-router boundary bridging the Effect webhook handler to the Promise-based request entrypoint.
-  return Effect.runPromise(handleWorkflowPublicRequestEffect(request, env, options))
+  return runEffectPromise(handleWorkflowPublicRequestEffect(request, env, options))
 }

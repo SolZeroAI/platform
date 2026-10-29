@@ -89,7 +89,7 @@ export function sqliteTableNames(client: DatabaseSync): Set<string> {
   )
 }
 
-export function makeDrizzleCopyDestination(
+export function drizzleCopyDestination(
   db: CopyDrizzleDatabase,
   options?: { sizeBytes?: () => Promise<number | null> },
 ): CopyDestination {
@@ -134,7 +134,7 @@ export function makeDrizzleCopyDestination(
     },
     sizeBytes: async () => options?.sizeBytes?.() ?? null,
     withTransaction: (fn) =>
-      database.transaction((tx) => fn(makeDrizzleCopyDestination(tx, options)), {
+      database.transaction((tx) => fn(drizzleCopyDestination(tx, options)), {
         isolationLevel: "serializable",
       }),
   }

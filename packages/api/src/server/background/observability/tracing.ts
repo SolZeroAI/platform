@@ -126,19 +126,15 @@ export function localSpanHeaders(context: LocalSpanContext): Record<string, stri
   return headers
 }
 
-// oxlint-disable-next-line solzero/prefer-option-over-null -- Interop reader consumed by Promise-side Durable Object plumbing and the header round-trip test, which branch on `undefined`; will return Option once those callers convert to Effect.
-export function localSpanContextFromHeaders(headers: Headers): LocalSpanContext | undefined {
+/** Reads the local trace headers, `None` when either id is missing or malformed. */
+export function localSpanContextFromHeaders(headers: Headers): Option.Option<LocalSpanContext> {
   const traceId = headers.get(LOCAL_TRACE_ID_HEADER)?.trim().toLowerCase()
   const spanId = headers.get(LOCAL_PARENT_SPAN_ID_HEADER)?.trim().toLowerCase()
 
-  return Option.getOrUndefined(
-    Option.all({
-      traceId: Option.fromNullishOr(traceId).pipe(
-        Option.filter((value) => HEX_16_BYTES.test(value)),
-      ),
-      spanId: Option.fromNullishOr(spanId).pipe(Option.filter((value) => HEX_8_BYTES.test(value))),
-    }),
-  )
+  return Option.all({
+    traceId: Option.fromNullishOr(traceId).pipe(Option.filter((value) => HEX_16_BYTES.test(value))),
+    spanId: Option.fromNullishOr(spanId).pipe(Option.filter((value) => HEX_8_BYTES.test(value))),
+  })
 }
 
 const runBackgroundSpan = <A, E, R>(

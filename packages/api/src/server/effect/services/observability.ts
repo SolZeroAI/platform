@@ -1,6 +1,7 @@
 import type { ApiEnv } from "infra/types/env"
 import { getStageMetadataSync, type StageMetadataInput } from "@solzero/shared"
 import { withRequestControlPlane } from "../db/control-plane-db"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Cause from "effect/Cause"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -381,7 +382,6 @@ export function observeRoute<A, E, R>(
 ) {
   const spanName = `http.${group}.${endpoint}`
 
-  // SAFETY: Effect.gen yields RequestObservability, which the request layer provides, so the public channel stays R.
   return Effect.gen(function* () {
     const observability = yield* RequestObservability
     const attributes = routeSpanAttributes(observability.context, group, endpoint)
@@ -398,8 +398,7 @@ export function observeRoute<A, E, R>(
         }),
       ),
     )
-    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Exported channel boundary: the gen requires RequestObservability (yielded above), but that service is satisfied by the request-scoped layer, so the public channel intentionally stays `R`.
-  }) as Effect.Effect<A, E, R>
+  })
 }
 
 function annotateCauseFailure(
@@ -573,10 +572,7 @@ export function createApiRequestObserver(
   const pendingTelemetryRuns: Array<Promise<void>> = []
   let activeSpan: Option.Option<CloudflareSpan> = Option.none()
 
-  function scheduleRequestEffect(
-    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Telemetry scheduler accepts an already-built observability Effect; the `Effect<void>` channel is intrinsic to forwarding it to the boundary runner.
-    effect: Effect.Effect<void>,
-  ): Promise<void> {
+  function scheduleRequestEffect(effect: VoidEffect): Promise<void> {
     const promise = runRequestEffect(env, effect)
     pendingTelemetryRuns.push(promise)
     ctx.waitUntil(promise)
@@ -671,13 +667,8 @@ export function createApiRequestObserver(
   return observer
 }
 
-export function runRequestEffect(
-  env: ApiEnv,
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Request/telemetry boundary-runner accepts a fully self-contained observability Effect; the `Effect<void>` channel is intrinsic to the runner contract.
-  effect: Effect.Effect<void>,
-): Promise<void> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Request/telemetry boundary-runner; runs the observability Effect at the Worker edge.
-  return Effect.runPromise(
+export function runRequestEffect(env: ApiEnv, effect: VoidEffect): Promise<void> {
+  return runEffectPromise(
     effect.pipe(
       Effect.provide(
         makeEffectLoggerLayer({
@@ -809,8 +800,7 @@ function createEffectRequestLogger(core: RequestLogCore): EffectRequestLoggerSer
 }
 
 function createRequestLogger(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Logger sink accepts an already-built log Effect; the `Effect<void>` channel is intrinsic to forwarding it to the scheduler.
-  run: (effect: Effect.Effect<void>) => Promise<void>,
+  run: (effect: VoidEffect) => Promise<void>,
   core: RequestLogCore,
   effectLog: EffectRequestLoggerService,
 ): RequestLogger {

@@ -1,4 +1,3 @@
-/* oxlint-disable no-console -- Reports bounded owned resource absence. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { parse } from "jsonc-parser"

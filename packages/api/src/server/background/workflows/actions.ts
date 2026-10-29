@@ -1,6 +1,5 @@
 import { generateId } from "../auth/crypto"
 import { createWorkflowStoreFromD1 } from "../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the workflow actions service-binding edge.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { toError } from "../../lib/effect-errors"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -10,6 +9,7 @@ import { executeWorkflowNodeWithAdapters } from "./nodes/registry"
 import type { WorkflowManifestNode } from "@solzero/shared"
 import type { WorkflowActionsEntrypoint, WorkflowTriggerPayload } from "./runner"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 
@@ -109,8 +109,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
       })
     })
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
-    return Effect.runPromise(execution)
+    return runEffectPromise(execution)
   }
 
   recordWorkflowEvent(input: {
@@ -148,8 +147,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
 
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(this.env))
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
-    return Effect.runPromise(
+    return runEffectPromise(
       Effect.tryPromise({
         try: () =>
           store.addRunEvent({
@@ -180,8 +178,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
   }): Promise<{ ok: true }> {
     const store = createWorkflowStoreFromD1(makeControlPlaneFromEnv(this.env))
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- Cloudflare service-binding RPC boundary consumed by dynamic workflow artifacts.
-    return Effect.runPromise(
+    return runEffectPromise(
       Effect.tryPromise({
         try: () =>
           store.completeRun({

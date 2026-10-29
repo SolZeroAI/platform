@@ -1,4 +1,5 @@
 import * as Match from "effect/Match"
+import * as Result from "effect/Result"
 
 // Centralized error-normalization helpers shared across server modules. Keeping these in one
 // place removes copy-pasted `raise`/`toError`/`describeError` micro-helpers from individual files
@@ -44,4 +45,9 @@ export function errorMessageOr(value: unknown, fallback: string): string {
  */
 export function raise(message: string): never {
   throw new Error(message)
+}
+
+/** Run a sync function in a non-Effect module and map a thrown value through `onError`. */
+export function recoverSync<A>(evaluate: () => A, onError: (error: unknown) => A): A {
+  return Result.getOrElse(Result.try(evaluate), onError)
 }

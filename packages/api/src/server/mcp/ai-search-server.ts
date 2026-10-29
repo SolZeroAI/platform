@@ -10,7 +10,7 @@ import {
   type CallToolResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -96,8 +96,7 @@ function resolveAvailableSourcesFromRegistry(
 ): Promise<AiSearchSourceRecord[]> {
   const registry = new AiSearchRegistryStore(env)
 
-  // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request setup is Promise-based.
-  return Effect.runPromise(registry.listAvailableSourcesByIds(requestedSourceIds)).then((sources) =>
+  return runEffectPromise(registry.listAvailableSourcesByIds(requestedSourceIds)).then((sources) =>
     requireAllSourcesAvailable(requestedSourceIds, sources),
   )
 }
@@ -228,8 +227,7 @@ async function runAiSearchSourceTool(
   definition: ReturnType<typeof defineAiSearchSourceTool>,
   input: AiSearchToolInput,
 ): Promise<CallToolResult> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request handler requires Promise; runs runAiSearchMcpTool Effect at that boundary.
-  const text = await Effect.runPromise(
+  const text = await runEffectPromise(
     runAiSearchMcpTool(env, definition.source, input.query, context, definition.mode),
   )
 

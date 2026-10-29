@@ -440,7 +440,8 @@ const normalizeOptionalConfig = <A, B>(
     onSome: normalize,
   })
 
-const credentialSignInEnabled = (auth: AuthProviderRegistry) =>
+/** True when an enabled credential provider allows sign-in. */
+export const credentialSignInEnabled = (auth: AuthProviderRegistry) =>
   Object.values(auth.providers).some(
     (provider) =>
       provider.kind === "credential" && provider.enabled && provider.capabilities.signIn,

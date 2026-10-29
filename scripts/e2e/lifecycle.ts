@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- This isolated Node process boundary validates durable ownership before invoking Alchemy and Docker CLIs. */
 import { spawn, spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import {
@@ -349,7 +348,7 @@ async function stopSnapshots(
 ) {
   const snapshots = [...initial]
   // While the original leader is alive its current descendants are also owned, including detached subgroups.
-  for (const anchor of [...snapshots])
+  for (const anchor of initial)
     if (processBirth(anchor.pid) === anchor.birth) {
       for (const item of descendants(anchor.pid))
         if (!snapshots.some((old) => old.pid === item.pid && old.birth === item.birth))

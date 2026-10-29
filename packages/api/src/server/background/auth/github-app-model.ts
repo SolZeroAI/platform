@@ -504,17 +504,6 @@ export function formatGitHubApiError(prefix: string, response: Response, body: s
   return `${prefix}: ${response.status} ${body}`
 }
 
-export function createGitHubAbortState(timeoutMs: number) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-
-  return { controller, timer }
-}
-
-export function clearGitHubAbortState(state: { timer: ReturnType<typeof setTimeout> }): void {
-  clearTimeout(state.timer)
-}
-
 export function buildRepositorySearchParams(
   options: GitHubRepositorySearchOptions,
   searchPage: number,

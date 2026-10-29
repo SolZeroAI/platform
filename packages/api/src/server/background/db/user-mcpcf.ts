@@ -3,8 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { parseJsonArray, stringifyJson } from "../../lib/json"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeD1Drizzle opens user MCP config tables from the Worker env at the store composition edge.
-import { makeD1Drizzle } from "../../effect/db/d1-drizzle"
+import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
   isControlPlaneDb,
   resolveControlPlaneHandle,
@@ -12,7 +11,8 @@ import {
   type AppSchema,
   type ControlPlaneDb,
 } from "../../effect/db/control-plane-db"
-import { d1Error, getErrorMessages, UserMcpcfMigrationError, type D1Error } from "./errors"
+import { d1Error, getErrorMessages, UserMcpcfMigrationError } from "./errors"
+import { runEffectPromise } from "../../lib/effect-promise"
 
 export interface UserMcpcfServerConfigRecord {
   userId: string
@@ -256,14 +256,6 @@ export class UserMcpcfServerConfigStore {
   })
 }
 
-function runUserMcpcfEffect<A>(
-  // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: A is the type parameter, so the error channel must be named explicitly here.
-  effect: Effect.Effect<A, D1Error | UserMcpcfMigrationError>,
-): Promise<A> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect UserMcpcfServerConfigStore to the non-Effect MCP Context Forge server.
-  return Effect.runPromise(effect)
-}
-
 /**
  * Promise-facing view of {@link UserMcpcfServerConfigStore} for the non-Effect MCP Context Forge
  * server. Runs the underlying Effect at this boundary.
@@ -281,12 +273,12 @@ export function createUserMcpcfServerConfigStoreFromD1(
   const store = new UserMcpcfServerConfigStore(
     Match.value(db).pipe(
       Match.when(isControlPlaneDb, (handle) => handle),
-      Match.orElse((d1) => makeD1Drizzle(d1)),
+      Match.orElse((d1) => openD1Drizzle(d1)),
     ),
   )
 
   return {
     listByUserAndServerIds: (userId, serverIds) =>
-      runUserMcpcfEffect(store.listByUserAndServerIds(userId, serverIds)),
+      runEffectPromise(store.listByUserAndServerIds(userId, serverIds)),
   }
 }

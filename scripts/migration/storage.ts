@@ -1,4 +1,3 @@
-/* oxlint-disable effect/avoid-process-env -- Operator-only CLI reads its explicit transfer token bindings. */
 import { parseArgs } from "node:util"
 import { readFile, stat } from "node:fs/promises"
 import * as Schema from "effect/Schema"

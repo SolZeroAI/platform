@@ -8,32 +8,13 @@ export interface GetAiSearchNamespaceNameOptions {
   stageName: string
 }
 
-function isAsciiLowercaseAlphanumeric(character: string): boolean {
-  const code = character.charCodeAt(0)
-
-  return (code >= 48 && code <= 57) || (code >= 97 && code <= 122)
-}
-
+// A single character class has no nested quantifier, so externally supplied stack names cannot trigger backtracking.
 function normalizeNamespaceName(value: string): string {
-  const characters: string[] = []
-  let separatorPending = false
-
-  // oxlint-disable-next-line effect/imperative-loops -- A linear scan avoids regex backtracking on externally supplied stack names.
-  for (const character of value.toLowerCase()) {
-    if (!isAsciiLowercaseAlphanumeric(character)) {
-      separatorPending = characters.length > 0
-      continue
-    }
-
-    if (separatorPending) {
-      characters.push("-")
-      separatorPending = false
-    }
-
-    characters.push(character)
-  }
-
-  return characters.join("")
+  return value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .join("-")
 }
 
 function stageQualifiedNamespaceName(prefix: string, stageName: string): string {

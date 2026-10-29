@@ -75,7 +75,12 @@ export default defineConfig({
     },
     {
       files: nonEffectBoundaryFiles,
-      rules: { ...effectRules("off"), ...observabilityRules("off") },
+      rules: {
+        ...effectRules("off"),
+        ...observabilityRules("off"),
+        // Alchemy Stack.make takes an Effect value. Effect.fn changes its inference.
+        "effect/prefer-effect-fn": "off",
+      },
     },
     {
       // Carried over from the s0-lint allowlist: the runner imports @cloudflare/dynamic-workflows on demand.
@@ -99,6 +104,89 @@ export default defineConfig({
         // These files are already at the 1000-line max-lines cap. The spacing fix pushes them over it.
         "anti-slop/require-readable-spacing": "off",
       },
+    },
+    {
+      // The Worker entrypoint is the Effect runtime edge. Its container outbound handlers proxy raw
+      // requests, so they forward with the Worker fetch instead of an Effect HttpClient.
+      files: ["apps/api/index.ts"],
+      rules: { "effect/effect-run-in-body": "off", "effect/avoid-native-fetch": "off" },
+    },
+    {
+      // The one Promise bridge for the non-Effect background runtime. Its helpers take the caller's
+      // effect, so they name the Effect channels, and they return null for the Promise-facing views.
+      files: ["packages/api/src/server/lib/effect-promise.ts"],
+      rules: {
+        "effect/effect-run-in-body": "off",
+        "solzero/no-manual-effect-channels": "off",
+        "solzero/prefer-option-over-null": "off",
+      },
+    },
+    {
+      // The session Durable Object is a composition root. It builds the tracing layer and the
+      // control plane from its Worker env, then runs Effects through lib/effect-promise.
+      files: [
+        "packages/api/src/server/background/session/durable-object.ts",
+        "packages/api/src/server/background/session/durable-object/*.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The workflow runtime runs outside the HTTP Layer: public routers, the alarm Durable Object,
+      // the dynamic workflow loader, service-binding actions, and node executors. Each entrypoint
+      // builds the control plane and internal clients from its Worker env.
+      files: ["packages/api/src/server/background/workflows/**/*.ts"],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The HTTP composition roots. The runtime installs the logger layer, CloudflareContext and
+      // the API key check build the control plane from the Worker env, and the control-plane
+      // modules open the D1 and Hyperdrive drizzle handles.
+      files: [
+        "packages/api/src/server/effect/db/control-plane-db.ts",
+        "packages/api/src/server/effect/db/postgres-promise-drizzle.ts",
+        "packages/api/src/server/effect/runtime.ts",
+        "packages/api/src/server/effect/services/auth.ts",
+        "packages/api/src/server/effect/services/cloudflare.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // Background modules that run outside the HTTP Layer: the provider catalog, the LiteLLM cron
+      // and config reads, and the sandbox manager and harness provider. Each builds the control
+      // plane from its Worker env.
+      files: [
+        "packages/api/src/server/background/ai-providers/litellm.ts",
+        "packages/api/src/server/background/provider-catalog.ts",
+        "packages/api/src/server/background/sandbox/lifecycle/manager.ts",
+        "packages/api/src/server/background/sandbox/providers/harness-container-provider.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
+      // from the Worker env before the library or MCP SDK takes the request.
+      files: [
+        "packages/api/src/server/lib/better-auth.ts",
+        "packages/api/src/server/mcp/mcpcf-server/runtime.ts",
+        "packages/api/src/server/mcp/workflow-builder/server.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The HTTP workflow node sends a user-authored request and reports the final URL, status
+      // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
+      files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
+      rules: { "effect/avoid-native-fetch": "off" },
+    },
+    {
+      // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
+      // them to the names Alchemy reads) before an Alchemy context exists.
+      files: [
+        "packages/infra/src/database-engine.ts",
+        "packages/infra/src/deploymentMetadata.ts",
+        "packages/infra/src/stack-flags.ts",
+      ],
+      rules: { "effect/avoid-process-env": "off" },
     },
     {
       files: ["packages/infra/alchemy.run.ts", "packages/infra/src/index.ts"],

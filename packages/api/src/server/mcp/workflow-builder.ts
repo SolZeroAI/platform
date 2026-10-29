@@ -1,5 +1,6 @@
 import { createMcpHandler } from "agents/mcp"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import { INTERNAL_WORKFLOW_BUILDER_MCP_ROUTE } from "../background/session/mcp-config"
 import type { Env } from "../background/types"
 import { toError } from "../lib/effect-errors"
@@ -37,6 +38,5 @@ export function handleWorkflowBuilderMcpRequest(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker entry boundary: apps/api index is non-Effect and runs this Effect at the Promise edge.
-  return Effect.runPromise(handleWorkflowBuilderMcpRequestEffect(request, env, ctx))
+  return runEffectPromise(handleWorkflowBuilderMcpRequestEffect(request, env, ctx))
 }

@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement -- DATABASE=planetscale remote is an implementation path. deployment.providers stays Cloudflare only; this merge is Alchemy resource auth, not a cloud provider. */
 import type * as Alchemy from "alchemy"
 import { localState, Stage } from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
@@ -7,7 +6,7 @@ import * as PlanetscaleLogicalDb from "alchemy-planetscale-logical-db"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
-import { getStageMetadataFromConfig } from "@solzero/shared"
+import { getStageMetadataFromConfig, optionalConfigString } from "@solzero/shared"
 import { loadS0ConfigFile, REPO_ROOT } from "./stacks/runtime"
 
 export interface StackOptionsInput {
@@ -17,24 +16,31 @@ export interface StackOptionsInput {
   readonly postgresLogicalDatabase?: boolean
 }
 
+/**
+ * DATABASE=planetscale adds the PlanetScale providers for Alchemy resource auth. The deployment
+ * providers stay Cloudflare only.
+ */
 export function stackProviders(input: StackOptionsInput = {}) {
-  if (input.planetscale || input.postgresLogicalDatabase) {
-    return Layer.mergeAll(
-      Cloudflare.providers(),
-      Planetscale.providers(),
-      PlanetscaleLogicalDb.providers(),
-    )
-  }
-
-  return Cloudflare.providers()
+  return Match.value(Boolean(input.planetscale || input.postgresLogicalDatabase)).pipe(
+    Match.when(true, () =>
+      Layer.mergeAll(
+        Cloudflare.providers(),
+        Planetscale.providers(),
+        PlanetscaleLogicalDb.providers(),
+      ),
+    ),
+    Match.orElse(() => Cloudflare.providers()),
+  )
 }
 
 export function stackState() {
   return Layer.unwrap(
     Effect.gen(function* () {
       const stage = yield* Stage
-      // oxlint-disable-next-line effect/avoid-process-env -- An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
-      const configProfile = process.env.S0_CONFIG_PROFILE
+
+      // An explicit operator-selected profile chooses a complete local deployment config without changing the Alchemy stage.
+      const configProfile = yield* optionalConfigString("S0_CONFIG_PROFILE")
+
       const s0Config = loadS0ConfigFile(REPO_ROOT, stage, configProfile)
 
       const metadata = yield* getStageMetadataFromConfig(

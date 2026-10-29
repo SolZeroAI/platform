@@ -8,6 +8,10 @@ import { createWorkflowStoreFromD1 } from "../../db/workflows"
 import type { Env } from "../../types"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import type * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { log } from "./log"
@@ -686,21 +690,11 @@ export const normalizeSlackInteraction = Effect.fn("workflows.slack.normalizeInt
 
 const applyHydratedChannelName = Effect.fn("workflows.slack.applyHydratedChannelName")(function* (
   payload: NormalizedSlackPayload,
-  response: Response,
+  response: HttpClientResponse.HttpClientResponse,
 ) {
   const data =
-    /* SAFETY: The JSON body is the Record<string, unknown> | null shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
-      {
-        try: () =>
-          /* SAFETY: The JSON body is the Promise<Record<string, unknown>> shape read by this caller after the response arrives. */ response.json() as Promise<
-            Record<string, unknown>
-          >,
-        catch: () =>
-          /* SAFETY: This branch has no Record<string, unknown>, so the result is null. */ null as Record<
-            string,
-            unknown
-          > | null,
-      },
+    /* SAFETY: The JSON body is the Record<string, unknown> | null shape read by this caller after the response arrives. */ (yield* response.json.pipe(
+      Effect.mapError(() => null),
     )) as Record<string, unknown> | null
 
   const channelName = Option.flatMap(Option.fromNullishOr(data), (resolved) =>
@@ -735,27 +729,21 @@ const fetchHydratedChannelName = Effect.fn("workflows.slack.fetchHydratedChannel
     const url = new URL("https://slack.com/api/conversations.info")
     url.searchParams.set("channel", input.payload.channelId ?? "")
 
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (Slack conversations.info) inside a Worker entry handler; no HttpClient layer is in scope for this public-router path.
-        fetch(url.toString(), {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${input.botToken}`,
-          },
-        }),
-      catch: () =>
-        /* SAFETY: This branch has no Response, so the result is null. */ null as Response | null,
-    })
+    const response = yield* HttpClient.execute(
+      HttpClientRequest.get(url.toString(), {
+        headers: { Authorization: `Bearer ${input.botToken}` },
+      }),
+    ).pipe(
+      Effect.provideService(FetchHttpClient.Fetch, fetch),
+      Effect.provide(FetchHttpClient.layer),
+      Effect.mapError(() => null),
+    )
 
-    return yield* Match.value(Boolean(response?.ok)).pipe(
+    const httpOk = response.status >= 200 && response.status < 300
+
+    return yield* Match.value(httpOk).pipe(
       Match.when(false, () => Effect.succeed(input.payload)),
-      Match.orElse(() =>
-        applyHydratedChannelName(
-          input.payload,
-          /* SAFETY: response has the Response shape established by the check or writer around this read. */ response as Response,
-        ),
-      ),
+      Match.orElse(() => applyHydratedChannelName(input.payload, response)),
     )
   },
 )

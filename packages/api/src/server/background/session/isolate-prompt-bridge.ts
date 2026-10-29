@@ -17,7 +17,7 @@ import type { IsolateSessionRuntime } from "../isolate/runtime"
 import { parseAgentToolEventMessage, sanitizeParentToolCallArgs } from "../isolate/agent/delegation"
 import { projectSubagentSessionEvent } from "../isolate/agent/subagent-event-projection"
 import type { PromptExecutionMode, SandboxEvent } from "../types"
-import { decodeJsonRecord } from "../../lib/json"
+import { decodeJsonRecord, stringifyJsonPretty } from "../../lib/json"
 
 class IsolatePromptStreamCallback extends RpcTarget implements StreamCallback {
   constructor(
@@ -134,8 +134,7 @@ async function emitIsolateToolResult(input: {
   const resultText = Match.value(input.result).pipe(
     Match.when(Match.undefined, () => ""),
     Match.when(Match.string, (value) => value),
-    // oxlint-disable-next-line effect/avoid-direct-json -- AI-SDK tool-result rendering boundary: 2-space pretty-printed JSON is the established displayed/persisted tool output; the compact Schema JSON helper would change it.
-    Match.orElse((value) => JSON.stringify(value, null, 2)),
+    Match.orElse(stringifyJsonPretty),
   )
 
   const errorText = Match.value(input.error).pipe(

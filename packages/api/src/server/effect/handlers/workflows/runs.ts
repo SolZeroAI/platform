@@ -17,6 +17,7 @@ import {
 } from "../../../background/workflows/runner"
 import { prefixStorageKeyWithUserId } from "../../../lib/better-auth"
 import { parseJson, parseJsonOrText, stringifyJson } from "../../../lib/json"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import type { ControlPlaneDb } from "../../db/control-plane-db"
 import type { D1DrizzleDatabase } from "../../db/d1-drizzle"
 import { EffectRequestLogger, type RequestLogger } from "../../services/observability"
@@ -493,8 +494,7 @@ function createRunEventsStreamResponse(input: {
 
       const runSnapshotTick = async () => {
         sending = true
-        // oxlint-disable-next-line effect/effect-run-in-body -- Web Streams boundary: SSE ticks fire from setInterval after the Effect handler has returned, so the snapshot Effect must be run to a Promise here to feed the imperative ReadableStream controller.
-        await Effect.runPromise(
+        await runEffectPromise(
           getRunsSnapshot({ env, store, workflow, workflowId, requestedRunId }),
         )
           .then((snapshot) => controller.enqueue(encodeSse("snapshot", snapshot)))

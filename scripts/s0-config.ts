@@ -1,4 +1,3 @@
-/* oxlint-disable effect/avoid-process-env, solzero/avoid-untagged-errors -- CLI boundary reads operator arguments directly. */
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import dotenv from "dotenv"

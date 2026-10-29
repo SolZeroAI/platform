@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- This is a redaction boundary from full child replay events to compact workflow disclosures; explicit guards make every allowed field visible. */
 import {
   sanitizeSubagentCompactError,
   sanitizeSubagentCompactLabel,
@@ -12,11 +11,8 @@ import {
   type WorkflowCallbackContext,
 } from "@solzero/shared"
 import { decodeJsonRecord, parseJson } from "../../lib/json"
-import { createWorkflowStoreFromD1, type WorkflowStorePromise } from "../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the session Durable Object env at the workflow-mirror composition edge.
-import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
-import { parseSubagentChunkActivity } from "../isolate/agent/delegation"
-import type { Env } from "../types"
+import type { WorkflowStorePromise } from "../db/workflows"
+import { parseSubagentChunkActivity, type SubagentChunkActivity } from "../isolate/agent/delegation"
 import type { SessionRepository } from "./repository"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
@@ -87,45 +83,57 @@ function terminalData(
   )
 }
 
+function presentText(value: string | undefined) {
+  return Option.fromUndefinedOr(value).pipe(Option.filter((text) => text.length > 0))
+}
+
 function compactProgress(progress: SubagentProgress): SubagentProgress {
-  const compact: SubagentProgress = { ...progress }
+  return {
+    ...progress,
+    ...Option.match(presentText(progress.message), {
+      onNone: () => ({}),
+      onSome: (message) => ({ message: sanitizeSubagentCompactProgress(message) }),
+    }),
+    ...Option.match(presentText(progress.phase), {
+      onNone: () => ({}),
+      onSome: (phase) => ({ phase: sanitizeSubagentCompactLabel(phase) }),
+    }),
+    ...Option.match(presentText(progress.milestone), {
+      onNone: () => ({}),
+      onSome: (milestone) => ({ milestone: sanitizeSubagentCompactLabel(milestone) }),
+    }),
+  }
+}
 
-  if (progress.message) compact.message = sanitizeSubagentCompactProgress(progress.message)
+function progressDescriptor(progress: SubagentProgress): WorkflowMirrorDescriptor {
+  return {
+    eventType: "subagent_progress",
+    level: "info",
+    message: progress.message ?? "Sub-agent progress updated",
+    data: { status: "running", progress },
+  }
+}
 
-  if (progress.phase) compact.phase = sanitizeSubagentCompactLabel(progress.phase)
-
-  if (progress.milestone) compact.milestone = sanitizeSubagentCompactLabel(progress.milestone)
-
-  return compact
+function activityDescriptor(activity: SubagentChunkActivity): WorkflowMirrorDescriptor {
+  return Option.match(Option.fromUndefinedOr(activity.progress), {
+    onNone: () => ({
+      eventType: "subagent_activity",
+      level: "info",
+      message: `Sub-agent called ${activity.toolName}`,
+      data: {
+        status: "running",
+        toolName: activity.toolName,
+        toolCallId: activity.toolCallId,
+      },
+    }),
+    onSome: (progress) => progressDescriptor(compactProgress(progress)),
+  })
 }
 
 function describeChunk(body: string): Option.Option<WorkflowMirrorDescriptor> {
-  const activity = parseSubagentChunkActivity(body)
-
-  if (!activity || (!activity.toolName && !activity.progress)) {
-    return Option.none()
-  }
-
-  const progress = activity.progress && compactProgress(activity.progress)
-
-  return someDescriptor(
-    progress
-      ? {
-          eventType: "subagent_progress",
-          level: "info",
-          message: progress.message ?? "Sub-agent progress updated",
-          data: { status: "running", progress },
-        }
-      : {
-          eventType: "subagent_activity",
-          level: "info",
-          message: `Sub-agent called ${activity.toolName}`,
-          data: {
-            status: "running",
-            toolName: activity.toolName,
-            toolCallId: activity.toolCallId,
-          },
-        },
+  return Option.fromNullishOr(parseSubagentChunkActivity(body)).pipe(
+    Option.filter((activity) => Boolean(activity.toolName) || Boolean(activity.progress)),
+    Option.map(activityDescriptor),
   )
 }
 
@@ -225,21 +233,20 @@ async function authorizeStoredWorkflowRun(
 ): Promise<Option.Option<WorkflowCallbackContext>> {
   const run = Option.fromNullishOr(await workflowStore.getRun(context.workflowId, context.runId))
 
-  return Option.match(run, {
-    onNone: () => Option.none<WorkflowCallbackContext>(),
-    onSome: (storedRun) =>
-      storedRun.user_id === participantUserId ? Option.some(context) : Option.none(),
-  })
+  return run.pipe(
+    Option.filter((storedRun) => storedRun.user_id === participantUserId),
+    Option.map(() => context),
+  )
 }
 
 /** Mirror only compact, redacted child lifecycle into the workflow event stream. */
 export async function mirrorSubagentWorkflowEvent(input: {
-  env: Env
+  workflowStore: WorkflowStorePromise
   repository: SessionRepository
   sessionId: string
   event: SubagentSessionEvent
 }): Promise<void> {
-  const workflowStore = createWorkflowStoreFromD1(makeControlPlaneFromEnv(input.env))
+  const { workflowStore } = input
 
   const workflow = await authorizedWorkflowContext({
     repository: input.repository,

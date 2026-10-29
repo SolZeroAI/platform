@@ -4,7 +4,7 @@ import {
   type WorkflowManifest,
   type WorkflowManifestNode,
 } from "@solzero/shared"
-import { stringifyJson } from "../../lib/json"
+import { stringifyJson, stringifyJsonPretty } from "../../lib/json"
 import {
   CURRENT_WORKFLOW_RUNTIME_ABI_VERSION,
   getWorkflowRuntimeKernelModuleName,
@@ -589,14 +589,8 @@ export function compileWorkflowToJavaScript(manifest: WorkflowManifest): string 
 import { createWorkflowRuntimeKernel, normalizeActionResult } from "./${runtimeKernelModuleName}";
 
 const WORKFLOW_RUNTIME_ABI_VERSION = ${runtimeAbiVersion};
-const MANIFEST = ${
-    // oxlint-disable-next-line effect/avoid-direct-json -- Emits the manifest into the compiled workflow ABI artifact with exact 2-space pretty-printing; the sanctioned `stringifyJson` helper is compact and would change persisted artifact bytes and the runtime ABI fingerprint.
-    JSON.stringify(manifest, null, 2)
-  };
-const ACTION_ORDER = ${
-    // oxlint-disable-next-line effect/avoid-direct-json -- Emits the action order into the compiled workflow ABI artifact with exact 2-space pretty-printing; the sanctioned `stringifyJson` helper is compact and would change persisted artifact bytes and the runtime ABI fingerprint.
-    JSON.stringify(actionOrder, null, 2)
-  };
+const MANIFEST = ${stringifyJsonPretty(manifest)};
+const ACTION_ORDER = ${stringifyJsonPretty(actionOrder)};
 const KERNEL = createWorkflowRuntimeKernel(MANIFEST);
 const NODE_BY_ID = new Map(MANIFEST.nodes.map((node) => [node.id, node]));
 const ACTION_STEP_CONFIG = { timeout: "30 minutes" };
