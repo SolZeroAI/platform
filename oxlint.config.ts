@@ -19,6 +19,8 @@ const nonEffectBoundaryFiles = ["packages/infra/alchemy*.run.ts", "packages/infr
 
 export default defineConfig({
   extends: [recommended],
+  // A disable comment that suppresses nothing fails lint, so stale suppressions cannot pile up.
+  options: { reportUnusedDisableDirectives: "error" },
   plugins: ["unicorn", "typescript", "oxc", "react"],
   jsPlugins: [{ name: "effect", specifier: "@mpsuesser/oxlint-plugin-effect" }],
   ignorePatterns: [
