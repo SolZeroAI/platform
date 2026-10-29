@@ -8,6 +8,7 @@ import {
   type SessionToolSpec,
   type UnavailableSessionTool,
 } from "@solzero/shared"
+import * as Predicate from "effect/Predicate"
 
 export interface SessionItem {
   id: string
@@ -27,6 +28,16 @@ export interface SessionItem {
   status: SessionStatus | string
   createdAt: number
   updatedAt: number
+}
+
+/** Narrows one session-list row from the API's JSON record contract. */
+export function isSessionItem(value: unknown): value is SessionItem {
+  return (
+    Predicate.hasProperty(value, "id") &&
+    Predicate.isString(value.id) &&
+    Predicate.hasProperty(value, "status") &&
+    Predicate.isString(value.status)
+  )
 }
 
 export interface ArchiveSessionFailure {

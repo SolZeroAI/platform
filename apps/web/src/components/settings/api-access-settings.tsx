@@ -1,5 +1,6 @@
 "use client"
 
+import type { McpcfContextForgeTokenSettings } from "@solzero/api"
 import { ExternalLink } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -9,6 +10,7 @@ import {
   useAuthProviderConfig,
   useAuthSession,
 } from "@/lib/auth-client"
+import { runApi } from "@/lib/api-client"
 import { copyToClipboard } from "@/lib/format"
 import { getAppStageMetadata } from "@/lib/runtime-config"
 import { appToastManager } from "@/lib/toast-manager"
@@ -70,13 +72,7 @@ interface SessionTransferPayload {
   error?: string
 }
 
-interface ContextForgeTokenSettings {
-  configured: boolean
-  contextForgeUrl?: string
-  contextForgeApiKeysUrl?: string
-  tokenAuthServerCount: number
-  error?: string
-}
+type ContextForgeTokenSettings = McpcfContextForgeTokenSettings
 
 interface ApiAccessSettingsProps {
   oktaReconnect?: OktaReconnectStatus
@@ -211,28 +207,17 @@ export function ApiAccessSettings({
     setErrorMessage(null)
 
     try {
-      const [keysResponse, accountsResult, contextForgeTokenResponse] = await Promise.all([
-        fetch("/api/auth/api-keys"),
+      const [keysData, accountsResult, contextForgeTokenData] = await Promise.all([
+        runApi((client) => client.auth.listApiKeys(), {
+          fallbackMessage: "Failed to load API keys",
+        }),
         authClient.listAccounts(),
-        fetch("/api/sessions/mcpcf/contextforge-token"),
+        runApi((client) => client.sessions.mcpcfContextForgeTokenSettings(), {
+          fallbackMessage: "Failed to load ContextForge token settings",
+        }),
       ])
 
-      if (!keysResponse.ok) {
-        throw new Error("Failed to load API keys")
-      }
-
-      if (!contextForgeTokenResponse.ok) {
-        throw new Error("Failed to load ContextForge token settings")
-      }
-
-      // SAFETY: GET /api/auth/api-keys returns the keys list after the keys response succeeds.
-      const keysData = (await keysResponse.json()) as { keys?: ApiKeyItem[] }
-
-      const contextForgeTokenData =
-        // SAFETY: The ContextForge token response matches ContextForgeTokenSettings after response.ok.
-        (await contextForgeTokenResponse.json()) as ContextForgeTokenSettings
-
-      setApiKeys(keysData.keys ?? [])
+      setApiKeys([...keysData.keys])
       setAccounts(normalizeAccounts(accountsResult))
       setContextForgeTokenSettings(contextForgeTokenData)
       setContextForgeToken("")
@@ -505,26 +490,22 @@ export function ApiAccessSettings({
     setErrorMessage(null)
     setNewApiKey(null)
 
-    const response = await fetch("/api/auth/api-keys", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: apiKeyLabel.trim() || undefined }),
-    })
+    const label = apiKeyLabel.trim()
 
-    // SAFETY: POST /api/auth/api-keys returns the created key or an error string.
-    const payload = (await response.json()) as {
-      error?: string
-      key?: string
-    }
+    try {
+      const created = await runApi(
+        (client) => client.auth.createApiKey({ payload: label ? { label } : {} }),
+        { fallbackMessage: "Failed to create API key" },
+      )
 
-    if (!response.ok) {
-      setErrorMessage(payload.error ?? "Failed to create API key")
+      setNewApiKey(created.key)
+    } catch (caught) {
+      setErrorMessage(caught instanceof Error ? caught.message : "Failed to create API key")
 
       return
     }
 
     setApiKeyLabel("")
-    setNewApiKey(payload.key ?? null)
     setStatusMessage("API key created.")
     await load()
   }
@@ -533,15 +514,12 @@ export function ApiAccessSettings({
     setStatusMessage(null)
     setErrorMessage(null)
 
-    const response = await fetch(`/api/auth/api-keys/${encodeURIComponent(keyId)}`, {
-      method: "DELETE",
-    })
-
-    // SAFETY: DELETE /api/auth/api-keys/:id returns an error string when the delete fails.
-    const payload = (await response.json()) as { error?: string }
-
-    if (!response.ok) {
-      setErrorMessage(payload.error ?? "Failed to revoke API key")
+    try {
+      await runApi((client) => client.auth.deleteApiKey({ params: { keyId } }), {
+        fallbackMessage: "Failed to revoke API key",
+      })
+    } catch (caught) {
+      setErrorMessage(caught instanceof Error ? caught.message : "Failed to revoke API key")
 
       return
     }
@@ -555,20 +533,23 @@ export function ApiAccessSettings({
     setStatusMessage(null)
     setErrorMessage(null)
 
-    const response = await fetch("/api/sessions/mcpcf/contextforge-token", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: contextForgeToken.trim() || undefined,
-        clearToken: clearContextForgeToken,
-      }),
-    })
+    const token = contextForgeToken.trim()
+    let payload: ContextForgeTokenSettings
 
-    // SAFETY: The ContextForge token update returns ContextForgeTokenSettings, with an error when response.ok is false.
-    const payload = (await response.json().catch(() => ({}))) as ContextForgeTokenSettings
-
-    if (!response.ok) {
-      setErrorMessage(payload.error ?? "Failed to save ContextForge API token")
+    try {
+      payload = await runApi(
+        (client) =>
+          client.sessions.updateMcpcfContextForgeTokenSettings({
+            payload: token
+              ? { token, clearToken: clearContextForgeToken }
+              : { clearToken: clearContextForgeToken },
+          }),
+        { fallbackMessage: "Failed to save ContextForge API token" },
+      )
+    } catch (caught) {
+      setErrorMessage(
+        caught instanceof Error ? caught.message : "Failed to save ContextForge API token",
+      )
 
       return
     }

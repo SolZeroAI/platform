@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { HttpApiSchema } from "effect/http-api"
 import { JsonRecord } from "./common"
 
 export const CreateApiKeyPayload = Schema.Struct({
@@ -37,6 +38,9 @@ export class CreatedApiKeyResponse extends Schema.Class<CreatedApiKeyResponse>(
   label: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
 }) {}
+
+/** The create route answers 201 Created. */
+export const CreatedApiKeySuccess = CreatedApiKeyResponse.pipe(HttpApiSchema.status(201))
 
 export class ApiKeysResponse extends Schema.Class<ApiKeysResponse>("ApiKeysResponse")({
   keys: Schema.Array(ApiKeyResponse),

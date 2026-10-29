@@ -3,7 +3,7 @@ import { CommonErrors, NotFoundError } from "../errors"
 import {
   ApiKeysResponse,
   AuthSessionResponse,
-  CreatedApiKeyResponse,
+  CreatedApiKeySuccess,
   CreateApiKeyPayload,
   KeyIdParams,
 } from "../schemas/auth"
@@ -18,7 +18,7 @@ export class AuthGroup extends HttpApiGroup.make("auth")
     }).annotateMerge(OpenApi.annotations({ summary: "Get authenticated session" })),
     HttpApiEndpoint.post("createApiKey", "/api-keys", {
       payload: CreateApiKeyPayload,
-      success: CreatedApiKeyResponse,
+      success: CreatedApiKeySuccess,
       error: CommonErrors,
     }).annotateMerge(OpenApi.annotations({ summary: "Create API key" })),
     HttpApiEndpoint.get("listApiKeys", "/api-keys", {
