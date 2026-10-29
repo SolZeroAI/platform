@@ -25,58 +25,52 @@ export function sessionKindForAgentRuntime(agentRuntime: AgentRuntime): SessionK
   return agentRuntime === "isolate" ? "isolate" : "sandbox"
 }
 
+const PROVIDER_COMPATIBILITY: Record<
+  AgentRuntime,
+  (providerId: string, providerApi: string | undefined) => boolean
+> = {
+  isolate: () => true,
+  opencode: (providerId, providerApi) =>
+    providerId === "litellm" ||
+    providerId === "litellm-anthropic" ||
+    (providerId === "cloudflare-ai-gateway" &&
+      (providerApi === "responses" ||
+        providerApi === "chat_completions" ||
+        providerApi === "messages")),
+  codex: (providerId, providerApi) =>
+    providerId === "litellm" ||
+    (providerId === "cloudflare-ai-gateway" && providerApi === "responses"),
+  "claude-code": (providerId, providerApi) =>
+    providerId === "litellm-anthropic" ||
+    (providerId === "cloudflare-ai-gateway" && providerApi === "messages"),
+}
+
+const MODEL_COMPATIBILITY_DESCRIPTIONS: Record<AgentRuntime, string> = {
+  isolate: "any configured model",
+  opencode: "Cloudflare AI Gateway or LiteLLM models",
+  codex: "Cloudflare AI Gateway OpenAI Responses or LiteLLM OpenAI-compatible models",
+  "claude-code": "Cloudflare AI Gateway or LiteLLM Anthropic Messages models",
+}
+
+const AGENT_RUNTIME_LABELS: Record<AgentRuntime, string> = {
+  isolate: "Isolate",
+  opencode: "OpenCode",
+  codex: "Codex",
+  "claude-code": "Claude Code",
+}
+
 export function isAgentRuntimeCompatibleWithProvider(
   agentRuntime: AgentRuntime,
   providerId: string,
   providerApi?: string,
 ): boolean {
-  switch (agentRuntime) {
-    case "isolate":
-      return true
-    case "opencode":
-      return (
-        providerId === "litellm" ||
-        providerId === "litellm-anthropic" ||
-        (providerId === "cloudflare-ai-gateway" &&
-          (providerApi === "responses" ||
-            providerApi === "chat_completions" ||
-            providerApi === "messages"))
-      )
-    case "codex":
-      return (
-        providerId === "litellm" ||
-        (providerId === "cloudflare-ai-gateway" && providerApi === "responses")
-      )
-    case "claude-code":
-      return (
-        providerId === "litellm-anthropic" ||
-        (providerId === "cloudflare-ai-gateway" && providerApi === "messages")
-      )
-  }
+  return PROVIDER_COMPATIBILITY[agentRuntime](providerId, providerApi)
 }
 
 export function describeAgentRuntimeModelCompatibility(agentRuntime: AgentRuntime): string {
-  switch (agentRuntime) {
-    case "isolate":
-      return "any configured model"
-    case "opencode":
-      return "Cloudflare AI Gateway or LiteLLM models"
-    case "codex":
-      return "Cloudflare AI Gateway OpenAI Responses or LiteLLM OpenAI-compatible models"
-    case "claude-code":
-      return "Cloudflare AI Gateway or LiteLLM Anthropic Messages models"
-  }
+  return MODEL_COMPATIBILITY_DESCRIPTIONS[agentRuntime]
 }
 
 export function formatAgentRuntimeLabel(agentRuntime: AgentRuntime): string {
-  switch (agentRuntime) {
-    case "isolate":
-      return "Isolate"
-    case "opencode":
-      return "OpenCode"
-    case "codex":
-      return "Codex"
-    case "claude-code":
-      return "Claude Code"
-  }
+  return AGENT_RUNTIME_LABELS[agentRuntime]
 }

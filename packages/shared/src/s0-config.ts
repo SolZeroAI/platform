@@ -1,12 +1,16 @@
-/* oxlint-disable solzero/avoid-untagged-errors, solzero/no-if-statement, solzero/no-return-in-arrow, solzero/no-ternary, solzero/prefer-option-over-null, effect/avoid-direct-json -- JSONC compilation is a synchronous deployment boundary; explicit validation keeps configuration failures path-specific. */
 import * as Match from "effect/Match"
+import * as Option from "effect/Option"
+import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import { AdminConfigSchema, normalizeAdminConfig, type AdminConfig } from "./admin"
 import {
   AuthProviderRegistrySchema,
-  normalizeAuthProviderRegistry,
+  validateAuthProviderRegistry,
   type AuthProviderRegistry,
+  type SocialAuthProviderConfig,
 } from "./auth"
+import { ConfigValidationError, ensureConfig, invalidS0Config, normalizeUrl } from "./config-error"
+import { stringifyJson } from "./json"
 import {
   ProviderModelDefinitionSchema,
   ReasoningEffortSchema,
@@ -29,7 +33,6 @@ export type { S0DatabaseEngine }
 
 const SamplingRateSchema = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
 
-// oxlint-disable-next-line effect/prefer-schema-class -- public branding is a browser-safe JSON DTO.
 export const S0BrandConfigSchema = Schema.Struct({
   name: Schema.String.check(Schema.isMinLength(1)),
   logoLightPath: Schema.String.check(Schema.isMinLength(1)),
@@ -40,7 +43,6 @@ export const S0BrandConfigSchema = Schema.Struct({
 
 export type S0BrandConfig = typeof S0BrandConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- PlanetScale provisioning is a deployment JSON DTO, not Worker state.
 export const S0PlanetscaleConfigSchema = Schema.Struct({
   clusterSize: Schema.String.check(Schema.isPattern(/^[A-Z0-9]+(?:[_-][A-Z0-9]+)*$/)),
   logicalDatabaseName: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,62}$/)),
@@ -68,7 +70,6 @@ function normalizeS0Brand(brand: S0BrandConfig): S0BrandConfig {
   )
 }
 
-// oxlint-disable-next-line effect/prefer-schema-class -- root deployment configuration is a plain JSON DTO
 export const S0DeploymentConfigSchema = Schema.Struct({
   appName: Schema.String,
   zone: Schema.String,
@@ -85,7 +86,6 @@ export const S0DeploymentConfigSchema = Schema.Struct({
 
 export type S0DeploymentConfig = typeof S0DeploymentConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- application configuration is a plain JSON DTO
 export const S0ApplicationConfigSchema = Schema.Struct({
   logLevel: Schema.Literals(["trace", "debug"]),
   sendSlackNotifications: Schema.Boolean,
@@ -97,7 +97,6 @@ export const S0ApplicationConfigSchema = Schema.Struct({
 
 export type S0ApplicationConfig = typeof S0ApplicationConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- runtime bootstrap configuration mirrors the existing KV record without persistence metadata
 export const S0LitellmConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   baseUrl: Schema.String,
@@ -109,7 +108,6 @@ export const S0LitellmConfigSchema = Schema.Struct({
 
 export type S0LitellmConfig = typeof S0LitellmConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- deployment-managed AI Gateway configuration is a plain JSON DTO
 export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   cacheTtl: Schema.NullOr(Schema.Number),
@@ -127,7 +125,6 @@ export const S0CloudflareAiGatewayConfigSchema = Schema.Struct({
 
 export type S0CloudflareAiGatewayConfig = typeof S0CloudflareAiGatewayConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- runtime bootstrap configuration mirrors the existing KV record without persistence metadata
 export const S0McpcfConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   baseUrl: Schema.String,
@@ -140,7 +137,6 @@ export const S0McpcfConfigSchema = Schema.Struct({
 
 export type S0McpcfConfig = typeof S0McpcfConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- integration configuration is a plain JSON DTO
 export const S0GitHubAppConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   appId: Schema.String,
@@ -156,7 +152,6 @@ export const S0GitHubAppConfigSchema = Schema.Struct({
 
 export type S0GitHubAppConfig = typeof S0GitHubAppConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- integration configuration is a plain JSON DTO
 export const S0SlackConfigSchema = Schema.Struct({
   enabled: Schema.Boolean,
   botToken: SecretReferenceSchema,
@@ -164,7 +159,6 @@ export const S0SlackConfigSchema = Schema.Struct({
 
 export type S0SlackConfig = typeof S0SlackConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- internal secret declarations are references, never secret values
 export const S0SecurityConfigSchema = Schema.Struct({
   betterAuthSecret: SecretReferenceSchema,
   mcpcfProxySigningSecret: SecretReferenceSchema,
@@ -174,7 +168,6 @@ export const S0SecurityConfigSchema = Schema.Struct({
 
 export type S0SecurityConfig = typeof S0SecurityConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- auth deployment config combines the public provider registry with its credential secret declaration
 export const S0AuthConfigSchema = Schema.Struct({
   defaultSignInProviderId: Schema.String,
   providers: AuthProviderRegistrySchema.fields.providers,
@@ -206,7 +199,6 @@ const S0ResolvedConfigFields = {
   }),
 } as const
 
-// oxlint-disable-next-line effect/prefer-schema-class -- resolved deployment config crosses infra and Worker JSON boundaries
 export const S0ResolvedConfigSchema = Schema.Struct({
   ...S0ResolvedConfigFields,
   brand: S0BrandConfigSchema,
@@ -214,7 +206,6 @@ export const S0ResolvedConfigSchema = Schema.Struct({
 
 export type S0ResolvedConfig = typeof S0ResolvedConfigSchema.Type
 
-// oxlint-disable-next-line effect/prefer-schema-class -- external JSONC is decoded to a plain DTO used by infra and Worker bindings
 export const S0ConfigFileSchema = Schema.Struct({
   $schema: Schema.optional(Schema.String),
   ...S0ResolvedConfigFields,
@@ -232,37 +223,42 @@ export const S0_CONFIG_JSON_SCHEMA_OPTIONS = {
   onExcessProperty: "error",
 } as const
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
+const S0_CONFIG_PROFILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
-  const normalized = stage.trim().toLowerCase()
-
-  if (normalized === "prod") return "prod"
-
-  if (normalized === "test") return "test"
-
-  if (normalized === "pre" || normalized.startsWith("pre-")) return "pre"
-
-  if (normalized === "dev") return "dev"
-  throw new Error(
-    `Invalid stage '${stage}' for s0 config file selection. Expected dev, test, pre, pre-*, or prod`,
+  return Match.value(stage.trim().toLowerCase()).pipe(
+    Match.when(
+      (normalized) => normalized.startsWith("pre-"),
+      (): S0ConfigStageName => "pre",
+    ),
+    Match.when(Match.is(...S0_CONFIG_STAGE_NAMES), (normalized) => normalized),
+    Match.option,
+    Result.fromOption(
+      () =>
+        new ConfigValidationError({
+          message: `Invalid stage '${stage}' for s0 config file selection. Expected dev, test, pre, pre-*, or prod`,
+        }),
+    ),
+    Result.getOrThrow,
   )
 }
 
 function s0ConfigProfilePrefix(profile: string | undefined): string {
-  const normalized = profile?.trim().toLowerCase() ?? ""
-
-  if (!normalized) return ""
-
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
-    throw new Error(
-      `Invalid s0 config profile '${profile}'. Expected lowercase letters, numbers, and hyphens`,
-    )
-  }
-
-  return `${normalized}-`
+  return Match.value(profile?.trim().toLowerCase() ?? "").pipe(
+    Match.when("", () => Result.succeed("")),
+    Match.when(
+      (normalized) => S0_CONFIG_PROFILE_PATTERN.test(normalized),
+      (normalized) => Result.succeed(`${normalized}-`),
+    ),
+    Match.orElse(() =>
+      Result.fail(
+        new ConfigValidationError({
+          message: `Invalid s0 config profile '${profile}'. Expected lowercase letters, numbers, and hyphens`,
+        }),
+      ),
+    ),
+    Result.getOrThrow,
+  )
 }
 
 export function s0ConfigFileNameForStage(stage: string, profile?: string): string {
@@ -286,282 +282,277 @@ function normalizeTextArray(values: readonly string[]): string[] {
   ].sort()
 }
 
-function normalizeOptionalUrl(value: string | null | undefined, path: string): string | null {
-  const normalized = value?.trim() ?? ""
-
-  if (!normalized) return null
-
-  try {
-    return new URL(normalized).toString().replace(/\/+$/, "")
-  } catch {
-    throw new Error(`Invalid s0 configuration: ${path} must be a valid URL`)
-  }
+/** A blank URL is absent. A present URL must parse, and loses its trailing slashes. */
+function normalizeOptionalUrl(value: string | null | undefined, path: string) {
+  return Option.match(Option.liftPredicate(value?.trim() ?? "", Boolean), {
+    onNone: () => Result.succeedNone,
+    onSome: (url) =>
+      normalizeUrl(url, () => invalidS0Config(`${path} must be a valid URL`)).pipe(
+        Result.map(Option.some),
+      ),
+  })
 }
 
-function normalizeCloudflareAiGatewayConfig(
-  config: S0CloudflareAiGatewayConfig,
-): S0CloudflareAiGatewayConfig {
-  if (config.cacheTtl !== null && (!Number.isFinite(config.cacheTtl) || config.cacheTtl <= 0)) {
-    throw new Error(
-      "Invalid s0 configuration: aiProviders.cloudflareAiGateway.cacheTtl must be null or a positive number of seconds",
-    )
-  }
-
-  const models: Record<string, ProviderModelDefinition> = {}
-
-  for (const [rawModelId, model] of Object.entries(config.models)) {
-    const modelId = rawModelId.trim()
-
-    if (!modelId) {
-      throw new Error(
-        "Invalid s0 configuration: aiProviders.cloudflareAiGateway model ids must be non-empty",
-      )
-    }
-
-    if (models[modelId]) {
-      throw new Error(
-        `Invalid s0 configuration: duplicate aiProviders.cloudflareAiGateway model '${modelId}'`,
-      )
-    }
-
-    models[modelId] = {
-      ...model,
-      name: model.name.trim(),
-    }
-  }
-
-  const defaultModel = config.defaultModel.trim()
-
-  if (config.enabled && Object.keys(models).length === 0) {
-    throw new Error(
-      "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires at least one model",
-    )
-  }
-
-  if (config.enabled && !defaultModel) {
-    throw new Error(
-      "Invalid s0 configuration: enabled aiProviders.cloudflareAiGateway requires a defaultModel",
-    )
-  }
-
-  if (defaultModel && !models[defaultModel]) {
-    throw new Error(
-      `Invalid s0 configuration: aiProviders.cloudflareAiGateway.defaultModel '${defaultModel}' is not in models`,
-    )
-  }
-
-  return {
-    ...config,
-    defaultModel,
-    models,
-  }
+function normalizeOptionalSecret(value: SecretReference | null | undefined, path: string) {
+  return Option.match(Option.fromNullishOr(value), {
+    onNone: () => Result.succeed(undefined),
+    onSome: (reference) => normalizeSecretReference(reference, path),
+  })
 }
 
-function validateGitHubAppAuthProvider(
-  auth: AuthProviderRegistry,
-  githubApp: S0GitHubAppConfig,
-): void {
-  if (!githubApp.enabled) return
-
-  const provider = auth.providers.github
-
-  if (!provider) {
-    throw new Error(
-      "Invalid s0 configuration: enabled integrations.githubApp requires auth.providers.github",
+const normalizeCloudflareAiGatewayConfig = (config: S0CloudflareAiGatewayConfig) =>
+  Result.gen(function* () {
+    yield* ensureConfig(
+      config.cacheTtl === null || (Number.isFinite(config.cacheTtl) && config.cacheTtl > 0),
+      () =>
+        invalidS0Config(
+          "aiProviders.cloudflareAiGateway.cacheTtl must be null or a positive number of seconds",
+        ),
     )
-  }
 
-  if (provider.kind !== "social" || !provider.enabled) {
-    throw new Error(
-      "Invalid s0 configuration: auth.providers.github must be an enabled social provider when integrations.githubApp is enabled",
+    const entries = Object.entries(config.models).map(
+      ([modelId, model]) => [modelId.trim(), { ...model, name: model.name.trim() }] as const,
     )
-  }
 
-  if (!provider.capabilities.link) {
-    throw new Error(
-      "Invalid s0 configuration: auth.providers.github must allow explicit account linking when integrations.githubApp is enabled",
-    )
-  }
-
-  if (provider.clientId !== githubApp.clientId) {
-    throw new Error(
-      "Invalid s0 configuration: auth.providers.github.clientId must match integrations.githubApp.clientId",
-    )
-  }
-
-  if (provider.clientSecret.env !== githubApp.clientSecret.env) {
-    throw new Error(
-      "Invalid s0 configuration: auth.providers.github.clientSecret.env must match integrations.githubApp.clientSecret.env",
-    )
-  }
-}
-
-function normalizeResolvedConfig(decoded: S0ResolvedConfig): S0ResolvedConfig {
-  const webhookSecret = decoded.integrations.githubApp.webhookSecret
-
-  const githubAppBase = {
-    ...decoded.integrations.githubApp,
-    appId: decoded.integrations.githubApp.appId.trim(),
-    clientId: decoded.integrations.githubApp.clientId.trim(),
-    slug: decoded.integrations.githubApp.slug.trim(),
-    clientSecret: normalizeSecretReference(
-      decoded.integrations.githubApp.clientSecret,
-      "integrations.githubApp.clientSecret",
-    ),
-    privateKey: normalizeSecretReference(
-      decoded.integrations.githubApp.privateKey,
-      "integrations.githubApp.privateKey",
-    ),
-  }
-
-  const githubApp: S0GitHubAppConfig =
-    webhookSecret === undefined
-      ? githubAppBase
-      : {
-          ...githubAppBase,
-          webhookSecret: normalizeSecretReference(
-            webhookSecret,
-            "integrations.githubApp.webhookSecret",
+    yield* Result.all(
+      entries.map(([modelId], index) =>
+        ensureConfig(modelId !== "", () =>
+          invalidS0Config("aiProviders.cloudflareAiGateway model ids must be non-empty"),
+        ).pipe(
+          Result.andThen(
+            ensureConfig(entries.findIndex(([other]) => other === modelId) === index, () =>
+              invalidS0Config(`duplicate aiProviders.cloudflareAiGateway model '${modelId}'`),
+            ),
           ),
-        }
+        ),
+      ),
+    )
 
-  const slack = decoded.integrations.slack
+    const models: Record<string, ProviderModelDefinition> = Object.fromEntries(entries)
+    const defaultModel = config.defaultModel.trim()
 
-  const cloudflareAiGateway = normalizeCloudflareAiGatewayConfig(
-    decoded.aiProviders.cloudflareAiGateway,
-  )
+    yield* ensureConfig(!config.enabled || entries.length > 0, () =>
+      invalidS0Config("enabled aiProviders.cloudflareAiGateway requires at least one model"),
+    )
 
-  const litellm = decoded.aiProviders.litellm
-  const mcpcf = decoded.mcpcf
-  const security = decoded.security
-  const auth = normalizeAuthProviderRegistry(decoded.auth)
-  validateGitHubAppAuthProvider(auth, githubApp)
+    yield* ensureConfig(!config.enabled || defaultModel !== "", () =>
+      invalidS0Config("enabled aiProviders.cloudflareAiGateway requires a defaultModel"),
+    )
 
-  const credentialSignInEnabled = Object.values(auth.providers).some(
+    yield* ensureConfig(defaultModel === "" || Object.hasOwn(models, defaultModel), () =>
+      invalidS0Config(
+        `aiProviders.cloudflareAiGateway.defaultModel '${defaultModel}' is not in models`,
+      ),
+    )
+
+    return { ...config, defaultModel, models }
+  })
+
+const validateGitHubAppAuthProvider = (auth: AuthProviderRegistry, githubApp: S0GitHubAppConfig) =>
+  Result.gen(function* () {
+    const provider = yield* Result.fromNullishOr(auth.providers.github, () =>
+      invalidS0Config("enabled integrations.githubApp requires auth.providers.github"),
+    )
+
+    const social = yield* Result.liftPredicate(
+      provider,
+      (candidate): candidate is SocialAuthProviderConfig =>
+        candidate.kind === "social" && candidate.enabled,
+      () =>
+        invalidS0Config(
+          "auth.providers.github must be an enabled social provider when integrations.githubApp is enabled",
+        ),
+    )
+
+    yield* ensureConfig(social.capabilities.link, () =>
+      invalidS0Config(
+        "auth.providers.github must allow explicit account linking when integrations.githubApp is enabled",
+      ),
+    )
+
+    yield* ensureConfig(social.clientId === githubApp.clientId, () =>
+      invalidS0Config("auth.providers.github.clientId must match integrations.githubApp.clientId"),
+    )
+
+    yield* ensureConfig(social.clientSecret.env === githubApp.clientSecret.env, () =>
+      invalidS0Config(
+        "auth.providers.github.clientSecret.env must match integrations.githubApp.clientSecret.env",
+      ),
+    )
+  })
+
+const normalizeGitHubAppConfig = (githubApp: S0GitHubAppConfig) =>
+  Result.gen(function* () {
+    return {
+      ...githubApp,
+      appId: githubApp.appId.trim(),
+      clientId: githubApp.clientId.trim(),
+      slug: githubApp.slug.trim(),
+      clientSecret: yield* normalizeSecretReference(
+        githubApp.clientSecret,
+        "integrations.githubApp.clientSecret",
+      ),
+      privateKey: yield* normalizeSecretReference(
+        githubApp.privateKey,
+        "integrations.githubApp.privateKey",
+      ),
+      webhookSecret: yield* normalizeOptionalSecret(
+        githubApp.webhookSecret,
+        "integrations.githubApp.webhookSecret",
+      ),
+    }
+  })
+
+const normalizeLitellmConfig = (litellm: S0LitellmConfig) =>
+  Result.gen(function* () {
+    const baseUrl = yield* normalizeOptionalUrl(litellm.baseUrl, "aiProviders.litellm.baseUrl")
+
+    return {
+      ...litellm,
+      baseUrl: Option.getOrElse(baseUrl, () => ""),
+      apiKey: yield* normalizeOptionalSecret(litellm.apiKey, "aiProviders.litellm.apiKey"),
+    }
+  })
+
+const normalizeMcpcfConfig = (mcpcf: S0McpcfConfig) =>
+  Result.gen(function* () {
+    const baseUrl = yield* normalizeOptionalUrl(mcpcf.baseUrl, "mcpcf.baseUrl")
+    const expectedIssuer = yield* normalizeOptionalUrl(mcpcf.expectedIssuer, "mcpcf.expectedIssuer")
+
+    return {
+      ...mcpcf,
+      baseUrl: Option.getOrElse(baseUrl, () => ""),
+      expectedIssuer: Option.getOrNull(expectedIssuer),
+      authTypeAllowlist: normalizeTextArray(mcpcf.authTypeAllowlist).map((value) =>
+        value.toLowerCase(),
+      ),
+      serverBlacklist: normalizeTextArray(mcpcf.serverBlacklist),
+      adminApiToken: yield* normalizeOptionalSecret(mcpcf.adminApiToken, "mcpcf.adminApiToken"),
+    }
+  })
+
+const normalizeOptionalConfig = <A, B>(
+  value: A | undefined,
+  normalize: (config: A) => Result.Result<B, ConfigValidationError>,
+) =>
+  Option.match(Option.fromUndefinedOr(value), {
+    onNone: () => Result.succeed(undefined),
+    onSome: normalize,
+  })
+
+const credentialSignInEnabled = (auth: AuthProviderRegistry) =>
+  Object.values(auth.providers).some(
     (provider) =>
       provider.kind === "credential" && provider.enabled && provider.capabilities.signIn,
   )
 
-  const adminPassword = decoded.auth.adminPassword
-    ? normalizeSecretReference(decoded.auth.adminPassword, "auth.adminPassword")
-    : undefined
+const normalizeResolvedConfig = (decoded: S0ResolvedConfig) =>
+  Result.gen(function* () {
+    const githubApp = yield* normalizeGitHubAppConfig(decoded.integrations.githubApp)
 
-  if (credentialSignInEnabled && !adminPassword) {
-    throw new Error(
-      "Invalid s0 configuration: auth.adminPassword is required when credential sign-in is enabled",
+    const cloudflareAiGateway = yield* normalizeCloudflareAiGatewayConfig(
+      decoded.aiProviders.cloudflareAiGateway,
     )
-  }
 
-  const deployment = {
-    ...decoded.deployment,
-    appName: decoded.deployment.appName.trim(),
-    zone: decoded.deployment.zone.trim(),
-    webFqdn:
-      decoded.deployment.webFqdn === undefined ? undefined : decoded.deployment.webFqdn.trim(),
-    observability: {
-      ...decoded.deployment.observability,
-      logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),
-      tracesDestinations: normalizeTextArray(decoded.deployment.observability.tracesDestinations),
-    },
-  }
+    const auth = yield* validateAuthProviderRegistry(decoded.auth)
 
-  const normalizedAuth = adminPassword ? { ...auth, adminPassword } : { ...auth }
-
-  const aiProviders: S0ResolvedConfig["aiProviders"] =
-    litellm === undefined
-      ? { cloudflareAiGateway }
-      : {
-          cloudflareAiGateway,
-          litellm: {
-            ...litellm,
-            baseUrl: normalizeOptionalUrl(litellm.baseUrl, "aiProviders.litellm.baseUrl") ?? "",
-            apiKey:
-              litellm.apiKey === undefined
-                ? undefined
-                : normalizeSecretReference(litellm.apiKey, "aiProviders.litellm.apiKey"),
-          },
-        }
-
-  const normalizedMcpcf =
-    mcpcf === undefined
-      ? undefined
-      : {
-          ...mcpcf,
-          baseUrl: normalizeOptionalUrl(mcpcf.baseUrl, "mcpcf.baseUrl") ?? "",
-          expectedIssuer: normalizeOptionalUrl(mcpcf.expectedIssuer, "mcpcf.expectedIssuer"),
-          authTypeAllowlist: normalizeTextArray(mcpcf.authTypeAllowlist).map((value) =>
-            value.toLowerCase(),
-          ),
-          serverBlacklist: normalizeTextArray(mcpcf.serverBlacklist),
-          adminApiToken:
-            mcpcf.adminApiToken === undefined
-              ? undefined
-              : normalizeSecretReference(mcpcf.adminApiToken, "mcpcf.adminApiToken"),
-        }
-
-  const normalized: S0ResolvedConfig = {
-    ...decoded,
-    brand: normalizeS0Brand(decoded.brand),
-    deployment,
-    application: {
-      ...decoded.application,
-      slackChannel: decoded.application.slackChannel.trim(),
-    },
-    admins: normalizeAdminConfig(decoded.admins),
-    auth: normalizedAuth,
-    aiProviders,
-    mcpcf: normalizedMcpcf,
-    integrations: {
-      githubApp,
-      slack: {
-        ...slack,
-        botToken: normalizeSecretReference(slack.botToken, "integrations.slack.botToken"),
+    yield* Option.match(
+      Option.liftPredicate(githubApp, (app) => app.enabled),
+      {
+        onNone: () => Result.void,
+        onSome: (app) => validateGitHubAppAuthProvider(auth, app),
       },
-    },
-    security: {
-      betterAuthSecret: normalizeSecretReference(
-        security.betterAuthSecret,
-        "security.betterAuthSecret",
-      ),
-      mcpcfProxySigningSecret: normalizeSecretReference(
-        security.mcpcfProxySigningSecret,
-        "security.mcpcfProxySigningSecret",
-      ),
-      tokenEncryptionKey: normalizeSecretReference(
-        security.tokenEncryptionKey,
-        "security.tokenEncryptionKey",
-      ),
-      repositorySecretsEncryptionKey: normalizeSecretReference(
-        security.repositorySecretsEncryptionKey,
-        "security.repositorySecretsEncryptionKey",
-      ),
-    },
-    aiSearch: decoded.aiSearch.serviceTokenId
-      ? {
-          serviceTokenId: normalizeSecretReference(
-            decoded.aiSearch.serviceTokenId,
-            "aiSearch.serviceTokenId",
-          ),
-        }
-      : {},
-  }
-
-  if (!normalized.deployment.appName) {
-    throw new Error("Invalid s0 configuration: deployment.appName must not be empty")
-  }
-
-  if (!normalized.deployment.zone) {
-    throw new Error("Invalid s0 configuration: deployment.zone must not be empty")
-  }
-
-  if (normalized.application.sandboxInactivityTimeoutMs <= 0) {
-    throw new Error(
-      "Invalid s0 configuration: application.sandboxInactivityTimeoutMs must be positive",
     )
-  }
 
-  return normalized
-}
+    const adminPassword = yield* normalizeOptionalSecret(
+      decoded.auth.adminPassword,
+      "auth.adminPassword",
+    )
+
+    yield* ensureConfig(!credentialSignInEnabled(auth) || adminPassword !== undefined, () =>
+      invalidS0Config("auth.adminPassword is required when credential sign-in is enabled"),
+    )
+
+    const litellm = yield* normalizeOptionalConfig(
+      decoded.aiProviders.litellm,
+      normalizeLitellmConfig,
+    )
+
+    const mcpcf = yield* normalizeOptionalConfig(decoded.mcpcf, normalizeMcpcfConfig)
+    const { slack } = decoded.integrations
+    const { security } = decoded
+
+    const normalized: S0ResolvedConfig = {
+      ...decoded,
+      brand: normalizeS0Brand(decoded.brand),
+      deployment: {
+        ...decoded.deployment,
+        appName: decoded.deployment.appName.trim(),
+        zone: decoded.deployment.zone.trim(),
+        webFqdn: decoded.deployment.webFqdn?.trim(),
+        observability: {
+          ...decoded.deployment.observability,
+          logsDestinations: normalizeTextArray(decoded.deployment.observability.logsDestinations),
+          tracesDestinations: normalizeTextArray(
+            decoded.deployment.observability.tracesDestinations,
+          ),
+        },
+      },
+      application: {
+        ...decoded.application,
+        slackChannel: decoded.application.slackChannel.trim(),
+      },
+      admins: normalizeAdminConfig(decoded.admins),
+      auth: { ...auth, adminPassword },
+      aiProviders: { cloudflareAiGateway, litellm },
+      mcpcf,
+      integrations: {
+        githubApp,
+        slack: {
+          ...slack,
+          botToken: yield* normalizeSecretReference(slack.botToken, "integrations.slack.botToken"),
+        },
+      },
+      security: yield* Result.all({
+        betterAuthSecret: normalizeSecretReference(
+          security.betterAuthSecret,
+          "security.betterAuthSecret",
+        ),
+        mcpcfProxySigningSecret: normalizeSecretReference(
+          security.mcpcfProxySigningSecret,
+          "security.mcpcfProxySigningSecret",
+        ),
+        tokenEncryptionKey: normalizeSecretReference(
+          security.tokenEncryptionKey,
+          "security.tokenEncryptionKey",
+        ),
+        repositorySecretsEncryptionKey: normalizeSecretReference(
+          security.repositorySecretsEncryptionKey,
+          "security.repositorySecretsEncryptionKey",
+        ),
+      }),
+      aiSearch: {
+        serviceTokenId: yield* normalizeOptionalSecret(
+          decoded.aiSearch.serviceTokenId,
+          "aiSearch.serviceTokenId",
+        ),
+      },
+    }
+
+    yield* ensureConfig(normalized.deployment.appName !== "", () =>
+      invalidS0Config("deployment.appName must not be empty"),
+    )
+
+    yield* ensureConfig(normalized.deployment.zone !== "", () =>
+      invalidS0Config("deployment.zone must not be empty"),
+    )
+
+    yield* ensureConfig(normalized.application.sandboxInactivityTimeoutMs > 0, () =>
+      invalidS0Config("application.sandboxInactivityTimeoutMs must be positive"),
+    )
+
+    return normalized
+  })
 
 export function resolveS0Config(
   value: unknown,
@@ -570,76 +561,89 @@ export function resolveS0Config(
   const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
 
-  return normalizeResolvedConfig(
-    Schema.decodeUnknownSync(
-      S0ResolvedConfigSchema,
-      S0_CONFIG_JSON_SCHEMA_OPTIONS,
-    )({
-      ...config,
-      brand: config.brand ?? resolveS0Brand(brandEnvironment),
-    }),
+  return Result.getOrThrow(
+    normalizeResolvedConfig(
+      Schema.decodeUnknownSync(
+        S0ResolvedConfigSchema,
+        S0_CONFIG_JSON_SCHEMA_OPTIONS,
+      )({
+        ...config,
+        brand: config.brand ?? resolveS0Brand(brandEnvironment),
+      }),
+    ),
   )
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+
 function sortForCanonicalJson(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortForCanonicalJson)
-
-  if (!isRecord(value)) return value
-
-  return Object.fromEntries(
-    Object.keys(value)
-      .sort()
-      .map((key) => [key, sortForCanonicalJson(value[key])]),
+  return Match.value(value).pipe(
+    Match.when(Array.isArray, (items: readonly unknown[]) => items.map(sortForCanonicalJson)),
+    Match.when(isRecord, (record) =>
+      Object.fromEntries(
+        Object.keys(record)
+          .sort()
+          .map((key) => [key, sortForCanonicalJson(record[key])]),
+      ),
+    ),
+    Match.orElse((other) => other),
   )
 }
 
 export function canonicalS0ConfigJson(config: S0ResolvedConfig): string {
-  return JSON.stringify(sortForCanonicalJson(config))
+  return stringifyJson(sortForCanonicalJson(config))
 }
 
-export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretReference[] {
-  const credentialSignInEnabled = Object.values(config.auth.providers).some(
-    (provider) =>
-      provider.kind === "credential" && provider.enabled && provider.capabilities.signIn,
+/** The references that are set, or none when `enabled` is false. */
+const enabledSecrets = (
+  enabled: boolean | undefined,
+  ...references: ReadonlyArray<SecretReference | null | undefined>
+): SecretReference[] =>
+  references.filter(
+    (reference): reference is SecretReference => enabled === true && reference != null,
   )
 
+export function s0RuntimeSecretReferences(config: S0ResolvedConfig): SecretReference[] {
   const authProviderSecrets = Object.values(config.auth.providers).flatMap((provider) =>
-    provider.kind !== "credential" && provider.enabled ? [provider.clientSecret] : [],
+    Match.value(provider).pipe(
+      Match.when({ kind: "credential" }, () => []),
+      Match.orElse((client) => enabledSecrets(client.enabled, client.clientSecret)),
+    ),
   )
+
+  const { litellm } = config.aiProviders
 
   return [
     ...authProviderSecrets,
-    ...(credentialSignInEnabled && config.auth.adminPassword ? [config.auth.adminPassword] : []),
-    ...(config.aiProviders.litellm?.enabled && config.aiProviders.litellm.apiKey
-      ? [config.aiProviders.litellm.apiKey]
-      : []),
-    ...(config.mcpcf?.enabled && config.mcpcf.adminApiToken ? [config.mcpcf.adminApiToken] : []),
+    ...enabledSecrets(credentialSignInEnabled(config.auth), config.auth.adminPassword),
+    ...enabledSecrets(litellm?.enabled, litellm?.apiKey),
+    ...enabledSecrets(config.mcpcf?.enabled, config.mcpcf?.adminApiToken),
   ]
 }
 
 export function s0ActiveSecretReferences(config: S0ResolvedConfig): SecretReference[] {
-  const githubApp = config.integrations.githubApp
-
-  const cloudflareAiGatewayProviderKeys = config.aiProviders.cloudflareAiGateway.enabled
-    ? Object.values(config.aiProviders.cloudflareAiGateway.providerKeys ?? {})
-    : []
+  const { githubApp, slack } = config.integrations
+  const { cloudflareAiGateway } = config.aiProviders
 
   return [
     ...s0RuntimeSecretReferences(config),
-    ...cloudflareAiGatewayProviderKeys,
-    ...(githubApp.enabled
-      ? [
-          githubApp.clientSecret,
-          githubApp.privateKey,
-          ...(githubApp.webhookSecret ? [githubApp.webhookSecret] : []),
-        ]
-      : []),
-    ...(config.integrations.slack.enabled ? [config.integrations.slack.botToken] : []),
+    ...enabledSecrets(
+      cloudflareAiGateway.enabled,
+      ...Object.values(cloudflareAiGateway.providerKeys ?? {}),
+    ),
+    ...enabledSecrets(
+      githubApp.enabled,
+      githubApp.clientSecret,
+      githubApp.privateKey,
+      githubApp.webhookSecret,
+    ),
+    ...enabledSecrets(slack.enabled, slack.botToken),
     config.security.betterAuthSecret,
     config.security.mcpcfProxySigningSecret,
     config.security.tokenEncryptionKey,
     config.security.repositorySecretsEncryptionKey,
-    ...(config.aiSearch.serviceTokenId ? [config.aiSearch.serviceTokenId] : []),
+    ...enabledSecrets(true, config.aiSearch.serviceTokenId),
   ]
 }
 

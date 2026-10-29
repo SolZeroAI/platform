@@ -1,8 +1,8 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- Stage metadata exposes synchronous adapters for browser, Worker, and deployment callers while its Effect constructors remain typed. */
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import type { S0ApplicationConfig, S0DeploymentConfig } from "./s0-config"
 
@@ -146,7 +146,6 @@ export interface StageProps {
   readonly infra: InfraStageProps
 }
 
-// oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
 const InfraStagePropsSchema = Schema.Struct({
   zone: Schema.String,
   apiRoutes: Schema.Array(Schema.String),
@@ -167,7 +166,6 @@ const InfraStagePropsSchema = Schema.Struct({
   alchemyStateStore: Schema.Literals(["local", "cloudflare"]),
 })
 
-// oxlint-disable-next-line effect/prefer-schema-class -- Cloudflare JSON binding contains a plain compiled StageMetadata value
 const AppStagePropsSchema = Schema.Struct({
   logLevel: Schema.Literals(["trace", "debug"]),
   sendSlackNotifications: Schema.Boolean,
@@ -219,54 +217,43 @@ function invalidStageError(stageStr: string): InvalidStageError {
   })
 }
 
-export function getAppStageMetadataFromStr(stageStr: string) {
+export function getAppStageMetadataFromStr(
+  stageStr: string,
+): Result.Result<AppStageMetadata, InvalidStageError> {
   const lowerCaseStage = stageStr.toLowerCase()
 
   return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () =>
-      Effect.succeed<AppStageMetadata>({
-        name: "dev",
-        app: Dev.app,
-      }),
-    ),
-    Match.when("test", () =>
-      Effect.succeed<AppStageMetadata>({
-        name: "test",
-        app: Test.app,
-      }),
-    ),
-    Match.when("prod", () =>
-      Effect.succeed<AppStageMetadata>({
-        name: "prod",
-        app: Prod.app,
-      }),
-    ),
+    Match.when("dev", () => Result.succeed({ name: "dev", app: Dev.app })),
+    Match.when("test", () => Result.succeed({ name: "test", app: Test.app })),
+    Match.when("prod", () => Result.succeed({ name: "prod", app: Prod.app })),
     Match.when(
       (stage) => stage === "pre" || stage.startsWith("pre-"),
-      (stage) =>
-        Effect.succeed<AppStageMetadata>({
-          name: stage,
-          app: Pre.app,
-        }),
+      (stage) => Result.succeed({ name: stage, app: Pre.app }),
     ),
-    Match.orElse(() => Effect.fail(invalidStageError(stageStr))),
+    Match.orElse(() => Result.fail(invalidStageError(stageStr))),
   )
 }
 
-export function getAppStageMetadataSync(input: string | StageMetadataEnv) {
-  if (typeof input !== "string" && input.S0_STAGE_METADATA !== undefined) {
-    const metadata = decodeStageMetadataBinding(input.S0_STAGE_METADATA)
+const appStageMetadataFromBinding = ({ name, app }: StageMetadataBinding): AppStageMetadata => ({
+  name,
+  app,
+})
 
-    return { name: metadata.name, app: metadata.app } satisfies AppStageMetadata
-  }
+function appStageMetadataFromEnv(env: StageMetadataEnv) {
+  return Option.match(Option.fromUndefinedOr(env.S0_STAGE_METADATA), {
+    onNone: () => getAppStageMetadataFromStr(env.STAGE),
+    onSome: (binding) =>
+      Result.succeed(appStageMetadataFromBinding(decodeStageMetadataBinding(binding))),
+  })
+}
 
-  const stage = Match.value(input).pipe(
-    Match.when(Match.string, (value) => value),
-    Match.orElse((env) => env.STAGE),
+/** App metadata is deterministic and resolves no infrastructure, so browser and Worker callers read it synchronously. */
+export function getAppStageMetadataSync(input: string | StageMetadataEnv): AppStageMetadata {
+  return Match.value(input).pipe(
+    Match.when(Match.string, getAppStageMetadataFromStr),
+    Match.orElse(appStageMetadataFromEnv),
+    Result.getOrThrow,
   )
-
-  // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary for browser/runtime feature flags; app metadata is deterministic and does not resolve infra.
-  return Effect.runSync(getAppStageMetadataFromStr(stage))
 }
 
 function localInfraStageProps(
@@ -489,19 +476,22 @@ export function getStageMetadataFromStr(
   stageStr: string,
   config: StageInfraConfig = EMPTY_STAGE_INFRA_CONFIG,
   application?: S0ApplicationConfig,
-) {
+): Result.Result<StageMetadata, InvalidStageError> {
   const lowerCaseStage = stageStr.toLowerCase()
-  const app = application ? configuredAppStageProps(application) : undefined
+
+  const app = Option.getOrUndefined(
+    Option.map(Option.fromUndefinedOr(application), configuredAppStageProps),
+  )
 
   return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => Effect.succeed<StageMetadata>(Dev.make(config, app))),
-    Match.when("test", () => Effect.succeed<StageMetadata>(Test.make(config, app))),
-    Match.when("prod", () => Effect.succeed<StageMetadata>(Prod.make(config, app))),
+    Match.when("dev", () => Result.succeed(Dev.make(config, app))),
+    Match.when("test", () => Result.succeed(Test.make(config, app))),
+    Match.when("prod", () => Result.succeed(Prod.make(config, app))),
     Match.when(
       (stage) => stage === "pre" || stage.startsWith("pre-"),
-      (stage) => Effect.succeed<StageMetadata>(Pre.make(stage, config, app)),
+      (stage) => Result.succeed(Pre.make(stage, config, app)),
     ),
-    Match.orElse(() => Effect.fail(invalidStageError(stageStr))),
+    Match.orElse(() => Result.fail(invalidStageError(stageStr))),
   )
 }
 
@@ -517,10 +507,14 @@ function stageMetadataFromBinding(binding: StageMetadataBinding): StageMetadata 
   )
 }
 
-export function getStageMetadata(env: StageMetadataEnv) {
-  return env.S0_STAGE_METADATA === undefined
-    ? getStageMetadataFromStr(env.STAGE)
-    : Effect.succeed(stageMetadataFromBinding(decodeStageMetadataBinding(env.S0_STAGE_METADATA)))
+export function getStageMetadata(
+  env: StageMetadataEnv,
+): Result.Result<StageMetadata, InvalidStageError> {
+  return Option.match(Option.fromUndefinedOr(env.S0_STAGE_METADATA), {
+    onNone: () => getStageMetadataFromStr(env.STAGE),
+    onSome: (binding) =>
+      Result.succeed(stageMetadataFromBinding(decodeStageMetadataBinding(binding))),
+  })
 }
 
 export function deployedApiWorkerName(appName: string, stageName: string): string {
@@ -535,22 +529,29 @@ export function deployedWebWorkerName(appName: string, stageName: string): strin
  * A deployed stage whose zone is `localhost` has no custom domain. Serve the
  * web worker on the account workers.dev subdomain; the API stays at its `/api` path.
  */
-export function withWorkersDevOrigins(
+export class InvalidWorkersDevSubdomainError extends Schema.TaggedError<InvalidWorkersDevSubdomainError>()(
+  "InvalidWorkersDevSubdomainError",
+  {
+    subdomain: Schema.String,
+    message: Schema.String,
+  },
+) {}
+
+const WORKERS_DEV_SUBDOMAIN_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/
+
+function workersDevStageMetadata(
   metadata: StageMetadata,
   input: { readonly appName: string; readonly subdomain: string },
 ): StageMetadata {
-  const applicable =
-    metadata.infra.alchemyStateStore === "cloudflare" && metadata.infra.zone === "localhost"
-
-  if (!applicable) return metadata
-
-  const subdomain = input.subdomain.trim().toLowerCase()
-
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomain)) {
-    throw new Error(
-      `Invalid workers.dev subdomain "${input.subdomain}". Set CLOUDFLARE_WORKERS_SUBDOMAIN to the account label.`,
-    )
-  }
+  const subdomain = Result.liftPredicate(
+    input.subdomain.trim().toLowerCase(),
+    (candidate) => WORKERS_DEV_SUBDOMAIN_PATTERN.test(candidate),
+    () =>
+      new InvalidWorkersDevSubdomainError({
+        subdomain: input.subdomain,
+        message: `Invalid workers.dev subdomain "${input.subdomain}". Set CLOUDFLARE_WORKERS_SUBDOMAIN to the account label.`,
+      }),
+  ).pipe(Result.getOrThrow)
 
   const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
 
@@ -569,7 +570,23 @@ export function withWorkersDevOrigins(
   })
 }
 
-export function getStageMetadataFromConfig(
+/**
+ * A deployed stage whose zone is `localhost` has no custom domain. Serve the
+ * web worker on the account workers.dev subdomain; the API stays at its `/api` path.
+ */
+export function withWorkersDevOrigins(
+  metadata: StageMetadata,
+  input: { readonly appName: string; readonly subdomain: string },
+): StageMetadata {
+  return Match.value(metadata.infra).pipe(
+    Match.when({ alchemyStateStore: "cloudflare", zone: "localhost" }, () =>
+      workersDevStageMetadata(metadata, input),
+    ),
+    Match.orElse(() => metadata),
+  )
+}
+
+function stageMetadataFromConfig(
   stage: string,
   deployment: S0DeploymentConfig,
   application: S0ApplicationConfig,
@@ -577,25 +594,30 @@ export function getStageMetadataFromConfig(
   return getStageMetadataFromStr(stage, stageInfraConfigFromDeployment(deployment), application)
 }
 
+export function getStageMetadataFromConfig(
+  stage: string,
+  deployment: S0DeploymentConfig,
+  application: S0ApplicationConfig,
+) {
+  return Effect.fromResult(stageMetadataFromConfig(stage, deployment, application))
+}
+
+/** Stage metadata is a deterministic compile of the config, so infrastructure and tests read it synchronously. */
 export function getStageMetadataFromConfigSync(
   stage: string,
   deployment: S0DeploymentConfig,
   application: S0ApplicationConfig,
 ): StageMetadata {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Synchronous compiler boundary for infrastructure and tests.
-  return Effect.runSync(getStageMetadataFromConfig(stage, deployment, application))
+  return Result.getOrThrow(stageMetadataFromConfig(stage, deployment, application))
 }
 
-function getStageMetadataFromInput(input: StageMetadataInput) {
+/** Synchronous for the non-Effect callers: the apps/api entry, web runtime config, and infra stacks. */
+export function getStageMetadataSync(input: StageMetadataInput): StageMetadata {
   return Match.value(input).pipe(
     Match.when(Match.string, (stage) => getStageMetadataFromStr(stage)),
-    Match.orElse((env) => getStageMetadata(env)),
+    Match.orElse(getStageMetadata),
+    Result.getOrThrow,
   )
-}
-
-export function getStageMetadataSync(input: StageMetadataInput): StageMetadata {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Sync boundary: deterministic stage metadata is consumed by non-Effect callers (apps/api entry, web runtime config, infra stacks, tests); converting them to Effect would ripple across those non-Effect surfaces.
-  return Effect.runSync(getStageMetadataFromInput(input))
 }
 
 /** Public origin for this stage (API / control plane), from compiled stage metadata. */
