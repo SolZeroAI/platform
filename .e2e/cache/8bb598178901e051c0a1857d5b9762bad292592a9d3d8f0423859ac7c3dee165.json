@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-28T21:26:22.754Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Unarchive\"",
+        "target": {
+          "role": "button",
+          "name": "Unarchive"
+        }
+      }
+    ],
+    "executor": {
+      "name": "decision",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "tests/sessions.e2e.ts::session%20tools%2C%20archive%20and%20restoration%20persist%20through%20the%20real%20Worker",
+      "targetId": "local-cloudflare",
+      "instructionDigest": "5e9c8238a5fdf772839b919a3390a11b3c6ab157ae5d08b7e40756e84c48fda1",
+      "paramsDigest": "3938217532ae508e28bf428c56c1e018b551cf46b9c1081517c16d2acf32844d",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "recordedBy": {
+      "provider": "anthropic.messages",
+      "model": "anthropic/claude-haiku-5.5"
+    },
+    "summary": "The screen shows the step is done (p=0.747, confidence 0.403).",
+    "startPath": "/settings?category=data-controls",
+    "endPath": "/settings?category=data-controls",
+    "endAnchors": [
+      {
+        "text": "No archived agents"
+      },
+      {
+        "text": "No archived agents. Agents you archive will appear here."
+      }
+    ],
+    "goneAnchors": [
+      {
+        "text": "1 archived agent"
+      },
+      {
+        "text": "just now"
+      },
+      {
+        "text": "·"
+      },
+      {
+        "text": "No tools"
+      },
+      {
+        "role": "button",
+        "name": "Unarchive"
+      }
+    ],
+    "endWaitMs": 11217,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "356bb4dad9f823ea5064055664450c1dbb1e4d9cbbfb201ca71c7993a2c18dcd",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "e18a7246aa64bc6cabcfc1fff593fa36af4d2bccf2dc172e6d2c8d9ad9cb96af",
+      "agentContextDigest": "4a2eee959f8e1c036316018b328c413ece77e500fc0d77f6a6be1acb70fb66d2"
+    }
+  }
+}

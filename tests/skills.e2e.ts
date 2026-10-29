@@ -1,5 +1,5 @@
 import { test } from "@e2e-dev/web"
-import { expect, unique } from "e2e"
+import { expect } from "e2e"
 import { api, uniqueName } from "./support/api"
 
 type Skill = {
@@ -13,7 +13,7 @@ type Skill = {
 test(
   "global skill defaults and per-user preferences persist independently",
   { session: "admin" },
-  async ({ app, browser, screen, agent }) => {
+  async ({ app, browser, screen }) => {
     const name = uniqueName("e2e-skill")
 
     const added = await api<{ skills: Skill[] }>(browser, "/admin/skills", "POST", {
@@ -29,10 +29,9 @@ test(
       await expect(screen.getByText(name, { exact: true })).toBeVisible()
       await app.open("/settings?category=agents&tab=skills")
       await expect(screen.getByRole("switch", `Enable ${name}`)).toBeChecked()
-      await agent.act(
-        "Turn off the Enable switch for the supplied skill. Finish when the Use admin default button is visible beside this skill; leave that button untouched.",
-        { params: { name: unique(name) } },
-      )
+      // The switch has an exact name. Clef did not confirm its off state from the
+      // screen, so a semantic goal here only tested the model.
+      await screen.getByRole("switch", `Enable ${name}`).tap()
       await expect(screen.getByRole("switch", `Enable ${name}`)).not.toBeChecked()
       await browser.reload()
       await expect(screen.getByRole("switch", `Enable ${name}`)).not.toBeChecked()

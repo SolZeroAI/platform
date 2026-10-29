@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
+    ".e2e/**",
     ".cursor/plans/**",
     "cloudflare-env-gen.d.ts",
     "dist",

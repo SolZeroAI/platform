@@ -143,12 +143,31 @@ disables action recording and replay; it cannot warm the cache. Strict mode stil
 step live when no entry exists, so verify `step.cache.mode === "self-finalized"` and zero
 model calls in the report rather than relying on the command name.
 
-CI restores the current branch's replay archives, preferring the same Nub lockfile
-then the branch prefix. A branch with no archive restores the default branch's latest
-archive, so a new pull request or a lockfile change does not run every step live. OS and architecture remain part of the key. Successful suites
-save a fresh run-and-attempt archive so repaired recordings reach the next run. Changes
-to documentation or accounting scripts do not invalidate the archive; the SDK validates
-each step's instruction, parameters, agent context, controls and final state itself.
+The recordings in `.e2e/cache` are committed to Git, as upstream e2e recommends. CI runs
+`test:e2e:cache-strict` against the committed recordings: a stale recording fails the run
+with `REPLAY_STALE`, and a step with no recording runs live. A strict run never writes
+the cache, so CI cannot change the recordings. The SDK validates each step's instruction,
+parameters, agent context, controls and final state itself; the model ids are not part of
+the key.
+
+Re-record when a test or the UI it drives changes. Do this before you mark the pull
+request ready for review.
+
+1. Run the Validate workflow on your branch with `e2e_record` set: `gh workflow run
+   validate.yml --ref <branch> -f e2e_record=true`. The suite runs in read-write mode.
+   When it passes, the `Commit recorded action replays` job commits the changed recordings
+   to your branch. It pushes with the release App token, so the push starts pull request
+   CI. The job does not run on the default branch. Set `e2e_commit=false` to only upload
+   the `solzero-e2e-replays-<run>-<attempt>` artifact.
+2. Or run `nub run test` (or `nub run test:e2e <file>`) locally. Read-write mode replaces
+   stale entries and adds missing ones in `.e2e/cache`. Commit the changed recordings with
+   the change that caused them.
+3. Pull the branch before you push again. The commit job fails when the branch moved after
+   the recorded commit; run `e2e_record` again on the new head. The pull request run
+   proves strict replay.
+
+Recordings must not contain secrets. Pass secret values through e2e secret handles, not
+action instructions or plain params.
 
 A focused local comparison used a fresh recording directory and ten tests covering bots,
 routines, archived sessions, runtime settings, MCP settings, secrets, theme, skills and
@@ -339,11 +358,11 @@ the original Alchemy process lifecycle while exposing errors before a final watc
 process failure.
 
 The workflow verifies Docker, builds the current harness source images through local
-`alchemy dev`, installs Chromium separately, restores `.e2e/cache`, runs the core suite,
-saves replay recordings, and uploads reports and failure artifacts. `.e2e/` is ignored
-locally. Chromium receives native clipboard read/write permissions through the small
+`alchemy dev`, installs Chromium separately, runs the core suite with strict replay of
+the committed `.e2e/cache` recordings, and uploads reports and failure artifacts. Other
+`.e2e/` output is ignored locally. Chromium receives native clipboard read/write permissions through the small
 pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
-have no Copy button in the current UI. Replay cache is preserved by CI rather than checked into Git. `test:e2e:live`
+have no Copy button in the current UI. Replay recordings are checked into Git. `test:e2e:live`
 forces fresh model decisions; `test:e2e:cache-strict` fails on stale recordings. Read
 `.e2e/report.json`, `.e2e/summary.md`, failure pages and the ignored stack log to diagnose
 failures. Treat unsupported runtime services and missing credentials as explicit blockers;
