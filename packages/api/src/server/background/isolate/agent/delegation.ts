@@ -1,4 +1,3 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary -- This module is a strict validation/redaction boundary for untrusted model and SDK wire values; direct discriminant guards keep rejected shapes adjacent to the contract. */
 import { jsonSchema, type Tool } from "ai"
 import type {
   AgentToolEventMessage,

@@ -39,6 +39,7 @@ import { McpcfResetConfigDialog } from "@/components/admin-mcpcf-reset-config-di
 import { Dialog } from "@/components/ui/dialog"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
 import { getStickySelectPortalRoot } from "@/lib/sticky-select-portal"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 const DEFAULT_TOC_SECTION = "#mcpcf-provider"
 const TOC_SECTION_VALUES = ["#mcpcf-provider", "#mcpcf-settings", "#mcpcf-server-registry"] as const
@@ -423,8 +424,7 @@ export function McpcfAdminPanel({
                     <DropdownMenu.Trigger>
                       <Button
                         type="button"
-                        // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                        shape="circle"
+                        {...circleIconButton}
                         variant="ghost"
                         disabled={busy !== null || loading}
                         loading={busy === "mcpcf-export" || busy === "mcpcf-reset"}
@@ -799,8 +799,7 @@ export function McpcfRefreshDialog({
             type="button"
             onClick={onClose}
             disabled={!canClose}
-            // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-            shape="circle"
+            {...circleIconButton}
             variant="ghost"
             title="Close"
             aria-label="Close"

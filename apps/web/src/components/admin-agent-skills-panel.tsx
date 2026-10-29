@@ -13,6 +13,7 @@ import { CodeEditor } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
 import { getErrorMessage, requestJson } from "@/lib/admin-console-actions"
 import { appToastManager, showErrorToast } from "@/lib/toast-manager"
+import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 const NEW_SKILL_TEMPLATE = `---
 name: my-skill
@@ -213,8 +214,7 @@ export function AdminAgentSkillsPanel({
                     <Button
                       type="button"
                       size="sm"
-                      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-                      shape="circle"
+                      {...circleIconButton}
                       variant="secondary-destructive"
                       icon={<Trash2 className="h-4 w-4" aria-hidden />}
                       aria-label={`Delete ${skill.name}`}
@@ -257,8 +257,7 @@ export function AdminAgentSkillsPanel({
             <Button
               type="button"
               variant="ghost"
-              // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- @cloudflare/kumo Button and InputGroup.Button require the prop name shape.
-              shape="circle"
+              {...circleIconButton}
               icon={<X className="h-4 w-4" aria-hidden />}
               aria-label="Close add skill dialog"
               onClick={() => setCreateOpen(false)}

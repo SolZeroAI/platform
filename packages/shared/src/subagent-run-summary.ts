@@ -38,7 +38,9 @@ const TOOL_INPUT_CHUNK_TYPES = new Set([
 
 const PROGRESS_CHUNK_TYPES = new Set(["data-agent-progress", "data-agent-milestone"])
 
-const SubagentProgressDataSchema = Schema.Struct({
+class SubagentProgressDataSchema extends Schema.Class<SubagentProgressDataSchema>(
+  "SubagentProgressData",
+)({
   fraction: Schema.optional(Schema.Number),
   message: Schema.optional(Schema.String),
   phase: Schema.optional(Schema.String),
@@ -46,14 +48,14 @@ const SubagentProgressDataSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   sequence: Schema.optional(Schema.Number),
   at: Schema.optional(Schema.Number),
-})
+}) {}
 
-const SubagentChunkSchema = Schema.Struct({
+class SubagentChunkSchema extends Schema.Class<SubagentChunkSchema>("SubagentChunk")({
   type: Schema.String,
   toolCallId: Schema.optional(Schema.String),
   toolName: Schema.optional(Schema.String),
   data: Schema.optional(SubagentProgressDataSchema),
-})
+}) {}
 
 type SubagentChunk = typeof SubagentChunkSchema.Type
 

@@ -1,6 +1,5 @@
 import { Workspace, WorkspaceFileSystem, type FileInfo } from "@cloudflare/shell"
 import { createGit } from "@cloudflare/shell/git"
-import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { getGitHubRepoTool, type PullRequest } from "@solzero/shared"
@@ -25,6 +24,8 @@ import {
   type ActiveTurn,
   type IsolateSessionAgentState,
 } from "./types"
+import { runEffectPromise } from "../../../lib/effect-promise"
+import { stringifyJsonPretty } from "../../../lib/json"
 
 export interface IsolateWorkspaceHost {
   readonly workspace: Workspace
@@ -249,8 +250,7 @@ export class IsolateAgentWorkspace {
       () => new Error(`Refusing to push directly to base branch '${baseBranch}'`),
     )
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget gitCreatePullRequest boundary; runs the isolate branch checkout Effect at the PR-creation edge.
-    await Effect.runPromise(
+    await runEffectPromise(
       checkoutIsolateBranch({
         workspace: this.workspace,
         git,
@@ -272,8 +272,7 @@ export class IsolateAgentWorkspace {
       ...buildGitHubAppGitCredentials(token),
     })
 
-    // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget gitCreatePullRequest boundary; runs the GitHub App PR creation Effect at the PR-creation edge.
-    return Effect.runPromise(
+    return runEffectPromise(
       createPullRequestWithInstallationToken({
         token,
         repoOwner: repo.repoOwner,
@@ -289,24 +288,19 @@ export class IsolateAgentWorkspace {
   async persistSessionMetadata(state: IsolateSessionAgentState): Promise<void> {
     await this.workspace.writeFile(
       SESSION_METADATA_PATH,
-      // oxlint-disable-next-line effect/avoid-direct-json -- Pretty-printed (2-space) human-readable session metadata file; the centralized JSON helper only emits compact output, which would change the persisted file contents.
-      `${JSON.stringify(
-        {
-          sessionId: state.sessionId,
-          repoOwner: state.repoOwner,
-          repoName: state.repoName,
-          repoDefaultBranch: state.repoDefaultBranch,
-          branchName: state.branchName,
-          model: state.model,
-          tools: state.tools,
-          customMcpServers: state.customMcpServers,
-          runtimeStatus: state.runtimeStatus,
-          capabilities: buildCapabilities(state),
-          lastError: state.lastError,
-        },
-        null,
-        2,
-      )}\n`,
+      `${stringifyJsonPretty({
+        sessionId: state.sessionId,
+        repoOwner: state.repoOwner,
+        repoName: state.repoName,
+        repoDefaultBranch: state.repoDefaultBranch,
+        branchName: state.branchName,
+        model: state.model,
+        tools: state.tools,
+        customMcpServers: state.customMcpServers,
+        runtimeStatus: state.runtimeStatus,
+        capabilities: buildCapabilities(state),
+        lastError: state.lastError,
+      })}\n`,
     )
   }
 
@@ -335,8 +329,7 @@ export class IsolateAgentWorkspace {
     branchName: string,
     baseBranch: string,
   ): Promise<void> {
-    // oxlint-disable-next-line effect/effect-run-in-body -- RpcTarget gitCreatePullRequest boundary; runs the branch commit-detection Effect at the PR-creation edge.
-    const hasCommittedChanges = await Effect.runPromise(
+    const hasCommittedChanges = await runEffectPromise(
       hasBranchCommitsBeyondBase({
         git,
         repoRoot: REPO_ROOT,
