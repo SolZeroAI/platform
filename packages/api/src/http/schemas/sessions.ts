@@ -292,8 +292,7 @@ export const SlackSetupLinkError = SlackSetupLinkResponse.pipe(HttpApiSchema.sta
 export class SessionListResponse extends Schema.Class<SessionListResponse>("SessionListResponse")({
   sessions: Schema.Array(JsonRecord),
   total: Schema.Number,
-  limit: Schema.Number,
-  offset: Schema.Number,
+  hasMore: Schema.Boolean,
 }) {}
 
 export class SessionMessagesResponse extends Schema.Class<SessionMessagesResponse>(
