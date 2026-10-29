@@ -7,7 +7,6 @@ import {
   type WorkflowRecord,
   type WorkflowRunRecord,
 } from "../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env inside workflow lifecycle commands, which have no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { parseJson } from "../../lib/json"
 import { resolveOktaUserId } from "../../lib/better-auth"
@@ -25,6 +24,7 @@ import { normalizeWorkflowManifest } from "./manifest"
 import { startWorkflowRun, type WorkflowTriggerPayload } from "./runner"
 import { disableWorkflowSlackTriggers, registerWorkflowSlackTriggers } from "./slack-apps"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -590,6 +590,5 @@ export function startWorkflowRunFromWebhook(
     log?: RequestLogger
   },
 ): Promise<WorkflowRunRecord> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging Effect WorkflowLifecycle to the non-Effect public webhook router (Worker request entry).
-  return Effect.runPromise(new WorkflowLifecycle(env).startWorkflowRun(input))
+  return runEffectPromise(new WorkflowLifecycle(env).startWorkflowRun(input))
 }

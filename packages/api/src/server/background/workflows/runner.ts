@@ -7,7 +7,6 @@ import {
   type WorkflowRunRecord,
   type WorkflowRunTriggerKind,
 } from "../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env at the dynamic workflow loader edge, which Cloudflare invokes without an Effect Layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { resolveOktaUserId } from "../../lib/better-auth"
 import { createApiRequestObserver, type RequestLogger } from "../../effect/services/observability"
@@ -18,6 +17,7 @@ import {
   getWorkflowRuntimeLoaderCacheVersion,
 } from "./runtime-abi"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 
@@ -198,10 +198,10 @@ export async function getWrappedWorkflowBinding(
 ): Promise<WorkflowBindingLike> {
   const { wrapWorkflowBinding } = await import("@cloudflare/dynamic-workflows")
 
-  // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Interop cast bridging the untyped `@cloudflare/dynamic-workflows` binding wrapper onto the local `WorkflowBindingLike` RPC surface; the wrapper return type is structurally opaque and is a runtime stub, not Schema-validatable data.
+  // SAFETY: wrapWorkflowBinding returns the dynamic workflow binding stub, which serves the WorkflowBindingLike RPC methods.
   return wrapWorkflowBinding(getWorkflowBindingMetadata(workflow, version), {
     bindingName: "DYNAMIC_WORKFLOW",
-  }) as unknown as WorkflowBindingLike
+  }) as WorkflowBindingLike
 }
 
 export function getWorkflowBindingMetadata(
@@ -339,8 +339,7 @@ async function loadObservedDynamicWorkflowRunner(input: {
     workflowRowFound: Boolean(workflow),
   })
 
-  // oxlint-disable-next-line effect/effect-run-in-body -- Dynamic workflow loader boundary must return a Promise to the Cloudflare SDK while loading code stored by Effect artifact helpers.
-  const code = await Effect.runPromise(readWorkflowCode(input.env, codeKey))
+  const code = await runEffectPromise(readWorkflowCode(input.env, codeKey))
 
   const stub = input.env.WORKFLOW_LOADER.load({
     compatibilityDate: DYNAMIC_WORKFLOW_COMPATIBILITY_DATE,
@@ -600,13 +599,8 @@ export async function startWorkflowRun(input: StartWorkflowRunInput) {
   validateWorkflowRunUserId(userId)
 
   const oktaUserId = await Match.value(input.oktaUserId).pipe(
-    Match.when(
-      Match.undefined,
-      () =>
-        // oxlint-disable-next-line effect/effect-run-in-body -- SAFETY: resolveOktaUserId succeeds with a string or null, and Effect.runPromise preserves that Promise. Workflow instance creation remains a Promise ABI boundary for Cloudflare dynamic workflows.
-        Effect.runPromise(
-          resolveOktaUserId(input.env, userId).pipe(Effect.orElseSucceed(() => null)),
-        ) as Promise<string | null>,
+    Match.when(Match.undefined, () =>
+      runEffectPromise(resolveOktaUserId(input.env, userId).pipe(Effect.orElseSucceed(() => null))),
     ),
     Match.orElse((resolved) => Promise.resolve(resolved)),
   )

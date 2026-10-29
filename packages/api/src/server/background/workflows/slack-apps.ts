@@ -4,7 +4,6 @@ import { generateId } from "../auth/crypto"
 import { parseJson } from "../../lib/json"
 import { toError } from "../../lib/effect-errors"
 import { createGlobalSecretsStoreFromD1 } from "../db/repo-secrets"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env while provisioning Slack apps, which runs outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import {
   createWorkflowSlackAppStoreFromD1,

@@ -21,7 +21,6 @@ import {
   type SessionIndexStorePromise,
 } from "../../db/session-index"
 import { createWorkflowStoreFromD1 } from "../../db/workflows"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env inside session workflow nodes, which run outside the HTTP Layer.
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
 import { parseJsonOrText, stringifyJson } from "../../../lib/json"
 import { toError } from "../../../lib/effect-errors"
@@ -34,7 +33,6 @@ import { providerServicesForEnv } from "../../../effect/services/providers"
 import {
   ControlPlaneFailure,
   InternalRequests,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeInternalRequests builds the internal HTTP client from the Worker env at the session-node composition edge.
   makeInternalRequests,
 } from "../../../effect/handlers/shared/control-plane"
 import {

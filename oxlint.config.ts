@@ -131,6 +131,19 @@ export default defineConfig({
       rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
     },
     {
+      // The workflow runtime runs outside the HTTP Layer: public routers, the alarm Durable Object,
+      // the dynamic workflow loader, service-binding actions, and node executors. Each entrypoint
+      // builds the control plane and internal clients from its Worker env.
+      files: ["packages/api/src/server/background/workflows/**/*.ts"],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The HTTP workflow node sends a user-authored request and reports the final URL, status
+      // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
+      files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
+      rules: { "effect/avoid-native-fetch": "off" },
+    },
+    {
       // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
       // them to the names Alchemy reads) before an Alchemy context exists.
       files: [
