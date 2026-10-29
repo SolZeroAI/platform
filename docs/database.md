@@ -6,6 +6,20 @@ Postgres is an optional paid path for operators who outgrow the 10 GB D1 limit.
 Session messages, events, and artifacts stay in Durable Object sqlite. R2 and Cloudflare AI Search
 stay on both flavors. A second database does not move chat.
 
+## Shared Project DNA exception
+
+The SolZero Shared Project DNA keeps platform on Cloudflare D1. The optional PlanetScale Postgres
+flavor is an accepted, permanent exception to that rule (decided 2026-10-27).
+
+- Keep D1 as the default for every stage, PR preview, and test run.
+- Keep the Postgres flavor working. Do not remove it in a cleanup, and do not file a ticket to move
+  platform to PlanetScale.
+- A change to a control-plane table must update both Drizzle schemas (`schema.ts` and `schema.pg.ts`
+  in `packages/api/src/server/effect/db/`) and both migration trees:
+  `packages/infra/d1-migrations/` and `packages/infra/migrations/pg/`.
+- Do not copy the Postgres flavor into other SolZero repositories. Janus uses shared PlanetScale through
+  `alchemy-planetscale-logical-db`; alchemy.new stays on D1.
+
 ## Select a flavor
 
 Set process env `DATABASE`. This is the alchemy.new select parameter. Do not invent
@@ -26,7 +40,7 @@ The Worker binding is also `DATABASE`.
 
 ## D1 default
 
-`bun alchemy deploy` / `nub run infra:deploy:*` with no `DATABASE` value and no PlanetScale tokens
+`nub run infra:deploy:*` with no `DATABASE` value and no PlanetScale tokens
 stays on D1.
 
 - Binding: `DB`
