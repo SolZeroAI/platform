@@ -163,6 +163,20 @@ export default defineConfig({
       rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
     },
     {
+      // The isolate Durable Objects (session agent and sub-agent) and their turn setup run outside
+      // the HTTP Layer. Each builds the tracing layer, the control plane, and the AI Gateway layer
+      // from its Worker env, then runs Effects through lib/effect-promise.
+      files: [
+        "packages/api/src/server/background/isolate/agent.ts",
+        "packages/api/src/server/background/isolate/agent/subagent-controller.ts",
+        "packages/api/src/server/background/isolate/agent/turn-surface.ts",
+        "packages/api/src/server/background/isolate/model.ts",
+        "packages/api/src/server/background/isolate/runtime.ts",
+        "packages/api/src/server/background/isolate/subagent.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
       // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
       // from the Worker env before the library or MCP SDK takes the request.
       files: [
@@ -176,6 +190,12 @@ export default defineConfig({
       // The HTTP workflow node sends a user-authored request and reports the final URL, status
       // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
       files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
+      rules: { "effect/avoid-native-fetch": "off" },
+    },
+    {
+      // The isolate model fetch is the traced AI provider HTTP passthrough. The AI SDK takes a native
+      // fetch implementation, and no HttpClient layer exists on this path.
+      files: ["packages/api/src/server/background/isolate/model.ts"],
       rules: { "effect/avoid-native-fetch": "off" },
     },
     {

@@ -9,6 +9,12 @@ import { checkoutIsolateBranch, getCloneBaseBranch } from "../git-branch"
 import { REPO_ROOT } from "../repo-paths"
 import type { IsolateCloneAuth, IsolateSessionAgentState } from "./types"
 
+// The result of repository preparation. A missing error means the workspace is ready, or the
+// session has no GitHub repository tool.
+export interface RepositoryWorkspacePreparation {
+  readonly error?: string
+}
+
 export function ensureRepositoryWorkspace(input: {
   workspace: Workspace
   state: IsolateSessionAgentState
@@ -18,7 +24,7 @@ export function ensureRepositoryWorkspace(input: {
     const repo = getGitHubRepoTool(input.state.tools)
 
     return yield* Option.match(Option.fromNullishOr(repo), {
-      onNone: () => Effect.succeed<{ error?: string }>({}),
+      onNone: () => Effect.succeed<RepositoryWorkspacePreparation>({}),
       onSome: (resolvedRepo) => prepareRepositoryWorkspaceEffect({ ...input, repo: resolvedRepo }),
     })
   })
@@ -31,10 +37,9 @@ function prepareRepositoryWorkspaceEffect(input: {
   auth?: IsolateCloneAuth
 }) {
   return runRepositoryWorkspacePreparation(input).pipe(
-    // oxlint-disable-next-line anti-slop/no-known-value-widening -- The success value is an empty object. Callers read the optional error field that the failure object also carries.
-    Effect.map((): { error?: string } => ({})),
+    Effect.map((): RepositoryWorkspacePreparation => ({})),
     Effect.catch((cause) =>
-      Effect.succeed<{ error?: string }>({
+      Effect.succeed<RepositoryWorkspacePreparation>({
         error: `Repository workspace is unavailable in isolate mode: ${errorMessageOr(
           cause,
           `Failed to prepare repository workspace for ${input.repo.repoOwner}/${input.repo.repoName}`,
