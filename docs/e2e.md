@@ -150,15 +150,21 @@ the cache, so CI cannot change the recordings. The SDK validates each step's ins
 parameters, agent context, controls and final state itself; the model ids are not part of
 the key.
 
-Re-record when a test or the UI it drives changes:
+Re-record when a test or the UI it drives changes. Do this before you mark the pull
+request ready for review.
 
-1. Run `nub run test` (or `nub run test:e2e <file>`) locally. Read-write mode replaces
-   stale entries and adds missing ones in `.e2e/cache`.
-2. Or run the Validate workflow on your branch with `e2e_record` set:
-   `gh workflow run validate.yml --ref <branch> -f e2e_record=true`. The run uploads the
-   `solzero-e2e-replays-<run>-<attempt>` artifact. Extract it into `.e2e/cache`.
-3. Review the diff, commit the changed recordings with the change that caused them, and
-   push. The pull request run proves strict replay.
+1. Run the Validate workflow on your branch with `e2e_record` set: `gh workflow run
+   validate.yml --ref <branch> -f e2e_record=true`. The suite runs in read-write mode.
+   When it passes, the `Commit recorded action replays` job commits the changed recordings
+   to your branch. It pushes with the release App token, so the push starts pull request
+   CI. The job does not run on the default branch. Set `e2e_commit=false` to only upload
+   the `solzero-e2e-replays-<run>-<attempt>` artifact.
+2. Or run `nub run test` (or `nub run test:e2e <file>`) locally. Read-write mode replaces
+   stale entries and adds missing ones in `.e2e/cache`. Commit the changed recordings with
+   the change that caused them.
+3. Pull the branch before you push again. The commit job fails when the branch moved after
+   the recorded commit; run `e2e_record` again on the new head. The pull request run
+   proves strict replay.
 
 Recordings must not contain secrets. Pass secret values through e2e secret handles, not
 action instructions or plain params.

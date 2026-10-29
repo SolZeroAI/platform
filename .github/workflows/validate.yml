@@ -28,6 +28,10 @@ on:
         description: "Record action replays and upload .e2e/cache instead of strict replay"
         type: boolean
         default: false
+      e2e_commit:
+        description: "Commit the e2e_record recordings to the dispatched branch"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -229,3 +233,52 @@ jobs:
             .e2e/ai-usage/summary.md
           if-no-files-found: warn
           retention-days: 7
+
+  commit-replays:
+    name: Commit recorded action replays
+    needs: e2e
+    # A dispatched e2e_record run commits its recordings to the branch it ran on.
+    # The App token push starts pull request CI; a GITHUB_TOKEN push would not.
+    if: github.event_name == 'workflow_dispatch' && inputs.e2e_record && inputs.e2e_commit && github.ref_name != github.event.repository.default_branch
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+      - name: Check out the recorded commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Download recorded action replays
+        uses: actions/download-artifact@v8
+        with:
+          name: solzero-e2e-replays-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .e2e/cache
+      - name: Commit and push changed recordings
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git add .e2e/cache
+          if git diff --cached --quiet; then
+            echo "The recordings did not change."
+            exit 0
+          fi
+          user_id="$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git commit -m "Update e2e action replay recordings" -m "Recorded by Validate run ${GITHUB_RUN_ID}."
+          # The push fails when the branch moved after the recorded commit.
+          # Run e2e_record again on the new head.
+          git push origin "HEAD:refs/heads/${BRANCH}"
