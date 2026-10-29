@@ -12,7 +12,6 @@ import {
   type AuthPrincipal,
 } from "@solzero/api"
 import { UserApiKeyStore } from "../../background/db/user-api-keys"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- auth.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because API key verification reads the control plane.
 import { makeControlPlaneFromEnv } from "../db/control-plane-db"
 import { getSessionContextFromHeaders } from "../../lib/better-auth"
 import { CloudflareContext } from "./cloudflare"

@@ -2,6 +2,7 @@ import type { Env } from "../types"
 import type { WorkflowManifest } from "@solzero/shared"
 import { prefixStorageKeyWithUserId } from "../../lib/better-auth"
 import { toError } from "../../lib/effect-errors"
+import { stringifyJsonPretty } from "../../lib/json"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
@@ -51,8 +52,7 @@ export const writeWorkflowArtifacts = Effect.fn("workflows.writeArtifacts")(func
     [
       Effect.tryPromise({
         try: () =>
-          // oxlint-disable-next-line effect/avoid-direct-json -- Persists the workflow manifest artifact with exact 2-space pretty-printing that is read back as the stored artifact; the sanctioned `stringifyJson` helper is compact and would change persisted artifact bytes.
-          input.env.WORKFLOW_BUCKET.put(manifestKey, JSON.stringify(input.manifest, null, 2), {
+          input.env.WORKFLOW_BUCKET.put(manifestKey, stringifyJsonPretty(input.manifest), {
             httpMetadata: { contentType: "application/json" },
           }),
         catch: toError,

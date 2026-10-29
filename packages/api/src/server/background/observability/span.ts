@@ -137,13 +137,14 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
   readonly onSpanEnd?: () => void
   readonly onSpanStart?: (span: CloudflareSpan) => void
 }) {
-  return Effect.callback<A, E>((resume, signal) => {
+  // Effect.callback calls this register function and runs the returned finalizer on interruption.
+  const register: Parameters<typeof Effect.callback<A, E>>[0] = function (resume, signal) {
     const startedAt = Date.now()
-    // oxlint-disable-next-line solzero/prefer-option-over-null -- Mutable interrupt handle assigned by the Effect.runCallbackWith bridge; it is a low-level imperative finalizer.
-    let interrupt: ((interruptor?: number | undefined) => void) | undefined
+    // Effect.runCallbackWith replaces this no-op with the child fiber's interrupt.
+    let interrupt: (interruptor?: number) => void = () => undefined
 
     const interruptChild = () => {
-      interrupt?.()
+      interrupt()
     }
 
     signal.addEventListener("abort", interruptChild, { once: true })
@@ -202,12 +203,13 @@ export function runEffectInCloudflareSpan<A, E, R>(options: {
       },
     )
 
-    // oxlint-disable-next-line solzero/no-return-in-arrow -- Effect.callback register returns its interrupt finalizer for Cloudflare span interop.
     return Effect.sync(() => {
       signal.removeEventListener("abort", interruptChild)
       interruptChild()
     })
-  })
+  }
+
+  return Effect.callback<A, E>(register)
 }
 
 function spanAttributeValue(value: unknown): Option.Option<string | number | boolean> {

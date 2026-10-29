@@ -4,6 +4,7 @@ import {
   type WorkflowManifest,
   type WorkflowManifestNode,
 } from "@solzero/shared"
+import { describeError, recoverSync } from "../../lib/effect-errors"
 
 export type WorkflowManifestAuditSeverity = "info" | "warning" | "error"
 
@@ -316,22 +317,24 @@ export function auditWorkflowManifestRuntimeCompatibility(input: {
   normalizeManifest: ManifestNormalizer
 }): WorkflowManifestAuditResult {
   const findings: WorkflowManifestAuditFinding[] = []
-  let migration: WorkflowManifestMigrationResult | null = null
 
-  // oxlint-disable-next-line effect/avoid-try-catch -- Synchronous, non-Effect boundary that must capture throws from the injected `normalizeManifest` validator (and migration invariant checks) as audit findings. This module is intentionally kept Effect-free so the s0 control-flow rules stay inactive; wrapping in Effect would force an effect import across the whole file and change the migration ABI surface.
-  try {
-    migration = migrateWorkflowManifestForSave(
-      input.manifest,
-      input.name ?? "Workflow",
-      input.normalizeManifest,
-    )
-  } catch (error) {
-    findings.push({
-      severity: "error",
-      code: "manifest-migration",
-      message: error instanceof Error ? error.message : String(error),
-    })
-  }
+  const migration = recoverSync<WorkflowManifestMigrationResult | null>(
+    () =>
+      migrateWorkflowManifestForSave(
+        input.manifest,
+        input.name ?? "Workflow",
+        input.normalizeManifest,
+      ),
+    (error) => {
+      findings.push({
+        severity: "error",
+        code: "manifest-migration",
+        message: describeError(error),
+      })
+
+      return null
+    },
+  )
 
   const validation = validateWorkflowDraft(migration?.manifest ?? input.manifest)
   validation.errors.forEach((message) => {

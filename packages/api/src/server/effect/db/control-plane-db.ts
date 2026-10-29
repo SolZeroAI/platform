@@ -1,9 +1,9 @@
-/* oxlint-disable solzero/no-if-statement, solzero/no-ternary, solzero/no-return-in-arrow -- Control-plane dialect selection is an imperative adapter boundary between D1 sqlite and Hyperdrive postgres. */
 import { AsyncLocalStorage } from "node:async_hooks"
 import { defineRelations } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
+import * as P from "effect/Predicate"
 import {
   APP_DB_MODE_ENV,
   APP_HYPERDRIVE_BINDING,
@@ -14,7 +14,6 @@ import {
   type S0DatabaseEngine,
 } from "@solzero/shared"
 import type { ApiEnv } from "infra/types/env"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- control-plane-db.ts builds openD1Drizzle from the D1 binding at the composition edge because d1ControlPlane owns drizzle construction.
 import { openD1Drizzle, type D1DrizzleDatabase } from "./d1-drizzle"
 import {
   asFiniteNumber,
@@ -110,18 +109,46 @@ export function hasControlPlane(env: ApiEnv): boolean {
   )
 }
 
+/** Reads a function-valued field, `None` when the driver does not implement it. */
+const callable = (value: unknown) => Option.liftPredicate(value, P.isFunction)
+
+/** True for a non-null object or array that has the field. Functions do not count. */
+const hasRowField =
+  (field: "results" | "rows") =>
+  (value: unknown): value is object =>
+    P.isObjectOrArray(value) && field in value
+
+function rowsField<T>(result: unknown, field: "results" | "rows"): T[] {
+  return Match.value(result).pipe(
+    Match.when(
+      hasRowField(field),
+      // SAFETY: D1 all() and Postgres drivers put the caller's rows on this field. T is that SQL row contract.
+      (value) => (value as Partial<Record<typeof field, T[]>>)[field] ?? [],
+    ),
+    Match.orElse(() => []),
+  )
+}
+
 function rawQueryRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
+  return Match.value(result).pipe(
     // SAFETY: Array.isArray established a row list. T is the caller's SQL row contract.
-    return result as T[]
-  }
+    Match.when(Array.isArray, (rows) => rows as T[]),
+    Match.orElse((value) => rowsField<T>(value, "rows")),
+  )
+}
 
-  if (result && typeof result === "object" && "rows" in result) {
-    // SAFETY: Postgres drivers put the caller's rows on the rows field. T is that SQL row contract.
-    return (result as { rows?: T[] }).rows ?? []
-  }
+/** D1 all() puts rows on results. Other drivers return the rows directly. */
+function d1AllRows<T>(result: unknown): T[] {
+  return Match.value(result).pipe(
+    Match.when(hasRowField("results"), (value) => rowsField<T>(value, "results")),
+    Match.orElse((value) => rawQueryRows<T>(value)),
+  )
+}
 
-  return []
+/** D1 first() returns one row of the caller's SQL contract T, or null when no row exists. */
+function d1FirstRows<T>(row: unknown): T[] {
+  // SAFETY: a truthy first() result is one row of the caller's SQL contract T.
+  return [row].filter(Boolean) as T[]
 }
 
 interface D1StatementMethods {
@@ -137,55 +164,47 @@ async function runD1PreparedSql<T>(
 ): Promise<T[]> {
   // SAFETY: D1 prepared statements expose all, first, or run. Some bindings omit methods, so each one stays optional.
   const statement = db.prepare(sqliteSql).bind(...binds) as D1StatementMethods
-  const all = statement.all
 
-  if (typeof all === "function") {
-    const result = await all.call(statement)
+  const execute = callable(statement.all).pipe(
+    Option.map((all) => () => Promise.resolve(all.call(statement)).then(d1AllRows<T>)),
+    Option.orElse(() =>
+      Option.map(
+        callable(statement.first),
+        (first) => () => Promise.resolve(first.call(statement)).then(d1FirstRows<T>),
+      ),
+    ),
+    Option.orElse(() =>
+      Option.map(
+        callable(statement.run),
+        (run) => () => Promise.resolve(run.call(statement)).then((): T[] => []),
+      ),
+    ),
+  )
 
-    if (result && typeof result === "object" && "results" in result) {
-      // SAFETY: D1 all() puts the caller's rows on results. T is that SQL row contract.
-      return (result as { results?: T[] }).results ?? []
-    }
-
-    return rawQueryRows<T>(result)
-  }
-
-  const first = statement.first
-
-  if (typeof first === "function") {
-    const row = await first.call(statement)
-
-    // SAFETY: D1 first() returns one row of the caller's SQL contract T, or null when no row exists.
-    return row ? [row as T] : []
-  }
-
-  const run = statement.run
-
-  if (typeof run === "function") {
-    await run.call(statement)
-
-    return []
-  }
-
-  throw new Error("D1 statement must implement all(), first(), or run()")
+  return Option.match(execute, {
+    onNone: () => Promise.reject(new Error("D1 statement must implement all(), first(), or run()")),
+    onSome: (run) => run(),
+  })
 }
 
 const POSTGRES_DATE_OIDS = ["1184", "1082", "1083", "1114", "1182", "1185", "1115", "1231"] as const
 
 export function serializePostgresDate(value: unknown) {
-  return value instanceof Date ? value.toISOString() : value
+  return Match.value(value).pipe(
+    Match.when(Match.instanceOf(Date), (date) => date.toISOString()),
+    Match.orElse((other) => other),
+  )
 }
 
+const postgresDateSerializers = Object.fromEntries(
+  POSTGRES_DATE_OIDS.map((oid) => [oid, serializePostgresDate]),
+)
+
+/** Installs the date serializers on a postgres.js client. A client without serializers is left as is. */
 export function serializePostgresDates(client: {
   readonly options?: { serializers?: Record<string, (value: unknown) => unknown> }
 }) {
-  const serializers = client.options?.serializers
-
-  if (!serializers) return
-
-  for (const oid of POSTGRES_DATE_OIDS) {
-    serializers[oid] = serializePostgresDate
-  }
+  Object.assign(client.options?.serializers ?? {}, postgresDateSerializers)
 }
 
 interface PostgresSqlClient {
@@ -202,19 +221,13 @@ async function queryPostgresClient<T>(
   text: string,
   binds: unknown[],
 ): Promise<T[]> {
-  const unsafe = client.unsafe
+  const query = callable(client.unsafe).pipe(Option.orElse(() => callable(client.query)))
 
-  if (typeof unsafe === "function") {
-    return rawQueryRows<T>(await unsafe.call(client, text, binds))
-  }
-
-  const query = client.query
-
-  if (typeof query === "function") {
-    return rawQueryRows<T>(await query.call(client, text, binds))
-  }
-
-  throw new Error("Postgres client is required when DATABASE is planetscale")
+  return Option.match(query, {
+    onNone: () =>
+      Promise.reject(new Error("Postgres client is required when DATABASE is planetscale")),
+    onSome: (run) => Promise.resolve(run.call(client, text, binds)).then(rawQueryRows<T>),
+  })
 }
 
 interface SqliteRawQueryDb {
@@ -228,14 +241,12 @@ interface DrizzleClientCarrier {
 function withSqliteRawQueryCompat(db: SqliteRawQueryDb): AppDrizzleDatabase {
   const execute = db.execute
 
-  const all = async <T>(query: unknown) => {
-    if (typeof execute !== "function") {
-      // SAFETY: a drizzle handle without execute has no rows. T is the caller's SQL row contract.
-      return [] as T[]
-    }
-
-    return rawQueryRows<T>(await execute.call(db, query))
-  }
+  // A drizzle handle without execute has no rows.
+  const all = async <T>(query: unknown): Promise<T[]> =>
+    Option.match(callable(execute), {
+      onNone: (): T[] => [],
+      onSome: (run) => Promise.resolve(run.call(db, query)).then(rawQueryRows<T>),
+    })
 
   // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Object.assign keeps the driver drizzle instance. AppDrizzleDatabase is the D1 drizzle type and does not overlap that postgres handle.
   return Object.assign(db, { all }) as unknown as AppDrizzleDatabase
@@ -334,23 +345,28 @@ export async function runControlPlaneSql<T = Record<string, unknown>>(
   sqliteSql: string,
   binds: unknown[] = [],
 ): Promise<T[]> {
-  const engine = databaseEngineFromEnv(env)
+  return Match.value(databaseEngineFromEnv(env)).pipe(
+    Match.when("d1", () => runD1PreparedSql<T>(requireD1Database(env), sqliteSql, binds)),
+    Match.orElse(() => runPostgresControlPlaneSql<T>(env, sqliteSql, binds)),
+  )
+}
 
-  if (engine === "d1") {
-    return runD1PreparedSql<T>(requireD1Database(env), sqliteSql, binds)
-  }
-
+async function runPostgresControlPlaneSql<T>(
+  env: ApiEnv,
+  sqliteSql: string,
+  binds: unknown[],
+): Promise<T[]> {
   const db = makeControlPlaneFromEnv(env)
   const rewritten = rewriteSqlitePlaceholders(sqliteSql, "postgres")
   // SAFETY: PlanetScale drizzle stores the postgres.js client on $client. AppDrizzleDatabase names the D1 handle, which does not list that field.
   const client = (db.drizzle as DrizzleClientCarrier).$client
 
   // postgres.js clients are tagged-template functions (`typeof` is "function").
-  if (!isPostgresQueryClient(client)) {
-    throw new Error("Postgres client is required when DATABASE is planetscale")
-  }
-
-  return queryPostgresClient<T>(client, rewritten, binds)
+  return Option.match(Option.liftPredicate(client, isPostgresQueryClient), {
+    onNone: () =>
+      Promise.reject(new Error("Postgres client is required when DATABASE is planetscale")),
+    onSome: (pgClient) => queryPostgresClient<T>(pgClient, rewritten, binds),
+  })
 }
 
 export async function runControlPlaneSqlFirst<T = Record<string, unknown>>(

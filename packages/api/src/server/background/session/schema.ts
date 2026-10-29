@@ -1,4 +1,6 @@
 import { DEFAULT_ISOLATE_STEP_LIMIT } from "@solzero/shared"
+import * as Match from "effect/Match"
+import * as Result from "effect/Result"
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS session (
@@ -124,19 +126,26 @@ CREATE INDEX IF NOT EXISTS idx_participant_ws_tokens_hash ON participant_ws_toke
 CREATE INDEX IF NOT EXISTS idx_participant_ws_tokens_participant ON participant_ws_tokens(participant_id);
 `
 
+function isError(value: unknown): value is Error {
+  return value instanceof Error
+}
+
+function isAppliedMigrationError(error: unknown) {
+  const message = Match.value(error).pipe(
+    Match.when(isError, (failure) => failure.message),
+    Match.orElse(String),
+  )
+
+  return message.includes("duplicate column") || message.includes("already exists")
+}
+
+// SqlStorage.exec throws on "duplicate column" and "already exists" when a migration already ran.
+// Those errors are ignored. Other errors are thrown again.
 function runMigration(sql: SqlStorage, statement: string): void {
-  // oxlint-disable-next-line effect/avoid-try-catch -- Idempotent DDL boundary: SqlStorage.exec throws synchronously on "duplicate column"/"already exists" for already-applied migrations, which must be swallowed while other errors rethrow.
-  try {
-    sql.exec(statement)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-
-    if (message.includes("duplicate column") || message.includes("already exists")) {
-      return
-    }
-
-    throw error
-  }
+  Result.try({ try: () => sql.exec(statement), catch: (error) => error }).pipe(
+    Result.orElse((error) => Result.liftPredicate(error, isAppliedMigrationError, () => error)),
+    Result.getOrThrowWith((error) => error),
+  )
 }
 
 export function initSchema(sql: SqlStorage): void {

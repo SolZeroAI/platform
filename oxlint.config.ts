@@ -122,6 +122,63 @@ export default defineConfig({
       },
     },
     {
+      // The session Durable Object is a composition root. It builds the tracing layer and the
+      // control plane from its Worker env, then runs Effects through lib/effect-promise.
+      files: [
+        "packages/api/src/server/background/session/durable-object.ts",
+        "packages/api/src/server/background/session/durable-object/*.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The workflow runtime runs outside the HTTP Layer: public routers, the alarm Durable Object,
+      // the dynamic workflow loader, service-binding actions, and node executors. Each entrypoint
+      // builds the control plane and internal clients from its Worker env.
+      files: ["packages/api/src/server/background/workflows/**/*.ts"],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The HTTP composition roots. The runtime installs the logger layer, CloudflareContext and
+      // the API key check build the control plane from the Worker env, and the control-plane
+      // modules open the D1 and Hyperdrive drizzle handles.
+      files: [
+        "packages/api/src/server/effect/db/control-plane-db.ts",
+        "packages/api/src/server/effect/db/postgres-promise-drizzle.ts",
+        "packages/api/src/server/effect/runtime.ts",
+        "packages/api/src/server/effect/services/auth.ts",
+        "packages/api/src/server/effect/services/cloudflare.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // Background modules that run outside the HTTP Layer: the provider catalog, the LiteLLM cron
+      // and config reads, and the sandbox manager and harness provider. Each builds the control
+      // plane from its Worker env.
+      files: [
+        "packages/api/src/server/background/ai-providers/litellm.ts",
+        "packages/api/src/server/background/provider-catalog.ts",
+        "packages/api/src/server/background/sandbox/lifecycle/manager.ts",
+        "packages/api/src/server/background/sandbox/providers/harness-container-provider.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // Better Auth and the MCP servers start outside the HTTP Layer. They build the control plane
+      // from the Worker env before the library or MCP SDK takes the request.
+      files: [
+        "packages/api/src/server/lib/better-auth.ts",
+        "packages/api/src/server/mcp/mcpcf-server/runtime.ts",
+        "packages/api/src/server/mcp/workflow-builder/server.ts",
+      ],
+      rules: { "anti-slop-effect/no-service-constructor-imports": "off" },
+    },
+    {
+      // The HTTP workflow node sends a user-authored request and reports the final URL, status
+      // text, and raw body. It calls the Worker fetch with the node's abort signal directly.
+      files: ["packages/api/src/server/background/workflows/nodes/http.ts"],
+      rules: { "effect/avoid-native-fetch": "off" },
+    },
+    {
       // Operator process boundaries. They read DATABASE, APP_DB_MODE, and PlanetScale tokens (and copy
       // them to the names Alchemy reads) before an Alchemy context exists.
       files: [

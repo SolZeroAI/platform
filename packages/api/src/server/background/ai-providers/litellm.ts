@@ -11,7 +11,6 @@ import {
   getS0DeploymentConfig,
   getS0DeploymentSecret,
 } from "../db/s0-config"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- makeControlPlaneFromEnv builds the control plane from the Worker env for LiteLLM cron and config reads, which have no Layer context.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { CronRunsStore, sanitizeCronErrorMessage, type CronRunTrigger } from "../db/cron-runs"
 import {

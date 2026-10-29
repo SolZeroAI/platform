@@ -8,8 +8,7 @@ import type {
   McpcfUserServerSettingsPayload,
   McpcfUserSettingsListQuery,
 } from "@solzero/api"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- mcpcf-tools.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because session MCP settings read control-plane rows in the handler.
-import { makeControlPlaneFromEnv, runControlPlaneSqlFirst } from "../../db/control-plane-db"
+import { runControlPlaneSqlFirst } from "../../db/control-plane-db"
 import { McpcfRegistryStore } from "../../../background/db/mcpcf"
 import type { GlobalSecretsStore } from "../../../background/db/repo-secrets"
 import {
@@ -296,7 +295,7 @@ function formatServerSummary(input: {
 
 export function mcpcfServers() {
   return runControlPlane(
-    Effect.fn("sessions.mcpcfServers")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.mcpcfServers")(function* ({ request, env, principal, db }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing user context",
@@ -310,9 +309,10 @@ export function mcpcfServers() {
       const servers = yield* registry.listAvailableServers()
       const serverIds = servers.map((server) => server.id)
 
-      const userConfigs = yield* new UserMcpcfServerConfigStore(
-        makeControlPlaneFromEnv(env),
-      ).listByUserAndServerIds(userId, serverIds)
+      const userConfigs = yield* new UserMcpcfServerConfigStore(db).listByUserAndServerIds(
+        userId,
+        serverIds,
+      )
 
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
@@ -584,7 +584,7 @@ function filterMcpcfUserSettings(
 
 export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) {
   return runControlPlane(
-    Effect.fn("sessions.mcpcfSettings")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.mcpcfSettings")(function* ({ request, env, principal, db }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing user context",
@@ -609,9 +609,10 @@ export function mcpcfSettings({ query }: { query: McpcfUserSettingsListQuery }) 
       const contextForgeApiKeysUrl = getContextForgeApiKeysUrl(contextForgeUrl)
       const serverIds = servers.map((server) => server.id)
 
-      const userConfigs = yield* new UserMcpcfServerConfigStore(
-        makeControlPlaneFromEnv(env),
-      ).listByUserAndServerIds(userId, serverIds)
+      const userConfigs = yield* new UserMcpcfServerConfigStore(db).listByUserAndServerIds(
+        userId,
+        serverIds,
+      )
 
       const userConfigByServerId = new Map(
         userConfigs.map((userConfig) => [userConfig.serverId, userConfig]),
@@ -836,7 +837,7 @@ export function updateMcpcfSettings({
   payload: McpcfUserServerSettingsPayload
 }) {
   return runControlPlane(
-    Effect.fn("sessions.updateMcpcfSettings")(function* ({ request, env, principal }) {
+    Effect.fn("sessions.updateMcpcfSettings")(function* ({ request, env, principal, db }) {
       const userId = yield* requireOption(
         resolvePrincipalUserId(request, principal),
         "Missing user context",
@@ -874,7 +875,7 @@ export function updateMcpcfSettings({
         400,
       )
 
-      const userConfigStore = new UserMcpcfServerConfigStore(makeControlPlaneFromEnv(env))
+      const userConfigStore = new UserMcpcfServerConfigStore(db)
       const existing = yield* userConfigStore.get(userId, server.id)
 
       const existingKey = Option.getOrNull(

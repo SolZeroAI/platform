@@ -1,5 +1,6 @@
 import { createMcpHandler } from "agents/mcp"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import * as Match from "effect/Match"
 import { verifyMcpcfProxyCapabilityRequest } from "../background/auth/mcpcf-capability"
 import {
@@ -104,6 +105,5 @@ export function handleMcpcfMcpRequest(
   ctx: ExecutionContext,
   runtimeContext: McpcfMcpRuntimeContext,
 ): Promise<Response> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker fetch-entry adapter boundary: the apps/api entrypoint is non-Effect and cannot import Effect without re-gating its imperative routing, so the Effect program is run here.
-  return Effect.runPromise(handleMcpcfMcpRequestEffect(request, env, ctx, runtimeContext))
+  return runEffectPromise(handleMcpcfMcpRequestEffect(request, env, ctx, runtimeContext))
 }

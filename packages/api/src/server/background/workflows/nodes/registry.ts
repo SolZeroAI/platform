@@ -9,7 +9,7 @@ import { executeWorkflowNotificationNode } from "./notification"
 import { executeWorkflowSessionNode } from "./session"
 import { executeWorkflowSlackNode } from "./slack"
 import { executeWorkflowStorageNode } from "./storage"
-import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Option from "effect/Option"
 
 export interface WorkflowNodeAdapter {
@@ -17,35 +17,26 @@ export interface WorkflowNodeAdapter {
   execute(input: WorkflowNodeExecutionInput): Promise<Record<string, unknown>>
 }
 
-const runNode =
-  (
-    // oxlint-disable-next-line solzero/no-manual-effect-channels -- Promise-boundary bridge: the channel must be named so the Effect node executors can be run at the Promise-typed WorkflowActionExecutor RPC ABI edge.
-    execute: (input: WorkflowNodeExecutionInput) => Effect.Effect<Record<string, unknown>, Error>,
-  ) =>
-  (input: WorkflowNodeExecutionInput) =>
-    // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary bridging the Effect workflow node executors to the Promise-typed WorkflowActionExecutor RPC ABI consumed by the dynamic workflow runtime.
-    Effect.runPromise(execute(input))
-
 const workflowNodeAdapters: Partial<Record<WorkflowNodeAdapterCategory, WorkflowNodeAdapter>> = {
   network: {
     category: "network",
-    execute: runNode(executeWorkflowHttpNode),
+    execute: (input) => runEffectPromise(executeWorkflowHttpNode(input)),
   },
   session: {
     category: "session",
-    execute: runNode(executeWorkflowSessionNode),
+    execute: (input) => runEffectPromise(executeWorkflowSessionNode(input)),
   },
   slack: {
     category: "slack",
-    execute: runNode(executeWorkflowSlackNode),
+    execute: (input) => runEffectPromise(executeWorkflowSlackNode(input)),
   },
   notification: {
     category: "notification",
-    execute: runNode(executeWorkflowNotificationNode),
+    execute: (input) => runEffectPromise(executeWorkflowNotificationNode(input)),
   },
   storage: {
     category: "storage",
-    execute: runNode(executeWorkflowStorageNode),
+    execute: (input) => runEffectPromise(executeWorkflowStorageNode(input)),
   },
 }
 

@@ -12,6 +12,9 @@ import {
 } from "./common"
 import * as Arr from "effect/Array"
 import * as Effect from "effect/Effect"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 
@@ -88,37 +91,25 @@ const resolveWorkflowSlackToken = Effect.fn("workflows.resolveSlackToken")(funct
   )
 })
 
-const callSlackApi = Effect.fn("workflows.callSlackApi")(function* (
-  token: string,
+const executeSlackApiRequest = Effect.fn("workflows.executeSlackApiRequest")(function* (
   method: string,
-  body: Record<string, unknown>,
+  request: HttpClientRequest.HttpClientRequest,
 ) {
-  const response = yield* Effect.tryPromise({
-    try: () =>
-      // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (Slack Web API) inside a workflow node executor; native fetch is required at this external API edge.
-      fetch(`https://slack.com/api/${method}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json; charset=utf-8",
-        },
-        body: stringifyJson(body),
-      }),
-    catch: toError,
-  })
+  const response = yield* HttpClient.execute(request).pipe(
+    Effect.provideService(FetchHttpClient.Fetch, fetch),
+    Effect.provide(FetchHttpClient.layer),
+    // Surface the fetch failure itself, as the native fetch call did.
+    Effect.mapError((error) => toError(error.reason.cause ?? error)),
+  )
 
   const result =
-    /* SAFETY: The JSON body is the SlackApiResponse shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
-      {
-        try: () =>
-          /* SAFETY: The JSON body is the Promise<SlackApiResponse> shape read by this caller after the response arrives. */ response
-            .json()
-            .catch(() => ({})) as Promise<SlackApiResponse>,
-        catch: toError,
-      },
+    /* SAFETY: The JSON body is the SlackApiResponse shape read by this caller after the response arrives. */ (yield* response.json.pipe(
+      Effect.orElseSucceed(() => ({})),
     )) as SlackApiResponse
 
-  return yield* Match.value(response.ok).pipe(
+  const httpOk = response.status >= 200 && response.status < 300
+
+  return yield* Match.value(httpOk).pipe(
     Match.when(false, () =>
       workflowNodeFail(`Slack API ${method} failed with HTTP ${response.status}`),
     ),
@@ -130,6 +121,19 @@ const callSlackApi = Effect.fn("workflows.callSlackApi")(function* (
         Match.orElse(() => Effect.succeed(result)),
       ),
     ),
+  )
+})
+
+const callSlackApi = Effect.fn("workflows.callSlackApi")(function* (
+  token: string,
+  method: string,
+  body: Record<string, unknown>,
+) {
+  return yield* executeSlackApiRequest(
+    method,
+    HttpClientRequest.post(`https://slack.com/api/${method}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(HttpClientRequest.bodyText(stringifyJson(body), "application/json; charset=utf-8")),
   )
 })
 
@@ -160,43 +164,11 @@ const callSlackApiGet = Effect.fn("workflows.callSlackApiGet")(function* (
   method: string,
   query: Record<string, unknown>,
 ) {
-  const url = slackApiUrl(method, query)
-
-  const response = yield* Effect.tryPromise({
-    try: () =>
-      // oxlint-disable-next-line effect/avoid-native-fetch -- External HTTP boundary (Slack Web API) inside a workflow node executor; native fetch is required at this external API edge.
-      fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }),
-    catch: toError,
-  })
-
-  const result =
-    /* SAFETY: The JSON body is the SlackApiResponse shape read by this caller after the response arrives. */ (yield* Effect.tryPromise(
-      {
-        try: () =>
-          /* SAFETY: The JSON body is the Promise<SlackApiResponse> shape read by this caller after the response arrives. */ response
-            .json()
-            .catch(() => ({})) as Promise<SlackApiResponse>,
-        catch: toError,
-      },
-    )) as SlackApiResponse
-
-  return yield* Match.value(response.ok).pipe(
-    Match.when(false, () =>
-      workflowNodeFail(`Slack API ${method} failed with HTTP ${response.status}`),
-    ),
-    Match.orElse(() =>
-      Match.value(result.ok).pipe(
-        Match.when(false, () =>
-          workflowNodeFail(`Slack API ${method} failed: ${result.error ?? "unknown_error"}`),
-        ),
-        Match.orElse(() => Effect.succeed(result)),
-      ),
-    ),
+  return yield* executeSlackApiRequest(
+    method,
+    HttpClientRequest.get(slackApiUrl(method, query), {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   )
 })
 

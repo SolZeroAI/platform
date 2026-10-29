@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { verifyMcpcfProxyCapabilityRequest } from "../background/auth/mcpcf-capability"
@@ -61,6 +62,5 @@ export function shouldDispatchMcpRequest(input: {
   mcpcfProxySigningSecret?: string | null
   workerRouteEnabled: boolean
 }): Promise<boolean> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Worker entry boundary: apps/api index is non-Effect and runs this Effect at the Promise edge.
-  return Effect.runPromise(shouldDispatchMcpRequestEffect(input))
+  return runEffectPromise(shouldDispatchMcpRequestEffect(input))
 }

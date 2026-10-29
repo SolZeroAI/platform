@@ -4,7 +4,7 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { SandboxEvent, ServerMessage } from "../types"
 import { generateId } from "../auth/crypto"
-import { parseJsonOrText, stringifyJson } from "../../lib/json"
+import { parseJsonOrText, stringifyJson, stringifyJsonPretty } from "../../lib/json"
 import type { SessionRepository } from "./repository"
 import type { EventRow, MessageRow, SessionRow } from "./types"
 
@@ -138,11 +138,6 @@ function truncateText(value: string, maxLength: number): string {
   )
 }
 
-function stringifyToolArgs(value: unknown): string {
-  // oxlint-disable-next-line effect/avoid-direct-json -- 2-space pretty rendering of already-decoded sandbox tool args for the LLM resume prompt; values come from parsed events (cycle-free) and compact Schema JSON would degrade prompt legibility.
-  return JSON.stringify(value, null, 2)
-}
-
 function latestAssistantText(events: readonly SandboxEvent[]): Option.Option<string> {
   const latestToken = events
     .filter((event): event is Extract<SandboxEvent, { type: "token" }> => event.type === "token")
@@ -179,7 +174,7 @@ function formatToolCall(
   index: number,
   toolResults: Map<string, Extract<SandboxEvent, { type: "tool_result" }>>,
 ): string {
-  const args = stringifyToolArgs(call.args)
+  const args = stringifyJsonPretty(call.args)
 
   const header = [
     `Tool call ${index + 1}: ${call.tool}`,

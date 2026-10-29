@@ -6,11 +6,12 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../lib/effect-promise"
+import { stringifyJsonPretty } from "../../lib/json"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { createSessionIndexStoreFromD1 } from "../../background/db/session-index"
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- workflow-builder/server.ts builds makeControlPlaneFromEnv from the Worker env at the composition edge because the MCP server resolves sessions before a request layer.
 import { makeControlPlaneFromEnv } from "../../effect/db/control-plane-db"
 import { raise } from "../../lib/effect-errors"
 import {
@@ -45,8 +46,7 @@ function jsonToolResult(value: unknown) {
     content: [
       {
         type: "text" as const,
-        // oxlint-disable-next-line effect/avoid-direct-json -- pretty-printed (2-space) JSON tool output must be preserved exactly; lib/json stringifyJson emits compact JSON, which would change the MCP tool response text.
-        text: JSON.stringify(value, null, 2),
+        text: stringifyJsonPretty(value),
       },
     ],
   }
@@ -166,8 +166,7 @@ async function callWorkflowBuilderTool(
 }
 
 async function runValidateWorkflowManifest(manifest: unknown): Promise<CallToolResult> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request handler requires Promise; runs validateWorkflowBuilderManifest Effect at that boundary.
-  return Effect.runPromise(
+  return runEffectPromise(
     validateWorkflowBuilderManifest({ manifest }).pipe(Effect.map(jsonToolResult)),
   )
 }
@@ -176,8 +175,7 @@ async function runSubmitWorkflowDraft(
   context: WorkflowBuilderContext,
   manifest: unknown,
 ): Promise<CallToolResult> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- MCP SDK request handler requires Promise; runs submitWorkflowBuilderDraft Effect at that boundary.
-  return Effect.runPromise(
+  return runEffectPromise(
     submitWorkflowBuilderDraft(context, { manifest }).pipe(Effect.map(jsonToolResult)),
   )
 }

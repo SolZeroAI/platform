@@ -48,13 +48,13 @@ import { createApiRequestObserver } from "../../../effect/services/observability
 import * as Arr from "effect/Array"
 import * as Cause from "effect/Cause"
 import * as Effect from "effect/Effect"
+import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import {
   BackgroundTracing,
   localSpanContextFromHeaders,
-  // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- session Durable Object processing is a composition root. It builds the tracing layer at Effect.runPromise edges.
   makeBackgroundTracingLayer,
   type LocalSpanContext,
 } from "../../observability/tracing"
@@ -72,6 +72,8 @@ import { buildResolvedSessionMcpServers } from "../runtime-mcp"
 import { initSchema } from "../schema"
 import { handleResumePromptRequest } from "../resume"
 import { runIsolatePromptWithEvents } from "../isolate-prompt-bridge"
+import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
+import { createWorkflowStoreFromD1 } from "../../db/workflows"
 import { mirrorSubagentWorkflowEvent } from "../subagent-workflow-mirror"
 import {
   getSandboxEventMessageId,
@@ -153,8 +155,7 @@ export function runQueuedMessage(
   message: MessageRow,
   parentContext?: LocalSpanContext,
 ): Promise<void> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object background queue boundary; runs the session.message.process span Effect from the Promise-typed message queue runner.
-  return Effect.runPromise(
+  return runEffectPromise(
     host.processQueuedMessage(message, parentContext).pipe(
       Effect.provide(
         makeBackgroundTracingLayer({
@@ -708,7 +709,7 @@ export function maybeMirrorPersistedSubagentEvent(
   return Match.value(event).pipe(
     Match.when({ type: "subagent_event" }, (subagentEvent) =>
       mirrorSubagentWorkflowEvent({
-        env: host.env,
+        workflowStore: createWorkflowStoreFromD1(makeControlPlaneFromEnv(host.env)),
         repository: host.repository,
         sessionId: host.getSessionId(),
         event: subagentEvent,
@@ -929,8 +930,7 @@ export function stopRuntimeExecution(
 ) {
   return Match.value(agentRuntime).pipe(
     Match.when("isolate", () => host.stopIsolateRuntime(processing, participant, runtimeId)),
-    // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object stop handler is a platform Promise boundary.
-    Match.orElse(() => Effect.runPromise(host.lifecycleManager.stopCurrentExecution())),
+    Match.orElse(() => runEffectPromise(host.lifecycleManager.stopCurrentExecution())),
   )
 }
 
@@ -942,8 +942,7 @@ export function stopIsolateRuntime(
 ): Promise<unknown> {
   host.repository.updateSandboxStatus("ready")
   host.broadcast({ type: "sandbox_status", status: "ready" })
-  // oxlint-disable-next-line effect/effect-run-in-body -- Durable Object stop boundary; runs the isolate stopPrompt span Effect with failure logging at the Promise edge.
-  return Effect.runPromise(host.stopIsolatePromptEffect(processing, participant, runtimeId))
+  return runEffectPromise(host.stopIsolatePromptEffect(processing, participant, runtimeId))
 }
 
 export function stopIsolatePromptEffect(
