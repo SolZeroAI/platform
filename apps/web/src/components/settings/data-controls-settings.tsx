@@ -2,8 +2,9 @@
 
 import { summarizeSessionTools } from "@solzero/shared"
 import { Link } from "@tanstack/react-router"
-import { useCallback, useEffect, useState } from "react"
-import { runApi } from "@/lib/api-client"
+import type { SessionListResponse } from "@solzero/api"
+import { useCallback, useState } from "react"
+import { runApi, type ApiRequest } from "@/lib/api-client"
 import type { SessionItem } from "@/lib/session-list"
 import { formatRelativeTime } from "@/lib/time"
 import { S0Loader } from "@/components/s0-loader"
@@ -12,12 +13,20 @@ import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-
 const PAGE_SIZE = 20
 const DATA_CONTROLS_TOC_ITEMS = [{ id: "archived-chats", label: "Archived chats" }] as const
 
-export function DataControlsSettings() {
-  const [sessions, setSessions] = useState<SessionItem[]>([])
-  const [loading, setLoading] = useState(true)
+/** One page of the signed-in user's archived sessions, starting at `offset`. */
+export function archivedSessionsRequest(offset: number): ApiRequest<SessionListResponse> {
+  return (client) =>
+    client.sessions.list({
+      query: { status: "archived", limit: String(PAGE_SIZE), offset: String(offset) },
+    })
+}
+
+export function DataControlsSettings({ initialPage }: { initialPage: SessionListResponse }) {
+  const [sessions, setSessions] = useState<SessionItem[]>(() => [...initialPage.sessions])
+  const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
-  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(initialPage.hasMore)
+  const [offset, setOffset] = useState(initialPage.sessions.length)
 
   const fetchArchivedSessions = useCallback(async (currentOffset: number, append: boolean) => {
     if (append) {
@@ -27,11 +36,7 @@ export function DataControlsSettings() {
     }
 
     try {
-      const data = await runApi((client) =>
-        client.sessions.list({
-          query: { status: "archived", limit: String(PAGE_SIZE), offset: String(currentOffset) },
-        }),
-      )
+      const data = await runApi(archivedSessionsRequest(currentOffset))
 
       setSessions((prev) => (append ? [...prev, ...data.sessions] : [...data.sessions]))
       setHasMore(data.hasMore)
@@ -43,10 +48,6 @@ export function DataControlsSettings() {
       setLoadingMore(false)
     }
   }, [])
-
-  useEffect(() => {
-    void fetchArchivedSessions(0, false)
-  }, [fetchArchivedSessions])
 
   const handleLoadMore = () => {
     fetchArchivedSessions(offset, true)

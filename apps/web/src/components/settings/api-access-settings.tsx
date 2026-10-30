@@ -74,7 +74,35 @@ interface SessionTransferPayload {
 
 type ContextForgeTokenSettings = McpcfContextForgeTokenSettings
 
+/** The API keys, linked accounts and ContextForge token settings that the page loads together. */
+export interface ApiAccessData {
+  readonly apiKeys: ApiKeyItem[]
+  readonly accounts: LinkedAccountItem[]
+  readonly contextForgeTokenSettings: ContextForgeTokenSettings
+}
+
+export async function loadApiAccessData(signal?: AbortSignal): Promise<ApiAccessData> {
+  const [keysData, accountsResult, contextForgeTokenSettings] = await Promise.all([
+    runApi((client) => client.auth.listApiKeys(), {
+      signal,
+      fallbackMessage: "Failed to load API keys",
+    }),
+    authClient.listAccounts(),
+    runApi((client) => client.sessions.mcpcfContextForgeTokenSettings(), {
+      signal,
+      fallbackMessage: "Failed to load ContextForge token settings",
+    }),
+  ])
+
+  return {
+    apiKeys: [...keysData.keys],
+    accounts: normalizeAccounts(accountsResult),
+    contextForgeTokenSettings,
+  }
+}
+
 interface ApiAccessSettingsProps {
+  initialData: ApiAccessData
   oktaReconnect?: OktaReconnectStatus
   oktaReconnectError?: string
   slackUserId?: string
@@ -121,6 +149,7 @@ function normalizeAccounts(value: unknown): LinkedAccountItem[] {
 }
 
 export function ApiAccessSettings({
+  initialData,
   oktaReconnect,
   oktaReconnectError,
   slackUserId,
@@ -130,15 +159,15 @@ export function ApiAccessSettings({
   const { data: session } = useAuthSession()
   const authProviderConfig = useAuthProviderConfig()
   const isAdmin = session?.isAdmin === true
-  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([])
-  const [accounts, setAccounts] = useState<LinkedAccountItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [apiKeys, setApiKeys] = useState(initialData.apiKeys)
+  const [accounts, setAccounts] = useState(initialData.accounts)
+  const [loading, setLoading] = useState(false)
   const [githubProfile, setGithubProfile] = useState<GitHubProfileData | null>(null)
   const [apiKeyLabel, setApiKeyLabel] = useState("")
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
 
   const [contextForgeTokenSettings, setContextForgeTokenSettings] =
-    useState<ContextForgeTokenSettings | null>(null)
+    useState<ContextForgeTokenSettings | null>(initialData.contextForgeTokenSettings)
 
   const [contextForgeToken, setContextForgeToken] = useState("")
   const [clearContextForgeToken, setClearContextForgeToken] = useState(false)
@@ -207,19 +236,10 @@ export function ApiAccessSettings({
     setErrorMessage(null)
 
     try {
-      const [keysData, accountsResult, contextForgeTokenData] = await Promise.all([
-        runApi((client) => client.auth.listApiKeys(), {
-          fallbackMessage: "Failed to load API keys",
-        }),
-        authClient.listAccounts(),
-        runApi((client) => client.sessions.mcpcfContextForgeTokenSettings(), {
-          fallbackMessage: "Failed to load ContextForge token settings",
-        }),
-      ])
-
-      setApiKeys([...keysData.keys])
-      setAccounts(normalizeAccounts(accountsResult))
-      setContextForgeTokenSettings(contextForgeTokenData)
+      const data = await loadApiAccessData()
+      setApiKeys(data.apiKeys)
+      setAccounts(data.accounts)
+      setContextForgeTokenSettings(data.contextForgeTokenSettings)
       setContextForgeToken("")
       setClearContextForgeToken(false)
     } catch (errorValue) {
@@ -228,10 +248,6 @@ export function ApiAccessSettings({
       setLoading(false)
     }
   }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   useEffect(() => {
     if (!githubAccount) {

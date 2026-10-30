@@ -1,51 +1,37 @@
 "use client"
 
-import type { AgentSkillItem, AgentSkillsResponse } from "@solzero/api"
+import { AgentSkillParams, AgentSkillPreferencePayload, type AgentSkillItem } from "@solzero/api"
 import { Badge } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Switch } from "@cloudflare/kumo/components/switch"
 import { RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
-import { S0Loader } from "@/components/s0-loader"
-import { getErrorMessage, requestJson } from "@/lib/admin-console-actions"
+import { useState } from "react"
+import { getErrorMessage } from "@/lib/admin-console-actions"
+import { runApi } from "@/lib/api-client"
 import { showErrorToast } from "@/lib/toast-manager"
 import { SettingsDocsLayout, SettingsDocsSectionHeading } from "./settings-docs-layout"
 
 const SKILLS_TOC_ITEMS = [{ id: "global-agent-skills", label: "Global skills" }] as const
 
-export function AgentSkillsSettings() {
-  const [skills, setSkills] = useState<readonly AgentSkillItem[]>([])
-  const [loading, setLoading] = useState(true)
+export function AgentSkillsSettings({
+  initialSkills,
+}: {
+  initialSkills: readonly AgentSkillItem[]
+}) {
+  const [skills, setSkills] = useState(initialSkills)
   const [busySkillId, setBusySkillId] = useState<string | null>(null)
-
-  const loadSkills = useCallback(async () => {
-    setLoading(true)
-
-    try {
-      const response = await requestJson<AgentSkillsResponse>("/api/skills")
-      setSkills(response.skills)
-    } catch (error) {
-      showErrorToast(getErrorMessage(error))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadSkills()
-  }, [loadSkills])
 
   const setPreference = async (skill: AgentSkillItem, enabled: boolean) => {
     setBusySkillId(skill.id)
 
     try {
-      const response = await requestJson<AgentSkillsResponse>(
-        `/api/skills/${encodeURIComponent(skill.id)}/preference`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled }),
-        },
+      const response = await runApi(
+        (client) =>
+          client.skills.setPreference({
+            params: new AgentSkillParams({ skillId: skill.id }),
+            payload: new AgentSkillPreferencePayload({ enabled }),
+          }),
+        { fallbackMessage: "Failed to update the skill" },
       )
 
       setSkills(response.skills)
@@ -60,9 +46,10 @@ export function AgentSkillsSettings() {
     setBusySkillId(skill.id)
 
     try {
-      const response = await requestJson<AgentSkillsResponse>(
-        `/api/skills/${encodeURIComponent(skill.id)}/preference`,
-        { method: "DELETE" },
+      const response = await runApi(
+        (client) =>
+          client.skills.clearPreference({ params: new AgentSkillParams({ skillId: skill.id }) }),
+        { fallbackMessage: "Failed to reset the skill" },
       )
 
       setSkills(response.skills)
@@ -83,11 +70,7 @@ export function AgentSkillsSettings() {
       <section className="scroll-mt-28 space-y-5" aria-labelledby="global-agent-skills">
         <SettingsDocsSectionHeading id="global-agent-skills" level="h2" title="Global skills" />
 
-        {loading ? (
-          <div className="flex min-h-32 items-center justify-center rounded-lg bg-kumo-elevated/80">
-            <S0Loader size={32} />
-          </div>
-        ) : skills.length === 0 ? (
+        {skills.length === 0 ? (
           <p className="rounded-lg bg-kumo-elevated/80 px-4 py-8 text-center text-sm text-kumo-subtle">
             No global agent skills are available.
           </p>
