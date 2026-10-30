@@ -83,10 +83,68 @@ export type WorkflowListQuery = {
   status?: string
 }
 
+export const WorkflowStatus = Schema.Literals(["active", "disabled", "archived"])
+
+/**
+ * One workflow, as the workflow routes return it. `manifest` is the stored manifest JSON; the
+ * builder migrates manifests from older versions, so the contract does not pin their shape.
+ */
+export const WorkflowSummary = Schema.Struct({
+  id: Schema.String,
+  userId: Schema.String,
+  name: Schema.String,
+  status: WorkflowStatus,
+  manifestVersion: Schema.Number,
+  manifestKey: Schema.String,
+  codeKey: Schema.String,
+  webhookId: Schema.String,
+  webhookPath: Schema.String,
+  webhookUrl: Schema.NullOr(Schema.String),
+  manifest: Schema.optionalKey(JsonRecord),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+export type WorkflowSummary = typeof WorkflowSummary.Type
+
+export const WorkflowRun = Schema.Struct({
+  id: Schema.String,
+  workflowId: Schema.String,
+  workflowVersion: Schema.Number,
+  workflowInstanceId: Schema.NullOr(Schema.String),
+  userId: Schema.String,
+  triggerKind: Schema.Literals(["manual", "webhook", "datetime", "cron", "slack"]),
+  triggerNodeId: Schema.NullOr(Schema.String),
+  status: Schema.Literals(["queued", "running", "completed", "failed"]),
+  input: JsonRecord,
+  output: Schema.NullOr(JsonRecord),
+  error: Schema.NullOr(Schema.String),
+  startedAt: Schema.Number,
+  completedAt: Schema.NullOr(Schema.Number),
+  updatedAt: Schema.Number,
+})
+
+export type WorkflowRun = typeof WorkflowRun.Type
+
+export const WorkflowRunEvent = Schema.Struct({
+  id: Schema.String,
+  workflowId: Schema.String,
+  runId: Schema.String,
+  sequence: Schema.Number,
+  nodeId: Schema.NullOr(Schema.String),
+  eventType: Schema.String,
+  level: Schema.Literals(["info", "warn", "error"]),
+  message: Schema.String,
+  data: JsonRecord,
+  createdAt: Schema.Number,
+})
+
+export type WorkflowRunEvent = typeof WorkflowRunEvent.Type
+
 export class WorkflowListResponse extends Schema.Class<WorkflowListResponse>(
   "WorkflowListResponse",
 )({
-  workflows: Schema.Array(JsonRecord),
+  workflows: Schema.Array(WorkflowSummary),
   total: Schema.Number,
   limit: Schema.Number,
   offset: Schema.Number,
@@ -128,13 +186,31 @@ export const WorkflowSlackAppCredentialsPayload = Schema.Struct({
 export type WorkflowSlackAppCredentialsPayload = typeof WorkflowSlackAppCredentialsPayload.Type
 
 export class WorkflowResponse extends Schema.Class<WorkflowResponse>("WorkflowResponse")({
-  workflow: JsonRecord,
+  workflow: WorkflowSummary,
 }) {}
 
-export const CreatedWorkflowResponse = WorkflowResponse.pipe(HttpApiSchema.status(201))
+export const WorkflowManifestMigrationStep = Schema.Struct({
+  fromVersion: Schema.Number,
+  toVersion: Schema.Number,
+  description: Schema.String,
+})
+
+/** A created or updated workflow, with the manifest migration the save applied. */
+export class WorkflowSaveResponse extends Schema.Class<WorkflowSaveResponse>(
+  "WorkflowSaveResponse",
+)({
+  workflow: WorkflowSummary,
+  manifestMigration: Schema.Struct({
+    fromVersion: Schema.Number,
+    toVersion: Schema.Number,
+    steps: Schema.Array(WorkflowManifestMigrationStep),
+  }),
+}) {}
+
+export const CreatedWorkflowResponse = WorkflowSaveResponse.pipe(HttpApiSchema.status(201))
 
 export class WorkflowRunResponse extends Schema.Class<WorkflowRunResponse>("WorkflowRunResponse")({
-  run: JsonRecord,
+  run: WorkflowRun,
 }) {}
 
 export const CreatedWorkflowRunResponse = WorkflowRunResponse.pipe(HttpApiSchema.status(201))
@@ -150,7 +226,7 @@ export class DeletedWorkflowRunResponse extends Schema.Class<DeletedWorkflowRunR
 export class WorkflowRunsResponse extends Schema.Class<WorkflowRunsResponse>(
   "WorkflowRunsResponse",
 )({
-  runs: Schema.Array(JsonRecord),
+  runs: Schema.Array(WorkflowRun),
   total: Schema.Number,
   totalRuns: Schema.Number,
   errorsLast24Hours: Schema.Number,
@@ -162,7 +238,7 @@ export class WorkflowRunsResponse extends Schema.Class<WorkflowRunsResponse>(
 export class WorkflowRunEventsResponse extends Schema.Class<WorkflowRunEventsResponse>(
   "WorkflowRunEventsResponse",
 )({
-  events: Schema.Array(JsonRecord),
+  events: Schema.Array(WorkflowRunEvent),
 }) {}
 
 export class WorkflowRunArtifactContentResponse extends Schema.Class<WorkflowRunArtifactContentResponse>(
