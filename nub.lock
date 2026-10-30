@@ -44,13 +44,13 @@ importers:
         version: 4.0.3(effect@4.0.3)(redis@6.3.0)
       alchemy:
         specifier: 2.0.0-beta.81
-        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
+        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
       drizzle-orm:
         specifier: 1.0.0-rc.5-ab785fc
-        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1)
+        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1)
       effect:
         specifier: 4.0.3
         version: 4.0.3
@@ -65,8 +65,8 @@ importers:
         specifier: 3.0.26
         version: 3.0.26(zod@4.6.1)
       '@cloudflare/workers-types':
-        specifier: ^4.20260702.1
-        version: 4.20260702.1
+        specifier: ^5.0.0
+        version: 5.20261024.1
       '@e2e-dev/decision':
         specifier: 0.3.0
         version: 0.3.0(ai@7.0.152(zod@4.6.1))(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))
@@ -114,7 +114,7 @@ importers:
         version: 3.3.1
       miniflare:
         specifier: 5.20261006.1-alpha
-        version: 5.20261006.1-alpha(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)(zod@4.6.1)
+        version: 5.20261006.1-alpha(@cloudflare/workers-types@5.20261024.1)(@types/node@24.19.2)(zod@4.6.1)
       oxfmt:
         specifier: 0.74.0
         version: 0.74.0
@@ -147,7 +147,7 @@ importers:
         version: 7.0.2
       wrangler:
         specifier: 4.149.0
-        version: 4.149.0(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)(zod@4.6.1)
+        version: 4.149.0(@cloudflare/workers-types@5.20261024.1)(@types/node@24.19.2)(zod@4.6.1)
 
   apps/api:
     dependencies:
@@ -163,7 +163,7 @@ importers:
     devDependencies:
       alchemy:
         specifier: 2.0.0-beta.81
-        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
+        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
       effect:
         specifier: 4.0.3
         version: 4.0.3
@@ -436,10 +436,10 @@ importers:
         version: link:../shared
       alchemy:
         specifier: 2.0.0-beta.81
-        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
+        version: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
       alchemy-planetscale-logical-db:
         specifier: 2.1.0
-        version: 2.1.0(@types/node@24.19.2)(alchemy@2.0.0-beta.81(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1))(effect@4.0.3)(typescript@7.0.2)
+        version: 2.1.0(@types/node@24.19.2)(alchemy@2.0.0-beta.81(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1))(effect@4.0.3)(typescript@7.0.2)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -451,8 +451,8 @@ importers:
         version: 3.3.1
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20260702.1
-        version: 4.20260702.1
+        specifier: ^5.0.0
+        version: 5.20261024.1
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -9333,15 +9333,15 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  alchemy-planetscale-logical-db@2.1.0(@types/node@24.19.2)(alchemy@2.0.0-beta.81(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1))(effect@4.0.3)(typescript@7.0.2):
+  alchemy-planetscale-logical-db@2.1.0(@types/node@24.19.2)(alchemy@2.0.0-beta.81(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1))(effect@4.0.3)(typescript@7.0.2):
     dependencies:
-      alchemy: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
+      alchemy: 2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2)
       effect: 4.0.3
       pg: 8.23.1
     transitivePeerDependencies:
       - pg-native
 
-  alchemy@2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2):
+  alchemy@2.0.0-beta.81(patch_hash=a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2)(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(drizzle-kit@1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1))(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1))(effect@4.0.3)(pg@8.23.1)(typescript@7.0.2):
     dependencies:
       '@alchemy.run/cloudflare-runtime': 2.0.0-beta.81(@distilled.cloud/cloudflare@1.0.0-rc.13(effect@4.0.3))(@effect/platform-node@4.0.3(effect@4.0.3)(redis@6.3.0))(@types/node@24.19.2)(effect@4.0.3)(rolldown@1.2.5)
       '@alchemy.run/floci': 2.0.0-beta.81(effect@4.0.3)
@@ -9374,7 +9374,7 @@ snapshots:
       '@types/aws-lambda': 8.10.164
       capnweb: 0.12.0
       drizzle-kit: 1.0.0-rc.5-ab785fc(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(pg@8.23.1)(postgres@3.4.9)(zod@4.6.1)
-      drizzle-orm: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1)
+      drizzle-orm: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1)
       effect: 4.0.3
       fflate: 0.8.3
       libsodium-wrappers: 0.8.4
@@ -9765,6 +9765,19 @@ snapshots:
   drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1):
     dependencies:
       '@cloudflare/workers-types': 4.20260702.1
+      '@effect/sql-d1': 4.0.3(effect@4.0.3)
+      '@effect/sql-sqlite-do': 4.0.3(effect@4.0.3)
+      '@electric-sql/pglite': 0.4.5
+      '@libsql/client': 0.17.4
+      effect: 4.0.3
+      pg: 8.23.1
+      postgres: 3.4.9
+      react: 19.2.8
+      zod: 4.6.1
+
+  drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261024.1)(@effect/sql-d1@4.0.3(effect@4.0.3))(@effect/sql-sqlite-do@4.0.3(effect@4.0.3))(@electric-sql/pglite@0.4.5)(@libsql/client@0.17.4)(effect@4.0.3)(pg@8.23.1)(postgres@3.4.9)(react@19.2.8)(zod@4.6.1):
+    dependencies:
+      '@cloudflare/workers-types': 5.20261024.1
       '@effect/sql-d1': 4.0.3(effect@4.0.3)
       '@effect/sql-sqlite-do': 4.0.3(effect@4.0.3)
       '@electric-sql/pglite': 0.4.5
@@ -10846,9 +10859,9 @@ snapshots:
 
   mimic-response@3.1.0: {}
 
-  miniflare@5.20261006.1-alpha(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)(zod@4.6.1):
+  miniflare@5.20261006.1-alpha(@cloudflare/workers-types@5.20261024.1)(@types/node@24.19.2)(zod@4.6.1):
     dependencies:
-      '@cloudflare/workers-types': 4.20260702.1
+      '@cloudflare/workers-types': 5.20261024.1
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.5(@types/node@24.19.2)
       undici: 7.29.1
@@ -11965,13 +11978,14 @@ snapshots:
       '@ai-sdk/provider': 4.0.33
       ai: 7.0.152(zod@4.6.1)
 
-  wrangler@4.149.0(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)(zod@4.6.1):
+  wrangler@4.149.0(@cloudflare/workers-types@5.20261024.1)(@types/node@24.19.2)(zod@4.6.1):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261006.1)
+      '@cloudflare/workers-types': 5.20261024.1
       blake3-wasm: 2.1.5
       esbuild: 0.28.2
-      miniflare: 5.20261006.1-alpha(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)(zod@4.6.1)
+      miniflare: 5.20261006.1-alpha(@cloudflare/workers-types@5.20261024.1)(@types/node@24.19.2)(zod@4.6.1)
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
       workerd: 1.20261006.1

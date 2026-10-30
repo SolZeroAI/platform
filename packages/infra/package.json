@@ -42,7 +42,7 @@
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "^5.0.0",
     "@types/node": "24.19.2",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "oxlint": "1.87.0",
