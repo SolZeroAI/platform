@@ -12,9 +12,17 @@ on:
       - master
     types:
       - labeled
-      - unlabeled
       - synchronize
       - reopened
+  # GitHub runs no pull_request workflow while a pull request has a merge
+  # conflict, so cleanup listens on pull_request_target. That event runs this
+  # workflow from the base branch even then. Cleanup checks out base branch
+  # code only and never runs pull request code.
+  pull_request_target:
+    branches:
+      - master
+    types:
+      - unlabeled
       - closed
   workflow_dispatch:
     inputs:
@@ -208,7 +216,7 @@ jobs:
         (
           github.event_name == 'workflow_dispatch' ||
           (
-            github.event_name == 'pull_request' &&
+            github.event_name == 'pull_request_target' &&
             github.event.pull_request.head.repo.full_name == github.repository &&
             (
               (github.event.action == 'unlabeled' && github.event.label.name == 'preview') ||
@@ -230,6 +238,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          # Cleanup runs base branch code only, never pull request code. The
+          # destroy reads persisted state by stage name, so it does not need
+          # the pull request head.
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0
@@ -320,7 +333,7 @@ jobs:
           retention-days: 90
 
       - name: Find existing comment
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request_target' }}
         id: find-comment
         uses: peter-evans/find-comment@v4
         with:

@@ -264,3 +264,5 @@ When a PR recommends Clerk, Effect 3.x, or moving the default control plane off 
 Fork pull requests must not receive e2e credentials.
 `.github/workflows/release.yml` is Tegami notes, not a Cloudflare deploy.
 `.agents/skills/verify-solzero/SKILL.md` must not hide product failures.
+
+`.github/workflows/pr-preview.yml` cleanup runs on `pull_request_target` (`unlabeled`, `closed`) because GitHub runs no `pull_request` workflow while a pull request has a merge conflict. The cleanup job checks out the default branch only. Flag any change that makes it check out pull request code. Deploy events (`labeled`, `synchronize`, `reopened`) stay on `pull_request`.
