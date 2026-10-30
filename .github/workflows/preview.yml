@@ -19,42 +19,25 @@ on:
       - synchronize
       - reopened
       - ready_for_review
-      - closed
+  # Run workflow refreshes standing Alchemy stage pre. PR Preview owns
+  # pre-<number> stages and their cleanup.
   workflow_dispatch:
-    inputs:
-      action:
-        description: >-
-          deploy-standing-pre refreshes standing Alchemy stage pre.
-          destroy-ephemeral removes an orphaned pre-<number> stage.
-          Standing pre cannot be destroyed here.
-        required: true
-        type: choice
-        default: deploy-standing-pre
-        options:
-          - deploy-standing-pre
-          - destroy-ephemeral
-      stage:
-        description: >-
-          Required for destroy-ephemeral only. Must start with pre- and cannot
-          be exact pre.
-        required: false
-        type: string
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pre-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral' && (github.event.inputs.stage || 'destroy-ephemeral')) || format('master-{0}', github.run_id) }}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('master-{0}', github.run_id) }}
   # A new push to a pull request cancels the run on the commit it replaces, so
-  # the current commit's checks start at once. The close event never cancels:
-  # the preview cleanup must finish. Master pushes and standing pre dispatches
-  # get a group per run here; their validate jobs cancel older master commits and
-  # their deploy jobs queue below.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+  # the current commit's checks start at once. Pull request runs only check
+  # code. Their group is not pre-<number>, which PR Preview owns. Master pushes
+  # and standing pre dispatches get a group per run here; their validate jobs
+  # cancel older master commits and their deploy jobs queue below.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
     name: Validate
-    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && (github.event_name != 'pull_request' || github.event.action != 'closed') && (github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'deploy-standing-pre') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     uses: ./.github/workflows/validate.yml
     permissions:
       actions: read
@@ -62,28 +45,27 @@ jobs:
       pull-requests: write
 
   deploy-preview:
-    name: Deploy preview stage
+    name: Deploy standing pre
     needs: validate
+    # Pull requests only validate. PR Preview deploys a pull request's
+    # pre-<number> stage when the pull request has the preview label.
     # Two deploys of standing pre must never run at once, and a deploy is never
     # cancelled. A newer pending deploy replaces an older pending one; it carries
     # every earlier commit.
     concurrency:
-      group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'pre' || format('deploy-{0}', github.run_id) }}
+      group: pre
       cancel-in-progress: false
-    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && !cancelled() && needs.validate.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     environment: pre
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
-      # Ephemeral previews stay on D1. Paid PlanetScale is for standing pre/prod.
-      DATABASE: ${{ github.event_name == 'pull_request' && 'd1' || vars.DATABASE || 'd1' }}
+      DATABASE: ${{ vars.DATABASE || 'd1' }}
       APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
       PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
     permissions:
-      actions: read
       contents: read
-      pull-requests: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -107,19 +89,6 @@ jobs:
       - name: Install dependencies
         run: nub install --frozen-lockfile
 
-      - name: Resolve preview target
-        id: preview-target
-        run: |
-          stage=$(node <<'NODE'
-          const fs = require("node:fs");
-          const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
-          process.stdout.write(process.env.GITHUB_EVENT_NAME === "pull_request" ? `pre-${event.pull_request.number}` : "pre");
-          NODE
-          )
-          website_url=$(nub run config:stage-url -- "$stage" | tail -n 1)
-          echo "stage=$stage" >> "$GITHUB_OUTPUT"
-          echo "website_url=$website_url" >> "$GITHUB_OUTPUT"
-
       - name: Create config/.pre.vars file
         env:
           S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
@@ -141,17 +110,8 @@ jobs:
         run: |
           nub run config:write-stage-vars -- pre config/.pre.vars
 
-      - name: Check current preview lifetime before deployment
-        id: deploy-lifetime
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/preview-lifecycle.mjs deploy
-
-      - name: Deploy preview
-        id: deploy
-        if: steps.deploy-lifetime.outputs.permitted == 'true'
-        run: |
-          ALCHEMY_STAGE="$PREVIEW_STAGE" nub run --cwd packages/infra deploy
+      - name: Deploy standing pre
+        run: nub run --cwd packages/infra deploy
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -159,174 +119,4 @@ jobs:
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
           CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
           WRANGLER_SEND_METRICS: "false"
-          PREVIEW_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
-
-      - name: Capture preview resource ownership
-        id: preview-ownership
-        if: steps.deploy.outcome == 'success'
-        env:
-          ALCHEMY_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          if [ "$ALCHEMY_STAGE" != "pre" ]; then node scripts/preview-absence.mjs capture; fi
-
-      - name: Preserve ephemeral preview ownership
-        if: steps.preview-ownership.outcome == 'success' && steps.deploy-lifetime.outputs.stage != 'pre'
-        uses: actions/upload-artifact@v7
-        with:
-          name: preview-ownership-${{ steps.deploy-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .e2e/preview-${{ steps.deploy-lifetime.outputs.stage }}-ownership.json
-          retention-days: 90
-
-      - name: Find existing comment
-        if: ${{ github.event_name == 'pull_request' && steps.deploy.outcome == 'success' }}
-        id: find-comment
-        uses: peter-evans/find-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: "github-actions[bot]"
-          body-includes: "<!-- infra-preview -->"
-
-      - name: Create or update PR comment
-        if: ${{ github.event_name == 'pull_request' && steps.deploy.outcome == 'success' }}
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            <!-- infra-preview -->
-            ## Preview Deployed
-            Your preview is ready.
-            **Preview URL:** ${{ steps.preview-target.outputs.website_url }}
-            This preview was built from commit ${{ github.event.pull_request.head.sha }}
-            ---
-            <sub>This comment will be updated automatically when you push new commits to this PR.</sub>
-          edit-mode: replace
-
-  cleanup-preview:
-    name: Clean up preview stage
-    if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && ((github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral')) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
-    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
-    timeout-minutes: 30
-    environment: pre
-    env:
-      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
-      DATABASE: d1
-    permissions:
-      actions: read
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Nub
-        uses: nubjs/setup-nub@v0
-        with:
-          nub-version: 0.9.6
-          node-version-file: .nvmrc
-          cache-dependency-path: nub.lock
-
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
-
-      - name: Install dependencies
-        run: nub install --frozen-lockfile
-
-      - name: Create config/.pre.vars file
-        env:
-          S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
-          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
-          S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
-          S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
-          S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
-          S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY }}
-          S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN: ${{ secrets.S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN }}
-          MCPCF_PROXY_SIGNING_SECRET: ${{ secrets.MCPCF_PROXY_SIGNING_SECRET }}
-          TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
-          REPO_SECRETS_ENCRYPTION_KEY: ${{ secrets.REPO_SECRETS_ENCRYPTION_KEY }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
-          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
-        run: |
-          nub run config:write-stage-vars -- pre config/.pre.vars
-
-      - name: Check current preview lifetime before cleanup
-        id: cleanup-lifetime
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/preview-lifecycle.mjs cleanup
-
-      - name: Restore verified preview ownership evidence
-        if: steps.cleanup-lifetime.outputs.permitted == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-        run: node scripts/preview-ownership.mjs
-
-      - name: Capture remaining preview resource ownership
-        id: preview-ownership
-        if: steps.cleanup-lifetime.outputs.permitted == 'true'
-        env:
-          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/preview-absence.mjs capture
-
-      - name: Clean up preview
-        id: cleanup
-        if: steps.cleanup-lifetime.outputs.permitted == 'true'
-        run: ALCHEMY_STAGE="$PREVIEW_STAGE" nub run --cwd packages/infra destroy
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
-          WRANGLER_SEND_METRICS: "false"
-          PREVIEW_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-
-      - name: Verify all captured preview resources are absent
-        id: cleanup-verified
-        if: steps.cleanup.outcome == 'success'
-        env:
-          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/preview-absence.mjs verify
-
-      - name: Preserve preview cleanup evidence for retry
-        if: always() && steps.preview-ownership.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: preview-ownership-${{ steps.cleanup-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            .e2e/preview-${{ steps.cleanup-lifetime.outputs.stage }}-ownership.json
-            .e2e/preview-cleanup-summary.json
-          retention-days: 90
-
-      - name: Find existing comment
-        if: ${{ github.event_name == 'pull_request' }}
-        id: find-comment
-        uses: peter-evans/find-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: "github-actions[bot]"
-          body-includes: "<!-- infra-preview -->"
-
-      - name: Update comment with cleanup status
-        if: steps.cleanup-verified.outcome == 'success' && steps.find-comment.outputs.comment-id != ''
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          body: |
-            <!-- infra-preview -->
-            ## Preview Cleaned Up
-            The preview for this PR has been cleaned up because the PR was closed.
-            ---
-            <sub>Preview resources have been removed from Cloudflare.</sub>
-          edit-mode: replace
+          ALCHEMY_STAGE: pre

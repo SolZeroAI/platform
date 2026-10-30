@@ -59,17 +59,21 @@ combined version and release-note preview. A change with no observable effect ca
 2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
    workflow runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
-   with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Keep the
-   YAML in the tree. Deploy Preview and Deploy jobs run only when the repository variable
+   with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`), and disable
+   `PR Preview` the same way (`gh workflow disable pr-preview.yml`). Keep the
+   YAML in the tree. Deploy Preview, PR Preview, and Deploy jobs run only when the repository variable
    `CLOUDFLARE_DEPLOY` is `true`. SolZeroAI/platform does not set that variable, so the jobs skip
    even if a workflow is enabled, and this repository does not need `CLOUDFLARE_API_TOKEN`.
-   Fork owners enable Deploy Preview on their Actions page, set `CLOUDFLARE_DEPLOY` to `true`, and
+   Fork owners enable Deploy Preview and PR Preview on their Actions page, set `CLOUDFLARE_DEPLOY` to `true`, and
    set the token. See [deployment customization](customization.md#private-deployment-ci). The canonical `Validate` e2e job uses dedicated Cloudflare test credentials; deployment remains disabled. On a fork that sets the variable, **Run
-   workflow** on `Deploy Preview` can refresh standing Alchemy stage `pre` (`deploy-standing-pre`)
-   or destroy an orphaned `pre-<number>` stage (`destroy-ephemeral` plus a canonical `pre-<positive-number>` stage for a currently closed, same-repository pull request).
-   The lifetime guard preserves standing `pre`, open/reopened previews and unrelated stages. Manual `Deploy`
+   workflow** on `Deploy Preview` refreshes standing Alchemy stage `pre`. A pull request preview is
+   opt-in: add the `preview` label to a same-repository pull request, and `PR Preview` deploys its
+   `pre-<number>` stage. Each later push redeploys it. Removing the label or closing the pull
+   request destroys it. **Run workflow** on `PR Preview` destroys an orphaned `pre-<number>` stage
+   (a canonical `pre-<positive-number>` stage for a closed or unlabeled same-repository pull request).
+   The lifetime guard preserves standing `pre`, labeled open previews and unrelated stages. Manual `Deploy`
    (`deploy.yml`) stays a separate `workflow_dispatch` with a required `environment` choice of `pre`
-   or `prod`. Do not fold those Deploy Preview actions into `Deploy`. It runs only when
+   or `prod`. Do not fold the Deploy Preview or PR Preview actions into `Deploy`. It runs only when
    `CLOUDFLARE_DEPLOY` is `true`. Put production deploy secrets in a `prod` environment limited to `master`. Only that Deploy job selects `prod`.
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
    pending entries, and writes `.tegami/publish-lock.yaml`.

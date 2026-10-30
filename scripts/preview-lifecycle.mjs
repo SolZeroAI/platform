@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process"
 
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"))
 const mode = process.argv[2]
+const previewLabel = "preview"
 
 if (!["deploy", "cleanup"].includes(mode)) throw new Error("Unknown preview lifecycle mode")
 
@@ -43,10 +44,14 @@ if (stage !== "pre") {
     pull.base?.repo?.full_name !== repository
   )
     throw new Error("Preview PR ownership does not match this repository")
+  // The preview label turns a pull request preview on. Read it from the live
+  // pull request, because a later label event can replace this run's payload.
+  const labelled = pull.labels?.some((label) => label.name === previewLabel) === true
+
   permitted =
     mode === "cleanup"
-      ? pull.state === "closed"
-      : pull.state === "open" && pull.head.sha === event.pull_request?.head?.sha
+      ? pull.state === "closed" || !labelled
+      : pull.state === "open" && labelled && pull.head.sha === event.pull_request?.head?.sha
 }
 
 console.log(`${permitted ? "Permit" : "Skip"} ${mode} for ${stage}: current PR lifetime checked`)

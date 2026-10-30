@@ -138,14 +138,15 @@ This public repo must not gain GitHub Actions that publish preview or prod.
 `nub run infra:deploy:pre`, `infra:deploy:prod`, and `github:sync-env-secrets` stay scripts.
 They are not GHA Environments on SolZeroAI/platform.
 
-`.github/workflows/deploy.yml` and `.github/workflows/preview.yml` are copyable templates.
+`.github/workflows/deploy.yml`, `.github/workflows/preview.yml`, and `.github/workflows/pr-preview.yml` are copyable templates.
 Cloudflare jobs run only when `vars.CLOUDFLARE_DEPLOY == 'true'`.
 Do not replace that switch with `github.repository != 'SolZeroAI/platform'`.
 SolZeroAI/platform does not set `CLOUDFLARE_DEPLOY` and does not need `CLOUDFLARE_API_TOKEN`.
 Comments say do not add secrets on SolZeroAI/platform.
 Keep the YAML valid.
 Do not comment the workflows out.
-The public repo disables preview with `gh workflow disable preview.yml`.
+The public repo disables both preview workflows with `gh workflow disable preview.yml` and `gh workflow disable pr-preview.yml`.
+`pr-preview.yml` deploys an ephemeral `pre-<number>` stage only while a pull request has the `preview` label.
 
 `.github/workflows/validate.yml` runs secret-less `config:check`, `typecheck`, `lint`, `format`, and actionlint on this public repo.
 `nub run test` and `nub run build` are skipped when `github.repository != 'SolZeroAI/platform'`.
@@ -233,7 +234,7 @@ When the copy CLI calls `infra:deploy:*`, flag it.
 ### Secrets and deploy
 
 Flag secret leakage in source, logs, or public GHA.
-When a PR removes the `CLOUDFLARE_DEPLOY` condition from Deploy or Deploy Preview, flag it.
+When a PR removes the `CLOUDFLARE_DEPLOY` condition from Deploy, Deploy Preview, or PR Preview, flag it.
 When a PR adds deploy secrets to SolZeroAI/platform, flag it.
 When preview or deploy jobs would run on this public repository, flag it.
 
@@ -258,8 +259,10 @@ When a PR recommends Clerk, Effect 3.x, or moving the default control plane off 
 `packages/infra/src/stack.ts` is `stackState()`.
 `packages/shared/src/stageMetadata.ts` is local versus deployed `alchemyStateStore`.
 `apps/web/src/routes/_authenticated.tsx` is `SignInPage`.
-`.github/workflows/deploy.yml` and `.github/workflows/preview.yml` are invert-guarded templates.
+`.github/workflows/deploy.yml`, `.github/workflows/preview.yml`, and `.github/workflows/pr-preview.yml` are invert-guarded templates.
 `.github/workflows/validate.yml` has secret-less static validation and a credentialed isolated e2e job for trusted events.
 Fork pull requests must not receive e2e credentials.
 `.github/workflows/release.yml` is Tegami notes, not a Cloudflare deploy.
 `.agents/skills/verify-solzero/SKILL.md` must not hide product failures.
+
+`.github/workflows/pr-preview.yml` cleanup runs on `pull_request_target` (`unlabeled`, `closed`) because GitHub runs no `pull_request` workflow while a pull request has a merge conflict. The cleanup job checks out the default branch only. Flag any change that makes it check out pull request code. Deploy events (`labeled`, `synchronize`, `reopened`) stay on `pull_request`.
