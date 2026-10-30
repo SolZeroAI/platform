@@ -20,10 +20,6 @@ on:
         type: string
   workflow_dispatch:
     inputs:
-      e2e_lifecycle:
-        description: "Run real cleanup lifecycle regressions after core flows"
-        type: boolean
-        default: false
       e2e_record:
         description: "Record action replays and upload .e2e/cache instead of strict replay"
         type: boolean
@@ -223,20 +219,6 @@ jobs:
           else
             nub run test:e2e:cache-strict
           fi
-      - name: Verify cleanup lifecycle after core flows
-        if: github.event_name == 'workflow_dispatch' && inputs.e2e_lifecycle
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: nub run test:e2e:lifecycle
-      - name: Destroy owned test infrastructure and revoke its run token
-        if: always() && steps.e2e-dependencies.outcome == 'success'
-        run: |
-          cleanup_status=0
-          nub run test:e2e:cleanup || cleanup_status=$?
-          node <<'NODE'
-          const fs = require("node:fs"); const path = ".e2e/cleanup-summary.json"; if (fs.existsSync(path)) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Owned test cleanup\n\n```json\n" + fs.readFileSync(path, "utf8") + "\n```\n")
-          NODE
-          exit "$cleanup_status"
       - name: Summarize measured AI usage
         if: always() && steps.ai-usage-init.outcome == 'success'
         id: ai-usage-summary
@@ -258,10 +240,6 @@ jobs:
           path: |
             .e2e/report.json
             .e2e/junit.xml
-            .e2e/cleanup-proof/report.json
-            .e2e/cleanup-proof/junit.xml
-            .e2e/cleanup-proof/summary.md
-            .e2e/cleanup-summary.json
             .e2e/summary.md
             .e2e/failures
             .e2e/artifacts

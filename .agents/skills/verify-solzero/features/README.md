@@ -26,11 +26,5 @@ Prefer `nub run test:e2e -- tests/<file>.e2e.ts` so the project wrapper owns cle
 and `nub run test:e2e:all` cover deferred integrations. Read `.agents/skills/e2e/SKILL.md`
 for authoring and `docs/e2e.md` for credentials, fixtures, and ops.
 
-### Ops (not product features)
-
-Lifecycle and owned-resource cleanup live under `tests/lifecycle/` and run with
-`nub run test:e2e:lifecycle`. They prove launcher recovery, not product UI coverage.
-See `docs/e2e.md` for cleanup and CI artifact rules.
-
 Do not count a blocked or deferred-external flow as passing coverage. Collection alone
 does not establish verification.

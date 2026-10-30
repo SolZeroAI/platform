@@ -9,10 +9,7 @@
     "e2e.config.ts",
     "e2e.config-check.config.ts",
     "tests/**/*.ts",
-    "scripts/e2e/**/*.ts",
-    "e2e.cleanup.config.ts",
-    "e2e.failure.config.ts",
-    "e2e.cancel.config.ts"
+    "scripts/e2e/**/*.ts"
   ],
   "exclude": [
     "node_modules",

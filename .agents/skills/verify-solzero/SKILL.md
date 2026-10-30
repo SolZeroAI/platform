@@ -45,14 +45,8 @@ Cloud-agent proof follows [Cloud-agent PR artifacts](../../../AGENTS.md#cloud-ag
 
 ## Scope and cleanup
 
-Use only the isolated e2e profile and disposable fixtures. Do not run `infra:deploy:*` or `db:copy-d1-to-planetscale` during verification. Preserve pinned Alchemy, Effect, Wrangler, and provider versions unless the requested fix requires a change. The e2e launcher owns process cleanup; stop only its recorded processes and preserve unrelated development stacks. Delete temporary integration fixtures and revoke minted tokens in `finally` blocks.
+Use only the isolated e2e profile and disposable fixtures. Do not run `infra:deploy:*` or `db:copy-d1-to-planetscale` during verification. Preserve pinned Alchemy, Effect, Wrangler, and provider versions unless the requested fix requires a change. The e2e launcher owns process cleanup; preserve unrelated development stacks. Delete temporary integration fixtures and revoke minted tokens in `finally` blocks.
 
-After the local launcher stops, remove its account-level test resources with the same private credential file, account and isolated profile used for the run:
-
-```sh
-E2E_ENV_FILE=/path/to/private.env nub run test:e2e:cleanup
-```
-
-If the run selected `E2E_CONFIG_PROFILE`, retain that selection for cleanup. Keep the same `CI` setting: local and CI scopes are separate, and the ownership guard refuses a scope mismatch. The command removes that run’s local Alchemy state, simulator data, build contexts, and labelled containers/images. It never calls the Cloudflare API. Preserve the replay cache, the shared `default` gateway, and unrelated resources. Do not bypass a guard or delete resources based only on names. Default commands verify guarded cleanup automatically, including after startup/test failure and cancellation. Use `nub run test:e2e:lifecycle` to prove SIGTERM, SIGKILL, orphaned descendants, intentional suite failure, cancellation, failed process inspection/publication and idempotence. The same suite is available through `gh workflow run validate.yml --ref feat/e2e -f e2e_lifecycle=true`. Preserve private failed receipts; safe CI ownership metadata can recover a lost runner only after immutable same-repository completed-run verification. See `docs/e2e.md` for the explicit recovery command and remote preview limitations.
+When e2e stops the app target, the target stops `alchemy dev`, removes the run's labelled Docker containers and images, and removes `.e2e/runs/<UUID>/`. It never calls the Cloudflare API. Preserve the replay cache, the shared `default` gateway, and unrelated resources. Runs are local only, so there is no recovery command; after a SIGKILL, stop leftover processes by hand. See `docs/e2e.md` for remote preview limitations.
 
 The previous `control-solzero` Chrome driver and its recipes were removed. Keep new regression cases in the shared e2e suite rather than rebuilding that driver.
