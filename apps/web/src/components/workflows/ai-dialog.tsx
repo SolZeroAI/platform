@@ -8,15 +8,17 @@ import {
   useRef,
   useState,
 } from "react"
-import { type SandboxEvent } from "@solzero/shared"
+import { parseWorkflowManifest, type SandboxEvent } from "@solzero/shared"
+import * as Option from "effect/Option"
 import { S0Loader } from "@/components/s0-loader"
 import { S0LogoSvg } from "@/components/s0-logo-svg"
 import { SafeMarkdown } from "@/components/safe-markdown"
 import { useSessionSocket } from "@/hooks/use-session-socket"
+import { runApi } from "@/lib/api-client"
 import { showErrorToast } from "@/lib/toast-manager"
 import { AiBeamButton, WorkflowDialogFrame } from "./detail-chrome"
 import { WorkflowRunSelectionTable } from "./run-selection-table"
-import { getErrorMessage, requestJson } from "./run-utils"
+import { getErrorMessage } from "./run-utils"
 import {
   type WorkflowBuilderDraft,
   type WorkflowRun,
@@ -477,9 +479,24 @@ export function getWorkflowAiUserDisplayContent(content: string): string {
 export async function fetchWorkflowAiDraft(
   sessionId: string,
 ): Promise<WorkflowBuilderDraft | null> {
-  const response = await requestJson<{ draft: WorkflowBuilderDraft | null }>(
-    `/api/workflows/builder/drafts/latest?sessionId=${encodeURIComponent(sessionId)}`,
+  const { draft } = await runApi((client) =>
+    client.workflows.builderDraftLatest({ query: { sessionId } }),
   )
 
-  return response.draft
+  if (draft === null) return null
+
+  return Option.match(parseWorkflowManifest(draft.manifest), {
+    onNone: () => null,
+    onSome: (manifest) => ({
+      sessionId: draft.sessionId,
+      manifest,
+      validation: {
+        ...draft.validation,
+        errors: [...draft.validation.errors],
+        warnings: [...draft.validation.warnings],
+        executionOrder: [...draft.validation.executionOrder],
+      },
+      submittedAt: draft.submittedAt,
+    }),
+  })
 }

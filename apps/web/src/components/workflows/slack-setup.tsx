@@ -16,6 +16,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { S0Loader } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
+import { runApi } from "@/lib/api-client"
 import { copyToClipboard } from "@/lib/format"
 import {
   WorkflowSlackAppSetup,
@@ -25,7 +26,7 @@ import {
 } from "./types"
 import { WorkflowDialogFrame } from "./detail-chrome"
 import { formatSlackRegistrationMatch } from "./save-utils"
-import { getErrorMessage, requestJson } from "./run-utils"
+import { getErrorMessage } from "./run-utils"
 import { formatJson } from "./header-utils"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
@@ -59,8 +60,8 @@ export function WorkflowSlackAppSetupModal({
     setLoadError("")
 
     try {
-      const data = await requestJson<{ slackApp: WorkflowSlackAppSetup }>(
-        `/api/workflows/${encodeURIComponent(workflowId)}/slack-app`,
+      const data = await runApi((client) =>
+        client.workflows.slackApp({ params: { id: workflowId } }),
       )
 
       setSetup(data.slackApp)
@@ -97,13 +98,8 @@ export function WorkflowSlackAppSetupModal({
     setSavingCredentials(true)
 
     try {
-      const data = await requestJson<{ slackApp: WorkflowSlackAppSetup }>(
-        `/api/workflows/${encodeURIComponent(workflowId)}/slack-app/credentials`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
+      const data = await runApi((client) =>
+        client.workflows.slackAppCredentials({ params: { id: workflowId }, payload }),
       )
 
       setSetup(data.slackApp)
@@ -537,7 +533,7 @@ export function WorkflowSlackSecretInput({
 export function WorkflowSlackRegistrations({
   registrations,
 }: {
-  registrations: WorkflowSlackTriggerRegistrationSummary[]
+  registrations: readonly WorkflowSlackTriggerRegistrationSummary[]
 }) {
   return (
     <LayerCard className="overflow-hidden rounded-xl">

@@ -28,6 +28,7 @@ import {
 import { useId, useMemo, useState } from "react"
 import { type WorkflowManifest } from "@solzero/shared"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
+import { runApi } from "@/lib/api-client"
 import { CodeSurface, getCodeLanguageForValue, getCodeTextForValue } from "@/components/code"
 import {
   WORKFLOW_CREATION_DIALOG_CONFIG,
@@ -61,7 +62,6 @@ import {
   getRunDurationLabel,
   getRunEventDurationLabel,
   getWorkflowRunArtifactSummaries,
-  requestJson,
   shortRunId,
 } from "./run-utils"
 import { formatJson } from "./header-utils"
@@ -886,10 +886,12 @@ export function RunArtifactViewerButton({ artifact }: { artifact: WorkflowRunArt
     setLoadError(null)
 
     try {
-      const data = await requestJson<{ artifact: WorkflowRunArtifactContent }>(
-        `/api/workflows/${encodeURIComponent(artifact.workflowId)}/runs/${encodeURIComponent(
-          artifact.runId,
-        )}/artifacts/${encodeURIComponent(artifact.nodeId)}`,
+      const data = await runApi(
+        (client) =>
+          client.workflows.runArtifactContent({
+            params: { id: artifact.workflowId, runId: artifact.runId, nodeId: artifact.nodeId },
+          }),
+        { fallbackMessage: "Failed to load artifact" },
       )
 
       setArtifactContent(data.artifact)
