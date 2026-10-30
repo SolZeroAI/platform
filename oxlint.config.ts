@@ -118,7 +118,6 @@ export default defineConfig({
         "packages/api/src/server/background/workflows/slack-apps.ts",
         "packages/api/src/server/background/session/durable-object/processing.ts",
         "packages/api/src/server/effect/handlers/shared/control-plane/sessions.ts",
-        "scripts/e2e/lifecycle.ts",
       ],
       rules: {
         // These files are already at the 1000-line max-lines cap. The spacing fix pushes them over it.

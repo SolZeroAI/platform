@@ -46,7 +46,7 @@ if (process.env.E2E_BYOK_API_KEY) {
 
 export default {
   projectId: "solzero",
-  tests: ["tests/**/*.e2e.ts", "!tests/lifecycle/**"],
+  tests: "tests/**/*.e2e.ts",
   targets: [
     {
       name: "local-cloudflare",

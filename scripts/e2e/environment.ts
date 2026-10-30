@@ -7,11 +7,8 @@ import { parse, type ParseError } from "jsonc-parser"
 import { resolveS0Config, s0ConfigPathForStage } from "@solzero/shared"
 
 // Explicit process/CI values always take precedence over local files.
-// Registered application children inherit the already filtered app environment; do not reload runner-only secrets.
-if (process.env.S0_E2E_APP_CHILD !== "1") {
-  for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]) {
-    if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
-  }
+for (const file of [process.env.E2E_ENV_FILE, "config/.env", "config/.dev.vars"]) {
+  if (file && existsSync(file)) dotenv.config({ path: resolve(file), quiet: true })
 }
 
 // workerd needs the trusted macOS roots explicitly; never replace a supplied CA bundle.
