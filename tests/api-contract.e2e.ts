@@ -3,6 +3,7 @@ import { expect } from "e2e"
 import * as Schema from "effect/Schema"
 import { CreatedApiKeyResponse, ApiKeysResponse } from "../packages/api/src/http/schemas/auth"
 import { ProviderSettingsResponse } from "../packages/api/src/http/schemas/providers"
+import { StatusResponse } from "../packages/api/src/http/schemas/common"
 import { SessionListResponse, SessionResponse } from "../packages/api/src/http/schemas/sessions"
 import { ForbiddenError } from "../packages/api/src/http/errors"
 import { api, authRequest, uniqueName } from "./support/api"
@@ -28,6 +29,29 @@ test(
       expect(Schema.decodeUnknownSync(ApiKeysResponse)(keys)).toBeDefined()
       const state = await api<unknown>(browser, `/sessions/${session.sessionId}`)
       expect(Schema.decodeUnknownSync(SessionResponse)(state)).toBeDefined()
+
+      const toolsState = await api<unknown>(
+        browser,
+        `/sessions/${session.sessionId}/tools`,
+        "PATCH",
+        {
+          tools: [],
+          customMcpServers: {},
+          isolateStepLimit: 20,
+        },
+      )
+
+      expect(Schema.decodeUnknownSync(SessionResponse)(toolsState)).toBeDefined()
+      const archived = await api<unknown>(browser, `/sessions/${session.sessionId}/archive`, "POST")
+      expect(Schema.decodeUnknownSync(StatusResponse)(archived).status).toBe("archived")
+
+      const restored = await api<unknown>(
+        browser,
+        `/sessions/${session.sessionId}/unarchive`,
+        "POST",
+      )
+
+      expect(Schema.decodeUnknownSync(StatusResponse)(restored).status).toBe("active")
       const providers = await api<unknown>(browser, "/providers")
       expect(Schema.decodeUnknownSync(ProviderSettingsResponse)(providers)).toBeDefined()
       const list = await api<unknown>(browser, "/sessions?limit=1")
