@@ -4,47 +4,29 @@ import { Input } from "@cloudflare/kumo/components/input"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { Bot as BotIcon, Plus } from "lucide-react"
-import { useEffect, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
+import { CreateBotPayload, type BotItem } from "@solzero/api"
 import { PageHeader } from "@/components/page-header"
-import { S0Loader } from "@/components/s0-loader"
 import { SidebarLayout } from "@/components/sidebar-layout"
-import { getErrorMessage, requestJson } from "@/lib/admin-console-actions"
+import { getErrorMessage } from "@/lib/admin-console-actions"
+import { runApi } from "@/lib/api-client"
 import { showErrorToast } from "@/lib/toast-manager"
-import type { BotRecord } from "./types"
 
-export function BotsPage() {
+export function BotsPage({ bots }: { bots: readonly BotItem[] }) {
   const navigate = useNavigate()
-  const [bots, setBots] = useState<BotRecord[] | null>(null)
   const [name, setName] = useState("")
   const [instructions, setInstructions] = useState("")
   const [creating, setCreating] = useState(false)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    requestJson<{ bots: BotRecord[] }>("/api/bots", { signal: controller.signal })
-      .then((data) => setBots(data.bots))
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return
-        }
-
-        showErrorToast(getErrorMessage(error))
-        setBots([])
-      })
-
-    return () => controller.abort()
-  }, [])
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setCreating(true)
 
     try {
-      const data = await requestJson<{ bot: BotRecord }>("/api/bots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, instructions }),
-      })
+      const data = await runApi(
+        (client) => client.bots.create({ payload: new CreateBotPayload({ name, instructions }) }),
+        { fallbackMessage: "Failed to create bot" },
+      )
 
       setName("")
       setInstructions("")
@@ -89,11 +71,7 @@ export function BotsPage() {
                 {creating ? "Creating" : "Create bot"}
               </Button>
             </form>
-            {bots === null ? (
-              <div className="flex justify-center py-12">
-                <S0Loader size={28} />
-              </div>
-            ) : bots.length === 0 ? (
+            {bots.length === 0 ? (
               <Empty
                 title="No bots yet"
                 description="Create a bot, then let it add standing or temporary routines."

@@ -2,9 +2,9 @@ import { Banner } from "@cloudflare/kumo/components/banner"
 import { Button } from "@cloudflare/kumo/components/button"
 import { Input } from "@cloudflare/kumo/components/input"
 import { Tooltip } from "@cloudflare/kumo/components/tooltip"
-import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router"
 import { CircleHelp, Info, LogIn } from "lucide-react"
-import { useEffect, useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
 import type { PublicAuthProvider, PublicAuthProviderRegistry } from "@solzero/shared"
 import { S0AnimatedIcon } from "@/components/s0-animated-icon"
 import { S0Loader } from "@/components/s0-loader"
@@ -47,8 +47,21 @@ function AuthenticatedOutlet({
   authProviderConfig: PublicAuthProviderRegistry
 }) {
   const { data: session, status } = useAuthSession()
+  const router = useRouter()
   const [interactive, setInteractive] = useState(false)
+  const loadedUserIdRef = useRef(session?.user.id ?? null)
+  const userId = session?.user.id ?? null
   useEffect(() => setInteractive(true), [])
+
+  // Page loaders skip their API calls while nobody is signed in. Load them again for the new user.
+  useEffect(() => {
+    if (status === "loading" || userId === loadedUserIdRef.current) {
+      return
+    }
+
+    loadedUserIdRef.current = userId
+    void router.invalidate()
+  }, [router, status, userId])
 
   if (status === "loading" || (session && !interactive)) {
     return (
