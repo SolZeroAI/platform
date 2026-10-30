@@ -1,3 +1,6 @@
+// Release tooling loads this card from the repo root, whose tsconfig compiles JSX for hono/jsx.
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 import type { CSSProperties, ReactElement } from "react"
 import * as Schema from "effect/Schema"
 
