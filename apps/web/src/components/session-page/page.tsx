@@ -23,6 +23,7 @@ import { useAuthSession } from "@/lib/auth-client"
 import { isIdleRuntimeStatus } from "@/lib/runtime-status"
 import {
   shouldUsePromptHttpStream,
+  streamSessionPrompt,
   submitSessionPrompt,
   submitSessionResume,
   takeSessionPromptError,
@@ -364,20 +365,11 @@ export function SessionPage({
 
       void (async () => {
         try {
-          const response = await submitSessionResume({
+          await submitSessionResume({
             sessionId,
             messageId: resumeMessageId,
             reason: "okta_reconnect",
           })
-
-          if (!response.ok) {
-            const data = await response.json().catch(() => null)
-            throw new Error(
-              data && typeof data === "object" && "error" in data && typeof data.error === "string"
-                ? data.error
-                : "Okta authentication completed, but no resumable failed request was found.",
-            )
-          }
         } catch (errorValue) {
           setPromptError(getErrorMessage(errorValue))
         }
@@ -430,20 +422,27 @@ export function SessionPage({
 
     void (async () => {
       try {
-        const response = await submitSessionPrompt({
+        const input = {
           sessionId,
           content: nextPrompt,
           model: resolvedModelId,
           reasoningEffort,
-          stream,
-        })
+        }
+
+        if (!stream) {
+          await submitSessionPrompt(input)
+
+          return
+        }
+
+        const response = await streamSessionPrompt(input)
 
         if (!response.ok) {
           const errorText = await response.text()
           throw new Error(errorText || "Failed to send prompt")
         }
 
-        if (!stream || !response.body) {
+        if (!response.body) {
           return
         }
 
