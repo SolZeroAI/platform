@@ -18,6 +18,7 @@ export function useWorkflowPageData(input: any) {
   const {
     edges,
     events,
+    initialDetail,
     loading,
     nodes,
     runFetchSequenceRef,
@@ -56,6 +57,29 @@ export function useWorkflowPageData(input: any) {
 
   const workflowFetchSequenceRef = useRef(0)
   const workflowDetailFetchSequenceRef = useRef(0)
+  // The route loader already read the first list page and the workflow the URL opened.
+  const skipInitialListLoadRef = useRef(true)
+  const initialDetailRef = useRef<WorkflowSummary | null>(initialDetail)
+
+  const applyWorkflow = useCallback(
+    (workflow: WorkflowSummary) => {
+      const manifest = workflow.manifest
+
+      if (!manifest) {
+        throw new Error("Workflow response did not include a manifest")
+      }
+
+      const builderManifest = migrateWorkflowManifestForBuilder(manifest)
+      setWorkflowName(builderManifest.name)
+      setNodes(builderManifest.nodes.map(toCanvasNode))
+      setEdges(builderManifest.edges.map(toCanvasEdge))
+      setSelectedNodeId(builderManifest.nodes[0]?.id ?? null)
+      setSelectedEdgeId(null)
+      setWorkflowHeaderDraftsByNode({})
+      setWorkflows((current: WorkflowSummary[]) => upsertWorkflowSummary(current, workflow))
+    },
+    [setEdges, setNodes],
+  )
 
   const loadWorkflows = useCallback(
     async (signal?: AbortSignal) => {
@@ -111,24 +135,11 @@ export function useWorkflowPageData(input: any) {
         return false
       }
 
-      const manifest = workflow.manifest
-
-      if (!manifest) {
-        throw new Error("Workflow response did not include a manifest")
-      }
-
-      const builderManifest = migrateWorkflowManifestForBuilder(manifest)
-      setWorkflowName(builderManifest.name)
-      setNodes(builderManifest.nodes.map(toCanvasNode))
-      setEdges(builderManifest.edges.map(toCanvasEdge))
-      setSelectedNodeId(builderManifest.nodes[0]?.id ?? null)
-      setSelectedEdgeId(null)
-      setWorkflowHeaderDraftsByNode({})
-      setWorkflows((current: WorkflowSummary[]) => upsertWorkflowSummary(current, workflow))
+      applyWorkflow(workflow)
 
       return true
     },
-    [setEdges, setNodes],
+    [applyWorkflow],
   )
 
   const loadRuns = useCallback(
@@ -214,6 +225,12 @@ export function useWorkflowPageData(input: any) {
   )
 
   useEffect(() => {
+    if (skipInitialListLoadRef.current) {
+      skipInitialListLoadRef.current = false
+
+      return
+    }
+
     const controller = new AbortController()
 
     const timeoutId = setTimeout(() => {
@@ -239,6 +256,16 @@ export function useWorkflowPageData(input: any) {
       currentDetailLoadState?.workflowId === selectedWorkflowId &&
       currentDetailLoadState.phase === "ready"
     ) {
+      return
+    }
+
+    const loadedWorkflow = initialDetailRef.current
+    initialDetailRef.current = null
+
+    if (loadedWorkflow && loadedWorkflow.id === selectedWorkflowId && loadedWorkflow.manifest) {
+      applyWorkflow(loadedWorkflow)
+      setWorkflowDetailLoadStateValue({ workflowId: selectedWorkflowId, phase: "ready" })
+
       return
     }
 
@@ -271,7 +298,13 @@ export function useWorkflowPageData(input: any) {
     return () => {
       controller.abort()
     }
-  }, [loadWorkflow, selectedWorkflowId, setWorkflowDetailLoadStateValue, workflowDetailReloadNonce])
+  }, [
+    applyWorkflow,
+    loadWorkflow,
+    selectedWorkflowId,
+    setWorkflowDetailLoadStateValue,
+    workflowDetailReloadNonce,
+  ])
 
   useEffect(() => {
     if (!selectedWorkflowId) {

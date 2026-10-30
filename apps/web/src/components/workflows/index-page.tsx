@@ -47,6 +47,7 @@ import {
   WorkflowSummary,
 } from "./types"
 import { WorkflowsPage } from "./page"
+import type { WorkflowsRouteData } from "./route-data"
 import { AiBeamButton } from "./detail-chrome"
 import { formatTime } from "./run-utils"
 
@@ -705,14 +706,17 @@ export function workflowRunQueryParams(state: WorkflowRunTableState): URLSearchP
 }
 
 export function WorkflowsIndexPage({
+  initialData,
   initialProviderSettings = null,
 }: {
+  initialData: WorkflowsRouteData
   initialProviderSettings?: ProviderSettingsResponse | null
 }) {
   const { pathname } = useLocation()
 
   return (
     <WorkflowsPage
+      initialData={initialData}
       pathname={pathname}
       routeWorkflowId={getRouteWorkflowId(pathname)}
       initialProviderSettings={initialProviderSettings}

@@ -1,13 +1,5 @@
-import { createFileRoute, useLocation } from "@tanstack/react-router"
-import { WorkflowsPage } from "@/components/workflows/page"
+import { createFileRoute } from "@tanstack/react-router"
 
-export const Route = createFileRoute("/_authenticated/workflows/$workflowId")({
-  component: WorkflowDetailPage,
-})
-
-function WorkflowDetailPage() {
-  const { workflowId } = Route.useParams()
-  const { pathname } = useLocation()
-
-  return <WorkflowsPage pathname={pathname} routeWorkflowId={workflowId} />
-}
+// The workflows route renders the list and the open workflow from the pathname, so this route only
+// declares the URL.
+export const Route = createFileRoute("/_authenticated/workflows/$workflowId")()
