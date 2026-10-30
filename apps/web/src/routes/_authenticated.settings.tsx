@@ -3,6 +3,7 @@ import * as Match from "effect/Match"
 import { Tabs } from "@cloudflare/kumo/components/tabs"
 import { useEffect, useState, type ReactNode } from "react"
 import { PageHeader } from "@/components/page-header"
+import { S0Loader } from "@/components/s0-loader"
 import { SettingsBreadcrumbs } from "@/components/settings/settings-breadcrumbs"
 import { AgentDefaultsSettings } from "@/components/settings/agent-defaults-settings"
 import { AgentSkillsSettings } from "@/components/settings/agent-skills-settings"
@@ -15,6 +16,7 @@ import {
   resolveOAuthCallbackError,
 } from "@/components/settings/okta-reconnect"
 import { ProvidersSettings } from "@/components/settings/providers-settings"
+import { loadSettingsPaneData, type SettingsPaneData } from "@/components/settings/route-data"
 import { SecretsSettings } from "@/components/settings/secrets-settings"
 import {
   getSettingsCategoryFromSearch,
@@ -34,6 +36,7 @@ import {
   SETTINGS_AGENT_TABS,
   type SettingsAgentTab,
 } from "@/lib/settings-agent-tabs"
+import { loadWhenSignedIn, RouteLoadError, RoutePending } from "@/lib/route-loaders"
 import type { ComponentType } from "react"
 
 interface SettingsSearch {
@@ -105,6 +108,15 @@ export const Route = createFileRoute("/_authenticated/settings")({
         typeof search.error_description === "string" ? search.error_description : undefined,
     }
   },
+  ssr: false,
+  loaderDeps: ({ search }) => ({
+    category: getSettingsCategoryFromSearch(search),
+    tab: getSettingsAgentTab(search.tab),
+  }),
+  loader: ({ deps, ...context }) =>
+    loadWhenSignedIn(context, (signal) => loadSettingsPaneData(deps, signal)),
+  pendingComponent: RoutePending,
+  errorComponent: RouteLoadError,
   component: SettingsPage,
 })
 
@@ -113,6 +125,7 @@ function SettingsPage() {
   const navigate = Route.useNavigate()
   const activeCategory = getSettingsCategoryFromSearch(search)
   const activeAgentTab = getSettingsAgentTab(search.tab)
+  const paneData = Route.useLoaderData()
 
   useEffect(() => {
     if (!search.legacyMcpRedirect) {
@@ -133,6 +146,7 @@ function SettingsPage() {
   return (
     <SidebarLayout>
       <SettingsContent
+        paneData={paneData}
         activeCategory={activeCategory}
         activeAgentTab={activeAgentTab}
         onAgentTabChange={(tab) => {
@@ -163,6 +177,7 @@ function SettingsPage() {
 }
 
 function SettingsContent({
+  paneData,
   activeCategory,
   activeAgentTab,
   onAgentTabChange,
@@ -175,6 +190,7 @@ function SettingsContent({
   mcpServerId,
   mcpServerLabel,
 }: {
+  paneData: SettingsPaneData | null
   activeCategory: SettingsCategory
   activeAgentTab: SettingsAgentTab
   onAgentTabChange: (tab: SettingsAgentTab) => void
@@ -231,7 +247,13 @@ function SettingsContent({
                 Match.when("runtimes", () => (
                   <AgentDefaultsSettings onHeaderActionsChange={setHeaderActions} />
                 )),
-                Match.when("skills", () => <AgentSkillsSettings />),
+                Match.when("skills", () =>
+                  paneData?.pane === "skills" ? (
+                    <AgentSkillsSettings initialSkills={paneData.skills} />
+                  ) : (
+                    <PaneLoading />
+                  ),
+                ),
                 Match.orElse(() => (
                   <McpSettingsPane
                     initialQuery={mcpQuery}
@@ -243,19 +265,36 @@ function SettingsContent({
             </>
           )}
           {activeCategory === "secrets" && <SecretsSettings />}
-          {activeCategory === "api-access" && (
-            <ApiAccessSettings
-              oktaReconnect={oktaReconnect}
-              oktaReconnectError={oktaReconnectError}
-              slackUserId={slackUserId}
-              slackLink={slackLink}
-              slackLinkError={slackLinkError}
-            />
-          )}
-          {activeCategory === "data-controls" && <DataControlsSettings />}
+          {activeCategory === "api-access" &&
+            (paneData?.pane === "api-access" ? (
+              <ApiAccessSettings
+                initialData={paneData.apiAccess}
+                oktaReconnect={oktaReconnect}
+                oktaReconnectError={oktaReconnectError}
+                slackUserId={slackUserId}
+                slackLink={slackLink}
+                slackLinkError={slackLinkError}
+              />
+            ) : (
+              <PaneLoading />
+            ))}
+          {activeCategory === "data-controls" &&
+            (paneData?.pane === "data-controls" ? (
+              <DataControlsSettings initialPage={paneData.archived} />
+            ) : (
+              <PaneLoading />
+            ))}
           {activeCategory === "learn-more" && <LearnMoreSettings />}
         </div>
       </div>
+    </div>
+  )
+}
+
+function PaneLoading() {
+  return (
+    <div className="flex min-h-32 items-center justify-center">
+      <S0Loader size={28} />
     </div>
   )
 }

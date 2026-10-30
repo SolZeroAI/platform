@@ -11,13 +11,12 @@ interface SignedInLoaderContext {
 }
 
 /**
- * Loads the first API response of a signed-in page. Returns null when nobody is signed in, because
- * the authenticated shell shows the sign-in page and reloads every route after sign-in.
+ * Runs the first load of a signed-in page. Returns null when nobody is signed in, because the
+ * authenticated shell shows the sign-in page and reloads every route after sign-in.
  */
-export async function loadSignedInRouteData<A>(
+export async function loadWhenSignedIn<A>(
   context: SignedInLoaderContext,
-  request: ApiRequest<A>,
-  fallbackMessage: string,
+  load: (signal: AbortSignal) => Promise<A>,
 ): Promise<A | null> {
   const parentMatch = await context.parentMatchPromise
   // SAFETY: Signed-in page routes are children of the authenticated shell, whose loader returns AuthenticatedShellRouteData.
@@ -27,7 +26,16 @@ export async function loadSignedInRouteData<A>(
     return null
   }
 
-  return runApi(request, { signal: context.abortController.signal, fallbackMessage })
+  return load(context.abortController.signal)
+}
+
+/** Loads the first API response of a signed-in page, as `loadWhenSignedIn` does. */
+export function loadSignedInRouteData<A>(
+  context: SignedInLoaderContext,
+  request: ApiRequest<A>,
+  fallbackMessage: string,
+): Promise<A | null> {
+  return loadWhenSignedIn(context, (signal) => runApi(request, { signal, fallbackMessage }))
 }
 
 /** The page frame while a signed-in route loads its first data. */
