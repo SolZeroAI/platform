@@ -63,12 +63,13 @@ ten files that are already at the `max-lines` cap. Change shared rules in the pl
 repository, not here.
 
 GitHub Actions on SolZeroAI/platform runs `config:check`, `typecheck`, `lint`, `format`, and actionlint.
-Deploy Preview and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is `true`.
+Deploy Preview, PR Preview, and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is `true`.
 This repository does not set that variable, so those jobs skip and do not need `CLOUDFLARE_API_TOKEN`.
 The Validate build step still skips when `github.repository != 'SolZeroAI/platform'`.
-Keep `preview.yml` as valid YAML and disable it here
-with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`). Disabled state
-is per-repo. A fork enables it on its Actions page, sets `CLOUDFLARE_DEPLOY` to `true`, and sets
+Keep `preview.yml` and `pr-preview.yml` as valid YAML and disable them here
+with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`) and the same
+steps for PR Preview (`gh workflow disable pr-preview.yml`). Disabled state is per-repo. A fork
+enables them on its Actions page, sets `CLOUDFLARE_DEPLOY` to `true`, and sets
 `CLOUDFLARE_API_TOKEN`. Put production deploy secrets in a `prod` environment limited to `master`
 that only the Deploy job uses. See [Private deployment CI](docs/customization.md#private-deployment-ci).
 GitHub disables scheduled workflows on public forks by default. Do not comment the workflow YAML out.

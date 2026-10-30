@@ -104,7 +104,7 @@ The shared templates support `master` only. Set repository variable `S0_CI_RUNNE
 `PLANETSCALE_ORGANIZATION` as needed. Empty `DATABASE` retains D1. PlanetScale deployments need
 `PLANETSCALE_SERVICE_TOKEN_ID` and `PLANETSCALE_SERVICE_TOKEN` secrets.
 
-Deploy Preview and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is the exact
+Deploy Preview, PR Preview, and Deploy run only when the repository variable `CLOUDFLARE_DEPLOY` is the exact
 value `true`. Set `CLOUDFLARE_API_TOKEN` for the stage you deploy. SolZeroAI/platform does not set
 `CLOUDFLARE_DEPLOY`, so those jobs stay skipped and the public repository does not need the token.
 A fork that deploys sets both the variable and the token. The same steps then run as before.

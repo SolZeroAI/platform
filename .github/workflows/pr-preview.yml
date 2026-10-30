@@ -1,0 +1,342 @@
+# Copyable PR Preview template. Keep this file valid YAML. Do not comment it out.
+# Each job runs only when the repository variable CLOUDFLARE_DEPLOY is the exact value true.
+# SolZeroAI/platform does not set that variable, so these jobs skip. See preview.yml.
+name: PR Preview
+
+# A pull request preview is opt-in. Add the `preview` label to deploy the
+# pull request's pre-<number> stage. Each later push redeploys it while the
+# label stays. Remove the label or close the pull request to destroy the stage.
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - labeled
+      - unlabeled
+      - synchronize
+      - reopened
+      - closed
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: >-
+          Destroy an orphaned pre-<number> stage. The pull request must be
+          closed or must not have the preview label. Standing pre cannot be
+          destroyed here.
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  # The runs of one pull request that deploy or destroy its stage take turns
+  # in pre-<number>. A label event for another label, or a push to a pull
+  # request without the preview label, does nothing. It gets a group per run so
+  # it cannot replace or cancel a run that changes the stage.
+  group: >-
+    ${{
+      github.event_name == 'workflow_dispatch' && inputs.stage ||
+      (
+        (contains(fromJSON('["labeled","unlabeled"]'), github.event.action) && github.event.label.name == 'preview') ||
+        (contains(fromJSON('["synchronize","reopened","closed"]'), github.event.action) && contains(github.event.pull_request.labels.*.name, 'preview'))
+      ) && format('pre-{0}', github.event.pull_request.number) ||
+      format('pr-preview-{0}', github.run_id)
+    }}
+  # A new push cancels the deploy of the commit it replaces. Label changes and
+  # the close event never cancel, so a cleanup always finishes.
+  cancel-in-progress: ${{ contains(fromJSON('["synchronize","reopened"]'), github.event.action) }}
+
+jobs:
+  deploy-preview:
+    name: Deploy PR preview
+    # Fork pull requests do not deploy. Drafts deploy, because the label is an
+    # explicit request.
+    if: >-
+      ${{
+        vars.CLOUDFLARE_DEPLOY == 'true' &&
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(github.event.pull_request.labels.*.name, 'preview') &&
+        (contains(fromJSON('["synchronize","reopened"]'), github.event.action) || (github.event.action == 'labeled' && github.event.label.name == 'preview'))
+      }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 30
+    environment: pre
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
+      # Ephemeral previews stay on D1. Paid PlanetScale is for standing pre/prod.
+      DATABASE: d1
+      APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
+      PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check that the labeler can deploy
+        if: ${{ github.event.action == 'labeled' }}
+        run: |
+          permission=$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${SENDER}/permission" --jq .permission)
+          if [[ "$permission" != "admin" && "$permission" != "write" ]]; then
+            echo "::error::${SENDER} has ${permission} access. A preview needs write access."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          # Full history and tags let the deploy compute the release offset
+          # label, for example v1.5.0+2-bbb222.
+          fetch-depth: 0
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0
+        with:
+          nub-version: 0.9.6
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Resolve preview target
+        id: preview-target
+        run: |
+          website_url=$(nub run config:stage-url -- "$PREVIEW_STAGE" | tail -n 1)
+          echo "stage=$PREVIEW_STAGE" >> "$GITHUB_OUTPUT"
+          echo "website_url=$website_url" >> "$GITHUB_OUTPUT"
+        env:
+          PREVIEW_STAGE: pre-${{ github.event.pull_request.number }}
+
+      - name: Create config/.pre.vars file
+        env:
+          S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
+          S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY }}
+          S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN: ${{ secrets.S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN }}
+          MCPCF_PROXY_SIGNING_SECRET: ${{ secrets.MCPCF_PROXY_SIGNING_SECRET }}
+          TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+          REPO_SECRETS_ENCRYPTION_KEY: ${{ secrets.REPO_SECRETS_ENCRYPTION_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+        run: |
+          nub run config:write-stage-vars -- pre config/.pre.vars
+
+      - name: Check current preview lifetime before deployment
+        id: deploy-lifetime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/preview-lifecycle.mjs deploy
+
+      - name: Deploy preview
+        id: deploy
+        if: steps.deploy-lifetime.outputs.permitted == 'true'
+        run: |
+          ALCHEMY_STAGE="$PREVIEW_STAGE" nub run --cwd packages/infra deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+          WRANGLER_SEND_METRICS: "false"
+          PREVIEW_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
+
+      - name: Capture preview resource ownership
+        id: preview-ownership
+        if: steps.deploy.outcome == 'success'
+        env:
+          ALCHEMY_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          node scripts/preview-absence.mjs capture
+
+      - name: Preserve ephemeral preview ownership
+        if: steps.preview-ownership.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: preview-ownership-${{ steps.deploy-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .e2e/preview-${{ steps.deploy-lifetime.outputs.stage }}-ownership.json
+          retention-days: 90
+
+      - name: Find existing comment
+        if: ${{ steps.deploy.outcome == 'success' }}
+        id: find-comment
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- infra-preview -->"
+
+      - name: Create or update PR comment
+        if: ${{ steps.deploy.outcome == 'success' }}
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            <!-- infra-preview -->
+            ## Preview Deployed
+            Your preview is ready.
+            **Preview URL:** ${{ steps.preview-target.outputs.website_url }}
+            This preview was built from commit ${{ github.event.pull_request.head.sha }}
+            ---
+            <sub>Each new push redeploys this preview. Remove the `preview` label to destroy it.</sub>
+          edit-mode: replace
+
+  cleanup-preview:
+    name: Clean up PR preview
+    if: >-
+      ${{
+        vars.CLOUDFLARE_DEPLOY == 'true' &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          (
+            github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            (
+              (github.event.action == 'unlabeled' && github.event.label.name == 'preview') ||
+              (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'preview'))
+            )
+          )
+        )
+      }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 30
+    environment: pre
+    env:
+      S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
+      DATABASE: d1
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0
+        with:
+          nub-version: 0.9.6
+          node-version-file: .nvmrc
+          cache-dependency-path: nub.lock
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Create config/.pre.vars file
+        env:
+          S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD: ${{ secrets.S0_CONFIG_SECRETS_AUTH_ADMIN_PASSWORD }}
+          S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET: ${{ secrets.S0_CONFIG_SECRETS_AUTH_PROVIDERS_OKTA_CLIENT_SECRET }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_OPENAI_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_ANTHROPIC_API_KEY }}
+          S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_CF_AI_GATEWAY_XAI_API_KEY }}
+          S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY: ${{ secrets.S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY }}
+          S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN: ${{ secrets.S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN }}
+          MCPCF_PROXY_SIGNING_SECRET: ${{ secrets.MCPCF_PROXY_SIGNING_SECRET }}
+          TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+          REPO_SECRETS_ENCRYPTION_KEY: ${{ secrets.REPO_SECRETS_ENCRYPTION_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+        run: |
+          nub run config:write-stage-vars -- pre config/.pre.vars
+
+      - name: Check current preview lifetime before cleanup
+        id: cleanup-lifetime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/preview-lifecycle.mjs cleanup
+
+      - name: Restore verified preview ownership evidence
+        if: steps.cleanup-lifetime.outputs.permitted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
+        run: node scripts/preview-ownership.mjs
+
+      - name: Capture remaining preview resource ownership
+        id: preview-ownership
+        if: steps.cleanup-lifetime.outputs.permitted == 'true'
+        env:
+          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/preview-absence.mjs capture
+
+      - name: Clean up preview
+        id: cleanup
+        if: steps.cleanup-lifetime.outputs.permitted == 'true'
+        run: ALCHEMY_STAGE="$PREVIEW_STAGE" nub run --cwd packages/infra destroy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_AI_SEARCH_SERVICE_TOKEN_ID: ${{ secrets.CF_AI_SEARCH_SERVICE_TOKEN_ID }}
+          WRANGLER_SEND_METRICS: "false"
+          PREVIEW_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
+
+      - name: Verify all captured preview resources are absent
+        id: cleanup-verified
+        if: steps.cleanup.outcome == 'success'
+        env:
+          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/preview-absence.mjs verify
+
+      - name: Preserve preview cleanup evidence for retry
+        if: always() && steps.preview-ownership.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: preview-ownership-${{ steps.cleanup-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .e2e/preview-${{ steps.cleanup-lifetime.outputs.stage }}-ownership.json
+            .e2e/preview-cleanup-summary.json
+          retention-days: 90
+
+      - name: Find existing comment
+        if: ${{ github.event_name == 'pull_request' }}
+        id: find-comment
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- infra-preview -->"
+
+      - name: Update comment with cleanup status
+        if: steps.cleanup-verified.outcome == 'success' && steps.find-comment.outputs.comment-id != ''
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          body: |
+            <!-- infra-preview -->
+            ## Preview Cleaned Up
+            The preview for this PR was destroyed because the PR closed or lost the `preview` label.
+            ---
+            <sub>Add the `preview` label to deploy it again.</sub>
+          edit-mode: replace

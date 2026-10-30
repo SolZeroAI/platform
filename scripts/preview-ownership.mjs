@@ -37,10 +37,15 @@ const artifact = candidates.sort((a, b) => b.id - a.id)[0]
 if (!artifact) {
   console.log("No previous preview ownership evidence to restore")
 } else {
-  // Only this repository's preview workflow can supply ownership evidence.
+  // Only this repository's preview workflows can supply ownership evidence.
+  // PR Preview owns pre-<number> stages. Deploy Preview owned them before it,
+  // so its evidence still covers a stage that it deployed.
   const run = JSON.parse(api(`repos/${repository}/actions/runs/${artifact.workflow_run.id}`))
 
-  if (run.path !== ".github/workflows/preview.yml" || run.repository.full_name !== repository)
+  if (
+    ![".github/workflows/pr-preview.yml", ".github/workflows/preview.yml"].includes(run.path) ||
+    run.repository.full_name !== repository
+  )
     throw new Error("Preview ownership evidence came from another workflow")
   mkdirSync(".e2e", { recursive: true })
   const archive = ".e2e/preview-ownership.zip"
