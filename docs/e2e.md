@@ -329,6 +329,12 @@ decision filter keeps only the tests the diff can affect. A change to `e2e.confi
 lockfile keeps every test, and a diff that affects no test passes with no tests. Pushes
 and manual runs run every core test. Preview the pull request selection with
 `nub run test:e2e:list --changed-since origin/master` after you commit.
+On master, a newer commit cancels the older commit's validation and e2e jobs, so only the
+newest commit runs the suite. When every change since the last successful master Validate
+run is in `VERSION`, `CHANGELOG.md` and `.tegami/` (the Tegami version commit), the push runs
+no e2e, because the pull requests it releases already ran their tests. Without a known
+base, the suite runs. Deploys of standing `pre` share the `pre` group and are
+never cancelled.
 `CLOUDFLARE_ACCOUNT_ID` and `CF_AI_GATEWAY_E2E_TOKEN` are SolZeroAI organization secrets. Do not add
 repository copies, because they override the organization values.
 The e2e job does not read `CLOUDFLARE_API_TOKEN`. It boots local `alchemy dev`. The semantic

@@ -43,10 +43,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pre-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral' && (github.event.inputs.stage || 'destroy-ephemeral')) || 'pre' }}
+  group: ${{ github.event_name == 'pull_request' && format('pre-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy-ephemeral' && (github.event.inputs.stage || 'destroy-ephemeral')) || format('master-{0}', github.run_id) }}
   # A new push to a pull request cancels the run on the commit it replaces, so
   # the current commit's checks start at once. The close event never cancels:
-  # the preview cleanup must finish. Pushes to master and dispatches wait their turn.
+  # the preview cleanup must finish. Master pushes and standing pre dispatches
+  # get a group per run here; their validate jobs cancel older master commits and
+  # their deploy jobs queue below.
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
@@ -62,6 +64,12 @@ jobs:
   deploy-preview:
     name: Deploy preview stage
     needs: validate
+    # Two deploys of standing pre must never run at once, and a deploy is never
+    # cancelled. A newer pending deploy replaces an older pending one; it carries
+    # every earlier commit.
+    concurrency:
+      group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'pre' || format('deploy-{0}', github.run_id) }}
+      cancel-in-progress: false
     if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && !cancelled() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy-standing-pre') || (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository))) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 30
