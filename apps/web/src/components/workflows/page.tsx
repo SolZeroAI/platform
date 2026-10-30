@@ -114,13 +114,16 @@ import { formatJson } from "./header-utils"
 import { useWorkflowPageActions } from "./use-page-actions"
 import { WorkflowsPageFrame } from "./page-frame"
 import { useWorkflowPageCanvasActions } from "./use-page-canvas-actions"
+import type { WorkflowsRouteData } from "./route-data"
 import { useWorkflowPageData } from "./use-page-data"
 
 export function WorkflowsPage({
+  initialData,
   pathname,
   routeWorkflowId,
   initialProviderSettings = null,
 }: {
+  initialData: WorkflowsRouteData
   pathname: string
   routeWorkflowId?: string
   initialProviderSettings?: ProviderSettingsResponse | null
@@ -129,8 +132,8 @@ export function WorkflowsPage({
     initialData: initialProviderSettings,
   })
   const navigate = useNavigate()
-  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([])
-  const [workflowTotal, setWorkflowTotal] = useState(0)
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>(initialData.workflows)
+  const [workflowTotal, setWorkflowTotal] = useState(initialData.total)
   const [workflowListState, setWorkflowListState] = useState<WorkflowListTableState>(
     WORKFLOW_DEFAULT_TABLE_STATE,
   )
@@ -202,7 +205,7 @@ export function WorkflowsPage({
   const [workflowValidationDialogOpen, setWorkflowValidationDialogOpen] = useState(false)
   const [workflowConfigFocusTarget, setWorkflowConfigFocusTarget] =
     useState<WorkflowConfigFocusTarget | null>(null)
-  const workflowsLoadedRef = useRef(false)
+  const workflowsLoadedRef = useRef(true)
   const workflowDetailLoadStateRef = useRef<WorkflowDetailLoadState | null>(null)
   const runsRef = useRef<WorkflowRun[]>([])
   const selectedRunIdRef = useRef<string | null>(null)
@@ -633,6 +636,7 @@ export function WorkflowsPage({
     workflowFetchSequenceRef,
   } = useWorkflowPageData({
     edges,
+    initialDetail: initialData.detail,
     events,
     loading,
     nodes,

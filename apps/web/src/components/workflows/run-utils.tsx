@@ -16,18 +16,6 @@ import { formatWorkflowNodeLabel } from "./save-utils"
 import { asJsonRecord, formatJson, parseJsonInput } from "./header-utils"
 import { getS0Brand } from "@/lib/brand"
 
-export async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init)
-  // SAFETY: The workflow JSON body is the caller-selected T and includes error when response.ok is false.
-  const data = (await response.json().catch(() => ({}))) as T & { error?: string }
-
-  if (!response.ok) {
-    throw new Error(data.error ?? `Request failed with status ${response.status}`)
-  }
-
-  return data
-}
-
 export function downloadTextFile(filename: string, content: string): void {
   const blob = new Blob([content], { type: "text/yaml;charset=utf-8" })
   const url = URL.createObjectURL(blob)
