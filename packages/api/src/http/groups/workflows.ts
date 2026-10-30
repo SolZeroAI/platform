@@ -20,6 +20,7 @@ import {
   WorkflowApprovalPayload,
   WorkflowApprovalResponse,
   WorkflowResponse,
+  WorkflowSaveResponse,
   WorkflowRunEventsResponse,
   WorkflowRunListQuery,
   WorkflowRunParams,
@@ -65,7 +66,7 @@ export class WorkflowsGroup extends HttpApiGroup.make("workflows")
     HttpApiEndpoint.put("update", "/:id", {
       params: WorkflowIdParams,
       payload: UpsertWorkflowPayload,
-      success: WorkflowResponse,
+      success: WorkflowSaveResponse,
       error: [NotFoundError, ...CommonErrors],
     }).annotateMerge(OpenApi.annotations({ summary: "Update workflow" })),
     HttpApiEndpoint.patch("updateName", "/:id/name", {
