@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useCallback, useEffect, useRef } from "react"
+import { runApi } from "@/lib/api-client"
 import { showErrorToast } from "@/lib/toast-manager"
 import {
   upsertWorkflowSummary,
@@ -11,7 +11,8 @@ import {
 } from "./types"
 import { workflowListQueryParams, workflowRunQueryParams } from "./index-page"
 import { migrateWorkflowManifestForBuilder, toCanvasEdge, toCanvasNode } from "./manifest-utils"
-import { getErrorMessage, requestJson } from "./run-utils"
+import { toWorkflowSummary } from "./api"
+import { getErrorMessage } from "./run-utils"
 
 export function useWorkflowPageData(input: any) {
   const {
@@ -65,19 +66,16 @@ export function useWorkflowPageData(input: any) {
       try {
         const params = workflowListQueryParams(workflowListState)
 
-        const data = await requestJson<{
-          workflows: WorkflowSummary[]
-          total: number
-          limit: number
-          offset: number
-          hasMore: boolean
-        }>(`/api/workflows?${params.toString()}`, { signal })
+        const data = await runApi(
+          (client) => client.workflows.list({ query: Object.fromEntries(params) }),
+          { signal },
+        )
 
         if (workflowFetchSequenceRef.current !== sequence) {
           return
         }
 
-        setWorkflows(data.workflows)
+        setWorkflows(data.workflows.map(toWorkflowSummary))
         setWorkflowTotal(data.total)
         workflowsLoadedRef.current = true
       } catch (errorValue) {
@@ -103,18 +101,17 @@ export function useWorkflowPageData(input: any) {
         sequence: number
       },
     ) => {
-      const data = await requestJson<{ workflow: WorkflowSummary }>(
-        `/api/workflows/${workflowId}`,
-        {
-          signal: options.signal,
-        },
-      )
+      const data = await runApi((client) => client.workflows.get({ params: { id: workflowId } }), {
+        signal: options.signal,
+      })
+
+      const workflow = toWorkflowSummary(data.workflow)
 
       if (options.signal?.aborted || workflowDetailFetchSequenceRef.current !== options.sequence) {
         return false
       }
 
-      const manifest = data.workflow.manifest
+      const manifest = workflow.manifest
 
       if (!manifest) {
         throw new Error("Workflow response did not include a manifest")
@@ -127,7 +124,7 @@ export function useWorkflowPageData(input: any) {
       setSelectedNodeId(builderManifest.nodes[0]?.id ?? null)
       setSelectedEdgeId(null)
       setWorkflowHeaderDraftsByNode({})
-      setWorkflows((current) => upsertWorkflowSummary(current, data.workflow))
+      setWorkflows((current: WorkflowSummary[]) => upsertWorkflowSummary(current, workflow))
 
       return true
     },
@@ -146,27 +143,24 @@ export function useWorkflowPageData(input: any) {
       setRunTableLoading(true)
 
       try {
-        const data = await requestJson<{
-          runs: WorkflowRun[]
-          total: number
-          totalRuns: number
-          errorsLast24Hours: number
-          limit: number
-          offset: number
-          hasMore: boolean
-        }>(`/api/workflows/${workflowId}/runs?${params.toString()}`, {
-          signal: options.signal,
-        })
+        const data = await runApi(
+          (client) =>
+            client.workflows.runs({
+              params: { id: workflowId },
+              query: Object.fromEntries(params),
+            }),
+          { signal: options.signal },
+        )
 
         if (options.signal?.aborted || runFetchSequenceRef.current !== sequence) {
           return
         }
 
-        setRuns(data.runs)
+        setRuns([...data.runs])
         setRunTableTotal(data.total)
         setRunTotal(data.totalRuns)
         setRunErrorsLast24Hours(data.errorsLast24Hours)
-        setSelectedRunId((current) =>
+        setSelectedRunId((current: string | null) =>
           current && data.runs.some((run) => run.id === current)
             ? current
             : (data.runs[0]?.id ?? null),
@@ -187,11 +181,11 @@ export function useWorkflowPageData(input: any) {
   )
 
   const loadEvents = useCallback(async (workflowId: string, runId: string) => {
-    const data = await requestJson<{ events: WorkflowRunEvent[] }>(
-      `/api/workflows/${workflowId}/runs/${runId}/events`,
+    const data = await runApi((client) =>
+      client.workflows.runEvents({ params: { id: workflowId, runId } }),
     )
 
-    setEvents(data.events)
+    setEvents([...data.events])
   }, [])
 
   const submitApproval = useCallback(
@@ -203,11 +197,12 @@ export function useWorkflowPageData(input: any) {
       setSubmittingApprovalNodeId(nodeId)
 
       try {
-        await requestJson(`/api/workflows/${selectedWorkflowId}/runs/${runId}/approval`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nodeId, approved }),
-        })
+        await runApi((client) =>
+          client.workflows.approveRun({
+            params: { id: selectedWorkflowId, runId },
+            payload: { nodeId, approved },
+          }),
+        )
         await Promise.all([loadRuns(selectedWorkflowId), loadEvents(selectedWorkflowId, runId)])
       } catch (errorValue) {
         showErrorToast(getErrorMessage(errorValue))
@@ -321,13 +316,14 @@ export function useWorkflowPageData(input: any) {
       // SAFETY: The workflow snapshot listener receives a MessageEvent whose data is the WorkflowRunSnapshot JSON string.
       const snapshot = JSON.parse((event as MessageEvent<string>).data) as WorkflowRunSnapshot
       const snapshotRunsById = new Map(snapshot.runs.map((run) => [run.id, run]))
-      setRuns((current) => current.map((run) => snapshotRunsById.get(run.id) ?? run))
+      setRuns((current: WorkflowRun[]) => current.map((run) => snapshotRunsById.get(run.id) ?? run))
       const nextRunId = runSelectionPinnedRef.current ? selectedRunIdRef.current : snapshot.runId
-      setSelectedRunId((current) => {
+      setSelectedRunId((current: string | null) => {
         if (
           runSelectionPinnedRef.current &&
           current &&
-          (snapshotRunsById.has(current) || runsRef.current.some((run) => run.id === current))
+          (snapshotRunsById.has(current) ||
+            runsRef.current.some((run: WorkflowRun) => run.id === current))
         ) {
           return current
         }

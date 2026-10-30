@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { useBlocker } from "@tanstack/react-router"
-import { useCallback } from "react"
+import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react"
 import {
   parseWorkflowExport,
   validateWorkflowDraft,
@@ -8,6 +7,7 @@ import {
   type WorkflowManifestNode,
   type WorkflowTemplate,
 } from "@solzero/shared"
+import { runApi } from "@/lib/api-client"
 import { showErrorToast } from "@/lib/toast-manager"
 import {
   RunTriggerOptions,
@@ -15,6 +15,8 @@ import {
   upsertWorkflowSummary,
   WorkflowCreationMode,
   WorkflowRun,
+  WorkflowHeaderDraftRow,
+  WorkflowSaveDialogState,
   WorkflowSaveDialogSummary,
   WorkflowSaveResponse,
   WorkflowSaveRevertAction,
@@ -28,10 +30,30 @@ import {
   getWorkflowVersionSaveLabel,
   stripWorkflowSaveChangeRevertActions,
 } from "./save-utils"
-import { downloadTextFile, getErrorMessage, requestJson } from "./run-utils"
+import { toWorkflowSaveResponse, toWorkflowSummary } from "./api"
+import { downloadTextFile, getErrorMessage } from "./run-utils"
 import { formatJson } from "./header-utils"
 
-export function useWorkflowPageActions(input: any) {
+type StateSetter<T> = Dispatch<SetStateAction<T>>
+
+/** The page state these actions update. The page passes more fields than this names. */
+interface WorkflowPageActionsState {
+  workflows: WorkflowSummary[]
+  runsRef: RefObject<WorkflowRun[]>
+  setWorkflows: StateSetter<WorkflowSummary[]>
+  setWorkflowTotal: StateSetter<number>
+  setSelectedNodeId: StateSetter<string | null>
+  setSelectedEdgeId: StateSetter<string | null>
+  setWorkflowHeaderDraftsByNode: StateSetter<Record<string, WorkflowHeaderDraftRow[]>>
+  setWorkflowSaveDialog: StateSetter<WorkflowSaveDialogState | null>
+  setDeletingWorkflowId: StateSetter<string | null>
+  setDeletingRunId: StateSetter<string | null>
+  setRuns: StateSetter<WorkflowRun[]>
+  setRunTableTotal: StateSetter<number>
+  setRunTotal: StateSetter<number>
+}
+
+export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<string, any>) {
   const {
     builderPrompt,
     currentManifest,
@@ -101,17 +123,15 @@ export function useWorkflowPageActions(input: any) {
   } = input
 
   const persistWorkflowSave = useCallback(async (): Promise<WorkflowSaveResponse> => {
-    const endpoint = selectedWorkflowId ? `/api/workflows/${selectedWorkflowId}` : "/api/workflows"
-    const method = selectedWorkflowId ? "PUT" : "POST"
+    const payload = { name: selectedWorkflow?.name ?? workflowName, manifest: currentManifest }
 
-    return requestJson<WorkflowSaveResponse>(endpoint, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: selectedWorkflow?.name ?? workflowName,
-        manifest: currentManifest,
-      }),
-    })
+    const data = await runApi((client) =>
+      selectedWorkflowId
+        ? client.workflows.update({ params: { id: selectedWorkflowId }, payload })
+        : client.workflows.create({ payload }),
+    )
+
+    return toWorkflowSaveResponse(data)
   }, [currentManifest, selectedWorkflow?.name, selectedWorkflowId, workflowName])
 
   const applyWorkflowSave = useCallback(
@@ -265,19 +285,12 @@ export function useWorkflowPageActions(input: any) {
     setSavingWorkflowTitle(true)
 
     try {
-      const data = await requestJson<{ workflow: WorkflowSummary }>(
-        `/api/workflows/${selectedWorkflowId}/name`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
-        },
+      const data = await runApi((client) =>
+        client.workflows.updateName({ params: { id: selectedWorkflowId }, payload: { name } }),
       )
 
-      const workflow = {
-        ...data.workflow,
-        manifest: data.workflow.manifest ?? selectedWorkflow.manifest,
-      }
+      const renamed = toWorkflowSummary(data.workflow)
+      const workflow = { ...renamed, manifest: renamed.manifest ?? selectedWorkflow.manifest }
 
       setWorkflows((current) => upsertWorkflowSummary(current, workflow))
       setWorkflowTitleDraft(workflow.name)
@@ -387,9 +400,7 @@ export function useWorkflowPageActions(input: any) {
       setDeletingWorkflowId(workflow.id)
 
       try {
-        await requestJson<{ status: string; workflowId: string }>(`/api/workflows/${workflow.id}`, {
-          method: "DELETE",
-        })
+        await runApi((client) => client.workflows.delete({ params: { id: workflow.id } }))
         const remaining = workflows.filter((item) => item.id !== workflow.id)
         setWorkflows(remaining)
         setWorkflowTotal((current) => Math.max(0, current - 1))
@@ -423,9 +434,8 @@ export function useWorkflowPageActions(input: any) {
       setDeletingRunId(run.id)
 
       try {
-        await requestJson<{ status: string; workflowId: string; runId: string }>(
-          `/api/workflows/${selectedWorkflowId}/runs/${run.id}`,
-          { method: "DELETE" },
+        await runApi((client) =>
+          client.workflows.deleteRun({ params: { id: selectedWorkflowId, runId: run.id } }),
         )
         const nextRuns = runsRef.current.filter((item) => item.id !== run.id)
         setRuns(nextRuns)
@@ -454,16 +464,15 @@ export function useWorkflowPageActions(input: any) {
     setUpdatingWorkflowStatus(true)
 
     try {
-      const action = enabled ? "enable" : "disable"
+      const params = { id: workflow.id }
 
-      const data = await requestJson<{ workflow: WorkflowSummary }>(
-        `/api/workflows/${workflow.id}/${action}`,
-        {
-          method: "POST",
-        },
+      const data = await runApi((client) =>
+        enabled ? client.workflows.enable({ params }) : client.workflows.disable({ params }),
       )
 
-      setWorkflows((current) => upsertWorkflowSummary(current, data.workflow))
+      setWorkflows((current: WorkflowSummary[]) =>
+        upsertWorkflowSummary(current, toWorkflowSummary(data.workflow)),
+      )
     } catch (errorValue) {
       showErrorToast(getErrorMessage(errorValue))
     } finally {
@@ -498,13 +507,8 @@ export function useWorkflowPageActions(input: any) {
       setRunning(true)
 
       try {
-        const data = await requestJson<{ run: WorkflowRun }>(
-          `/api/workflows/${selectedWorkflowId}/runs`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trigger }),
-          },
+        const data = await runApi((client) =>
+          client.workflows.run({ params: { id: selectedWorkflowId }, payload: { trigger } }),
         )
 
         setRuns((current) => [data.run, ...current.filter((run) => run.id !== data.run.id)])

@@ -24,6 +24,7 @@ import { PageHeader } from "@/components/page-header"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
 import { SidebarLayout } from "@/components/sidebar-layout"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
+import { runApi } from "@/lib/api-client"
 import { copyToClipboard } from "@/lib/format"
 import { showErrorToast } from "@/lib/toast-manager"
 import {
@@ -108,7 +109,6 @@ import {
   downloadTextFile,
   getErrorMessage,
   getLatestWebhookTestPayload,
-  requestJson,
 } from "./run-utils"
 import { formatJson } from "./header-utils"
 import { useWorkflowPageActions } from "./use-page-actions"
@@ -427,15 +427,15 @@ export function WorkflowsPage({
     }
 
     const promise = (async () => {
-      const created = await requestJson<{ sessionId: string }>("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionKind: "isolate",
-          title: "Workflow builder",
-          tools: [{ kind: "workflow_builder" }],
+      const created = await runApi((client) =>
+        client.sessions.create({
+          payload: {
+            sessionKind: "isolate",
+            title: "Workflow builder",
+            tools: [{ kind: "workflow_builder" }],
+          },
         }),
-      })
+      )
       workflowAiSessionIdRef.current = created.sessionId
       setWorkflowAiSessionId(created.sessionId)
       return created.sessionId
@@ -454,13 +454,11 @@ export function WorkflowsPage({
   const enqueueWorkflowAiPrompt = useCallback(
     async (input: { content: string }) => {
       const sessionId = await createWorkflowAiSession()
-      await requestJson<{ messageId: string; status: string }>(
-        `/api/sessions/${encodeURIComponent(sessionId)}/prompt`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: input.content, source: "web" }),
-        },
+      await runApi((client) =>
+        client.sessions.prompt({
+          params: { id: sessionId },
+          payload: { content: input.content, source: "web" },
+        }),
       )
       return sessionId
     },
@@ -493,10 +491,13 @@ export function WorkflowsPage({
             ? Object.fromEntries(
                 await Promise.all(
                   input.runs.map(async (run) => {
-                    const response = await requestJson<{ events: WorkflowRunEvent[] }>(
-                      `/api/workflows/${encodeURIComponent(selectedWorkflowId)}/runs/${encodeURIComponent(run.id)}/events`,
+                    const response = await runApi((client) =>
+                      client.workflows.runEvents({
+                        params: { id: selectedWorkflowId, runId: run.id },
+                      }),
                     )
-                    return [run.id, response.events] as const
+                    const entry: [string, WorkflowRunEvent[]] = [run.id, [...response.events]]
+                    return entry
                   }),
                 ),
               )
