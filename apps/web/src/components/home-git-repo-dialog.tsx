@@ -11,7 +11,7 @@ import { Pagination } from "@cloudflare/kumo/components/pagination"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Check, FolderGit2 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { DialogPaginationPageSize } from "@/components/dialog-pagination-page-size"
 import { Dialog } from "@/components/ui/dialog"
@@ -114,8 +114,6 @@ export function HomeGitRepoDialog({
   const brand = getS0Brand()
   const [draftTools, setDraftTools] = useState<SessionToolSpec[]>(selectedTools)
   const [saveError, setSaveError] = useState("")
-  const selectedToolsRef = useRef(selectedTools)
-  selectedToolsRef.current = selectedTools
   const selectedRepo = getGitHubRepoTool(draftTools)
 
   const selectedRepoFullName = selectedRepo
@@ -139,14 +137,17 @@ export function HomeGitRepoDialog({
     setDraftTools(setSelectedRepo(draftTools, repoFullName))
   }
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
+  // Reset the drafts while rendering each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(false)
 
-    setDraftTools(selectedToolsRef.current)
-    setSaveError("")
-  }, [open])
+  if (wasOpen !== open) {
+    setWasOpen(open)
+
+    if (open) {
+      setDraftTools(selectedTools)
+      setSaveError("")
+    }
+  }
 
   useEffect(() => {
     if (!open) {

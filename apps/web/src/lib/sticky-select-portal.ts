@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react"
+
 const STICKY_SELECT_PORTAL_ATTR = "data-sticky-select-portal"
 
 let stickySelectPortalRoot: HTMLElement | null = null
@@ -15,4 +17,13 @@ export function getStickySelectPortalRoot(): HTMLElement | null {
   }
 
   return stickySelectPortalRoot
+}
+
+function subscribeToPortalRoot() {
+  return () => {}
+}
+
+/** Returns the shared portal root after hydration, and null during server render. */
+export function useStickySelectPortalRoot(): HTMLElement | null {
+  return useSyncExternalStore(subscribeToPortalRoot, getStickySelectPortalRoot, () => null)
 }

@@ -26,7 +26,6 @@ import type {
   RuntimeActivityCreateInput,
   RuntimeActivityRow,
   RuntimeLifecycleRow,
-  SandboxActivityRow,
   SandboxRow,
   SessionRow,
 } from "./types"

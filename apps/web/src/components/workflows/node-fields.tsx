@@ -366,10 +366,12 @@ export function LabeledNodeIdInput({
   helpText?: string
 }) {
   const [draft, setDraft] = useState(value)
+  const [draftSource, setDraftSource] = useState(value)
 
-  useEffect(() => {
+  if (draftSource !== value) {
+    setDraftSource(value)
     setDraft(value)
-  }, [value])
+  }
 
   const validationError = getNodeIdValidationError(draft, value, existingIds)
   const showValidationError = draft.trim() !== value && validationError !== null

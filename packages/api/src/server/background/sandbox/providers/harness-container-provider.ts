@@ -9,7 +9,9 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as P from "effect/Predicate"
+import * as Ref from "effect/Ref"
 import * as Result from "effect/Result"
+import * as Schedule from "effect/Schedule"
 import * as Schema from "effect/Schema"
 import { toError } from "../../../lib/effect-errors"
 import { stringifyJson } from "../../../lib/json"
@@ -314,7 +316,7 @@ function stringifyOutput(value: unknown): string {
     Match.when(Match.string, (text) => text),
     Match.orElse((other) =>
       Result.getOrElse(
-        Result.try(() => JSON.stringify(other)),
+        Result.try(() => stringifyJson(other)),
         () => String(other),
       ),
     ),
@@ -623,15 +625,12 @@ export class HarnessContainerProvider implements SandboxProvider {
     onEvent: (event: SandboxEvent) => Promise<void>,
   ) {
     return Effect.gen(function* () {
-      let cursor = initialCursor
-      let outcome = PENDING_POLL
+      const cursor = yield* Ref.make(initialCursor)
 
       const state: RuntimeSessionState = {
         text: "",
         reasoningById: new Map(),
       }
-
-      const pause = Effect.sleep("500 millis")
 
       const deliver = (runtimeEvent: RuntimeEvent) =>
         Option.match(mapRuntimeEvent(runtimeEvent, sandboxId, state), {
@@ -639,24 +638,31 @@ export class HarnessContainerProvider implements SandboxProvider {
           onSome: (event) => Effect.tryPromise({ try: () => onEvent(event), catch: toError }),
         })
 
-      while (!outcome.finished) {
-        const polled = yield* Effect.tryPromise({
-          try: () =>
-            fetchContainer(stub, `/poll?cursor=${cursor}`).then((response) =>
-              readOkJson(response, "poll events"),
-            ),
-          catch: toError,
-        })
-
+      const pollOnce = Ref.get(cursor).pipe(
+        Effect.flatMap((current) =>
+          Effect.tryPromise({
+            try: () =>
+              fetchContainer(stub, `/poll?cursor=${current}`).then((response) =>
+                readOkJson(response, "poll events"),
+              ),
+            catch: toError,
+          }),
+        ),
         // SAFETY: The JSON body is the RuntimePollResponse shape read by this caller after the response arrives.
-        const payload = polled as RuntimePollResponse
-        cursor = payload.cursor
+        Effect.map((polled) => polled as RuntimePollResponse),
+        Effect.tap((payload) => Ref.set(cursor, payload.cursor)),
+        Effect.tap((payload) =>
+          Effect.forEach(eventsThroughFinish(payload.events), deliver, { discard: true }),
+        ),
+        Effect.map((payload) => pollOutcome(payload.events)),
+      )
 
-        yield* Effect.forEach(eventsThroughFinish(payload.events), deliver, { discard: true })
-        outcome = pollOutcome(payload.events)
-        const stillPolling = Effect.succeed(!outcome.finished)
-        yield* Effect.when(pause, stillPolling)
-      }
+      const outcome = yield* pollOnce.pipe(
+        Effect.repeat({
+          until: (polled) => polled.finished,
+          schedule: Schedule.spaced("500 millis"),
+        }),
+      )
 
       return { success: outcome.success, error: outcome.error }
     })

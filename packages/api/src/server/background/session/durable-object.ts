@@ -1,13 +1,9 @@
-import { DurableObject, tracing as workerTracing } from "cloudflare:workers"
+import { DurableObject } from "cloudflare:workers"
 import type { AgentToolEventMessage } from "agents"
 import {
-  DEFAULT_ISOLATE_STEP_LIMIT,
   getGitHubRepoTool,
   getSelectedMcpcfServerIds,
   getStageMetadataSync,
-  normalizeIsolateStepLimit,
-  normalizeOpenCodeMcpServers,
-  normalizeSessionTools,
   parseStoredOpenCodeMcpServers,
   parseSessionArtifactMetadata,
   parseStoredSessionTools,
@@ -15,7 +11,6 @@ import {
   type AgentRuntime,
   type OpenCodeInteractionRequest,
   type OpenCodeInteractionResponse,
-  type RuntimeActivityEvent,
   type SessionArtifactMetadata,
   type SessionKind,
   type SessionRuntimeCapabilities,
@@ -23,272 +18,23 @@ import {
   type SessionToolSpec,
   type SubagentMode,
 } from "@solzero/shared"
-import { generateId, hashToken } from "../auth/crypto"
-import {
-  resolveGitHubCloneCredentials,
-  type GitHubCloneCredentials,
-} from "../auth/github-clone-auth"
-import {
-  type IsolateSessionConfig,
-  type IsolateWarmResult,
-  IsolateSessionRuntime,
-} from "../isolate/runtime"
-import {
-  createSandboxLifecycleManager,
-  type SandboxLifecycleManager,
-} from "../sandbox/lifecycle/manager"
-import type {
-  Attachment,
-  ClientInfo,
-  ClientMessage,
-  Env,
-  PromptExecutionMode,
-  SandboxEvent,
-  ServerMessage,
-  SessionState,
-} from "../types"
-import { getGitHubAppUserAccessTokenForUserId } from "../../lib/better-auth"
-import { createApiRequestObserver } from "../../effect/services/observability"
-import * as Arr from "effect/Array"
-import * as Cause from "effect/Cause"
+import { generateId } from "../auth/crypto"
+import { IsolateSessionRuntime } from "../isolate/runtime"
+import { type SandboxLifecycleManager } from "../sandbox/lifecycle/manager"
+import type { Attachment, ClientInfo, Env, SandboxEvent } from "../types"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
-import {
-  BackgroundTracing,
-  localSpanContextFromHeaders,
-  makeBackgroundTracingLayer,
-  type LocalSpanContext,
-} from "../observability/tracing"
-import { createGlobalSecretsStoreFromD1 } from "../db/repo-secrets"
 import { decodeJson, parseJson, parseJsonArray, stringifyJson } from "../../lib/json"
-import { toError, toErrorWithFallback } from "../../lib/effect-errors"
-import { SessionRepository, toSessionRuntimeRepository } from "./repository"
-import { buildResolvedSessionMcpServers } from "./runtime-mcp"
-import { initSchema } from "./schema"
+import { toError } from "../../lib/effect-errors"
+import { SessionRepository } from "./repository"
 import { durableMigration } from "../../../migration/durable-state"
-import { handleResumePromptRequest } from "./resume"
-import { runIsolatePromptWithEvents } from "./isolate-prompt-bridge"
 import { projectSubagentSessionEvent } from "../isolate/agent/subagent-event-projection"
-import {
-  getSandboxEventMessageId,
-  isStoppedByUserMessage,
-  shouldProcessSandboxEventForMessage,
-  STOPPED_BY_USER_ERROR,
-} from "./event-gating"
-import type {
-  ArtifactRow,
-  MessageRow,
-  ParticipantRow,
-  RuntimeActivityRow,
-  SandboxRow,
-  SessionRow,
-} from "./types"
-import {
-  type ParsedTags,
-  type SessionWebSocketManager,
-  SessionWebSocketManagerImpl,
-  toSessionRuntimeWebSocket,
-} from "./websocket-manager"
-import {
-  webSocketMessage,
-  routeWebSocketMessage,
-  webSocketClose,
-  handleSandboxSocketClose,
-  applySandboxSocketClose,
-  handleClientSocketClose,
-  broadcastClientLeft,
-  webSocketError,
-  handleWebSocketUpgrade,
-  validateSandboxUpgrade,
-  validateActiveSandboxUpgrade,
-  acceptWebSocketUpgrade,
-  acceptSandboxSocket,
-  acceptClientSocketWithAuth,
-  handleSandboxMessage,
-  logSandboxMessageError,
-  handleClientMessage,
-  sendInvalidMessage,
-  dispatchClientMessage,
-  sendPong,
-  applyPresence,
-  updateClientPresence,
-  clientWsId,
-  clientWsIdOption,
-  handleSubscribe,
-  rejectSubscribeMissingToken,
-  authorizeSubscribe,
-  rejectSubscribeInvalidToken,
-  completeSubscribe,
-  sendSubscribeReplay,
-  sendReplayEvent,
-  replayCursor,
-  handleTyping,
-  getClientInfo,
-  recoverClientInfo,
-  buildAndCacheClientInfo,
-  handlePromptMessage,
-} from "./durable-object/websocket"
-import {
-  processMessageQueue,
-  canProcessQueue,
-  nextQueuedMessage,
-  runQueuedMessage,
-  buildQueuedMessageContext,
-  messageSpanAttributes,
-  processQueuedMessage,
-  processQueuedMessageEffect,
-  ensureRuntimeReady,
-  ensureSandboxEffect,
-  ensureIsolateReadySpan,
-  runPromptExecution,
-  runSandboxPrompt,
-  runSandboxPromptEffect,
-  runIsolatePrompt,
-  runIsolatePromptEvents,
-  maybeCompleteIsolatePrompt,
-  completeIsolatePrompt,
-  handlePromptFailure,
-  clearTerminalDiscoveryEffect,
-  promptFailureMessage,
-  applyPromptFailure,
-  reportPromptFailure,
-  reportNonSandboxFailure,
-  failNonSandboxRuntime,
-  emitPromptErrorEvent,
-  processSandboxEvent,
-  recordHeartbeat,
-  processNonHeartbeatEvent,
-  droppedEventMessageStatus,
-  dropStatusForMessage,
-  persistSandboxEvent,
-  maybeWriteStreamDelta,
-  writeTokenDelta,
-  streamForMessage,
-  applyStreamDelta,
-  maybeCompleteExecution,
-  completeExecutionIfMessage,
-  completionStatus,
-  finalizeExecutionStream,
-  completeExecution,
-  stopExecution,
-  stopProcessingMessage,
-  resolveStopRuntimeId,
-  stopRuntimeExecution,
-  stopIsolateRuntime,
-  stopIsolatePromptEffect,
-  logIsolateStopFailureEffect,
-  broadcast,
-} from "./durable-object/processing"
-import {
-  getSessionState,
-  reconcileSandboxStatusIfSandbox,
-  getSession,
-  getSessionId,
-  getSessionKind,
-  getAgentRuntime,
-  getSessionOwner,
-  buildIsolateSessionConfig,
-  buildIsolateConfigFor,
-  resolveSecretEnv,
-  decryptSecretEnv,
-  getIsolateCloneAuth,
-  getIsolateCloneAuthEffect,
-  getSandboxCloneCredentials,
-  getSandboxCloneCredentialsEffect,
-  repoBackedSessionOwner,
-  resolveCloneCredentialsEffect,
-  syncIsolateRuntime,
-  syncIsolateRuntimeEffect,
-  finalizeWarmFailure,
-  maybeBroadcastSandboxError,
-  finalizeWarmSuccess,
-  isIsolateRuntimeReady,
-  ensureIsolateReady,
-  warmIsolateRuntime,
-  registerIsolateStream,
-  closeIsolateStream,
-  closeStream,
-  failIsolateStream,
-} from "./durable-object/runtime-state"
-import {
-  handleInit,
-  warmRuntimeForKind,
-  handleGetState,
-  serializeSessionState,
-  serializeSandbox,
-  handleEnqueuePrompt,
-  enqueuePromptValidationError,
-  enqueueValidatedPrompt,
-  resolveParticipantByUserId,
-  dispatchEnqueuedPrompt,
-  startStreamedPrompt,
-  startQueuedPrompt,
-  startBackgroundQueuedPrompt,
-  startAwaitedQueuedPrompt,
-  logAsyncPromptQueueError,
-  handleResumePrompt,
-  handleUpdateTools,
-  updateToolsForUser,
-  updateToolsForSession,
-  applyToolUpdate,
-  repoChangeError,
-  existingRepoChangeError,
-  attachRepoError,
-  commitToolUpdate,
-  syncToolingRuntime,
-  syncRuntimeForKind,
-  broadcastSessionState,
-} from "./durable-object/rpc"
-import {
-  createInternalRequestObserver,
-  logMessageQueueFailure,
-  logPromptStopped,
-  logIsolateStopFailure,
-  logDroppedSandboxEvent,
-  emitDroppedSandboxEventLog,
-  logClientWebSocketAuthFailure,
-  ensureInitialized,
-  initializeStorage,
-  wsManager,
-  lifecycleManager,
-  isolateRuntime,
-  routeRequest,
-  alarm,
-  handleIsolateInactivityAlarm,
-  maybeStopInactiveSandbox,
-  stopInactiveSandbox,
-} from "./durable-object/core"
-import {
-  handleStop,
-  handleListEvents,
-  handleListRuntimeActivity,
-  listSerializedRuntimeActivity,
-  handleListMessages,
-  handleListArtifacts,
-  handleGenerateWsToken,
-  generateWsTokenForUser,
-  ensureWsParticipant,
-  createWsParticipant,
-  issueWsToken,
-  handleVerifySandboxToken,
-  verifySandboxToken,
-  matchSandboxToken,
-  matchSandboxAuthToken,
-  serializeArtifact,
-  serializeRuntimeActivity,
-  handleArchive,
-  archiveSession,
-  archiveResolvedSession,
-  teardownArchivedRuntime,
-  revertArchive,
-  finalizeArchive,
-  broadcastArchivedProcessing,
-  handleUnarchive,
-  unarchiveSession,
-  unarchiveResolvedSession,
-} from "./durable-object/query-archive"
+import type { MessageRow, ParticipantRow, RuntimeActivityRow, SessionRow } from "./types"
+import { type SessionWebSocketManager } from "./websocket-manager"
+import { getSession } from "./durable-object/runtime-state"
+import { wsManager, lifecycleManager, isolateRuntime } from "./durable-object/core"
 import { installSessionDOCoreBindings } from "./durable-object/core-bindings"
 import { installSessionDOWebSocketBindings } from "./durable-object/websocket-bindings"
 import { installSessionDOProcessingBindings } from "./durable-object/processing-bindings"
@@ -458,6 +204,7 @@ function resolvedModel(value: string | null | undefined): Option.Option<string> 
   )
 }
 
+// oxlint-disable-next-line typescript/no-unsafe-declaration-merging -- The install*Bindings mixins at the end of this file add the split-out methods; the merged interface types them until they move into the class.
 export class SessionDO extends DurableObject<Env> {
   private initialized = false
   private readonly sql: SqlStorage
@@ -751,6 +498,8 @@ export class SessionDO extends DurableObject<Env> {
   }
 }
 
+// The install*Bindings calls below add the split-out methods to the prototype. This open
+// interface types them until the session Durable Object methods are typed in place.
 export interface SessionDO {
   [key: string]: any
 }

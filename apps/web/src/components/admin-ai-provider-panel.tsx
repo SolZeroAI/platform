@@ -27,7 +27,6 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -35,7 +34,7 @@ import {
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
-import { getStickySelectPortalRoot } from "@/lib/sticky-select-portal"
+import { useStickySelectPortalRoot } from "@/lib/sticky-select-portal"
 import { showErrorToast } from "@/lib/toast-manager"
 import { AdminCloudflareAiGatewayPanel } from "./admin-cloudflare-ai-gateway-panel"
 import {
@@ -200,14 +199,14 @@ export function AdminAiProviderPanel({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportDotenv, setExportDotenv] = useState<string | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
-  const [stickySelectPortalContainer, setStickySelectPortalContainer] =
-    useState<HTMLElement | null>(null)
+  const stickySelectPortalContainer = useStickySelectPortalRoot()
   const latestFailureToastKeyRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    if (!config) {
-      return
-    }
+  // Reset the form while rendering when a new config arrives.
+  const [formConfig, setFormConfig] = useState<typeof config | null>(null)
+
+  if (config && formConfig !== config) {
+    setFormConfig(config)
     setEnabled(config.enabled)
     setBaseUrl(config.baseUrl)
     setApiKey("")
@@ -227,7 +226,7 @@ export function AdminAiProviderPanel({
         }),
       ),
     )
-  }, [config])
+  }
 
   const litellmModelOptions = useMemo(
     () => buildLitellmDialogModelOptions(models, adapterOverrides),
@@ -414,15 +413,9 @@ export function AdminAiProviderPanel({
     }
   }, [onHeaderActionsChange])
 
-  useEffect(() => {
-    if (modelRegistryPage !== currentModelRegistryPage) {
-      setModelRegistryPage(currentModelRegistryPage)
-    }
-  }, [currentModelRegistryPage, modelRegistryPage])
-
-  useLayoutEffect(() => {
-    setStickySelectPortalContainer(getStickySelectPortalRoot())
-  }, [])
+  if (modelRegistryPage !== currentModelRegistryPage) {
+    setModelRegistryPage(currentModelRegistryPage)
+  }
 
   useEffect(() => {
     if (!latestRun || latestRun.status !== "failure" || !latestRunFailureMessage) {

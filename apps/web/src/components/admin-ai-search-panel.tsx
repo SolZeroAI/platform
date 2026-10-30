@@ -13,7 +13,7 @@ import { Switch } from "@cloudflare/kumo/components/switch"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { Tooltip, TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { Edit3, FileCode2, Plus, Save, Trash2, X } from "lucide-react"
-import { useLayoutEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
@@ -23,7 +23,7 @@ import {
   Field,
   SelectField,
 } from "@/components/admin-ai-provider-panel-ui"
-import { getDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
+import { useDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 type SourceDraft = {
@@ -99,12 +99,7 @@ export function AdminAiSearchPanel({
   const [draft, setDraft] = useState<SourceDraft>(EMPTY_DRAFT)
   const [fieldError, setFieldError] = useState("")
 
-  const [dialogSelectPortalContainer, setDialogSelectPortalContainer] =
-    useState<HTMLElement | null>(null)
-
-  useLayoutEffect(() => {
-    setDialogSelectPortalContainer(getDialogSelectPortalRoot())
-  }, [])
+  const dialogSelectPortalContainer = useDialogSelectPortalRoot()
 
   const editingSource = useMemo(
     () => data?.sources.find((source) => source.id === editingSourceId) ?? null,

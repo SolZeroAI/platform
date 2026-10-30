@@ -1,6 +1,7 @@
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as P from "effect/Predicate"
+import { stringifyJson } from "../../../lib/json"
 
 type JsonObject = Record<string, unknown>
 
@@ -142,7 +143,7 @@ function bufferedChatRequest(
       method: request.method,
       signal: request.signal,
       headers,
-      body: JSON.stringify(nativeInput),
+      body: stringifyJson(nativeInput),
     }),
     streaming: true,
     functionNames,
@@ -230,7 +231,7 @@ function chatToolMessage(callNames: Map<unknown, unknown>, item: JsonObject) {
     name: callNames.get(item.call_id),
     content: Match.value(item.output).pipe(
       Match.when(P.isString, (output) => output),
-      Match.orElse((output) => JSON.stringify(output)),
+      Match.orElse((output) => stringifyJson(output)),
     ),
   }
 }
@@ -369,9 +370,9 @@ function responsesToChat(body: JsonObject, functionNames: FunctionNames) {
     Match.orElse(() => fail("Workers AI GPT-OSS requires explicit Responses input history")),
   )
 
-  for (const item of input) {
+  input.forEach((item) => {
     appendInputItem(messages, callNames, item)
-  }
+  })
 
   const tools = Option.liftPredicate(body.tools, Array.isArray).pipe(
     Option.map((list: unknown[]) => list.flatMap((tool) => chatTools(tool, functionNames))),
@@ -584,7 +585,7 @@ function emitReasoningSummary(
   common: JsonObject,
   item: JsonObject & { summary: unknown[] },
 ): void {
-  for (const [summaryIndex, part] of item.summary.entries()) {
+  item.summary.forEach((part, summaryIndex) => {
     Option.liftPredicate(
       part,
       (value: unknown): value is JsonObject & { text: string } =>
@@ -601,11 +602,11 @@ function emitReasoningSummary(
         emit("response.reasoning_summary_part.done", { ...summary, part: summaryPart })
       }),
     )
-  }
+  })
 }
 
 function emitContentParts(emit: EmitEvent, common: JsonObject, parts: unknown[]): void {
-  for (const [contentIndex, part] of parts.entries()) {
+  parts.forEach((part, contentIndex) => {
     Option.liftPredicate(part, object).pipe(
       Option.map((contentPart) => {
         const content = { ...common, content_index: contentIndex }
@@ -631,7 +632,7 @@ function emitContentParts(emit: EmitEvent, common: JsonObject, parts: unknown[])
         emit("response.content_part.done", { ...content, part: contentPart })
       }),
     )
-  }
+  })
 }
 
 function emitOutputItem(emit: EmitEvent, outputIndex: number, item: JsonObject): void {
@@ -677,18 +678,18 @@ function responsesEvents(value: ResponsesValue): string[] {
 
   const emit: EmitEvent = (type, fields) => {
     events.push(
-      `event: ${type}\ndata: ${JSON.stringify({ type, sequence_number: sequence++, ...fields })}\n\n`,
+      `event: ${type}\ndata: ${stringifyJson({ type, sequence_number: sequence++, ...fields })}\n\n`,
     )
   }
 
   emit("response.created", { response: { ...value, status: "in_progress", output: [] } })
   emit("response.in_progress", { response: { ...value, status: "in_progress", output: [] } })
 
-  for (const [outputIndex, item] of value.output.entries()) {
+  value.output.forEach((item, outputIndex) => {
     Option.liftPredicate(item, object).pipe(
       Option.map((outputItem) => emitOutputItem(emit, outputIndex, outputItem)),
     )
-  }
+  })
 
   const terminal = Match.value(value.status).pipe(
     Match.when("failed", () => "failed"),

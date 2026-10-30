@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import type { PublicAuthProvider, PublicAuthProviderRegistry } from "@solzero/shared"
 import { S0AnimatedIcon } from "@/components/s0-animated-icon"
 import { S0Loader } from "@/components/s0-loader"
+import { useHydrated } from "@/hooks/use-hydrated"
 import {
   authClient,
   AuthProviderConfigProvider,
@@ -48,10 +49,9 @@ function AuthenticatedOutlet({
 }) {
   const { data: session, status } = useAuthSession()
   const router = useRouter()
-  const [interactive, setInteractive] = useState(false)
+  const interactive = useHydrated()
   const loadedUserIdRef = useRef(session?.user.id ?? null)
   const userId = session?.user.id ?? null
-  useEffect(() => setInteractive(true), [])
 
   // Page loaders skip their API calls while nobody is signed in. Load them again for the new user.
   useEffect(() => {
@@ -85,8 +85,7 @@ export function SignInPage({
 }) {
   const brand = getS0Brand()
   const [pending, setPending] = useState(false)
-  const [ready, setReady] = useState(false)
-  useEffect(() => setReady(true), [])
+  const ready = useHydrated()
 
   const signInProviders = [...authProviderConfig.providers]
     .filter((provider) => provider.capabilities.signIn)

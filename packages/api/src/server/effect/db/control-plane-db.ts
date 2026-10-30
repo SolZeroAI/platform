@@ -248,7 +248,7 @@ function withSqliteRawQueryCompat(db: SqliteRawQueryDb): AppDrizzleDatabase {
       onSome: (run) => Promise.resolve(run.call(db, query)).then(rawQueryRows<T>),
     })
 
-  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Object.assign keeps the driver drizzle instance. AppDrizzleDatabase is the D1 drizzle type and does not overlap that postgres handle.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, effect/avoid-any -- Object.assign keeps the driver drizzle instance. AppDrizzleDatabase is the D1 drizzle type and does not overlap that postgres handle.
   return Object.assign(db, { all }) as unknown as AppDrizzleDatabase
 }
 
@@ -267,7 +267,7 @@ export function makePostgresControlPlane(drizzle: SqliteRawQueryDb): ControlPlan
     engine: "planetscale",
     dialect: "postgres",
     drizzle: withSqliteRawQueryCompat(drizzle),
-    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- The pg schema module and sqlite AppSchema are different drizzle modules and do not overlap. The runtime dialect selects which schema is read.
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, effect/avoid-any -- The pg schema module and sqlite AppSchema are different drizzle modules and do not overlap. The runtime dialect selects which schema is read.
     schema: pgSchema as unknown as AppSchema,
   }
 }

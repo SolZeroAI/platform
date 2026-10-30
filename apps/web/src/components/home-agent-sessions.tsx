@@ -261,6 +261,7 @@ export function PreviousSessionsTable() {
     [archivingSessionIds, handleArchiveOne, selectedSessionIds, sessions],
   )
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table's API returns functions by design, and this app does not run the React Compiler.
   const table = useReactTable({
     data: sessions,
     columns,
@@ -709,15 +710,15 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
 }
 
 function SourceLabel({ source }: { source: SessionItem["source"] }) {
-  const Icon = Match.value(source).pipe(
-    Match.when("api", () => Code2),
-    Match.when("slack", () => MessageSquare),
-    Match.orElse(() => Globe2),
+  const icon = Match.value(source).pipe(
+    Match.when("api", () => <Code2 className="h-3.5 w-3.5" aria-hidden />),
+    Match.when("slack", () => <MessageSquare className="h-3.5 w-3.5" aria-hidden />),
+    Match.orElse(() => <Globe2 className="h-3.5 w-3.5" aria-hidden />),
   )
 
   return (
     <span className="inline-flex items-center gap-1.5 text-kumo-subtle">
-      <Icon className="h-3.5 w-3.5" aria-hidden />
+      {icon}
       {getSessionSourceLabel(source).replace("Started from ", "")}
     </span>
   )

@@ -117,7 +117,13 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     cursorRef.current = null
     replayCompleteRef.current = false
     liveEventBufferRef.current = []
+  }, [sessionId])
 
+  // Reset session state while rendering when the session changes; the effect above resets the refs.
+  const [stateSessionId, setStateSessionId] = useState(sessionId)
+
+  if (stateSessionId !== sessionId) {
+    setStateSessionId(sessionId)
     setConnected(false)
     setConnecting(false)
     setAuthError(null)
@@ -133,7 +139,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     setCurrentParticipantId(null)
     setHasMoreHistory(false)
     setLoadingHistory(false)
-  }, [sessionId])
+  }
 
   /**
    * Process a single sandbox_event through the existing logic.
@@ -479,39 +485,59 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     }
   }, [sessionId])
 
-  const connect = useCallback(async () => {
-    const connectionGeneration = connectionGenerationRef.current
+  const connect = useCallback(
+    async function connectSessionSocket() {
+      const connectionGeneration = connectionGenerationRef.current
 
-    // Use ref to avoid race conditions with React StrictMode
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already open")
+      // Use ref to avoid race conditions with React StrictMode
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log("WebSocket already open")
 
-      return
-    }
+        return
+      }
 
-    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-      console.log("WebSocket already connecting")
+      if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+        console.log("WebSocket already connecting")
 
-      return
-    }
+        return
+      }
 
-    if (connectingRef.current) {
-      console.log("Connection in progress (ref)")
+      if (connectingRef.current) {
+        console.log("Connection in progress (ref)")
 
-      return
-    }
+        return
+      }
 
-    connectingRef.current = true
-    setConnecting(true)
-    setAuthError(null)
+      connectingRef.current = true
+      setConnecting(true)
+      setAuthError(null)
 
-    // Fetch a WebSocket auth token first
-    if (!wsTokenRef.current) {
-      let token: string
+      // Fetch a WebSocket auth token first
+      if (!wsTokenRef.current) {
+        let token: string
 
-      try {
-        token = await fetchWsToken()
-      } catch (error) {
+        try {
+          token = await fetchWsToken()
+        } catch (error) {
+          if (!mountedRef.current || connectionGeneration !== connectionGenerationRef.current) {
+            connectingRef.current = false
+            setConnecting(false)
+
+            return
+          }
+
+          console.error("Failed to fetch WS token:", error)
+          setAuthError(
+            error instanceof WsTokenRequestError && error.status === 401
+              ? error.message
+              : "Failed to authenticate session connection",
+          )
+          connectingRef.current = false
+          setConnecting(false)
+
+          return
+        }
+
         if (!mountedRef.current || connectionGeneration !== connectionGenerationRef.current) {
           connectingRef.current = false
           setConnecting(false)
@@ -519,171 +545,158 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           return
         }
 
-        console.error("Failed to fetch WS token:", error)
-        setAuthError(
-          error instanceof WsTokenRequestError && error.status === 401
-            ? error.message
-            : "Failed to authenticate session connection",
+        const currentSocket = wsRef.current
+
+        if (
+          currentSocket?.readyState === WebSocket.OPEN ||
+          currentSocket?.readyState === WebSocket.CONNECTING
+        ) {
+          connectingRef.current = false
+          setConnecting(false)
+
+          return
+        }
+
+        wsTokenRef.current = token
+      }
+
+      const subscribeToken = wsTokenRef.current
+
+      if (!subscribeToken) {
+        connectingRef.current = false
+        setConnecting(false)
+        setAuthError("Failed to authenticate session connection")
+
+        return
+      }
+
+      const wsUrl = `${getWebSocketOrigin()}/sessions/${sessionId}/ws`
+      console.log("WebSocket connecting to:", wsUrl)
+
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
+          ws.close()
+
+          return
+        }
+
+        if (!mountedRef.current) {
+          ws.close()
+
+          return
+        }
+
+        console.log("WebSocket connected!")
+        connectingRef.current = false
+        setConnected(true)
+        setConnecting(false)
+        reconnectAttempts.current = 0
+
+        // Subscribe to session with the auth token
+        ws.send(
+          JSON.stringify({
+            type: "subscribe",
+            token: subscribeToken,
+            clientId: crypto.randomUUID(),
+          }),
         )
-        connectingRef.current = false
-        setConnecting(false)
-
-        return
       }
 
-      if (!mountedRef.current || connectionGeneration !== connectionGenerationRef.current) {
-        connectingRef.current = false
-        setConnecting(false)
+      ws.onmessage = (event) => {
+        if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
+          return
+        }
 
-        return
-      }
-
-      const currentSocket = wsRef.current
-
-      if (
-        currentSocket?.readyState === WebSocket.OPEN ||
-        currentSocket?.readyState === WebSocket.CONNECTING
-      ) {
-        connectingRef.current = false
-        setConnecting(false)
-
-        return
-      }
-
-      wsTokenRef.current = token
-    }
-
-    const subscribeToken = wsTokenRef.current
-
-    if (!subscribeToken) {
-      connectingRef.current = false
-      setConnecting(false)
-      setAuthError("Failed to authenticate session connection")
-
-      return
-    }
-
-    const wsUrl = `${getWebSocketOrigin()}/sessions/${sessionId}/ws`
-    console.log("WebSocket connecting to:", wsUrl)
-
-    const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
-        ws.close()
-
-        return
-      }
-
-      if (!mountedRef.current) {
-        ws.close()
-
-        return
-      }
-
-      console.log("WebSocket connected!")
-      connectingRef.current = false
-      setConnected(true)
-      setConnecting(false)
-      reconnectAttempts.current = 0
-
-      // Subscribe to session with the auth token
-      ws.send(
-        JSON.stringify({
-          type: "subscribe",
-          token: subscribeToken,
-          clientId: crypto.randomUUID(),
-        }),
-      )
-    }
-
-    ws.onmessage = (event) => {
-      if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
-        return
-      }
-
-      try {
-        const data = JSON.parse(event.data)
-        handleMessage(data)
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error)
-      }
-    }
-
-    ws.onclose = (event) => {
-      if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
-        return
-      }
-
-      console.log("WebSocket closed:", {
-        code: event.code,
-        reason: event.reason,
-        wasClean: event.wasClean,
-      })
-      connectingRef.current = false
-      subscribedRef.current = false
-      setConnected(false)
-      setConnecting(false)
-      wsRef.current = null
-
-      // Handle authentication errors
-      if (event.code === WS_CLOSE_AUTH_REQUIRED) {
-        const reason = event.reason.trim()
-        setAuthError(
-          reason
-            ? `Session connection authentication failed: ${reason}. Reconnect to get a fresh token.`
-            : "Session connection authentication failed. Reconnect to get a fresh token.",
-        )
-        // Clear the token so we fetch a new one on reconnect
-        wsTokenRef.current = null
-        wsTokenRequestRef.current = null
-
-        return
-      }
-
-      // Handle session expired (e.g., after server hibernation)
-      if (event.code === WS_CLOSE_SESSION_EXPIRED) {
-        setConnectionError("Agent expired. Please reconnect.")
-        wsTokenRef.current = null
-        wsTokenRequestRef.current = null
-
-        return
-      }
-
-      // Only reconnect if mounted and not a clean close
-      if (mountedRef.current && !event.wasClean) {
-        wsTokenRef.current = null
-        wsTokenRequestRef.current = null
-
-        if (reconnectAttempts.current < 5) {
-          const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
-          reconnectAttempts.current++
-          console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`)
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (mountedRef.current) {
-              connect()
-            }
-          }, delay)
-        } else {
-          // Exhausted reconnection attempts
-          console.error("WebSocket reconnection failed after 5 attempts")
-          setConnectionError("Connection lost. Please check your network and try reconnecting.")
+        try {
+          const data = JSON.parse(event.data)
+          handleMessage(data)
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error)
         }
       }
-    }
 
-    ws.onerror = (error) => {
-      if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
-        return
+      ws.onclose = (event) => {
+        if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
+          return
+        }
+
+        console.log("WebSocket closed:", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        })
+        connectingRef.current = false
+        subscribedRef.current = false
+        setConnected(false)
+        setConnecting(false)
+        wsRef.current = null
+
+        // Handle authentication errors
+        if (event.code === WS_CLOSE_AUTH_REQUIRED) {
+          const reason = event.reason.trim()
+          setAuthError(
+            reason
+              ? `Session connection authentication failed: ${reason}. Reconnect to get a fresh token.`
+              : "Session connection authentication failed. Reconnect to get a fresh token.",
+          )
+          // Clear the token so we fetch a new one on reconnect
+          wsTokenRef.current = null
+          wsTokenRequestRef.current = null
+
+          return
+        }
+
+        // Handle session expired (e.g., after server hibernation)
+        if (event.code === WS_CLOSE_SESSION_EXPIRED) {
+          setConnectionError("Agent expired. Please reconnect.")
+          wsTokenRef.current = null
+          wsTokenRequestRef.current = null
+
+          return
+        }
+
+        // Only reconnect if mounted and not a clean close
+        if (mountedRef.current && !event.wasClean) {
+          wsTokenRef.current = null
+          wsTokenRequestRef.current = null
+
+          if (reconnectAttempts.current < 5) {
+            const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
+            reconnectAttempts.current++
+            console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`)
+
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (mountedRef.current) {
+                void connectSessionSocket()
+              }
+            }, delay)
+          } else {
+            // Exhausted reconnection attempts
+            console.error("WebSocket reconnection failed after 5 attempts")
+            setConnectionError("Connection lost. Please check your network and try reconnecting.")
+          }
+        }
       }
 
-      console.error("WebSocket error event:", error)
-    }
-  }, [sessionId, handleMessage, fetchWsToken])
+      ws.onerror = (error) => {
+        if (connectionGeneration !== connectionGenerationRef.current || wsRef.current !== ws) {
+          return
+        }
 
-  const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string) => {
+        console.error("WebSocket error event:", error)
+      }
+    },
+    [sessionId, handleMessage, fetchWsToken],
+  )
+
+  const sendPrompt = useCallback(function sendSessionPrompt(
+    content: string,
+    model?: string,
+    reasoningEffort?: string,
+  ) {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.error("WebSocket not connected")
 
@@ -693,7 +706,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     if (!subscribedRef.current) {
       console.error("Not subscribed yet, waiting...")
       // Retry after a short delay
-      setTimeout(() => sendPrompt(content, model, reasoningEffort), 500)
+      setTimeout(() => sendSessionPrompt(content, model, reasoningEffort), 500)
 
       return
     }

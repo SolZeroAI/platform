@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useId, useRef, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 export const TOOLS_TOOLBAR_CLASS_NAME = "home-toolbar-accent-purple"
@@ -33,11 +33,9 @@ export function HomeToolbarIconButton({
   const tooltipDescriptionId = tooltipHidden ? undefined : tooltipId
   const tooltipVisible = !tooltipHidden && tooltipAnchor
 
-  useEffect(() => {
-    if (tooltipHidden) {
-      setTooltipAnchor(null)
-    }
-  }, [tooltipHidden])
+  if (tooltipHidden && tooltipAnchor) {
+    setTooltipAnchor(null)
+  }
 
   const showTooltip = () => {
     if (tooltipHidden || !buttonRef.current) {

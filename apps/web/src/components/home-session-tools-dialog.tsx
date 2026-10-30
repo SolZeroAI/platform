@@ -27,6 +27,7 @@ import { Tooltip, TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { Check, ChevronRight, ExternalLink, Plus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { runApi } from "@/lib/api-client"
+import { useApiQuery } from "@/lib/api-hooks"
 import { DialogPaginationPageSize } from "@/components/dialog-pagination-page-size"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
@@ -240,6 +241,9 @@ function getMcpcfSetupUrl(server: McpcfServer): string {
     : `/settings?category=agents&tab=mcps&mcpServerId=${encodeURIComponent(server.id)}`
 }
 
+const noMcpcfServers: readonly McpcfServer[] = []
+const noAiSearchSources: readonly AiSearchSessionSource[] = []
+
 export function HomeSessionToolsDialog({
   open,
   onClose,
@@ -255,14 +259,6 @@ export function HomeSessionToolsDialog({
   error,
 }: HomeSessionToolsDialogProps) {
   const stepLimitInputRef = useRef<HTMLInputElement>(null)
-  const selectedToolsRef = useRef(selectedTools)
-  const customMcpServersRef = useRef(customMcpServers)
-  const isolateStepLimitRef = useRef(isolateStepLimit)
-  const subagentsRef = useRef(subagents)
-  selectedToolsRef.current = selectedTools
-  customMcpServersRef.current = customMcpServers
-  isolateStepLimitRef.current = isolateStepLimit
-  subagentsRef.current = subagents
   const [draftTools, setDraftTools] = useState<SessionToolSpec[]>(selectedTools)
   const [draftIsolateStepLimit, setDraftIsolateStepLimit] = useState(() =>
     String(normalizeIsolateStepLimit(isolateStepLimit)),
@@ -273,12 +269,28 @@ export function HomeSessionToolsDialog({
   )
   const [customMcpError, setCustomMcpError] = useState("")
   const [stepLimitError, setStepLimitError] = useState("")
-  const [mcpcfServers, setMcpcfServers] = useState<readonly McpcfServer[]>([])
-  const [mcpcfServersLoading, setMcpcfServersLoading] = useState(false)
-  const [mcpcfServersError, setMcpcfServersError] = useState("")
-  const [aiSearchSources, setAiSearchSources] = useState<readonly AiSearchSessionSource[]>([])
-  const [aiSearchSourcesLoading, setAiSearchSourcesLoading] = useState(false)
-  const [aiSearchSourcesError, setAiSearchSourcesError] = useState("")
+  const mcpcfServersQuery = useApiQuery({
+    key: ["sessions", "mcpcf-servers"],
+    enabled: open,
+    request: (client) => client.sessions.mcpcfServers(),
+    fallbackMessage: "Failed to load MCP Context Forge servers",
+  })
+  const mcpcfServers: readonly McpcfServer[] = mcpcfServersQuery.error
+    ? noMcpcfServers
+    : (mcpcfServersQuery.data?.servers ?? noMcpcfServers)
+  const mcpcfServersLoading = mcpcfServersQuery.isFetching
+  const mcpcfServersError = mcpcfServersQuery.error?.message ?? ""
+  const aiSearchSourcesQuery = useApiQuery({
+    key: ["sessions", "ai-search-sources"],
+    enabled: open,
+    request: (client) => client.sessions.aiSearchSources(),
+    fallbackMessage: "Failed to load AI Search sources",
+  })
+  const aiSearchSources: readonly AiSearchSessionSource[] = aiSearchSourcesQuery.error
+    ? noAiSearchSources
+    : (aiSearchSourcesQuery.data?.sources ?? noAiSearchSources)
+  const aiSearchSourcesLoading = aiSearchSourcesQuery.isFetching
+  const aiSearchSourcesError = aiSearchSourcesQuery.error?.message ?? ""
   const [expandedMcpcfServerIds, setExpandedMcpcfServerIds] = useState<Set<McpcfServerId>>(
     () => new Set(),
   )
@@ -340,29 +352,37 @@ export function HomeSessionToolsDialog({
     return filteredMcpcfServers.slice(start, start + mcpcfPerPage)
   }, [filteredMcpcfServers, mcpcfPage, mcpcfPerPage])
 
+  // Reset the drafts while rendering each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(false)
+
+  if (wasOpen !== open) {
+    setWasOpen(open)
+
+    if (open) {
+      setDraftTools(selectedTools)
+      setDraftIsolateStepLimit(String(normalizeIsolateStepLimit(isolateStepLimit)))
+      setDraftSubagents(subagents)
+      setDraftCustomMcpText(formatCustomMcpServers(customMcpServers))
+      setCustomMcpError("")
+      setStepLimitError("")
+      setMcpcfSearch("")
+      setMcpcfPage(1)
+      setMcpcfPerPage(DEFAULT_MCPCF_PER_PAGE)
+      setCustomMcpEditorOpen(false)
+    }
+  }
+
   useEffect(() => {
-    if (!open) {
+    if (!open || !focusStepLimit) {
       return
     }
 
-    setDraftTools(selectedToolsRef.current)
-    setDraftIsolateStepLimit(String(normalizeIsolateStepLimit(isolateStepLimitRef.current)))
-    setDraftSubagents(subagentsRef.current)
-    setDraftCustomMcpText(formatCustomMcpServers(customMcpServersRef.current))
-    setCustomMcpError("")
-    setStepLimitError("")
-    setMcpcfServersError("")
-    setMcpcfSearch("")
-    setMcpcfPage(1)
-    setMcpcfPerPage(DEFAULT_MCPCF_PER_PAGE)
-    setCustomMcpEditorOpen(false)
+    const timeoutId = window.setTimeout(() => {
+      stepLimitInputRef.current?.focus()
+      stepLimitInputRef.current?.select()
+    }, 0)
 
-    if (focusStepLimit) {
-      window.setTimeout(() => {
-        stepLimitInputRef.current?.focus()
-        stepLimitInputRef.current?.select()
-      }, 0)
-    }
+    return () => window.clearTimeout(timeoutId)
   }, [focusStepLimit, open])
 
   useEffect(() => {
@@ -380,85 +400,15 @@ export function HomeSessionToolsDialog({
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [onClose, open])
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
+  const mcpcfPageSource = `${mcpcfSearch}:${mcpcfPerPage}`
+  const [shownMcpcfPageSource, setShownMcpcfPageSource] = useState(mcpcfPageSource)
 
-    const controller = new AbortController()
-    setMcpcfServersLoading(true)
-    runApi((client) => client.sessions.mcpcfServers(), {
-      signal: controller.signal,
-      fallbackMessage: "Failed to load MCP Context Forge servers",
-    })
-      .then((data) => {
-        setMcpcfServers(data.servers)
-        setMcpcfServersError("")
-      })
-      .catch((errorValue) => {
-        if (controller.signal.aborted) return
-
-        setMcpcfServers([])
-        setMcpcfServersError(
-          errorValue instanceof Error
-            ? errorValue.message
-            : "Failed to load MCP Context Forge servers",
-        )
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setMcpcfServersLoading(false)
-        }
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    const controller = new AbortController()
-    setAiSearchSourcesLoading(true)
-    runApi((client) => client.sessions.aiSearchSources(), {
-      signal: controller.signal,
-      fallbackMessage: "Failed to load AI Search sources",
-    })
-      .then((data) => {
-        setAiSearchSources(data.sources)
-        setAiSearchSourcesError("")
-      })
-      .catch((errorValue) => {
-        if (controller.signal.aborted) return
-
-        setAiSearchSources([])
-        setAiSearchSourcesError(
-          errorValue instanceof Error ? errorValue.message : "Failed to load AI Search sources",
-        )
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setAiSearchSourcesLoading(false)
-        }
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [open])
-
-  useEffect(() => {
+  if (shownMcpcfPageSource !== mcpcfPageSource) {
+    setShownMcpcfPageSource(mcpcfPageSource)
     setMcpcfPage(1)
-  }, [mcpcfSearch, mcpcfPerPage])
-
-  useEffect(() => {
-    if (mcpcfPage > mcpcfPageCount) {
-      setMcpcfPage(mcpcfPageCount)
-    }
-  }, [mcpcfPage, mcpcfPageCount])
+  } else if (mcpcfPage > mcpcfPageCount) {
+    setMcpcfPage(mcpcfPageCount)
+  }
 
   const loadMcpcfTools = async (serverId: McpcfServerId) => {
     const currentPreview = mcpcfToolPreviews[serverId]

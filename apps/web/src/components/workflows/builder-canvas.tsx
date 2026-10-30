@@ -1,17 +1,9 @@
-import { Input } from "@cloudflare/kumo/components/input"
 import { Label } from "@cloudflare/kumo/components/label"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
-import { Select } from "@cloudflare/kumo/components/select"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
-import {
-  type Connection,
-  Handle,
-  type NodeProps,
-  Position,
-  useUpdateNodeInternals,
-} from "@xyflow/react"
+import { Handle, type NodeProps, Position, useUpdateNodeInternals } from "@xyflow/react"
 import { Link } from "@tanstack/react-router"
-import { Copy, GitBranch, Save, Trash2, X } from "lucide-react"
+import { Copy, GitBranch, Trash2, X } from "lucide-react"
 import {
   type MouseEvent,
   type ReactNode,

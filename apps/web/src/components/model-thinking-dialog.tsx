@@ -16,7 +16,7 @@ import {
   type Ref,
 } from "react"
 import { Dialog } from "@/components/ui/dialog"
-import { getDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
+import { useDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
 import { recessedInputGroupClassName } from "@/lib/recessed-field"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
@@ -51,7 +51,7 @@ export function ModelThinkingDialog({
   const [openRow, setOpenRow] = useState<OpenRow>("models")
   const [modelSearch, setModelSearch] = useState("")
   const [providerFilter, setProviderFilter] = useState(ALL_PROVIDERS_FILTER)
-  const [selectPortalContainer, setSelectPortalContainer] = useState<HTMLElement | null>(null)
+  const selectPortalContainer = useDialogSelectPortalRoot()
   const modelListScrollRef = useRef<HTMLDivElement | null>(null)
   const selectedModelCardRef = useRef<HTMLButtonElement | null>(null)
   const modelScrollAnimationFrameRef = useRef<number | null>(null)
@@ -107,10 +107,6 @@ export function ModelThinkingDialog({
   const thinkingSummary = reasoningConfig
     ? `${selectedReasoningLabel} thinking`
     : "Provider default"
-
-  useLayoutEffect(() => {
-    setSelectPortalContainer(getDialogSelectPortalRoot())
-  }, [])
 
   useLayoutEffect(() => {
     const previousSelectedModel = previousSelectedModelRef.current
@@ -179,15 +175,12 @@ export function ModelThinkingDialog({
     }
   }, [])
 
-  useEffect(() => {
-    if (providerFilter === ALL_PROVIDERS_FILTER) {
-      return
-    }
-
-    if (!providerOptions.some((provider) => provider.id === providerFilter)) {
-      setProviderFilter(ALL_PROVIDERS_FILTER)
-    }
-  }, [providerFilter, providerOptions])
+  if (
+    providerFilter !== ALL_PROVIDERS_FILTER &&
+    !providerOptions.some((provider) => provider.id === providerFilter)
+  ) {
+    setProviderFilter(ALL_PROVIDERS_FILTER)
+  }
 
   return (
     <Dialog.Root

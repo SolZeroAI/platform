@@ -63,11 +63,15 @@ export function WorkflowAiEditDialog({
   const selectedRunIds = useMemo(() => new Set(selectedRuns.keys()), [selectedRuns])
   const [openRow, setOpenRow] = useState<WorkflowAiOpenRow>("editor")
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open)
+
+  if (wasOpen !== open) {
+    setWasOpen(open)
+
     if (open) {
       setOpenRow("editor")
     }
-  }, [open])
+  }
 
   return (
     <WorkflowDialogFrame

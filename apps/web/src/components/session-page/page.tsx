@@ -114,6 +114,12 @@ export function SessionPage({
   const allModels = useMemo(() => modelOptions.flatMap((group) => group.models), [modelOptions])
   const replay = useSessionReplay(events)
 
+  const [prompt, setPrompt] = useState("")
+  const isArchived = sessionState?.status === "archived"
+  const [streamedAssistantText, setStreamedAssistantText] = useState("")
+  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false)
+  const [promptError, setPromptError] = useState<string | null>(null)
+
   const handleArchive = useCallback(async () => {
     try {
       await runApi((client) => client.sessions.archive({ params: { id: sessionId } }), {
@@ -122,7 +128,7 @@ export function SessionPage({
     } catch (errorValue) {
       setPromptError(getErrorMessage(errorValue))
     }
-  }, [sessionId])
+  }, [sessionId, setPromptError])
 
   const handleUnarchive = useCallback(async () => {
     try {
@@ -132,13 +138,8 @@ export function SessionPage({
     } catch (errorValue) {
       setPromptError(getErrorMessage(errorValue))
     }
-  }, [sessionId])
+  }, [sessionId, setPromptError])
 
-  const [prompt, setPrompt] = useState("")
-  const isArchived = sessionState?.status === "archived"
-  const [streamedAssistantText, setStreamedAssistantText] = useState("")
-  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false)
-  const [promptError, setPromptError] = useState<string | null>(null)
   const [collapseOktaReconnectErrors, setCollapseOktaReconnectErrors] = useState(false)
   const [selectedModel, setSelectedModel] = useState<string>("")
   const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(undefined)
@@ -181,7 +182,7 @@ export function SessionPage({
       const nextModel = allModels.find((item) => item.id === model)
       setReasoningEffort(nextModel?.reasoning?.default)
     },
-    [allModels],
+    [allModels, setReasoningEffort],
   )
 
   const handleSaveTools = useCallback(
@@ -226,48 +227,60 @@ export function SessionPage({
         replace: true,
       })
     }
-  }, [navigate, sessionId, toolsSearch])
+  }, [navigate, sessionId, toolsSearch, setToolsDialogOpen])
 
-  useEffect(() => {
-    if (sessionState?.model) {
-      const matchingModel = allModels.find((model) => model.id === sessionState.model)
-      const defaultModel = allModels.find((model) => model.id === providerCatalog?.defaultModel)
-      setSelectedModel(matchingModel?.id ?? defaultModel?.id ?? sessionState.model)
-      setReasoningEffort(sessionState.reasoningEffort ?? matchingModel?.reasoning?.default)
+  // Adjust the selected model while rendering when the session or catalog default changes.
+  const modelSource = {
+    allModels,
+    defaultModel: providerCatalog?.defaultModel,
+    model: sessionState?.model,
+    reasoningEffort: sessionState?.reasoningEffort,
+  }
 
-      return
-    }
+  const [syncedModelSource, setSyncedModelSource] = useState<typeof modelSource | null>(null)
 
-    if (providerCatalog?.defaultModel) {
+  if (
+    syncedModelSource?.allModels !== modelSource.allModels ||
+    syncedModelSource.defaultModel !== modelSource.defaultModel ||
+    syncedModelSource.model !== modelSource.model ||
+    syncedModelSource.reasoningEffort !== modelSource.reasoningEffort
+  ) {
+    setSyncedModelSource(modelSource)
+    const { defaultModel, model, reasoningEffort: sessionReasoningEffort } = modelSource
+
+    if (model) {
+      const matchingModel = allModels.find((item) => item.id === model)
+      const defaultOption = allModels.find((item) => item.id === defaultModel)
+      setSelectedModel(matchingModel?.id ?? defaultOption?.id ?? model)
+      setReasoningEffort(sessionReasoningEffort ?? matchingModel?.reasoning?.default)
+    } else if (defaultModel) {
       setSelectedModel((current) =>
-        current && allModels.some((model) => model.id === current)
+        current && allModels.some((item) => item.id === current)
           ? current
-          : (allModels.find((model) => model.id === providerCatalog.defaultModel)?.id ?? ""),
+          : (allModels.find((item) => item.id === defaultModel)?.id ?? ""),
       )
     }
-  }, [allModels, providerCatalog?.defaultModel, sessionState?.model, sessionState?.reasoningEffort])
+  }
 
-  useEffect(() => {
-    if (!selectedModelOption?.reasoning) {
-      setReasoningEffort(undefined)
+  // Keep the reasoning effort valid for the selected model.
+  const [reasoningModelOption, setReasoningModelOption] = useState(selectedModelOption)
 
-      return
-    }
-
-    const reasoning = selectedModelOption.reasoning
+  if (reasoningModelOption !== selectedModelOption) {
+    setReasoningModelOption(selectedModelOption)
+    const reasoning = selectedModelOption?.reasoning
 
     setReasoningEffort((current) =>
-      current && reasoning.efforts.some((effort) => effort === current)
-        ? current
-        : reasoning.default,
+      reasoning
+        ? current && reasoning.efforts.some((effort) => effort === current)
+          ? current
+          : reasoning.default
+        : undefined,
     )
-  }, [selectedModelOption])
+  }
 
-  useEffect(() => {
-    if (isArchived) {
-      setModelDialogOpen(false)
-    }
-  }, [isArchived])
+  if (isArchived && modelDialogOpen) {
+    setModelDialogOpen(false)
+  }
 
   useEffect(() => {
     if (!isProcessing && !isSubmittingPrompt && streamedAssistantText) {
@@ -285,14 +298,22 @@ export function SessionPage({
     }
   }, [authStatus, navigate])
 
-  const [homeBootThinking, setHomeBootThinking] = useState(false)
+  const [homeBootThinking, setHomeBootThinking] = useState(boot === "1")
+  const [thinkingBoot, setThinkingBoot] = useState(boot)
+
+  if (thinkingBoot !== boot) {
+    setThinkingBoot(boot)
+
+    if (boot === "1") {
+      setHomeBootThinking(true)
+    }
+  }
 
   useLayoutEffect(() => {
     if (boot !== "1") {
       return
     }
 
-    setHomeBootThinking(true)
     void navigate({
       to: "/session/$id",
       params: { id: sessionId },
@@ -303,31 +324,26 @@ export function SessionPage({
     })
   }, [boot, navigate, sessionId])
 
-  useEffect(() => {
+  const [dialogToolsSearch, setDialogToolsSearch] = useState<typeof toolsSearch | null>(null)
+
+  if (dialogToolsSearch !== toolsSearch) {
+    setDialogToolsSearch(toolsSearch)
+
     if (toolsSearch === "step-limit") {
       setToolsDialogOpen(true)
     }
-  }, [toolsSearch])
+  }
 
-  useEffect(() => {
-    if (homeBootThinking && isProcessing) {
-      setHomeBootThinking(false)
-    }
-  }, [homeBootThinking, isProcessing])
-
-  useEffect(() => {
-    if (!homeBootThinking) {
-      return
-    }
-
-    const hasTerminalEvent = events.some(
-      (event) => event.type === "error" || event.type === "execution_complete",
-    )
-
-    if (isIdleRuntimeStatus(runtimeStatus) || sessionState?.runtimeError || hasTerminalEvent) {
-      setHomeBootThinking(false)
-    }
-  }, [events, homeBootThinking, runtimeStatus, sessionState?.runtimeError])
+  // Stop the boot indicator once the run starts, finishes, or fails.
+  if (
+    homeBootThinking &&
+    (isProcessing ||
+      isIdleRuntimeStatus(runtimeStatus) ||
+      sessionState?.runtimeError ||
+      events.some((event) => event.type === "error" || event.type === "execution_complete"))
+  ) {
+    setHomeBootThinking(false)
+  }
 
   useEffect(() => {
     if (!homeBootThinking) {
@@ -343,15 +359,32 @@ export function SessionPage({
     const msg = takeSessionPromptError(sessionId)
 
     if (msg) {
+      // oxlint-disable-next-line react/set-state-in-effect -- takeSessionPromptError consumes a one-shot value from browser storage, so it cannot run during render.
       setPromptError(msg)
       setHomeBootThinking(false)
     }
   }, [sessionId])
 
+  // Show the Okta reconnect result while rendering; the effect below resumes the session.
+  const oktaReconnectKey = `${oktaReconnect ?? "none"}:${resumeMessageId ?? ""}:${
+    oktaReconnectError ?? ""
+  }`
+
+  const [shownOktaReconnectKey, setShownOktaReconnectKey] = useState<string | null>(null)
+
+  if (shownOktaReconnectKey !== oktaReconnectKey) {
+    setShownOktaReconnectKey(oktaReconnectKey)
+
+    if (oktaReconnect === "complete") {
+      setPromptError(null)
+      setCollapseOktaReconnectErrors(true)
+    } else if (oktaReconnect === "error") {
+      setPromptError(formatOktaReconnectError(oktaReconnectError))
+    }
+  }
+
   useEffect(() => {
-    const reconnectKey = `${oktaReconnect ?? "none"}:${resumeMessageId ?? ""}:${
-      oktaReconnectError ?? ""
-    }`
+    const reconnectKey = oktaReconnectKey
 
     if (!oktaReconnect || handledOktaReconnectRef.current === reconnectKey) {
       return
@@ -360,9 +393,6 @@ export function SessionPage({
     handledOktaReconnectRef.current = reconnectKey
 
     if (oktaReconnect === "complete") {
-      setPromptError(null)
-      setCollapseOktaReconnectErrors(true)
-
       void (async () => {
         try {
           await submitSessionResume({
@@ -374,9 +404,7 @@ export function SessionPage({
           setPromptError(getErrorMessage(errorValue))
         }
       })()
-    } else if (oktaReconnect === "error") {
-      setPromptError(formatOktaReconnectError(oktaReconnectError))
-    } else {
+    } else if (oktaReconnect !== "error") {
       return
     }
 
@@ -392,7 +420,7 @@ export function SessionPage({
       }),
       replace: true,
     })
-  }, [navigate, oktaReconnect, oktaReconnectError, resumeMessageId, sessionId])
+  }, [navigate, oktaReconnect, oktaReconnectKey, resumeMessageId, sessionId])
 
   const submitPrompt = useCallback(() => {
     if (
@@ -486,6 +514,10 @@ export function SessionPage({
     sessionId,
     agentRuntime,
     sessionState?.sessionKind,
+    setPromptError,
+    setStreamedAssistantText,
+    setPrompt,
+    setIsSubmittingPrompt,
   ])
 
   const handleSubmit = useCallback(

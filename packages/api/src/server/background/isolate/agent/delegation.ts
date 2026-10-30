@@ -7,6 +7,7 @@ import type {
 } from "agents"
 import { sanitizeSubagentTaskPreview } from "@solzero/shared"
 import type { IsolateSubagentDelegation } from "../subagent"
+import { parseJsonOrUndefined } from "../../../lib/json"
 
 interface IsolateDelegationFields {
   task: string
@@ -134,22 +135,62 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isValidChunkBody(value: unknown): value is string {
-  if (typeof value !== "string") {
-    return false
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(value)
-
-    return isOfficialUiMessageChunk(parsed)
-  } catch {
-    return false
-  }
+  return typeof value === "string" && isOfficialUiMessageChunk(parseJsonOrUndefined(value))
 }
 
 function hasString(value: Record<string, unknown>, key: string): boolean {
   return typeof value[key] === "string"
 }
+
+type ChunkRecord = Record<string, unknown>
+
+function hasCheck<Checks extends object>(
+  checks: Checks,
+  key: string,
+): key is Extract<keyof Checks, string> {
+  return Object.hasOwn(checks, key)
+}
+
+const hasId = (chunk: ChunkRecord) => hasString(chunk, "id")
+const hasIdAndDelta = (chunk: ChunkRecord) => hasString(chunk, "id") && hasString(chunk, "delta")
+const always = () => true
+
+// Required fields for each official AI SDK UI message chunk type.
+const uiMessageChunkChecks = {
+  "text-start": hasId,
+  "text-end": hasId,
+  "reasoning-start": hasId,
+  "reasoning-end": hasId,
+  "text-delta": hasIdAndDelta,
+  "reasoning-delta": hasIdAndDelta,
+  error: (chunk) => hasString(chunk, "errorText"),
+  "tool-input-start": (chunk) => hasString(chunk, "toolCallId") && hasString(chunk, "toolName"),
+  "tool-input-delta": (chunk) =>
+    hasString(chunk, "toolCallId") && hasString(chunk, "inputTextDelta"),
+  "tool-input-available": (chunk) =>
+    hasString(chunk, "toolCallId") && hasString(chunk, "toolName") && Object.hasOwn(chunk, "input"),
+  "tool-input-error": (chunk) =>
+    hasString(chunk, "toolCallId") &&
+    hasString(chunk, "toolName") &&
+    Object.hasOwn(chunk, "input") &&
+    hasString(chunk, "errorText"),
+  "tool-approval-request": (chunk) =>
+    hasString(chunk, "approvalId") && hasString(chunk, "toolCallId"),
+  "tool-output-available": (chunk) =>
+    hasString(chunk, "toolCallId") && Object.hasOwn(chunk, "output"),
+  "tool-output-error": (chunk) => hasString(chunk, "toolCallId") && hasString(chunk, "errorText"),
+  "tool-output-denied": (chunk) => hasString(chunk, "toolCallId"),
+  "source-url": (chunk) => hasString(chunk, "sourceId") && hasString(chunk, "url"),
+  "source-document": (chunk) =>
+    hasString(chunk, "sourceId") && hasString(chunk, "mediaType") && hasString(chunk, "title"),
+  file: (chunk) => hasString(chunk, "url") && hasString(chunk, "mediaType"),
+  "start-step": always,
+  "finish-step": always,
+  start: always,
+  finish: always,
+  abort: always,
+  "message-metadata": (chunk) => Object.hasOwn(chunk, "messageMetadata"),
+} satisfies Record<string, (chunk: ChunkRecord) => boolean>
 
 function isOfficialUiMessageChunk(value: unknown): boolean {
   if (!isRecord(value) || typeof value.type !== "string") {
@@ -160,61 +201,7 @@ function isOfficialUiMessageChunk(value: unknown): boolean {
     return Object.hasOwn(value, "data")
   }
 
-  switch (value.type) {
-    case "text-start":
-    case "text-end":
-    case "reasoning-start":
-    case "reasoning-end":
-      return hasString(value, "id")
-    case "text-delta":
-    case "reasoning-delta":
-      return hasString(value, "id") && hasString(value, "delta")
-    case "error":
-      return hasString(value, "errorText")
-    case "tool-input-start":
-      return hasString(value, "toolCallId") && hasString(value, "toolName")
-    case "tool-input-delta":
-      return hasString(value, "toolCallId") && hasString(value, "inputTextDelta")
-    case "tool-input-available":
-      return (
-        hasString(value, "toolCallId") &&
-        hasString(value, "toolName") &&
-        Object.hasOwn(value, "input")
-      )
-    case "tool-input-error":
-      return (
-        hasString(value, "toolCallId") &&
-        hasString(value, "toolName") &&
-        Object.hasOwn(value, "input") &&
-        hasString(value, "errorText")
-      )
-    case "tool-approval-request":
-      return hasString(value, "approvalId") && hasString(value, "toolCallId")
-    case "tool-output-available":
-      return hasString(value, "toolCallId") && Object.hasOwn(value, "output")
-    case "tool-output-error":
-      return hasString(value, "toolCallId") && hasString(value, "errorText")
-    case "tool-output-denied":
-      return hasString(value, "toolCallId")
-    case "source-url":
-      return hasString(value, "sourceId") && hasString(value, "url")
-    case "source-document":
-      return (
-        hasString(value, "sourceId") && hasString(value, "mediaType") && hasString(value, "title")
-      )
-    case "file":
-      return hasString(value, "url") && hasString(value, "mediaType")
-    case "start-step":
-    case "finish-step":
-    case "start":
-    case "finish":
-    case "abort":
-      return true
-    case "message-metadata":
-      return Object.hasOwn(value, "messageMetadata")
-    default:
-      return false
-  }
+  return hasCheck(uiMessageChunkChecks, value.type) && uiMessageChunkChecks[value.type](value)
 }
 
 const INTERRUPTED_REASONS = new Set([
@@ -270,59 +257,49 @@ function progressFromChunk(chunk: Record<string, unknown>): AgentToolProgressSna
 }
 
 export function parseSubagentChunkActivity(body: string): SubagentChunkActivity | null {
-  try {
-    const chunk: unknown = JSON.parse(body)
+  const chunk = parseJsonOrUndefined(body)
 
-    if (!isRecord(chunk) || typeof chunk.type !== "string") {
-      return null
-    }
-
-    const toolType =
-      chunk.type === "tool-input-start" ||
-      chunk.type === "tool-input-available" ||
-      chunk.type === "tool-call"
-
-    const progress = progressFromChunk(chunk)
-
-    const activity: SubagentChunkActivity = {}
-
-    if (toolType && typeof chunk.toolName === "string") activity.toolName = chunk.toolName
-
-    if (toolType && typeof chunk.toolCallId === "string") activity.toolCallId = chunk.toolCallId
-
-    if (progress !== undefined) activity.progress = progress
-
-    return activity
-  } catch {
+  if (!isRecord(chunk) || typeof chunk.type !== "string") {
     return null
   }
+
+  const toolType =
+    chunk.type === "tool-input-start" ||
+    chunk.type === "tool-input-available" ||
+    chunk.type === "tool-call"
+
+  const progress = progressFromChunk(chunk)
+
+  const activity: SubagentChunkActivity = {}
+
+  if (toolType && typeof chunk.toolName === "string") activity.toolName = chunk.toolName
+
+  if (toolType && typeof chunk.toolCallId === "string") activity.toolCallId = chunk.toolCallId
+
+  if (progress !== undefined) activity.progress = progress
+
+  return activity
 }
+
+// Required fields for each agent tool event kind.
+const agentToolEventChecks = {
+  started: (event) => typeof event.agentType === "string" && typeof event.order === "number",
+  chunk: (event) => isValidChunkBody(event.body),
+  finished: (event) => typeof event.summary === "string",
+  error: (event) => typeof event.error === "string",
+  aborted: (event) => event.reason === undefined || typeof event.reason === "string",
+  interrupted: (event) =>
+    typeof event.error === "string" &&
+    isInterruptedReason(event.reason) &&
+    (event.childStillRunning === undefined || typeof event.childStillRunning === "boolean"),
+} satisfies Record<string, (event: ChunkRecord) => boolean>
 
 function isAgentToolEvent(value: unknown): boolean {
   if (!isRecord(value) || typeof value.kind !== "string" || typeof value.runId !== "string") {
     return false
   }
 
-  switch (value.kind) {
-    case "started":
-      return typeof value.agentType === "string" && typeof value.order === "number"
-    case "chunk":
-      return isValidChunkBody(value.body)
-    case "finished":
-      return typeof value.summary === "string"
-    case "error":
-      return typeof value.error === "string"
-    case "aborted":
-      return value.reason === undefined || typeof value.reason === "string"
-    case "interrupted":
-      return (
-        typeof value.error === "string" &&
-        isInterruptedReason(value.reason) &&
-        (value.childStillRunning === undefined || typeof value.childStillRunning === "boolean")
-      )
-    default:
-      return false
-  }
+  return hasCheck(agentToolEventChecks, value.kind) && agentToolEventChecks[value.kind](value)
 }
 
 export function parseAgentToolEventMessage(
@@ -332,26 +309,22 @@ export function parseAgentToolEventMessage(
     return null
   }
 
-  try {
-    const parsed: unknown = JSON.parse(message)
+  const parsed = parseJsonOrUndefined(message)
 
-    if (
-      !isRecord(parsed) ||
-      parsed.type !== "agent-tool-event" ||
-      !Number.isSafeInteger(parsed.sequence) ||
-      Number(parsed.sequence) < 0 ||
-      (parsed.parentToolCallId !== undefined && typeof parsed.parentToolCallId !== "string") ||
-      (parsed.replay !== undefined && parsed.replay !== true) ||
-      !isAgentToolEvent(parsed.event)
-    ) {
-      return null
-    }
-
-    // SAFETY: The checks above established the agent-tool-event fields required by AgentToolEventMessage.
-    return parsed as AgentToolEventMessage
-  } catch {
+  if (
+    !isRecord(parsed) ||
+    parsed.type !== "agent-tool-event" ||
+    !Number.isSafeInteger(parsed.sequence) ||
+    Number(parsed.sequence) < 0 ||
+    (parsed.parentToolCallId !== undefined && typeof parsed.parentToolCallId !== "string") ||
+    (parsed.replay !== undefined && parsed.replay !== true) ||
+    !isAgentToolEvent(parsed.event)
+  ) {
     return null
   }
+
+  // SAFETY: The checks above established the agent-tool-event fields required by AgentToolEventMessage.
+  return parsed as AgentToolEventMessage
 }
 
 export function toAgentToolFailure(result: RunAgentToolResult): AgentToolFailure {

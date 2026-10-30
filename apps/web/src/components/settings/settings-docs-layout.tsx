@@ -4,8 +4,8 @@ import { Select as KumoSelect } from "@cloudflare/kumo/components/select"
 import * as Match from "effect/Match"
 import { TableOfContents } from "@cloudflare/kumo/components/table-of-contents"
 import { Link as LinkIcon } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react"
-import { getStickySelectPortalRoot } from "@/lib/sticky-select-portal"
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { useStickySelectPortalRoot } from "@/lib/sticky-select-portal"
 
 export interface SettingsDocsTocItem {
   id: string
@@ -64,8 +64,7 @@ export function SettingsDocsLayout({
 }: SettingsDocsLayoutProps) {
   const [selectedTocValue, setSelectedTocValue] = useState(() => getInitialTocValue(tocItems))
 
-  const [stickySelectPortalContainer, setStickySelectPortalContainer] =
-    useState<HTMLElement | null>(null)
+  const stickySelectPortalContainer = useStickySelectPortalRoot()
 
   const tocValues = useMemo(() => tocItems.map(toTocValue), [tocItems])
   const tocGroups = useMemo(() => groupTocItems(tocItems), [tocItems])
@@ -73,10 +72,6 @@ export function SettingsDocsLayout({
   const selectedValue = tocValues.includes(selectedTocValue)
     ? selectedTocValue
     : (tocValues[0] ?? "")
-
-  useLayoutEffect(() => {
-    setStickySelectPortalContainer(getStickySelectPortalRoot())
-  }, [])
 
   useEffect(() => {
     let animationFrame = 0

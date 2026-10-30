@@ -11,7 +11,7 @@ import { asc, and, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import * as Predicate from "effect/Predicate"
+import * as P from "effect/Predicate"
 import { parseJsonRecord, stringifyJson } from "../../lib/json"
 import { openD1Drizzle } from "../../effect/db/d1-drizzle"
 import {
@@ -150,7 +150,7 @@ function isMissingOpenCodePermissionPreferenceColumn(errorValue: unknown): boole
 }
 
 function isD1Error(errorValue: unknown): errorValue is D1Error {
-  return Predicate.isTagged(errorValue, "D1Error")
+  return P.isTagged(errorValue, "D1Error")
 }
 
 function describeUserProviderD1Error(error: D1Error): string {

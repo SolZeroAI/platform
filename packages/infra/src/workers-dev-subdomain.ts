@@ -1,5 +1,8 @@
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -70,33 +73,47 @@ function toError(error: unknown): Error {
   )
 }
 
-function requestSubdomain(accountId: string, token: string, init: RequestInit) {
-  return Effect.tryPromise({
-    try: () =>
-      fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }).then((response) =>
-        response
-          .text()
-          .then((text) => subdomainOrThrow(response.status, decodeSubdomainPayload(text))),
-      ),
+const requestSubdomain = Effect.fn("infra.requestWorkersDevSubdomain")(function* (
+  token: string,
+  request: HttpClientRequest.HttpClientRequest,
+) {
+  const response = yield* HttpClient.execute(
+    request.pipe(
+      HttpClientRequest.bearerToken(token),
+      HttpClientRequest.setHeader("Content-Type", "application/json"),
+    ),
+  ).pipe(
+    Effect.provideService(FetchHttpClient.Fetch, fetch),
+    Effect.provide(FetchHttpClient.layer),
+    Effect.mapError(toError),
+  )
+
+  const text = yield* response.text.pipe(Effect.mapError(toError))
+
+  return yield* Effect.try({
+    try: () => subdomainOrThrow(response.status, decodeSubdomainPayload(text)),
     catch: toError,
   })
+})
+
+function subdomainUrl(accountId: string): string {
+  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`
 }
 
 function readAccountSubdomain(accountId: string, token: string) {
-  return requestSubdomain(accountId, token, { method: "GET" })
+  return requestSubdomain(token, HttpClientRequest.get(subdomainUrl(accountId)))
 }
 
 function createAccountSubdomain(accountId: string, token: string, subdomain: string) {
-  return requestSubdomain(accountId, token, {
-    method: "PUT",
-    body: encodeSubdomainBody(new CloudflareSubdomainBody({ subdomain })),
-  })
+  return requestSubdomain(
+    token,
+    HttpClientRequest.put(subdomainUrl(accountId)).pipe(
+      HttpClientRequest.bodyText(
+        encodeSubdomainBody(new CloudflareSubdomainBody({ subdomain })),
+        "application/json",
+      ),
+    ),
+  )
 }
 
 function proposedSubdomain(accountId: string): string {

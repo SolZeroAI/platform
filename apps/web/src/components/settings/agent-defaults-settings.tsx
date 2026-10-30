@@ -102,18 +102,17 @@ export function AgentDefaultsSettings({
     ? String(normalizeIsolateStepLimit(settings.defaultIsolateStepLimit))
     : null
 
-  useEffect(() => {
-    if (persistedStepLimit === null) {
-      return
-    }
+  // Load the saved value into the form while rendering. A background refresh can publish a new
+  // settings object without changing this saved value, so compare the value itself.
+  const [loadedStepLimit, setLoadedStepLimit] = useState<string | null>(null)
 
-    // A background refresh can publish a new settings object without changing this saved value.
-    const nextStepLimit = persistedStepLimit
-    setStepLimit(nextStepLimit)
-    setSavedFormState(serializeAgentDefaultsFormState(nextStepLimit))
+  if (persistedStepLimit !== null && loadedStepLimit !== persistedStepLimit) {
+    setLoadedStepLimit(persistedStepLimit)
+    setStepLimit(persistedStepLimit)
+    setSavedFormState(serializeAgentDefaultsFormState(persistedStepLimit))
     setSaveError(null)
     setSaveSuccess(null)
-  }, [persistedStepLimit])
+  }
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     setSaveError(null)

@@ -1,115 +1,16 @@
 // @ts-nocheck
-import { DurableObject, tracing as workerTracing } from "cloudflare:workers"
-import {
-  DEFAULT_ISOLATE_STEP_LIMIT,
-  getGitHubRepoTool,
-  getSelectedMcpcfServerIds,
-  getStageMetadataSync,
-  normalizeIsolateStepLimit,
-  normalizeOpenCodeMcpServers,
-  normalizeSessionTools,
-  parseStoredOpenCodeMcpServers,
-  parseStoredSessionTools,
-  type OpenCodeInteractionResponse,
-  type RuntimeActivityEvent,
-  type SessionKind,
-  type SessionRuntimeCapabilities,
-  type OpenCodeMcpServers,
-  type SessionToolSpec,
-} from "@solzero/shared"
+import { type OpenCodeInteractionResponse } from "@solzero/shared"
 import { generateId, hashToken } from "../../auth/crypto"
-import {
-  resolveGitHubCloneCredentials,
-  type GitHubCloneCredentials,
-} from "../../auth/github-clone-auth"
-import {
-  type IsolateSessionConfig,
-  type IsolateWarmResult,
-  IsolateSessionRuntime,
-} from "../../isolate/runtime"
-import {
-  createSandboxLifecycleManager,
-  type SandboxLifecycleManager,
-} from "../../sandbox/lifecycle/manager"
-import type {
-  Attachment,
-  ClientInfo,
-  ClientMessage,
-  Env,
-  PromptExecutionMode,
-  SandboxEvent,
-  ServerMessage,
-  SessionState,
-} from "../.../types"
-import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
-import { createApiRequestObserver } from "../../../effect/services/observability"
+import type { ClientInfo, ClientMessage, SandboxEvent, ServerMessage } from "../.../types"
 import * as Arr from "effect/Array"
-import * as Cause from "effect/Cause"
 import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import * as Schema from "effect/Schema"
-import {
-  BackgroundTracing,
-  localSpanContextFromHeaders,
-  makeBackgroundTracingLayer,
-  type LocalSpanContext,
-} from "../../observability/tracing"
-import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
-import {
-  decodeJson,
-  decodeJsonRecord,
-  parseJson,
-  parseJsonArray,
-  stringifyJson,
-} from "../../../lib/json"
-import { toError, toErrorWithFallback } from "../../../lib/effect-errors"
-import { SessionRepository, toSessionRuntimeRepository } from "../repository"
-import { buildResolvedSessionMcpServers } from "../runtime-mcp"
-import { initSchema } from "../schema"
-import { handleResumePromptRequest } from "../resume"
-import { runIsolatePromptWithEvents } from "../isolate-prompt-bridge"
-import {
-  getSandboxEventMessageId,
-  isStoppedByUserMessage,
-  shouldProcessSandboxEventForMessage,
-  STOPPED_BY_USER_ERROR,
-} from "../event-gating"
-import type {
-  ArtifactRow,
-  MessageRow,
-  ParticipantRow,
-  RuntimeActivityRow,
-  SandboxRow,
-  SessionRow,
-} from "../types"
-import {
-  type ParsedTags,
-  type SessionWebSocketManager,
-  SessionWebSocketManagerImpl,
-  toSessionRuntimeWebSocket,
-} from "../websocket-manager"
-import {
-  IsolateRuntimeUnavailableError,
-  WS_AUTH_TIMEOUT_MS,
-  WS_TOKEN_TTL_MS,
-  getSessionCapabilities,
-  getSessionCustomMcpServers,
-  getSessionTools,
-  isNonEmptyString,
-  parseArtifactMetadata,
-  parseAttachments,
-  parseStoredSecretKeys,
-  promiseEffect,
-  summarizeCustomMcpServersForLog,
-  summarizeToolsForLog,
-  type ExecutionCompleteSandboxEvent,
-  type IsolateStreamState,
-  type QueuedMessageContext,
-  type TokenSandboxEvent,
-  type UpdateToolsBody,
-  type WsTokenBody,
-} from "../durable-object"
+import { decodeJson } from "../../../lib/json"
+import { toError } from "../../../lib/effect-errors"
+import type { ParticipantRow, SandboxRow } from "../types"
+import { type ParsedTags } from "../websocket-manager"
+import { WS_TOKEN_TTL_MS, isNonEmptyString } from "../durable-object"
 
 type SessionDODelegate = any
 
@@ -381,17 +282,14 @@ export async function handleInteractionReply(
 ): Promise<void> {
   await Option.match(host.getClientInfo(ws), {
     onNone: () => Promise.resolve(host.sendNotSubscribed(ws, "must subscribe before replying")),
-    onSome: async (client) => {
-      try {
-        await host.resolveRuntimeInteraction(client, data)
-      } catch (errorValue) {
+    onSome: (client) =>
+      host.resolveRuntimeInteraction(client, data).catch((errorValue: unknown) =>
         host.wsManager.send(ws, {
           type: "error",
           code: "INTERACTION_REPLY_FAILED",
           message: toError(errorValue).message,
-        })
-      }
-    },
+        }),
+      ),
   })
 }
 

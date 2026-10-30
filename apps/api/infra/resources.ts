@@ -60,7 +60,11 @@ function buildContext(context: string): AgentContainerImageSource {
 
 /** Bundles a stable build context, so Alchemy rebuilds the image only when its inputs change. */
 function bundledContext(runtime: AgentContainerRuntime) {
-  return Effect.promise(() => prepareAgentContainerContext(runtime)).pipe(Effect.map(buildContext))
+  // A failed context build is a defect that stops the deploy.
+  return Effect.tryPromise(() => prepareAgentContainerContext(runtime)).pipe(
+    Effect.orDie,
+    Effect.map(buildContext),
+  )
 }
 
 export function createAgentContainerApplication(

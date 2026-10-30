@@ -44,6 +44,10 @@ export const parseJsonArray = (value: string | null | undefined): readonly unkno
 /** Parse a JSON string strictly, throwing on invalid input (like `JSON.parse`). */
 export const parseJson = (value: string): unknown => decodeValueSync(value)
 
+/** Parse a JSON string, returning `undefined` for invalid input. JSON never parses to `undefined`. */
+export const parseJsonOrUndefined = (value: string): unknown =>
+  Option.getOrUndefined(decodeValueOption(value))
+
 /** Parse a JSON string, returning the original string when it is not valid JSON. */
 export const parseJsonOrText = (value: string): unknown =>
   Option.getOrElse(decodeValueOption(value), () => value)

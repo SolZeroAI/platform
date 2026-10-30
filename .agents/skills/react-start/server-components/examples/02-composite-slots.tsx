@@ -92,24 +92,7 @@ function PostActions(props: { postId: string; authorId: string }) {
 }
 
 // Component-prop slot variant
-const getProductCard = createServerFn({ method: 'GET' })
-  .validator(z.object({ productId: z.string() }))
-  .handler(async ({ data }) => {
-    const product = await db.products.findById(data.productId)
 
-    const src = await createCompositeComponent<{
-      AddToCart?: ComponentType<{ productId: string; price: number }>
-    }>((props) => (
-      <section className="product-card">
-        <h2>{product.name}</h2>
-        {props.AddToCart ? (
-          <props.AddToCart productId={product.id} price={product.price} />
-        ) : null}
-      </section>
-    ))
-
-    return { src }
-  })
 
 function AddToCartButton(props: { productId: string; price: number }) {
   return (

@@ -480,6 +480,7 @@ export function useWorkflowRunTable({
     ...(state.triggerKind ? [{ id: "triggerKind", value: state.triggerKind }] : []),
   ]
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table's API returns functions by design, and this app does not run the React Compiler.
   return useReactTable({
     data: tableData,
     columns,

@@ -118,8 +118,7 @@ export function HomePage({
   const [error, setError] = useState("")
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
-  const selectedModelSourceRef = useRef<"default" | "manual">("default")
-  const previousReasoningModelRef = useRef<string | null>(null)
+  const [selectedModelSource, setSelectedModelSource] = useState<"default" | "manual">("default")
   const sessionCreationPromise = useRef<Promise<string | null> | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -237,6 +236,7 @@ export function HomePage({
       )
 
       if (queryTools.length > 0) {
+        // oxlint-disable-next-line react/set-state-in-effect -- Reads the browser URL once after hydration; the server render has no window to read.
         setSelectedTools((current) => normalizeSessionTools([...current, ...queryTools]))
       }
     } catch (errorValue) {
@@ -244,60 +244,67 @@ export function HomePage({
     }
   }, [])
 
-  useEffect(() => {
-    if (!providerCatalog) {
-      return
-    }
+  // Keep the selected model visible while rendering when the catalog or model list changes.
+  const visibleModelSource = { allModels, providerCatalog }
 
+  const [shownVisibleModelSource, setShownVisibleModelSource] = useState<
+    typeof visibleModelSource | null
+  >(null)
+
+  if (
+    providerCatalog &&
+    (shownVisibleModelSource?.allModels !== allModels ||
+      shownVisibleModelSource.providerCatalog !== providerCatalog)
+  ) {
+    setShownVisibleModelSource(visibleModelSource)
     const visibleModelIds = new Set(allModels.map((model) => model.id))
     const defaultModel = providerCatalog.defaultModel ?? ""
-    setSelectedModel((current) => {
-      const currentIsVisible = Boolean(current && visibleModelIds.has(current))
-      const defaultIsVisible = Boolean(defaultModel && visibleModelIds.has(defaultModel))
+    const currentIsVisible = Boolean(selectedModel && visibleModelIds.has(selectedModel))
+    const defaultIsVisible = Boolean(defaultModel && visibleModelIds.has(defaultModel))
+    const fallbackModel = defaultIsVisible ? defaultModel : ""
 
-      const fallbackModel = defaultIsVisible ? defaultModel : ""
-
-      if (!currentIsVisible) {
-        selectedModelSourceRef.current = "default"
-
-        return fallbackModel
-      }
-
-      if (selectedModelSourceRef.current === "default") {
-        return fallbackModel
-      }
-
-      return current
-    })
-  }, [providerCatalog, allModels])
-
-  useEffect(() => {
-    const previousModel = previousReasoningModelRef.current
-    previousReasoningModelRef.current = selectedModel
-    const selectedModelChanged = previousModel !== selectedModel
-
-    if (!selectedModelOption?.reasoning) {
-      setReasoningEffort(undefined)
-
-      return
+    if (!currentIsVisible) {
+      setSelectedModelSource("default")
+      setSelectedModel(fallbackModel)
+    } else if (selectedModelSource === "default") {
+      setSelectedModel(fallbackModel)
     }
+  }
 
-    const reasoning = selectedModelOption.reasoning
+  // Keep the reasoning effort valid for the selected model while rendering.
+  const reasoningSource = { model: selectedModel, option: selectedModelOption }
+
+  const [shownReasoningSource, setShownReasoningSource] = useState<typeof reasoningSource | null>(
+    null,
+  )
+
+  if (
+    shownReasoningSource?.model !== selectedModel ||
+    shownReasoningSource.option !== selectedModelOption
+  ) {
+    const selectedModelChanged = shownReasoningSource?.model !== selectedModel
+    setShownReasoningSource(reasoningSource)
+    const reasoning = selectedModelOption?.reasoning
 
     setReasoningEffort((current) =>
-      selectedModelChanged && selectedModelSourceRef.current === "default"
-        ? reasoning.default
-        : current && reasoning.efforts.some((effort) => effort === current)
-          ? current
-          : reasoning.default,
+      !reasoning
+        ? undefined
+        : selectedModelChanged && selectedModelSource === "default"
+          ? reasoning.default
+          : current && reasoning.efforts.some((effort) => effort === current)
+            ? current
+            : reasoning.default,
     )
-  }, [selectedModel, selectedModelOption])
+  }
 
-  useEffect(() => {
+  const [stepLimitDefault, setStepLimitDefault] = useState(defaultIsolateStepLimit)
+
+  if (stepLimitDefault !== defaultIsolateStepLimit) {
+    setStepLimitDefault(defaultIsolateStepLimit)
     setSelectedIsolateStepLimit((current) =>
       current === DEFAULT_ISOLATE_STEP_LIMIT ? defaultIsolateStepLimit : current,
     )
-  }, [defaultIsolateStepLimit])
+  }
 
   useEffect(() => {
     const currentConfig = {
@@ -347,8 +354,6 @@ export function HomePage({
       abortControllerRef.current = null
     }
 
-    setPendingSessionId(null)
-    setIsCreatingSession(false)
     sessionCreationPromise.current = null
     pendingConfigRef.current = null
   }, [])
@@ -464,7 +469,7 @@ export function HomePage({
 
   const handleModelChange = useCallback(
     (model: string) => {
-      selectedModelSourceRef.current = "manual"
+      setSelectedModelSource("manual")
       setSelectedModel(model)
       const nextModel = allModels.find((item) => item.id === model)
       setReasoningEffort(nextModel?.reasoning?.default)

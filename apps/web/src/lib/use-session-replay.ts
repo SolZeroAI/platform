@@ -86,7 +86,10 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
     })
   }, [clearReplayTimer])
 
-  const scheduleNextEvent = useCallback((currentIndex: number, overrideWaitMs?: number) => {
+  const scheduleNextEvent = useCallback(function scheduleReplayEvent(
+    currentIndex: number,
+    overrideWaitMs?: number,
+  ) {
     const replayEvents = replayEventsRef.current
     const nextIndex = currentIndex + 1
     const currentEvent = replayEvents[currentIndex]
@@ -138,7 +141,7 @@ export function useSessionReplay(recordedEvents: SandboxEvent[]) {
         ...current,
         events: replayEvents.slice(0, nextIndex + 1),
       }))
-      scheduleNextEvent(nextIndex)
+      scheduleReplayEvent(nextIndex)
     }, scheduledWaitMs)
   }, [])
 

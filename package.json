@@ -25,7 +25,7 @@
     "build": "turbo run build",
     "effect:diagnostics": "effect-tsrs diagnostics --project tsconfig.json --lspconfig '{}'",
     "typecheck": "turbo run typecheck && nub run typecheck:e2e && nub run typecheck:migration",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix",
     "alchemy:state:bootstrap": "nub run --cwd packages/infra alchemy cloudflare bootstrap",
     "alchemy:state:tree": "CI=true nub run --cwd packages/infra alchemy state tree alchemy.state.run.ts",

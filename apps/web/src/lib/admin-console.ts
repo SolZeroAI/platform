@@ -302,26 +302,33 @@ export function useAdminConsole({
     [isAdmin, sessionTableState, view, workflowTableState],
   )
 
-  useEffect(() => {
-    if (view !== "integrations" || initialAdminIntegrations === null) {
-      return
+  // Apply route loader data while rendering when the view or its loader data changes.
+  const initialSource = { initialAdminAiSearch, initialAdminIntegrations, view }
+
+  const [appliedInitialSource, setAppliedInitialSource] = useState<typeof initialSource | null>(
+    null,
+  )
+
+  if (
+    appliedInitialSource?.initialAdminAiSearch !== initialAdminAiSearch ||
+    appliedInitialSource.initialAdminIntegrations !== initialAdminIntegrations ||
+    appliedInitialSource.view !== view
+  ) {
+    setAppliedInitialSource(initialSource)
+
+    if (view === "integrations" && initialAdminIntegrations !== null) {
+      setMcpcf(initialAdminIntegrations.mcpcf)
+      setAiProviders(initialAdminIntegrations.aiProviders)
+      setError(initialAdminIntegrations.error)
+      setLoading(false)
     }
 
-    setMcpcf(initialAdminIntegrations.mcpcf)
-    setAiProviders(initialAdminIntegrations.aiProviders)
-    setError(initialAdminIntegrations.error)
-    setLoading(false)
-  }, [initialAdminIntegrations, view])
-
-  useEffect(() => {
-    if (view !== "ai-search" || initialAdminAiSearch === null) {
-      return
+    if (view === "ai-search" && initialAdminAiSearch !== null) {
+      setAiSearch(initialAdminAiSearch.aiSearch)
+      setError(initialAdminAiSearch.error)
+      setLoading(false)
     }
-
-    setAiSearch(initialAdminAiSearch.aiSearch)
-    setError(initialAdminAiSearch.error)
-    setLoading(false)
-  }, [initialAdminAiSearch, view])
+  }
 
   useEffect(() => {
     if (view === "ai-search" && initialAdminAiSearch !== null) {

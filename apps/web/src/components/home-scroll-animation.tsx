@@ -156,17 +156,20 @@ export function useHomeScrollAnimation({
     pendingSnapRef.current = "table"
   }, [])
 
+  const scrollToNewAgent = useCallback(() => {
+    if (snapControllerRef.current) {
+      snapControllerRef.current.snapTo("hero", { focusInput: true })
+
+      return
+    }
+
+    pendingSnapRef.current = "hero"
+  }, [])
+
+  // Wrap on each call, so render code never hands ref-reading callbacks to GSAP.
   return {
-    scrollToPreviousSessions: contextSafe(scrollToPreviousSessions),
-    scrollToNewAgent: contextSafe(() => {
-      if (snapControllerRef.current) {
-        snapControllerRef.current.snapTo("hero", { focusInput: true })
-
-        return
-      }
-
-      pendingSnapRef.current = "hero"
-    }),
+    scrollToPreviousSessions: () => contextSafe(scrollToPreviousSessions)(),
+    scrollToNewAgent: () => contextSafe(scrollToNewAgent)(),
   }
 }
 

@@ -22,7 +22,7 @@ import { getWebUrl } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import * as Predicate from "effect/Predicate"
+import * as P from "effect/Predicate"
 import * as Schema from "effect/Schema"
 import { HttpServerRequest, HttpServerResponse } from "effect/http"
 import { describeError } from "../../../lib/effect-errors"
@@ -144,7 +144,7 @@ function failureBody(payload: unknown, status: number): unknown {
   return Option.all({
     encode: Option.fromNullishOr(encodeHttpApiError.get(status)),
     legacy: Schema.decodeUnknownOption(LegacyErrorPayload)(payload),
-    fields: Option.liftPredicate(payload, Predicate.isObject),
+    fields: Option.liftPredicate(payload, P.isObject),
   }).pipe(
     Option.match({
       onNone: () => payload,
@@ -656,7 +656,7 @@ const withTypedFailureBody = Effect.fn("controlPlane.withTypedFailureBody")(func
   return Option.match(payload, {
     onNone: () => response,
     onSome: (body: unknown) =>
-      new Response(JSON.stringify(failureBody(body, response.status)), {
+      Response.json(failureBody(body, response.status), {
         status: response.status,
         statusText: response.statusText,
         headers: response.headers,
@@ -681,7 +681,7 @@ const annotateRequestIdentity = Effect.fn("controlPlane.annotateRequestIdentity"
 })
 
 export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) {
-  const program = Effect.gen(function* () {
+  const program = Effect.fn("controlPlane.run")(function* () {
     const { env, ctx } = yield* getCloudflareBindings
     const db = yield* ControlPlane
     const serverRequest = yield* HttpServerRequest.HttpServerRequest
@@ -717,7 +717,7 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
     )
   })
 
-  const widenedErrors = program.pipe(Effect.mapError((cause): unknown => cause))
+  const widenedErrors = program().pipe(Effect.mapError((cause): unknown => cause))
 
   return widenedErrors.pipe(
     Effect.catchIf(

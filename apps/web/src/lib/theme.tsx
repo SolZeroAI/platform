@@ -1,7 +1,8 @@
 "use client"
 
 import { ScriptOnce } from "@tanstack/react-router"
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
+import { createContext, type ReactNode, useContext, useEffect, useSyncExternalStore } from "react"
+import { useHydrated } from "@/hooks/use-hydrated"
 
 export type Theme = "light" | "dark" | "system"
 
@@ -49,25 +50,49 @@ function applyResolvedTheme(resolved: ResolvedTheme) {
   document.documentElement.style.colorScheme = resolved
 }
 
+const themeListeners = new Set<() => void>()
+
+function subscribeToStoredTheme(listener: () => void) {
+  themeListeners.add(listener)
+  window.addEventListener("storage", listener)
+
+  return () => {
+    themeListeners.delete(listener)
+    window.removeEventListener("storage", listener)
+  }
+}
+
+function writeStoredTheme(next: Theme) {
+  if (next === "system") {
+    localStorage.removeItem(THEME_STORAGE_KEY)
+  } else {
+    localStorage.setItem(THEME_STORAGE_KEY, next)
+  }
+
+  themeListeners.forEach((listener) => listener())
+}
+
+const darkSchemeQuery = "(prefers-color-scheme: dark)"
+
+function subscribeToSystemPreference(listener: () => void) {
+  const media = window.matchMedia(darkSchemeQuery)
+  media.addEventListener("change", listener)
+
+  return () => media.removeEventListener("change", listener)
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // SSR renders with the defaults; the real values load after mount. The
+  // SSR renders with the defaults; the stored and OS values apply after hydration. The
   // pre-hydration script above keeps <html> correct in the meantime.
-  const [theme, setThemeState] = useState<Theme>("system")
-  const [systemPrefersDark, setSystemPrefersDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const theme = useSyncExternalStore<Theme>(subscribeToStoredTheme, readStoredTheme, () => "system")
 
-  useEffect(() => {
-    setThemeState(readStoredTheme())
+  const systemPrefersDark = useSyncExternalStore(
+    subscribeToSystemPreference,
+    () => window.matchMedia(darkSchemeQuery).matches,
+    () => false,
+  )
 
-    const media = window.matchMedia("(prefers-color-scheme: dark)")
-    const updateSystemPreference = () => setSystemPrefersDark(media.matches)
-    updateSystemPreference()
-    media.addEventListener("change", updateSystemPreference)
-
-    setMounted(true)
-
-    return () => media.removeEventListener("change", updateSystemPreference)
-  }, [])
+  const mounted = useHydrated()
 
   const resolvedTheme: ResolvedTheme =
     theme === "dark" || (theme === "system" && systemPrefersDark) ? "dark" : "light"
@@ -83,13 +108,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mounted, resolvedTheme])
 
   const setTheme = (next: Theme) => {
-    setThemeState(next)
-
-    if (next === "system") {
-      localStorage.removeItem(THEME_STORAGE_KEY)
-    } else {
-      localStorage.setItem(THEME_STORAGE_KEY, next)
-    }
+    writeStoredTheme(next)
   }
 
   const toggle = () => {

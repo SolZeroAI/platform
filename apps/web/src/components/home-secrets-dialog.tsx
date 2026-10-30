@@ -4,7 +4,7 @@ import { Banner } from "@cloudflare/kumo/components/banner"
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button"
 import { KumoPortalProvider } from "@cloudflare/kumo/utils"
 import { Link } from "@tanstack/react-router"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { SECRETS_SEARCH_DEBOUNCE_MS, SecretsSearchFilter } from "@/components/secrets-search-filter"
 import { SecretMultiSelect } from "@/components/secret-selector"
 import { Dialog } from "@/components/ui/dialog"
@@ -37,8 +37,6 @@ export function HomeSecretsDialog({
   const [debouncedKeySearch, setDebouncedKeySearch] = useState("")
   const [saveError, setSaveError] = useState("")
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
-  const selectedSecretKeysRef = useRef(selectedSecretKeys)
-  selectedSecretKeysRef.current = selectedSecretKeys
   const isSearchDebouncing = keySearch !== debouncedKeySearch
   const hasActiveFilters = debouncedKeySearch.trim().length > 0 || selectedSecretTags.length > 0
 
@@ -60,17 +58,20 @@ export function HomeSecretsDialog({
     return () => clearTimeout(timer)
   }, [keySearch])
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
+  // Reset the drafts while rendering each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(false)
 
-    setDraftSecretKeys(selectedSecretKeysRef.current)
-    setSelectedSecretTags([])
-    setKeySearch("")
-    setDebouncedKeySearch("")
-    setSaveError("")
-  }, [open])
+  if (wasOpen !== open) {
+    setWasOpen(open)
+
+    if (open) {
+      setDraftSecretKeys(selectedSecretKeys)
+      setSelectedSecretTags([])
+      setKeySearch("")
+      setDebouncedKeySearch("")
+      setSaveError("")
+    }
+  }
 
   useEffect(() => {
     if (!open) {

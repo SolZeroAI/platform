@@ -8,7 +8,7 @@ import { Button } from "@cloudflare/kumo/components/button"
 import { Switch } from "@cloudflare/kumo/components/switch"
 import { Table as KumoTable } from "@cloudflare/kumo/components/table"
 import { ExternalLink, Save, Trash2 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { DocsSectionHeading, EnvLockIcon, Field } from "./admin-ai-provider-panel-ui"
 
 type CloudflareProviderKeyUpdate = AdminCloudflareAiGatewayProviderKeysPayload["keys"][number]
@@ -39,10 +39,14 @@ export function AdminCloudflareAiGatewayPanel({
   const keyDirty =
     Object.values(keyDrafts).some((value) => value.trim().length > 0) || clearedProviderIds.size > 0
 
-  useEffect(() => {
+  const providerKeys = data?.providerKeys
+  const [draftProviderKeys, setDraftProviderKeys] = useState(providerKeys)
+
+  if (draftProviderKeys !== providerKeys) {
+    setDraftProviderKeys(providerKeys)
     setKeyDrafts({})
     setClearedProviderIds(new Set())
-  }, [data?.providerKeys])
+  }
 
   const saveProviderKeys = async () => {
     const saved = await onSave({

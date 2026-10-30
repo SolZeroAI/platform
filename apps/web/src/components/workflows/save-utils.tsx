@@ -1,7 +1,3 @@
-import { Input } from "@cloudflare/kumo/components/input"
-import { Label } from "@cloudflare/kumo/components/label"
-import { type Node, Position } from "@xyflow/react"
-import { Save } from "lucide-react"
 import {
   getWorkflowNodeDefinitionForNode,
   type WorkflowManifest,
@@ -464,7 +460,7 @@ export function getWorkflowNodeChangeDetails(
         {
           kind: "node-input-values",
           nodeId: nextNode.id,
-          previousInputValues: { ...(previousNode.options.inputValues ?? {}) },
+          previousInputValues: { ...previousNode.options.inputValues },
         },
         createWorkflowSaveChangeJsonDiff(
           "Node input values",

@@ -149,27 +149,26 @@ function normalizeDomain(value: string): string {
 }
 
 function normalizeDataSource(dataSource: AiSearchDataSourceRecord): AiSearchDataSourceRecord {
-  switch (dataSource.type) {
-    case "built-in":
-      return { type: "built-in" }
-    case "r2":
-      return {
+  return Match.value(dataSource).pipe(
+    Match.discriminatorsExhaustive("type")({
+      "built-in": (): AiSearchDataSourceRecord => ({ type: "built-in" }),
+      r2: (r2): AiSearchDataSourceRecord => ({
         type: "r2",
-        bucketName: dataSource.bucketName.trim(),
-        prefix: dataSource.prefix?.trim() || null,
-        r2Jurisdiction: dataSource.r2Jurisdiction?.trim() || null,
-      }
-    case "website":
-      return {
+        bucketName: r2.bucketName.trim(),
+        prefix: r2.prefix?.trim() || null,
+        r2Jurisdiction: r2.r2Jurisdiction?.trim() || null,
+      }),
+      website: (website): AiSearchDataSourceRecord => ({
         type: "website",
-        domain: normalizeDomain(dataSource.domain),
-        includePaths: normalizeStringList(dataSource.includePaths),
-        excludePaths: normalizeStringList(dataSource.excludePaths),
-        specificSitemaps: normalizeStringList(dataSource.specificSitemaps),
-        useBrowserRendering: Boolean(dataSource.useBrowserRendering),
-        includeImages: Boolean(dataSource.includeImages),
-      }
-  }
+        domain: normalizeDomain(website.domain),
+        includePaths: normalizeStringList(website.includePaths),
+        excludePaths: normalizeStringList(website.excludePaths),
+        specificSitemaps: normalizeStringList(website.specificSitemaps),
+        useBrowserRendering: Boolean(website.useBrowserRendering),
+        includeImages: Boolean(website.includeImages),
+      }),
+    }),
+  )
 }
 
 function hasRequiredDataSourceFields(dataSource: AiSearchDataSourceRecord) {
@@ -385,24 +384,26 @@ function createInputFor(
     }),
   }
 
-  switch (source.dataSource.type) {
-    case "built-in":
-      return /* SAFETY: base has the AiSearchCreateInput shape established by the check or writer around this read. */ base as AiSearchCreateInput
-    case "r2":
-      return /* SAFETY: { ...base, type: "r2", source: source.dataSource.bucketName, source_params: sourceParamsFor(source.dataSource), } has the AiSearchCreateInput shape established by the check or writer around this read. */ {
-        ...base,
-        type: "r2",
-        source: source.dataSource.bucketName,
-        source_params: sourceParamsFor(source.dataSource),
-      } as AiSearchCreateInput
-    case "website":
-      return /* SAFETY: { ...base, type: "web-crawler", source: source.dataSource.domain, source_params: sourceParamsFor(source.dataSource), } has the AiSearchCreateInput shape established by the check or writer around this read. */ {
-        ...base,
-        type: "web-crawler",
-        source: source.dataSource.domain,
-        source_params: sourceParamsFor(source.dataSource),
-      } as AiSearchCreateInput
-  }
+  // SAFETY: each branch builds the AiSearchCreateInput variant for its data source type.
+  return Match.value(source.dataSource).pipe(
+    Match.discriminatorsExhaustive("type")({
+      "built-in": () => base as AiSearchCreateInput,
+      r2: (r2) =>
+        ({
+          ...base,
+          type: "r2",
+          source: r2.bucketName,
+          source_params: sourceParamsFor(r2),
+        }) as AiSearchCreateInput,
+      website: (website) =>
+        ({
+          ...base,
+          type: "web-crawler",
+          source: website.domain,
+          source_params: sourceParamsFor(website),
+        }) as AiSearchCreateInput,
+    }),
+  )
 }
 
 function updateInputFor(source: AiSearchSourceRecord): AiSearchUpdateInput {
