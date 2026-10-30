@@ -13,7 +13,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
-import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated.bots'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authenticated.workflows'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
@@ -21,6 +20,7 @@ import { Route as AuthenticatedAdminAgentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminAiSearchRouteImport } from './routes/_authenticated.admin.ai-search'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated.admin.integrations'
 import { Route as AuthenticatedAdminWorkflowsRouteImport } from './routes/_authenticated.admin.workflows'
+import { Route as AuthenticatedBotsIndexRouteImport } from './routes/_authenticated.bots.index'
 import { Route as AuthenticatedBotsBotIdRouteImport } from './routes/_authenticated.bots.$botId'
 import { Route as AuthenticatedSessionIdRouteImport } from './routes/_authenticated.session.$id'
 import { Route as AuthenticatedWorkflowsWorkflowIdRouteImport } from './routes/_authenticated.workflows.$workflowId'
@@ -42,11 +42,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedBotsRoute = AuthenticatedBotsRouteImport.update({
-  id: '/bots',
-  path: '/bots',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -88,10 +83,15 @@ const AuthenticatedAdminWorkflowsRoute =
     path: '/workflows',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedBotsIndexRoute = AuthenticatedBotsIndexRouteImport.update({
+  id: '/bots/',
+  path: '/bots/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedBotsBotIdRoute = AuthenticatedBotsBotIdRouteImport.update({
-  id: '/$botId',
-  path: '/$botId',
-  getParentRoute: () => AuthenticatedBotsRoute,
+  id: '/bots/$botId',
+  path: '/bots/$botId',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSessionIdRoute = AuthenticatedSessionIdRouteImport.update({
   id: '/session/$id',
@@ -109,7 +109,6 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/access-denied': typeof AccessDeniedRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
@@ -120,11 +119,11 @@ export interface FileRoutesByFullPath {
   '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/session/$id': typeof AuthenticatedSessionIdRoute
   '/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
+  '/bots/': typeof AuthenticatedBotsIndexRoute
 }
 export interface FileRoutesByTo {
   '/access-denied': typeof AccessDeniedRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/bots': typeof AuthenticatedBotsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
@@ -136,13 +135,13 @@ export interface FileRoutesByTo {
   '/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/session/$id': typeof AuthenticatedSessionIdRoute
   '/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
+  '/bots': typeof AuthenticatedBotsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/access-denied': typeof AccessDeniedRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/_authenticated/bots': typeof AuthenticatedBotsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRouteWithChildren
   '/api/$': typeof ApiSplatRoute
@@ -154,6 +153,7 @@ export interface FileRoutesById {
   '/_authenticated/bots/$botId': typeof AuthenticatedBotsBotIdRoute
   '/_authenticated/session/$id': typeof AuthenticatedSessionIdRoute
   '/_authenticated/workflows/$workflowId': typeof AuthenticatedWorkflowsWorkflowIdRoute
+  '/_authenticated/bots/': typeof AuthenticatedBotsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,7 +161,6 @@ export interface FileRouteTypes {
     | '/'
     | '/access-denied'
     | '/admin'
-    | '/bots'
     | '/settings'
     | '/workflows'
     | '/api/$'
@@ -172,11 +171,11 @@ export interface FileRouteTypes {
     | '/bots/$botId'
     | '/session/$id'
     | '/workflows/$workflowId'
+    | '/bots/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/access-denied'
     | '/admin'
-    | '/bots'
     | '/settings'
     | '/workflows'
     | '/api/$'
@@ -188,12 +187,12 @@ export interface FileRouteTypes {
     | '/bots/$botId'
     | '/session/$id'
     | '/workflows/$workflowId'
+    | '/bots'
   id:
     | '__root__'
     | '/_authenticated'
     | '/access-denied'
     | '/_authenticated/admin'
-    | '/_authenticated/bots'
     | '/_authenticated/settings'
     | '/_authenticated/workflows'
     | '/api/$'
@@ -205,6 +204,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bots/$botId'
     | '/_authenticated/session/$id'
     | '/_authenticated/workflows/$workflowId'
+    | '/_authenticated/bots/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,13 +241,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/bots': {
-      id: '/_authenticated/bots'
-      path: '/bots'
-      fullPath: '/bots'
-      preLoaderRoute: typeof AuthenticatedBotsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings': {
@@ -299,12 +292,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminWorkflowsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/bots/': {
+      id: '/_authenticated/bots/'
+      path: '/bots'
+      fullPath: '/bots/'
+      preLoaderRoute: typeof AuthenticatedBotsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/bots/$botId': {
       id: '/_authenticated/bots/$botId'
-      path: '/$botId'
+      path: '/bots/$botId'
       fullPath: '/bots/$botId'
       preLoaderRoute: typeof AuthenticatedBotsBotIdRouteImport
-      parentRoute: typeof AuthenticatedBotsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/session/$id': {
       id: '/_authenticated/session/$id'
@@ -340,17 +340,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
-interface AuthenticatedBotsRouteChildren {
-  AuthenticatedBotsBotIdRoute: typeof AuthenticatedBotsBotIdRoute
-}
-
-const AuthenticatedBotsRouteChildren: AuthenticatedBotsRouteChildren = {
-  AuthenticatedBotsBotIdRoute: AuthenticatedBotsBotIdRoute,
-}
-
-const AuthenticatedBotsRouteWithChildren =
-  AuthenticatedBotsRoute._addFileChildren(AuthenticatedBotsRouteChildren)
-
 interface AuthenticatedWorkflowsRouteChildren {
   AuthenticatedWorkflowsWorkflowIdRoute: typeof AuthenticatedWorkflowsWorkflowIdRoute
 }
@@ -368,20 +357,22 @@ const AuthenticatedWorkflowsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedBotsRoute: typeof AuthenticatedBotsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedBotsBotIdRoute: typeof AuthenticatedBotsBotIdRoute
   AuthenticatedSessionIdRoute: typeof AuthenticatedSessionIdRoute
+  AuthenticatedBotsIndexRoute: typeof AuthenticatedBotsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
-  AuthenticatedBotsRoute: AuthenticatedBotsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedBotsBotIdRoute: AuthenticatedBotsBotIdRoute,
   AuthenticatedSessionIdRoute: AuthenticatedSessionIdRoute,
+  AuthenticatedBotsIndexRoute: AuthenticatedBotsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
