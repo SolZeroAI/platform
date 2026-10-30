@@ -1,11 +1,21 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useHydrated } from "@/hooks/use-hydrated"
 
 const SIDEBAR_STORAGE_KEY = "s0-agent-sidebar-open"
 
 // Matches Tailwind `max-md` (width < 48rem).
 const MOBILE_SIDEBAR_MEDIA_QUERY = "(max-width: 767px)"
+
+function readInitialSidebarOpen(): boolean {
+  // Below md the sidebar overlays content, so it starts closed there.
+  if (typeof window !== "undefined" && window.matchMedia(MOBILE_SIDEBAR_MEDIA_QUERY).matches) {
+    return false
+  }
+
+  return readStoredSidebarOpen() ?? true
+}
 
 function readStoredSidebarOpen(): boolean | null {
   if (typeof window === "undefined") {
@@ -25,12 +35,8 @@ export function useSidebar() {
   // Read the persisted value during the initial render so the sidebar paints at the
   // correct width immediately. The sidebar only mounts client-side (after auth resolves),
   // so this never runs during SSR/hydration and avoids the open->closed animation flash.
-  const [isOpen, setIsOpen] = useState(() => readStoredSidebarOpen() ?? true)
-  const [isHydrated, setIsHydrated] = useState(false)
-
-  useEffect(() => {
-    setIsHydrated(true)
-  }, [])
+  const [isOpen, setIsOpen] = useState(readInitialSidebarOpen)
+  const isHydrated = useHydrated()
 
   // Persist state to localStorage
   useEffect(() => {
@@ -48,10 +54,6 @@ export function useSidebar() {
 
     const mediaQuery = window.matchMedia(MOBILE_SIDEBAR_MEDIA_QUERY)
     let wasNarrow = mediaQuery.matches
-
-    if (wasNarrow) {
-      setIsOpen((open) => (open ? false : open))
-    }
 
     const handleViewportChange = () => {
       const isNarrow = mediaQuery.matches

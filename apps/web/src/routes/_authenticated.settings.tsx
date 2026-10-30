@@ -205,9 +205,13 @@ function SettingsContent({
 }) {
   const [headerActions, setHeaderActions] = useState<ReactNode | null>(null)
 
-  useEffect(() => {
+  const headerActionsSource = `${activeCategory}:${activeAgentTab}`
+  const [shownHeaderActionsSource, setShownHeaderActionsSource] = useState(headerActionsSource)
+
+  if (shownHeaderActionsSource !== headerActionsSource) {
+    setShownHeaderActionsSource(headerActionsSource)
     setHeaderActions(null)
-  }, [activeAgentTab, activeCategory])
+  }
 
   return (
     <div className="h-full flex flex-col">

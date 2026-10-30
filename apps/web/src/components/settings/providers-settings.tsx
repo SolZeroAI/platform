@@ -287,19 +287,29 @@ export function ProvidersSettings({
     showErrorToast(error)
   }, [error])
 
-  useEffect(() => {
-    if (!catalog || !settings) {
-      return
-    }
+  // Load the saved settings into the form while rendering when new settings arrive.
+  const formSource = catalog && settings ? { catalog, settings } : null
+  const [loadedFormSource, setLoadedFormSource] = useState<typeof formSource>(null)
 
-    const shared = buildSharedProviderDrafts(catalog.providers, settings.sharedOverrides)
-    const custom = buildCustomProviderDrafts(settings.customProviders)
-    const model = settings.defaultModel ?? ""
+  if (
+    formSource &&
+    (loadedFormSource?.catalog !== formSource.catalog ||
+      loadedFormSource.settings !== formSource.settings)
+  ) {
+    setLoadedFormSource(formSource)
+
+    const shared = buildSharedProviderDrafts(
+      formSource.catalog.providers,
+      formSource.settings.sharedOverrides,
+    )
+
+    const custom = buildCustomProviderDrafts(formSource.settings.customProviders)
+    const model = formSource.settings.defaultModel ?? ""
     setSharedDrafts(shared)
     setCustomDrafts(custom)
     setDefaultModel(model)
     setSavedFormState(serializeProviderFormState(model, shared, custom))
-  }, [catalog, settings])
+  }
 
   const flatModelOptions = useMemo(
     () => catalog?.modelOptions.flatMap((group) => group.models) ?? [],

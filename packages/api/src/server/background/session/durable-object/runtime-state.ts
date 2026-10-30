@@ -1,120 +1,37 @@
 // @ts-nocheck
-import { DurableObject, tracing as workerTracing } from "cloudflare:workers"
 import {
   DEFAULT_ISOLATE_STEP_LIMIT,
   DEFAULT_SUBAGENT_MODE,
-  getGitHubRepoTool,
-  getSelectedMcpcfServerIds,
-  getStageMetadataSync,
   normalizeIsolateStepLimit,
   normalizeSubagentMode,
-  normalizeOpenCodeMcpServers,
-  normalizeSessionTools,
-  parseStoredOpenCodeMcpServers,
-  parseStoredSessionTools,
   resolveAgentRuntime,
   sessionSubagentModeField,
   type AgentRuntime,
-  type RuntimeActivityEvent,
   type SessionKind,
-  type SessionRuntimeCapabilities,
-  type OpenCodeMcpServers,
-  type SessionToolSpec,
 } from "@solzero/shared"
-import { generateId, hashToken } from "../../auth/crypto"
 import {
   resolveGitHubCloneCredentials,
   type GitHubCloneCredentials,
 } from "../../auth/github-clone-auth"
-import {
-  type IsolateSessionConfig,
-  type IsolateWarmResult,
-  IsolateSessionRuntime,
-} from "../../isolate/runtime"
-import {
-  createSandboxLifecycleManager,
-  type SandboxLifecycleManager,
-} from "../../sandbox/lifecycle/manager"
-import type {
-  Attachment,
-  ClientInfo,
-  ClientMessage,
-  Env,
-  PromptExecutionMode,
-  SandboxEvent,
-  ServerMessage,
-  SessionState,
-} from "../.../types"
+import { type IsolateSessionConfig, type IsolateWarmResult } from "../../isolate/runtime"
+import type { SessionState } from "../.../types"
 import { getGitHubAppUserAccessTokenForUserId } from "../../../lib/better-auth"
-import { createApiRequestObserver } from "../../../effect/services/observability"
-import * as Arr from "effect/Array"
-import * as Cause from "effect/Cause"
 import * as Effect from "effect/Effect"
 import { runEffectPromise } from "../../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
-import * as Schema from "effect/Schema"
-import {
-  BackgroundTracing,
-  localSpanContextFromHeaders,
-  makeBackgroundTracingLayer,
-  type LocalSpanContext,
-} from "../../observability/tracing"
 import { createGlobalSecretsStoreFromD1 } from "../../db/repo-secrets"
 import { makeControlPlaneFromEnv } from "../../../effect/db/control-plane-db"
-import {
-  decodeJson,
-  decodeJsonRecord,
-  parseJson,
-  parseJsonArray,
-  stringifyJson,
-} from "../../../lib/json"
-import { toError, toErrorWithFallback } from "../../../lib/effect-errors"
-import { SessionRepository, toSessionRuntimeRepository } from "../repository"
-import { buildResolvedSessionMcpServers } from "../runtime-mcp"
-import { initSchema } from "../schema"
-import { handleResumePromptRequest } from "../resume"
-import { runIsolatePromptWithEvents } from "../isolate-prompt-bridge"
-import {
-  getSandboxEventMessageId,
-  isStoppedByUserMessage,
-  shouldProcessSandboxEventForMessage,
-  STOPPED_BY_USER_ERROR,
-} from "../event-gating"
-import type {
-  ArtifactRow,
-  MessageRow,
-  ParticipantRow,
-  RuntimeActivityRow,
-  SandboxRow,
-  SessionRow,
-} from "../types"
-import {
-  type ParsedTags,
-  type SessionWebSocketManager,
-  SessionWebSocketManagerImpl,
-  toSessionRuntimeWebSocket,
-} from "../websocket-manager"
+import type { ParticipantRow, SessionRow } from "../types"
 import {
   IsolateRuntimeUnavailableError,
-  WS_AUTH_TIMEOUT_MS,
-  WS_TOKEN_TTL_MS,
   getSessionCapabilities,
   getSessionCustomMcpServers,
   getSessionTools,
   isNonEmptyString,
-  parseArtifactMetadata,
-  parseAttachments,
   parseStoredSecretKeys,
   promiseEffect,
-  summarizeCustomMcpServersForLog,
-  summarizeToolsForLog,
-  type ExecutionCompleteSandboxEvent,
   type IsolateStreamState,
-  type QueuedMessageContext,
-  type TokenSandboxEvent,
-  type UpdateToolsBody,
-  type WsTokenBody,
 } from "../durable-object"
 
 type SessionDODelegate = any

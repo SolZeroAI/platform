@@ -252,6 +252,7 @@ export function getAppStageMetadataSync(input: string | StageMetadataEnv): AppSt
   return Match.value(input).pipe(
     Match.when(Match.string, getAppStageMetadataFromStr),
     Match.orElse(appStageMetadataFromEnv),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     Result.getOrThrow,
   )
 }
@@ -551,6 +552,7 @@ function workersDevStageMetadata(
         subdomain: input.subdomain,
         message: `Invalid workers.dev subdomain "${input.subdomain}". Set CLOUDFLARE_WORKERS_SUBDOMAIN to the account label.`,
       }),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   ).pipe(Result.getOrThrow)
 
   const authBaseUrl = `https://${deployedWebWorkerName(input.appName, metadata.name)}.${subdomain}.workers.dev`
@@ -608,6 +610,7 @@ export function getStageMetadataFromConfigSync(
   deployment: S0DeploymentConfig,
   application: S0ApplicationConfig,
 ): StageMetadata {
+  // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   return Result.getOrThrow(stageMetadataFromConfig(stage, deployment, application))
 }
 
@@ -616,6 +619,7 @@ export function getStageMetadataSync(input: StageMetadataInput): StageMetadata {
   return Match.value(input).pipe(
     Match.when(Match.string, (stage) => getStageMetadataFromStr(stage)),
     Match.orElse(getStageMetadata),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     Result.getOrThrow,
   )
 }

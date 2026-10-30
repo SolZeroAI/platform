@@ -113,7 +113,7 @@ export function buildSessionMcpServersFromPlan(input: {
   }
 
   if (selectedMcpcfServers.length > 0) {
-    for (const server of selectedMcpcfServers) {
+    selectedMcpcfServers.forEach((server) => {
       let headers: Record<string, string> = {}
       headers[MCPCF_SERVER_HEADER] = server.id
 
@@ -126,7 +126,7 @@ export function buildSessionMcpServersFromPlan(input: {
         headers,
         timeout: MCPCF_MCP_TIMEOUT_MS,
       }
-    }
+    })
   }
 
   return normalizeOpenCodeMcpServers(servers)

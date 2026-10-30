@@ -4,7 +4,6 @@ import { showErrorToast } from "@/lib/toast-manager"
 import {
   upsertWorkflowSummary,
   WorkflowRun,
-  WorkflowRunEvent,
   WorkflowRunSnapshot,
   WorkflowRunTableState,
   WorkflowSummary,
@@ -16,16 +15,11 @@ import { getErrorMessage } from "./run-utils"
 
 export function useWorkflowPageData(input: any) {
   const {
-    edges,
-    events,
     initialDetail,
-    loading,
-    nodes,
     runFetchSequenceRef,
     runSelectionPinned,
     runSelectionPinnedRef,
     runTableState,
-    runs,
     runsRef,
     selectedRunId,
     selectedRunIdRef,
@@ -51,7 +45,6 @@ export function useWorkflowPageData(input: any) {
     workflowDetailLoadStateRef,
     workflowDetailReloadNonce,
     workflowListState,
-    workflows,
     workflowsLoadedRef,
   } = input
 
@@ -78,7 +71,15 @@ export function useWorkflowPageData(input: any) {
       setWorkflowHeaderDraftsByNode({})
       setWorkflows((current: WorkflowSummary[]) => upsertWorkflowSummary(current, workflow))
     },
-    [setEdges, setNodes],
+    [
+      setEdges,
+      setNodes,
+      setSelectedEdgeId,
+      setWorkflowName,
+      setWorkflows,
+      setWorkflowHeaderDraftsByNode,
+      setSelectedNodeId,
+    ],
   )
 
   const loadWorkflows = useCallback(
@@ -114,7 +115,7 @@ export function useWorkflowPageData(input: any) {
         }
       }
     },
-    [workflowListState],
+    [workflowListState, setWorkflowTotal, setWorkflows, workflowsLoadedRef, setLoading],
   )
 
   const loadWorkflow = useCallback(
@@ -188,16 +189,28 @@ export function useWorkflowPageData(input: any) {
         }
       }
     },
-    [runTableState],
+    [
+      runTableState,
+      setRunTotal,
+      setRunTableTotal,
+      setRuns,
+      runFetchSequenceRef,
+      setSelectedRunId,
+      setRunErrorsLast24Hours,
+      setRunTableLoading,
+    ],
   )
 
-  const loadEvents = useCallback(async (workflowId: string, runId: string) => {
-    const data = await runApi((client) =>
-      client.workflows.runEvents({ params: { id: workflowId, runId } }),
-    )
+  const loadEvents = useCallback(
+    async (workflowId: string, runId: string) => {
+      const data = await runApi((client) =>
+        client.workflows.runEvents({ params: { id: workflowId, runId } }),
+      )
 
-    setEvents([...data.events])
-  }, [])
+      setEvents([...data.events])
+    },
+    [setEvents],
+  )
 
   const submitApproval = useCallback(
     async (runId: string, nodeId: string, approved: boolean) => {
@@ -221,7 +234,7 @@ export function useWorkflowPageData(input: any) {
         setSubmittingApprovalNodeId(null)
       }
     },
-    [loadEvents, loadRuns, selectedWorkflowId],
+    [loadEvents, loadRuns, selectedWorkflowId, setSubmittingApprovalNodeId],
   )
 
   useEffect(() => {
@@ -304,6 +317,7 @@ export function useWorkflowPageData(input: any) {
     selectedWorkflowId,
     setWorkflowDetailLoadStateValue,
     workflowDetailReloadNonce,
+    workflowDetailLoadStateRef,
   ])
 
   useEffect(() => {
@@ -323,7 +337,7 @@ export function useWorkflowPageData(input: any) {
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [loadRuns, selectedWorkflowId])
+  }, [loadRuns, selectedWorkflowId, setRunTableLoading])
 
   useEffect(() => {
     if (!selectedWorkflowId || !selectedRunId) {
@@ -333,7 +347,7 @@ export function useWorkflowPageData(input: any) {
     }
 
     void loadEvents(selectedWorkflowId, selectedRunId)
-  }, [loadEvents, selectedRunId, selectedWorkflowId])
+  }, [loadEvents, selectedRunId, selectedWorkflowId, setEvents])
 
   useEffect(() => {
     if (!selectedWorkflowId) {
@@ -372,7 +386,17 @@ export function useWorkflowPageData(input: any) {
     return () => {
       source.close()
     }
-  }, [runSelectionPinned, selectedRunId, selectedWorkflowId])
+  }, [
+    runSelectionPinned,
+    selectedRunId,
+    selectedWorkflowId,
+    runsRef,
+    setRuns,
+    setEvents,
+    setSelectedRunId,
+    selectedRunIdRef,
+    runSelectionPinnedRef,
+  ])
 
   return {
     loadEvents,

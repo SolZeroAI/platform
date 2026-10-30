@@ -13,7 +13,7 @@ import {
   Play,
   Square,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Dialog } from "@/components/ui/dialog"
 import type { Artifact } from "@/types/session"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
@@ -57,11 +57,9 @@ export function SessionMoreActionsMenu({
   const attachedSecretKeys = [...secretKeys].sort((left, right) => left.localeCompare(right))
   const isArchived = sessionStatus === "archived"
 
-  useEffect(() => {
-    if (isArchived) {
-      setIsArchiveConfirmOpen(false)
-    }
-  }, [isArchived])
+  if (isArchived && isArchiveConfirmOpen) {
+    setIsArchiveConfirmOpen(false)
+  }
 
   const handleArchiveToggle = async () => {
     if (!isArchived && onArchive) {

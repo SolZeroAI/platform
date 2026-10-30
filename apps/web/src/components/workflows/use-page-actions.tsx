@@ -57,17 +57,12 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
   const {
     builderPrompt,
     currentManifest,
-    edges,
     emptyStarterVisible,
     loadRuns,
     loadWorkflowDraft,
     navigationBypassRef,
-    nodes,
     resetWorkflowDraft,
-    running,
-    runs,
     runsRef,
-    saving,
     selectWorkflow,
     selectedRunIdRef,
     selectedWorkflow,
@@ -152,7 +147,17 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         setWorkflowTotal((current) => current + 1)
       }
     },
-    [selectedWorkflowId, setWorkflowDetailLoadStateValue, showWorkflowRoute, workflows],
+    [
+      selectedWorkflowId,
+      setWorkflowDetailLoadStateValue,
+      showWorkflowRoute,
+      workflows,
+      setWorkflowTotal,
+      setSelectedWorkflowId,
+      navigationBypassRef,
+      setEmptyStarterVisible,
+      setWorkflows,
+    ],
   )
 
   const getWorkflowSaveDialogSummaryForManifest = useCallback(
@@ -193,17 +198,19 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     [currentManifest, getWorkflowSaveDialogSummaryForManifest],
   )
 
+  const selectedWorkflowManifest = selectedWorkflow?.manifest
+
   const hasWorkflowSaveDiffForManifest = useCallback(
     (manifest: WorkflowManifest): boolean => {
       if (!selectedWorkflowId) {
         return !emptyStarterVisible
       }
 
-      return selectedWorkflow?.manifest
-        ? formatJson(manifest) !== formatJson(selectedWorkflow.manifest)
+      return selectedWorkflowManifest
+        ? formatJson(manifest) !== formatJson(selectedWorkflowManifest)
         : false
     },
-    [emptyStarterVisible, selectedWorkflow?.manifest, selectedWorkflowId],
+    [emptyStarterVisible, selectedWorkflowManifest, selectedWorkflowId],
   )
 
   const revertWorkflowSaveDialogChange = useCallback(
@@ -247,6 +254,11 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
       hasWorkflowSaveDiffForManifest,
       setEdges,
       setNodes,
+      setWorkflowSaveDialog,
+      setWorkflowName,
+      setSelectedNodeId,
+      setSelectedEdgeId,
+      setWorkflowHeaderDraftsByNode,
     ],
   )
 
@@ -272,7 +284,13 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         setSaving(false)
       }
     },
-    [applyWorkflowSave, persistWorkflowSave, workflowConfigErrors.length],
+    [
+      applyWorkflowSave,
+      persistWorkflowSave,
+      workflowConfigErrors.length,
+      setSaving,
+      setWorkflowValidationDialogOpen,
+    ],
   )
 
   const saveWorkflowTitle = useCallback(async (): Promise<boolean> => {
@@ -327,7 +345,13 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
       phase: "confirm",
       summary: getCurrentWorkflowSaveDialogSummary(),
     })
-  }, [getCurrentWorkflowSaveDialogSummary, workflowConfigErrors.length, workflowHasSaveDiff])
+  }, [
+    getCurrentWorkflowSaveDialogSummary,
+    workflowConfigErrors.length,
+    workflowHasSaveDiff,
+    setWorkflowSaveDialog,
+    setWorkflowValidationDialogOpen,
+  ])
 
   const confirmWorkflowSave = useCallback(async () => {
     if (!workflowSaveDialog) {
@@ -351,7 +375,7 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     } finally {
       setSaving(false)
     }
-  }, [applyWorkflowSave, persistWorkflowSave, workflowSaveDialog])
+  }, [applyWorkflowSave, persistWorkflowSave, workflowSaveDialog, setSaving, setWorkflowSaveDialog])
 
   const closeWorkflowSaveDialog = useCallback(() => {
     if (workflowSaveDialog?.phase === "saving") {
@@ -359,7 +383,7 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     }
 
     setWorkflowSaveDialog(null)
-  }, [workflowSaveDialog?.phase])
+  }, [workflowSaveDialog?.phase, setWorkflowSaveDialog])
 
   const shouldBlockWorkflowNavigation = useCallback(() => {
     if (navigationBypassRef.current) {
@@ -369,7 +393,7 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     }
 
     return !showWorkflowIndexView && workflowDirty
-  }, [showWorkflowIndexView, workflowDirty])
+  }, [showWorkflowIndexView, workflowDirty, navigationBypassRef])
 
   const navigationBlocker = useBlocker({
     shouldBlockFn: shouldBlockWorkflowNavigation,
@@ -393,7 +417,7 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     } finally {
       setSavingBeforeNavigation(false)
     }
-  }, [navigationBlocker, saveWorkflow])
+  }, [navigationBlocker, saveWorkflow, setSavingBeforeNavigation])
 
   const deleteWorkflow = useCallback(
     async (workflow: WorkflowSummary) => {
@@ -422,7 +446,16 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         setDeletingWorkflowId((current) => (current === workflow.id ? null : current))
       }
     },
-    [resetWorkflowDraft, selectWorkflow, selectedWorkflowId, workflows],
+    [
+      resetWorkflowDraft,
+      selectWorkflow,
+      selectedWorkflowId,
+      workflows,
+      setWorkflows,
+      setWorkflowTotal,
+      setDeletingWorkflowId,
+      setWorkflowPendingDeletion,
+    ],
   )
 
   const deleteWorkflowRun = useCallback(
@@ -457,28 +490,45 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         setDeletingRunId((current) => (current === run.id ? null : current))
       }
     },
-    [loadRuns, selectedWorkflowId],
+    [
+      loadRuns,
+      selectedWorkflowId,
+      setRunDetailsOpen,
+      setEvents,
+      setRuns,
+      setDeletingRunId,
+      runsRef,
+      setSelectedRunId,
+      setRunPendingDeletion,
+      setRunTableTotal,
+      setRunSelectionPinned,
+      selectedRunIdRef,
+      setRunTotal,
+    ],
   )
 
-  const setWorkflowEnabled = useCallback(async (workflow: WorkflowSummary, enabled: boolean) => {
-    setUpdatingWorkflowStatus(true)
+  const setWorkflowEnabled = useCallback(
+    async (workflow: WorkflowSummary, enabled: boolean) => {
+      setUpdatingWorkflowStatus(true)
 
-    try {
-      const params = { id: workflow.id }
+      try {
+        const params = { id: workflow.id }
 
-      const data = await runApi((client) =>
-        enabled ? client.workflows.enable({ params }) : client.workflows.disable({ params }),
-      )
+        const data = await runApi((client) =>
+          enabled ? client.workflows.enable({ params }) : client.workflows.disable({ params }),
+        )
 
-      setWorkflows((current: WorkflowSummary[]) =>
-        upsertWorkflowSummary(current, toWorkflowSummary(data.workflow)),
-      )
-    } catch (errorValue) {
-      showErrorToast(getErrorMessage(errorValue))
-    } finally {
-      setUpdatingWorkflowStatus(false)
-    }
-  }, [])
+        setWorkflows((current: WorkflowSummary[]) =>
+          upsertWorkflowSummary(current, toWorkflowSummary(data.workflow)),
+        )
+      } catch (errorValue) {
+        showErrorToast(getErrorMessage(errorValue))
+      } finally {
+        setUpdatingWorkflowStatus(false)
+      }
+    },
+    [setUpdatingWorkflowStatus, setWorkflows],
+  )
 
   const runTrigger = useCallback(
     async (trigger: TriggerRunRequest, options: RunTriggerOptions = {}) => {
@@ -529,7 +579,19 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         setRunning(false)
       }
     },
-    [loadRuns, selectedWorkflowId, workflowDisabled],
+    [
+      loadRuns,
+      selectedWorkflowId,
+      workflowDisabled,
+      setRunDetailsOpen,
+      setRunning,
+      setRuns,
+      setActiveTab,
+      setSelectedRunId,
+      setRunTableTotal,
+      setRunSelectionPinned,
+      setRunTotal,
+    ],
   )
 
   const testTriggerNode = useCallback(
@@ -583,11 +645,14 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     [runTrigger, setSlackTestNode, setWebhookTestNode],
   )
 
-  const openWorkflowCreationMode = useCallback((mode: WorkflowCreationMode) => {
-    setCreationMode(mode)
-    setImportWarnings([])
-    setCreationDialogOpen(true)
-  }, [])
+  const openWorkflowCreationMode = useCallback(
+    (mode: WorkflowCreationMode) => {
+      setCreationMode(mode)
+      setImportWarnings([])
+      setCreationDialogOpen(true)
+    },
+    [setImportWarnings, setCreationDialogOpen, setCreationMode],
+  )
 
   const createDraftFromTemplate = useCallback(
     (template: WorkflowTemplate) => {
@@ -614,8 +679,10 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
         showErrorToast(getErrorMessage(errorValue))
       }
     },
-    [loadWorkflowDraft],
+    [loadWorkflowDraft, setImportWarnings],
   )
+
+  const selectedWorkflowName = selectedWorkflow?.name
 
   const exportSelectedWorkflow = useCallback(async () => {
     if (!selectedWorkflowId) {
@@ -632,11 +699,11 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
       }
 
       const yaml = await response.text()
-      downloadTextFile(`${selectedWorkflow?.name ?? selectedWorkflowId}.workflow.yaml`, yaml)
+      downloadTextFile(`${selectedWorkflowName ?? selectedWorkflowId}.workflow.yaml`, yaml)
     } catch (errorValue) {
       showErrorToast(getErrorMessage(errorValue))
     }
-  }, [selectedWorkflow?.name, selectedWorkflowId])
+  }, [selectedWorkflowName, selectedWorkflowId])
 
   const buildWorkflowWithLlm = useCallback(async () => {
     setBuilderRunning(true)
@@ -646,13 +713,16 @@ export function useWorkflowPageActions(input: WorkflowPageActionsState & Record<
     } finally {
       setBuilderRunning(false)
     }
-  }, [builderPrompt, startWorkflowAiTurn])
+  }, [builderPrompt, startWorkflowAiTurn, setBuilderRunning])
 
-  const selectRun = useCallback((runId: string) => {
-    setSelectedRunId(runId)
-    setRunSelectionPinned(true)
-    setRunDetailsOpen(true)
-  }, [])
+  const selectRun = useCallback(
+    (runId: string) => {
+      setSelectedRunId(runId)
+      setRunSelectionPinned(true)
+      setRunDetailsOpen(true)
+    },
+    [setRunDetailsOpen, setSelectedRunId, setRunSelectionPinned],
+  )
 
   return {
     applyWorkflowSave,

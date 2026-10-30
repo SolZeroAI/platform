@@ -150,9 +150,9 @@ function slackApiUrl(method: string, query: Record<string, unknown>) {
   const url = new URL(`https://slack.com/api/${method}`)
   const params = new URLSearchParams()
 
-  for (const [key, value] of Object.entries(query)) {
+  Object.entries(query).forEach(([key, value]) => {
     appendSlackQueryParam(params, key, value)
-  }
+  })
 
   url.search = params.toString()
 

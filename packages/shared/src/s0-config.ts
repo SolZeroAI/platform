@@ -239,6 +239,7 @@ export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
           message: `Invalid stage '${stage}' for s0 config file selection. Expected dev, test, pre, pre-*, or prod`,
         }),
     ),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     Result.getOrThrow,
   )
 }
@@ -257,6 +258,7 @@ function s0ConfigProfilePrefix(profile: string | undefined): string {
         }),
       ),
     ),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     Result.getOrThrow,
   )
 }
@@ -562,6 +564,7 @@ export function resolveS0Config(
   const decoded = Schema.decodeUnknownSync(S0ConfigFileSchema, S0_CONFIG_JSON_SCHEMA_OPTIONS)(value)
   const { $schema: _schema, ...config } = decoded
 
+  // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   return Result.getOrThrow(
     normalizeResolvedConfig(
       Schema.decodeUnknownSync(

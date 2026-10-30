@@ -386,6 +386,7 @@ export function useWorkflowIndexTable({
 }): Table<WorkflowSummary> {
   const tableData = useMemo(() => data, [data])
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table's API returns functions by design, and this app does not run the React Compiler.
   return useReactTable({
     data: tableData,
     columns,

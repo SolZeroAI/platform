@@ -137,12 +137,14 @@ export function NodeInspector({
     [node?.options.customMcpServers],
   )
 
+  const secretKeysOption = node?.options.secretKeys
+
   const selectedSecretKeys = useMemo(
     () =>
-      Array.isArray(node?.options.secretKeys)
-        ? node.options.secretKeys.filter((key): key is string => typeof key === "string")
+      Array.isArray(secretKeysOption)
+        ? secretKeysOption.filter((key): key is string => typeof key === "string")
         : [],
-    [node?.options.secretKeys],
+    [secretKeysOption],
   )
 
   const cacheKeyOption =
@@ -190,12 +192,7 @@ export function NodeInspector({
       : getWorkflowHeaderDraftRowsValidation(node?.options.headers, createHeaderDraftRow)
 
     setHeaderRows(rows)
-
-    if (validation.ok) {
-      updateHeadersValidation(null, validation.rowErrors)
-    } else {
-      updateHeadersValidation(validation.message, validation.rowErrors)
-    }
+    updateHeadersValidation(validation.ok ? null : validation.message, validation.rowErrors)
   }, [
     createHeaderDraftRow,
     headerDraftRows,

@@ -13,8 +13,6 @@ import { WorkflowLifecycle } from "./lifecycle"
 import { getWorkflowSlackAppSecrets } from "./slack-apps"
 import {
   computeRegistrationMatchDetails,
-  eventPayloadRequiresSlackUser,
-  matchesRegistration,
   payloadRequiresSlackUser,
   registrationFilteredLogFields,
 } from "./slack-public-router/matching"
@@ -39,7 +37,6 @@ import {
   type SlackRunResult,
   type SlackSurface,
   type SlackWorkflowActor,
-  type SlackWorkflowActorResolution,
 } from "./slack-public-router/normalization"
 import * as Arr from "effect/Array"
 import * as Data from "effect/Data"

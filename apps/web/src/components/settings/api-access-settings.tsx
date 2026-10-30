@@ -1,6 +1,7 @@
 "use client"
 
 import type { McpcfContextForgeTokenSettings } from "@solzero/api"
+import { useQuery } from "@tanstack/react-query"
 import { ExternalLink } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -162,7 +163,6 @@ export function ApiAccessSettings({
   const [apiKeys, setApiKeys] = useState(initialData.apiKeys)
   const [accounts, setAccounts] = useState(initialData.accounts)
   const [loading, setLoading] = useState(false)
-  const [githubProfile, setGithubProfile] = useState<GitHubProfileData | null>(null)
   const [apiKeyLabel, setApiKeyLabel] = useState("")
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
 
@@ -249,46 +249,35 @@ export function ApiAccessSettings({
     }
   }, [])
 
-  useEffect(() => {
-    if (!githubAccount) {
-      setGithubProfile(null)
+  const githubAccountId = githubAccount?.id ?? null
 
-      return
-    }
+  const githubProfileQuery = useQuery({
+    queryKey: ["auth", "account-info", githubAccountId],
+    enabled: githubAccountId !== null,
+    queryFn: async ({ signal }): Promise<GitHubProfileData | null> => {
+      const response = await fetch(
+        `/api/auth/account-info?accountId=${encodeURIComponent(githubAccountId ?? "")}`,
+        { signal },
+      )
 
-    let cancelled = false
-
-    const loadGithubProfile = async () => {
-      try {
-        const response = await fetch(
-          `/api/auth/account-info?accountId=${encodeURIComponent(githubAccount.id)}`,
-        )
-
-        if (!response.ok) {
-          throw new Error("Failed to load GitHub profile")
-        }
-
-        // SAFETY: The GitHub profile response is GitHubAccountInfo after response.ok.
-        const payload = (await response.json()) as GitHubAccountInfo
-
-        if (!cancelled) {
-          setGithubProfile(payload.data ?? null)
-        }
-      } catch (errorValue) {
-        console.error("Failed to load GitHub profile:", errorValue)
-
-        if (!cancelled) {
-          setGithubProfile(null)
-        }
+      if (!response.ok) {
+        throw new Error("Failed to load GitHub profile")
       }
-    }
 
-    void loadGithubProfile()
+      // SAFETY: The GitHub profile response is GitHubAccountInfo after response.ok.
+      const payload = (await response.json()) as GitHubAccountInfo
 
-    return () => {
-      cancelled = true
+      return payload.data ?? null
+    },
+  })
+
+  const githubProfile = githubAccountId === null ? null : (githubProfileQuery.data ?? null)
+
+  useEffect(() => {
+    if (githubProfileQuery.error) {
+      console.error("Failed to load GitHub profile:", githubProfileQuery.error)
     }
-  }, [githubAccount])
+  }, [githubProfileQuery.error])
 
   const linkSlackAccount = useCallback(async (expectedSlackUserId?: string | null) => {
     const callbackURL = expectedSlackUserId
@@ -318,6 +307,7 @@ export function ApiAccessSettings({
     }
 
     if (requestedSlackAccount) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Follows the Slack redirect after the accounts load; the auto-link attempt guard is a ref, which render code cannot read.
       setErrorMessage(null)
       setStatusMessage(`Slack account ${requestedSlackUserId} is linked.`)
 
@@ -362,33 +352,37 @@ export function ApiAccessSettings({
     slackLinkError,
   ])
 
+  // Show the Okta reconnect result while rendering; the effect below scrolls and reloads.
+  const oktaReconnectSource = `${oktaReconnect ?? ""}:${oktaReconnectError ?? ""}`
+  const [shownOktaReconnectSource, setShownOktaReconnectSource] = useState<string | null>(null)
+
+  if (shownOktaReconnectSource !== oktaReconnectSource) {
+    setShownOktaReconnectSource(oktaReconnectSource)
+
+    if (oktaReconnect === "1") {
+      setErrorMessage(null)
+      setStatusMessage("Authenticate with Okta to refresh MCP Context Forge access.")
+    } else if (oktaReconnect === "complete") {
+      setErrorMessage(null)
+      setStatusMessage(
+        "Okta authentication complete. MCP Context Forge tools can use your refreshed account.",
+      )
+    } else if (oktaReconnect === "error") {
+      setStatusMessage(null)
+      setErrorMessage(formatOktaReconnectError(oktaReconnectError))
+    }
+  }
+
   useEffect(() => {
     if (oktaReconnect) {
       document.getElementById(OKTA_RECONNECT_SETTINGS_HASH)?.scrollIntoView({ block: "start" })
     }
 
-    if (oktaReconnect === "1") {
-      setErrorMessage(null)
-      setStatusMessage("Authenticate with Okta to refresh MCP Context Forge access.")
-
-      return
-    }
-
     if (oktaReconnect === "complete") {
-      setErrorMessage(null)
-      setStatusMessage(
-        "Okta authentication complete. MCP Context Forge tools can use your refreshed account.",
-      )
+      // oxlint-disable-next-line react/set-state-in-effect -- Reloads the accounts after the Okta redirect; load marks itself as loading before the request starts.
       void load()
-
-      return
     }
-
-    if (oktaReconnect === "error") {
-      setStatusMessage(null)
-      setErrorMessage(formatOktaReconnectError(oktaReconnectError))
-    }
-  }, [load, oktaReconnect, oktaReconnectError])
+  }, [load, oktaReconnect])
 
   const handleLinkGithub = async () => {
     setStatusMessage(null)

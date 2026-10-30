@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Sun,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { S0LogoSvg } from "@/components/s0-logo-svg"
 import {
   ADMIN_SIDEBAR_ITEMS,
@@ -76,23 +76,20 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
   const [adminOpen, setAdminOpen] = useState(activeNav === "admin")
   const [settingsOpen, setSettingsOpen] = useState(activeNav === "settings")
 
-  useEffect(() => {
+  // Expand the active section while rendering when navigation changes.
+  const [expandedNav, setExpandedNav] = useState(activeNav)
+
+  if (expandedNav !== activeNav) {
+    setExpandedNav(activeNav)
+
     if (activeNav === "sessions") {
       setAgentsOpen(true)
-    }
-  }, [activeNav])
-
-  useEffect(() => {
-    if (activeNav === "settings") {
+    } else if (activeNav === "settings") {
       setSettingsOpen(true)
-    }
-  }, [activeNav])
-
-  useEffect(() => {
-    if (activeNav === "admin") {
+    } else if (activeNav === "admin") {
       setAdminOpen(true)
     }
-  }, [activeNav])
+  }
 
   const navLinkClass = (isActive: boolean) =>
     `flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${

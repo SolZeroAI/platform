@@ -79,7 +79,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
     const env = this.env
     const log = this.log
 
-    const execution = Effect.gen(function* () {
+    const execution = Effect.fn("workflows.executeWorkflowNode")(function* () {
       const run = yield* Effect.tryPromise({
         try: () => store.getRun(input.workflowId, input.runId),
         catch: toError,
@@ -109,7 +109,7 @@ export class WorkflowActionExecutor implements WorkflowActionsEntrypoint {
       })
     })
 
-    return runEffectPromise(execution)
+    return runEffectPromise(execution())
   }
 
   recordWorkflowEvent(input: {

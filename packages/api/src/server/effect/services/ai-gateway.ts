@@ -139,7 +139,7 @@ const mockAiBinding = {
 
 const mockAi = createAI({
   // SAFETY: mockAiBinding implements every binding member that createAI calls.
-  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- The mock stands in for the AI binding stub, which has no constructor; createAI reaches it only through run, fetch, and aiGatewayLogId.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, effect/avoid-any -- The mock stands in for the AI binding stub, which has no constructor; createAI reaches it only through run, fetch, and aiGatewayLogId.
   binding: mockAiBinding as unknown as Ai,
   id: "mock",
 })

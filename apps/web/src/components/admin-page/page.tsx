@@ -70,9 +70,13 @@ export function AdminContent({
   const navigate = useNavigate()
   const [integrationHeaderActions, setIntegrationHeaderActions] = useState<ReactNode | null>(null)
 
-  useEffect(() => {
+  const integrationTab = normalizedSearch.integrationTab
+  const [headerActionsTab, setHeaderActionsTab] = useState(integrationTab)
+
+  if (headerActionsTab !== integrationTab) {
+    setHeaderActionsTab(integrationTab)
     setIntegrationHeaderActions(null)
-  }, [normalizedSearch.integrationTab])
+  }
 
   const updateSearch = useCallback(
     (input: Partial<AdminSearch> | ((previous: AdminSearch) => Partial<AdminSearch>)) => {

@@ -424,7 +424,7 @@ export function McpDiscoveryErrorItem({
   const [isExpanded, setIsExpanded] = useState(autoExpand)
   const [reconnectingOkta, setReconnectingOkta] = useState(false)
   const [reconnectError, setReconnectError] = useState<string | null>(null)
-  const userToggledRef = useRef(false)
+  const [userToggled, setUserToggled] = useState(false)
 
   const serverName =
     event.serverName ??
@@ -436,23 +436,39 @@ export function McpDiscoveryErrorItem({
   const canReconnectOkta =
     Boolean(sessionId) && isTerminal && isOktaReconnectMcpDiscoveryError(event)
 
-  useEffect(() => {
-    if (collapseAfterOktaReconnect && canReconnectOkta) {
+  const collapseForOkta = collapseAfterOktaReconnect && canReconnectOkta
+  const [collapsedForOkta, setCollapsedForOkta] = useState(false)
+
+  if (collapsedForOkta !== collapseForOkta) {
+    setCollapsedForOkta(collapseForOkta)
+
+    if (collapseForOkta) {
       setIsExpanded(false)
     }
-  }, [canReconnectOkta, collapseAfterOktaReconnect])
+  }
 
-  useEffect(() => {
+  const [toggleProcessing, setToggleProcessing] = useState(isProcessing)
+  let toggled = userToggled
+
+  if (toggleProcessing !== isProcessing) {
+    setToggleProcessing(isProcessing)
+
     if (!isProcessing) {
-      userToggledRef.current = false
+      toggled = false
+      setUserToggled(false)
     }
-  }, [isProcessing])
+  }
 
-  useEffect(() => {
-    if (!userToggledRef.current) {
+  const expandSource = `${autoExpand}:${isStreamingFocus}`
+  const [shownExpandSource, setShownExpandSource] = useState<string | null>(null)
+
+  if (shownExpandSource !== expandSource) {
+    setShownExpandSource(expandSource)
+
+    if (!toggled) {
       setIsExpanded(isStreamingFocus || autoExpand)
     }
-  }, [autoExpand, isStreamingFocus])
+  }
 
   const handleReconnectOkta = useCallback(async () => {
     if (!sessionId) {
@@ -487,7 +503,7 @@ export function McpDiscoveryErrorItem({
           <button
             type="button"
             onClick={() => {
-              userToggledRef.current = true
+              setUserToggled(true)
               setIsExpanded((expanded) => !expanded)
             }}
             aria-expanded={isExpanded}
@@ -642,21 +658,21 @@ export function AssistantMessageItem({
 }) {
   const contentId = useId()
   const [isExpanded, setIsExpanded] = useState(isLatest)
-  const userToggledRef = useRef(false)
+  const [userToggled, setUserToggled] = useState(false)
   const summary = content.replace(/\s+/g, " ").trim()
 
-  useEffect(() => {
+  const [shownLatest, setShownLatest] = useState(isLatest)
+
+  if (shownLatest !== isLatest) {
+    setShownLatest(isLatest)
+
     if (isLatest) {
-      userToggledRef.current = false
+      setUserToggled(false)
       setIsExpanded(true)
-
-      return
-    }
-
-    if (!userToggledRef.current) {
+    } else if (!userToggled) {
       setIsExpanded(false)
     }
-  }, [isLatest])
+  }
 
   return (
     <div className="group py-1">
@@ -665,7 +681,7 @@ export function AssistantMessageItem({
           <button
             type="button"
             onClick={() => {
-              userToggledRef.current = true
+              setUserToggled(true)
               setIsExpanded((expanded) => !expanded)
             }}
             aria-expanded={isExpanded}
@@ -728,26 +744,34 @@ export function ReasoningMessageItem({
 }) {
   const contentId = useId()
   const [isExpanded, setIsExpanded] = useState(false)
-  const userToggledRef = useRef(false)
+  const [userToggled, setUserToggled] = useState(false)
   const reasoning = parseReasoningSummary(content)
   const title = reasoning.title ?? label
   const body = reasoning.body
   const copyContent = body || content
 
-  useEffect(() => {
+  const [toggleProcessing, setToggleProcessing] = useState(isProcessing)
+  let toggled = userToggled
+
+  if (toggleProcessing !== isProcessing) {
+    setToggleProcessing(isProcessing)
+
     if (!isProcessing) {
-      userToggledRef.current = false
+      toggled = false
+      setUserToggled(false)
       setIsExpanded(false)
     }
-  }, [isProcessing])
+  }
 
-  useEffect(() => {
-    if (userToggledRef.current) {
-      return
+  const [shownStreamingFocus, setShownStreamingFocus] = useState<boolean | null>(null)
+
+  if (shownStreamingFocus !== isStreamingFocus) {
+    setShownStreamingFocus(isStreamingFocus)
+
+    if (!toggled) {
+      setIsExpanded(isStreamingFocus)
     }
-
-    setIsExpanded(isStreamingFocus)
-  }, [isStreamingFocus])
+  }
 
   return (
     <div className="group py-1">
@@ -756,7 +780,7 @@ export function ReasoningMessageItem({
           <button
             type="button"
             onClick={() => {
-              userToggledRef.current = true
+              setUserToggled(true)
               setIsExpanded((expanded) => !expanded)
             }}
             aria-expanded={isExpanded}

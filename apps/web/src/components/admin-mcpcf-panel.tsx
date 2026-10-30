@@ -17,15 +17,7 @@ import { TableOfContents } from "@cloudflare/kumo/components/table-of-contents"
 import { TooltipProvider } from "@cloudflare/kumo/components/tooltip"
 import { useBlocker } from "@tanstack/react-router"
 import { FileCode2, MoreVertical, RefreshCw, RotateCcw, Save, X } from "lucide-react"
-import {
-  type MouseEvent,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react"
+import { type MouseEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
   DocsSectionHeading,
   EnvLockIcon,
@@ -38,7 +30,7 @@ import { CodeSurface } from "@/components/code"
 import { McpcfResetConfigDialog } from "@/components/admin-mcpcf-reset-config-dialog"
 import { Dialog } from "@/components/ui/dialog"
 import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
-import { getStickySelectPortalRoot } from "@/lib/sticky-select-portal"
+import { useStickySelectPortalRoot } from "@/lib/sticky-select-portal"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 const DEFAULT_TOC_SECTION = "#mcpcf-provider"
@@ -88,8 +80,7 @@ export function McpcfAdminPanel({
   const [exportDotenv, setExportDotenv] = useState<string | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
 
-  const [stickySelectPortalContainer, setStickySelectPortalContainer] =
-    useState<HTMLElement | null>(null)
+  const stickySelectPortalContainer = useStickySelectPortalRoot()
 
   const configLocked = config?.locked ?? false
   const configLockEnvVar = configLocked ? (config?.envVarName ?? null) : null
@@ -106,11 +97,11 @@ export function McpcfAdminPanel({
     ? "Configured from environment"
     : adminApiToken
 
-  useEffect(() => {
-    if (!config) {
-      return
-    }
+  // Reset the form while rendering when a new config arrives.
+  const [formConfig, setFormConfig] = useState<typeof config | null>(null)
 
+  if (config && formConfig !== config) {
+    setFormConfig(config)
     setEnabled(config.enabled)
     setBaseUrl(config.baseUrl)
     setUserOauthProviderId(config.userOauthProviderId)
@@ -131,7 +122,7 @@ export function McpcfAdminPanel({
         }),
       ),
     )
-  }, [config])
+  }
 
   const currentPayload = useMemo(
     () =>
@@ -272,10 +263,6 @@ export function McpcfAdminPanel({
       onHeaderActionsChange?.(null)
     }
   }, [onHeaderActionsChange])
-
-  useLayoutEffect(() => {
-    setStickySelectPortalContainer(getStickySelectPortalRoot())
-  }, [])
 
   const sectionOptions = useMemo<Array<{ value: TocSectionValue; label: string; depth: 0 | 1 }>>(
     () => [

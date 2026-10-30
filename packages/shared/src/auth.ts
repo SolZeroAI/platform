@@ -215,6 +215,7 @@ export const validateAuthProviderRegistry = (decoded: AuthProviderRegistry) =>
   })
 
 export function normalizeAuthProviderRegistry(value: unknown): AuthProviderRegistry {
+  // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   return Result.getOrThrow(
     validateAuthProviderRegistry(Schema.decodeUnknownSync(AuthProviderRegistrySchema)(value)),
   )

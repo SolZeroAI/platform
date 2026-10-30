@@ -78,17 +78,20 @@ function SecretEditDialog({
   const [tagDraft, setTagDraft] = useState("")
   const [fieldErrors, setFieldErrors] = useState<SecretFieldErrors>({})
 
-  useEffect(() => {
-    if (!row || !open) {
-      return
-    }
+  // Load the row into the form while rendering when the dialog opens or the row changes.
+  const formSource = open ? row : null
+  const [loadedFormSource, setLoadedFormSource] = useState<typeof formSource>(null)
 
-    setKey(row.key)
-    setValue(row.value)
-    setTags(row.tags)
-    setTagDraft(row.tagDraft)
+  if (formSource && loadedFormSource !== formSource) {
+    setLoadedFormSource(formSource)
+    setKey(formSource.key)
+    setValue(formSource.value)
+    setTags(formSource.tags)
+    setTagDraft(formSource.tagDraft)
     setFieldErrors({})
-  }, [open, row])
+  } else if (!formSource && loadedFormSource) {
+    setLoadedFormSource(null)
+  }
 
   const addTag = () => {
     const nextTag = tagDraft.trim()
@@ -401,6 +404,7 @@ export function SecretsTable({
     [],
   )
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table's API returns functions by design, and this app does not run the React Compiler.
   const table = useReactTable({
     data: tableRows,
     columns,

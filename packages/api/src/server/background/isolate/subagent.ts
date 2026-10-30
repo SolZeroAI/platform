@@ -291,24 +291,32 @@ export class IsolateSubAgent extends Think<Env> {
   ): Promise<Awaited<ReturnType<Think<Env>["startAgentToolRun"]>>> {
     const startedAt = Date.now()
 
-    try {
-      assertRunInput(input)
-      const trustedConfig = await this.loadTrustedConfig(options.runId)
-      await this.prepareRuntime(options.runId, trustedConfig, input.delegation.task)
+    return this.prepareAgentToolRun(input, options.runId)
+      .then((runInput) => super.startAgentToolRun(runInput, options))
+      .catch(() => this.preparationFailure(options.runId, startedAt))
+  }
 
-      return await super.startAgentToolRun(input, options)
-    } catch {
-      this.isolateTurn = null
-      this.preparingInput = null
+  private preparationFailure(runId: string, startedAt: number) {
+    this.clearActiveRuntime()
 
-      return {
-        runId: options.runId,
-        status: "error",
-        error: SUBAGENT_PREPARATION_ERROR,
-        startedAt,
-        completedAt: Date.now(),
-      }
+    return {
+      runId,
+      status: "error" as const,
+      error: SUBAGENT_PREPARATION_ERROR,
+      startedAt,
+      completedAt: Date.now(),
     }
+  }
+
+  private async prepareAgentToolRun(
+    input: unknown,
+    runId: string,
+  ): Promise<IsolateSubagentRunInput> {
+    assertRunInput(input)
+    const trustedConfig = await this.loadTrustedConfig(runId)
+    await this.prepareRuntime(runId, trustedConfig, input.delegation.task)
+
+    return input
   }
 
   async inspectAgentToolRun(
@@ -326,14 +334,14 @@ export class IsolateSubAgent extends Think<Env> {
   protected async onChatRecovery(
     context: ChatRecoveryContext,
   ): Promise<ChatRecoveryOptions | void> {
-    try {
-      const trustedConfig = await this.loadTrustedConfig(this.name)
-      await this.prepareRuntime(this.name, trustedConfig, "Recovered delegated sub-agent turn")
-    } catch {
-      throw new Error(SUBAGENT_PREPARATION_ERROR)
-    }
-
-    return super.onChatRecovery(context)
+    return this.loadTrustedConfig(this.name)
+      .then((trustedConfig) =>
+        this.prepareRuntime(this.name, trustedConfig, "Recovered delegated sub-agent turn"),
+      )
+      .then(
+        () => super.onChatRecovery(context),
+        () => Promise.reject(new Error(SUBAGENT_PREPARATION_ERROR)),
+      )
   }
 
   private async prepareRuntime(
@@ -354,49 +362,49 @@ export class IsolateSubAgent extends Think<Env> {
   ): Promise<void> {
     this.preparingInput = input
 
-    try {
-      const [model, mcpTurn] = await Promise.all([
-        runEffectPromise(
-          compileIsolateModelContext({
-            env: this.env,
-            observability: { tracing: workerTracing },
+    return Promise.all([
+      runEffectPromise(
+        compileIsolateModelContext({
+          env: this.env,
+          observability: { tracing: workerTracing },
+          userId: input.userId,
+          model: input.model,
+          reasoningEffort: input.reasoningEffort,
+        }).pipe(Effect.provide(aiGatewayLayer(this.env))),
+      ),
+      runEffectPromise(
+        prepareIsolateMcpTurn({
+          env: this.env,
+          manager: this.mcp,
+          customMcpServers: input.customMcpServers,
+          selectedTools: input.selectedTools,
+          createObserver: this.createInternalRequestObserver.bind(this),
+          runtime: {
+            sessionId: input.parentSessionId,
             userId: input.userId,
+            repoOwner: input.repoOwner,
+            repoName: input.repoName,
+          },
+          request: {
+            content: requestContent,
             model: input.model,
             reasoningEffort: input.reasoningEffort,
-          }).pipe(Effect.provide(aiGatewayLayer(this.env))),
-        ),
-        runEffectPromise(
-          prepareIsolateMcpTurn({
-            env: this.env,
-            manager: this.mcp,
-            customMcpServers: input.customMcpServers,
-            selectedTools: input.selectedTools,
-            createObserver: this.createInternalRequestObserver.bind(this),
-            runtime: {
-              sessionId: input.parentSessionId,
-              userId: input.userId,
-              repoOwner: input.repoOwner,
-              repoName: input.repoName,
-            },
-            request: {
-              content: requestContent,
-              model: input.model,
-              reasoningEffort: input.reasoningEffort,
-            },
-          }),
-        ),
-      ])
-
-      this.isolateTurn = {
-        runId,
-        input,
-        model,
-        customMcpServerNames: mcpTurn.connectedServerNames,
-        mcpcfMcpServers: mcpTurn.mcpcfMcpServers,
-      }
-    } finally {
-      this.preparingInput = null
-    }
+          },
+        }),
+      ),
+    ])
+      .then(([model, mcpTurn]) => {
+        this.isolateTurn = {
+          runId,
+          input,
+          model,
+          customMcpServerNames: mcpTurn.connectedServerNames,
+          mcpcfMcpServers: mcpTurn.mcpcfMcpServers,
+        }
+      })
+      .finally(() => {
+        this.preparingInput = null
+      })
   }
 
   private async loadTrustedConfig(runId: string): Promise<IsolateSubagentTrustedConfig> {

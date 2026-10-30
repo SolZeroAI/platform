@@ -42,23 +42,33 @@ export function useProviderSettings({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
-    if (showLoading) {
-      setLoading(true)
-      setError(null)
-    }
+  const fetchLatest = useCallback(
+    (showErrors: boolean) =>
+      fetchProviderSettings()
+        .then((nextData) => {
+          publishProviderSettings(nextData)
+          setError(null)
+        })
+        .catch((errorValue: unknown) => {
+          if (showErrors) {
+            setError(errorValue instanceof Error ? errorValue.message : String(errorValue))
+          }
+        })
+        .finally(() => setLoading(false)),
+    [],
+  )
 
-    try {
-      publishProviderSettings(await fetchProviderSettings())
-      setError(null)
-    } catch (errorValue) {
+  const refresh = useCallback(
+    async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
       if (showLoading) {
-        setError(errorValue instanceof Error ? errorValue.message : String(errorValue))
+        setLoading(true)
+        setError(null)
       }
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+
+      await fetchLatest(showLoading)
+    },
+    [fetchLatest],
+  )
 
   const save = useCallback(async (input: ProviderSettingsUpdatePayload) => {
     setSaving(true)
@@ -98,9 +108,10 @@ export function useProviderSettings({
     }
   }, [resolvedInitialData])
 
+  // The initial loading state already covers this fetch when no data is cached.
   useEffect(() => {
-    void refresh({ showLoading: !(providerSettingsCache ?? resolvedInitialData) })
-  }, [refresh, resolvedInitialData])
+    void fetchLatest(!(providerSettingsCache ?? resolvedInitialData))
+  }, [fetchLatest, resolvedInitialData])
 
   return {
     data,

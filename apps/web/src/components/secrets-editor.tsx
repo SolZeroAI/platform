@@ -87,40 +87,56 @@ export function SecretsEditor({
     return () => clearTimeout(timer)
   }, [keySearch])
 
-  const loadSecrets = useCallback(async (q: string, tags: readonly string[]) => {
+  const fetchSecrets = useCallback(
+    (q: string, tags: readonly string[]) =>
+      runApi(
+        (client) => client.secrets.list({ query: secretsListQuery(q.trim(), tags.join(",")) }),
+        { fallbackMessage: "Failed to load secrets" },
+      )
+        .then((result) => {
+          setRows(
+            result.secrets.map((secret) =>
+              createRow({ key: secret.key, tags: normalizeTags(secret.tags), existing: true }),
+            ),
+          )
+          setAllTags(normalizeTags(result.tags))
+        })
+        .catch((caught: unknown) => {
+          const message = caught instanceof Error ? caught.message : "Failed to load secrets"
+          console.error("[secrets-editor] Failed to load secrets", { message })
+          showErrorToast("Failed to load secrets", { description: message })
+          setError(message)
+          setRows([])
+          setAllTags([])
+        })
+        .finally(() => setLoading(false)),
+    [],
+  )
+
+  const loadSecrets = useCallback(
+    async (q: string, tags: readonly string[]) => {
+      setLoading(true)
+      setError("")
+      setSuccess("")
+      await fetchSecrets(q, tags)
+    },
+    [fetchSecrets],
+  )
+
+  // Mark the list as loading while rendering when the filters change; the effect below fetches it.
+  const filterKey = `${debouncedKeySearch}\n${selectedTags.join(",")}`
+  const [requestedFilterKey, setRequestedFilterKey] = useState<string | null>(null)
+
+  if (requestedFilterKey !== filterKey) {
+    setRequestedFilterKey(filterKey)
     setLoading(true)
     setError("")
     setSuccess("")
-
-    const trimmedQ = q.trim()
-
-    try {
-      const result = await runApi(
-        (client) => client.secrets.list({ query: secretsListQuery(trimmedQ, tags.join(",")) }),
-        { fallbackMessage: "Failed to load secrets" },
-      )
-
-      setRows(
-        result.secrets.map((secret) =>
-          createRow({ key: secret.key, tags: normalizeTags(secret.tags), existing: true }),
-        ),
-      )
-      setAllTags(normalizeTags(result.tags))
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Failed to load secrets"
-      console.error("[secrets-editor] Failed to load secrets", { message })
-      showErrorToast("Failed to load secrets", { description: message })
-      setError(message)
-      setRows([])
-      setAllTags([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  }
 
   useEffect(() => {
-    void loadSecrets(debouncedKeySearch, selectedTags)
-  }, [debouncedKeySearch, loadSecrets, selectedTags])
+    void fetchSecrets(debouncedKeySearch, selectedTags)
+  }, [debouncedKeySearch, fetchSecrets, selectedTags])
 
   const removeRow = (rowId: string) => {
     setRows((current) => current.filter((row) => row.id !== rowId))

@@ -1,9 +1,7 @@
 import { Button } from "@cloudflare/kumo/components/button"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
-import { type Node } from "@xyflow/react"
 import {
   AlertTriangle,
-  Bot,
   Check,
   CircleHelp,
   Copy,
@@ -12,14 +10,14 @@ import {
   RefreshCw,
   Save,
 } from "lucide-react"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { S0Loader } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { runApi } from "@/lib/api-client"
+import { queryClient, useApiQuery } from "@/lib/api-hooks"
 import { copyToClipboard } from "@/lib/format"
 import {
-  WorkflowSlackAppSetup,
   WorkflowSlackManifestValidation,
   WorkflowSlackTriggerRegistrationSummary,
   WorkflowSummary,
@@ -46,35 +44,21 @@ export function WorkflowSlackAppSetupModal({
   workflowStatus: WorkflowSummary["status"]
   onClose: () => void
 }) {
-  const [setup, setSetup] = useState<WorkflowSlackAppSetup | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
+  const setupKey = ["workflows", workflowId, "slack-app"] as const
+
+  const setupQuery = useApiQuery({
+    key: setupKey,
+    request: (client) => client.workflows.slackApp({ params: { id: workflowId } }),
+  })
+
+  const setup = setupQuery.data?.slackApp ?? null
+  const loading = setupQuery.isFetching
+  const loadError = setupQuery.error ? getErrorMessage(setupQuery.error) : ""
   const [signingSecret, setSigningSecret] = useState("")
   const [botToken, setBotToken] = useState("")
   const [savingCredentials, setSavingCredentials] = useState(false)
   const [credentialsError, setCredentialsError] = useState("")
   const [credentialsSaved, setCredentialsSaved] = useState(false)
-
-  const loadSetup = useCallback(async () => {
-    setLoading(true)
-    setLoadError("")
-
-    try {
-      const data = await runApi((client) =>
-        client.workflows.slackApp({ params: { id: workflowId } }),
-      )
-
-      setSetup(data.slackApp)
-    } catch (errorValue) {
-      setLoadError(getErrorMessage(errorValue))
-    } finally {
-      setLoading(false)
-    }
-  }, [workflowId])
-
-  useEffect(() => {
-    void loadSetup()
-  }, [loadSetup])
 
   const saveCredentials = async () => {
     setCredentialsError("")
@@ -102,7 +86,7 @@ export function WorkflowSlackAppSetupModal({
         client.workflows.slackAppCredentials({ params: { id: workflowId }, payload }),
       )
 
-      setSetup(data.slackApp)
+      queryClient.setQueryData(setupKey, data)
       setSigningSecret("")
       setBotToken("")
       setCredentialsSaved(true)
@@ -133,7 +117,7 @@ export function WorkflowSlackAppSetupModal({
       headerActions={
         <Button
           type="button"
-          onClick={() => void loadSetup()}
+          onClick={() => void setupQuery.refetch()}
           disabled={loading}
           {...circleIconButton}
           variant="ghost"

@@ -1,8 +1,7 @@
 "use client"
 
 import { Select } from "@cloudflare/kumo/components/select"
-import { useLayoutEffect, useState } from "react"
-import { getDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
+import { useDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
 
 type DialogPaginationPageSizeProps = {
   value: number
@@ -26,11 +25,7 @@ export function DialogPaginationPageSize({
   className,
   disabled = false,
 }: DialogPaginationPageSizeProps) {
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
-
-  useLayoutEffect(() => {
-    setPortalContainer(getDialogSelectPortalRoot())
-  }, [])
+  const portalContainer = useDialogSelectPortalRoot()
 
   return (
     <div className={className ?? "flex items-center gap-2"} data-slot="pagination-page-size">

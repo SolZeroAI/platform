@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react"
+
 const DIALOG_SELECT_PORTAL_ATTR = "data-dialog-select-portal"
 
 let dialogSelectPortalRoot: HTMLElement | null = null
@@ -15,4 +17,13 @@ export function getDialogSelectPortalRoot(): HTMLElement | null {
   }
 
   return dialogSelectPortalRoot
+}
+
+function subscribeToPortalRoot() {
+  return () => {}
+}
+
+/** Returns the shared portal root after hydration, and null during server render. */
+export function useDialogSelectPortalRoot(): HTMLElement | null {
+  return useSyncExternalStore(subscribeToPortalRoot, getDialogSelectPortalRoot, () => null)
 }

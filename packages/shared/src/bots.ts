@@ -302,6 +302,7 @@ function normalizeBotRoutineCadence(
 
 export function normalizeCreateBotInput(input: CreateBotInput): NormalizedCreateBotInput {
   return {
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     name: Result.getOrThrow(requireNonEmpty(input.name, "name")),
     instructions: input.instructions?.trim() ?? "",
   }
@@ -343,6 +344,7 @@ const validateCreateBotRoutineInput = (input: CreateBotRoutineInput) =>
 export function normalizeCreateBotRoutineInput(
   input: CreateBotRoutineInput,
 ): NormalizedCreateBotRoutineInput {
+  // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   return Result.getOrThrow(validateCreateBotRoutineInput(input))
 }
 
@@ -386,6 +388,7 @@ export function parseRoutineAlarmWorkflowId(workflowId: string): Option.Option<s
 export function parseStoredBotRoutineWatch(value: string | null | undefined): BotRoutineWatch {
   return Option.match(decodeStoredBotRoutineWatch(value ?? '{"kind":"none"}'), {
     onNone: () => ({ kind: "none" }),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
     onSome: (parsed) => Result.getOrThrow(normalizeBotRoutineWatch(parsed)),
   })
 }
@@ -394,6 +397,7 @@ export function parseStoredBotRoutineCadence(value: string): BotRoutineCadence {
   return Option.match(decodeStoredBotRoutineCadence(value), {
     onNone: () => Result.fail(invalid("cadence", "cadence must be a JSON object")),
     onSome: (parsed) => normalizeBotRoutineCadence({ ...parsed, kind: parsed.kind ?? "interval" }),
+    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
   }).pipe(Result.getOrThrow)
 }
 

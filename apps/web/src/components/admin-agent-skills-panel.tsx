@@ -43,22 +43,19 @@ export function AdminAgentSkillsPanel({
   const [validationError, setValidationError] = useState("")
   const [pendingDelete, setPendingDelete] = useState<AdminAgentSkillItem | null>(null)
 
-  const loadSkills = useCallback(async () => {
-    setLoading(true)
+  const fetchSkills = useCallback(
+    () =>
+      requestJson<AdminAgentSkillsResponse>("/api/admin/skills")
+        .then((response) => setSkills(response.skills))
+        .catch((error: unknown) => showErrorToast(getErrorMessage(error)))
+        .finally(() => setLoading(false)),
+    [],
+  )
 
-    try {
-      const response = await requestJson<AdminAgentSkillsResponse>("/api/admin/skills")
-      setSkills(response.skills)
-    } catch (error) {
-      showErrorToast(getErrorMessage(error))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // The initial loading state covers the first fetch.
   useEffect(() => {
-    void loadSkills()
-  }, [loadSkills])
+    void fetchSkills()
+  }, [fetchSkills])
 
   useEffect(() => {
     onHeaderActionsChange?.(

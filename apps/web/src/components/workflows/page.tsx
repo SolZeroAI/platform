@@ -1,40 +1,20 @@
-import {
-  addEdge,
-  type Connection,
-  type OnEdgesChange,
-  useEdgesState,
-  useNodesState,
-} from "@xyflow/react"
-import { useBlocker, useNavigate } from "@tanstack/react-router"
-import { Save } from "lucide-react"
+import { useEdgesState, useNodesState } from "@xyflow/react"
+import { useNavigate } from "@tanstack/react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  getWorkflowNodeDefaultOptions,
-  getWorkflowNodeDefinition,
   getWorkflowNodeDefinitionForNode,
-  parseWorkflowExport,
-  validateWorkflowDraft,
   type ProviderSettingsResponse,
   type WorkflowManifest,
   type WorkflowManifestNode,
-  type WorkflowNodeType,
-  type WorkflowTemplate,
 } from "@solzero/shared"
-import { PageHeader } from "@/components/page-header"
-import { UnsavedChangesModal } from "@/components/unsaved-changes-modal"
-import { SidebarLayout } from "@/components/sidebar-layout"
 import { useProviderSettings } from "@/hooks/use-provider-settings"
 import { runApi } from "@/lib/api-client"
-import { copyToClipboard } from "@/lib/format"
 import { showErrorToast } from "@/lib/toast-manager"
 import {
   getWorkflowNodeConfigErrorDetails,
   getWorkflowNodeConfigErrorsByNode,
   PendingConnectionReplacement,
   PendingManualInputOverwrite,
-  RunTriggerOptions,
-  TriggerRunRequest,
-  upsertWorkflowSummary,
   WORKFLOW_DEFAULT_TABLE_STATE,
   WORKFLOW_RUN_DEFAULT_TABLE_STATE,
   WorkflowCanvasEdge,
@@ -47,69 +27,23 @@ import {
   WorkflowNodeConfigErrorDetails,
   WorkflowRun,
   WorkflowRunEvent,
-  WorkflowRunSnapshot,
   WorkflowRunTableState,
   WorkflowSaveDialogState,
-  WorkflowSaveDialogSummary,
-  WorkflowSaveResponse,
-  WorkflowSaveRevertAction,
   WorkflowSummary,
   WorkflowViewTab,
 } from "./types"
-import { WorkflowIndexLanding, workflowListQueryParams, workflowRunQueryParams } from "./index-page"
-import {
-  WorkflowBuilderSidebarCloser,
-  WorkflowDetailLoadErrorState,
-  WorkflowDetailLoadingState,
-  WorkflowVersionToolbar,
-  WorkflowViewTabs,
-} from "./detail-chrome"
-import { WorkflowSlackAppSetupModal } from "./slack-setup"
-import { WorkflowSaveDialog, WorkflowValidationErrorsDialog } from "./save-dialog"
-import { WorkflowCreationDialog, WorkflowOverview } from "./overview"
-import { WorkflowBuilder } from "./builder"
 import { getWorkflowConnectionDetails } from "./builder-canvas"
 import {
-  DeleteConnectionConfirmationModal,
-  DeleteNodeConfirmationModal,
-  DeleteRunConfirmationModal,
-  DeleteWorkflowConfirmationModal,
-  OverwriteManualInputConnectionModal,
-  ReplaceInputConnectionModal,
-  WebhookTestModal,
-} from "./modals"
-import {
-  clearManualInputValue,
   createStarterEdges,
   createStarterNodes,
-  findEdgeUsingTargetInput,
-  getConnectionTargetInputKey,
-  getEdgeTargetInputKey,
-  getNormalizedTargetHandle,
   getTemplateManifest,
-  hasManualInputValue,
-  isSameConnection,
   migrateWorkflowManifestForBuilder,
   toCanvasEdge,
   toCanvasNode,
-  toConnectionEdge,
   toManifest,
 } from "./manifest-utils"
-import {
-  applyWorkflowSaveRevertAction,
-  getWorkflowRuntimeVersionChangePreview,
-  getWorkflowSaveChangeSummary,
-  getWorkflowVersionSaveLabel,
-  hasWorkflowSlackTriggers,
-  stripWorkflowSaveChangeRevertActions,
-} from "./save-utils"
-import {
-  buildWorkflowBuilderPrompt,
-  buildWorkflowEditorPrompt,
-  downloadTextFile,
-  getErrorMessage,
-  getLatestWebhookTestPayload,
-} from "./run-utils"
+import { hasWorkflowSlackTriggers } from "./save-utils"
+import { buildWorkflowBuilderPrompt, buildWorkflowEditorPrompt, getErrorMessage } from "./run-utils"
 import { formatJson } from "./header-utils"
 import { useWorkflowPageActions } from "./use-page-actions"
 import { WorkflowsPageFrame } from "./page-frame"
@@ -273,15 +207,16 @@ export function WorkflowsPage({
   const selectedHeaderDraftRows = selectedNode
     ? (workflowHeaderDraftsByNode[selectedNode.data.node.id] ?? null)
     : null
+  const selectedWorkflowManifest = selectedWorkflow?.manifest
   const workflowHasSaveDiff = useMemo(() => {
     if (!selectedWorkflowId) {
       return !emptyStarterVisible
     }
-    if (!selectedWorkflow?.manifest) {
+    if (!selectedWorkflowManifest) {
       return false
     }
-    return formatJson(currentManifest) !== formatJson(selectedWorkflow.manifest)
-  }, [currentManifest, emptyStarterVisible, selectedWorkflow?.manifest, selectedWorkflowId])
+    return formatJson(currentManifest) !== formatJson(selectedWorkflowManifest)
+  }, [currentManifest, emptyStarterVisible, selectedWorkflowManifest, selectedWorkflowId])
   const workflowTitleDirty = Boolean(
     selectedWorkflowId && selectedWorkflowReady && workflowTitleDraftTrimmed !== workflowTitle,
   )
@@ -336,7 +271,11 @@ export function WorkflowsPage({
     setWorkflowConfigFocusTarget(null)
   }, [])
 
-  useEffect(() => {
+  // Drop header drafts for removed nodes while rendering.
+  const [draftNodes, setDraftNodes] = useState(nodes)
+
+  if (draftNodes !== nodes) {
+    setDraftNodes(nodes)
     const nodeIds = new Set(nodes.map((node) => node.data.node.id))
     setWorkflowHeaderDraftsByNode((current) => {
       const next = Object.fromEntries(
@@ -344,7 +283,7 @@ export function WorkflowsPage({
       )
       return Object.keys(next).length === Object.keys(current).length ? current : next
     })
-  }, [nodes])
+  }
 
   const showWorkflowIndex = useCallback(
     (replace = false) => {
@@ -574,15 +513,23 @@ export function WorkflowsPage({
     runSelectionPinnedRef.current = runSelectionPinned
   }, [runSelectionPinned])
 
-  useEffect(() => {
+  // Reset the title draft while rendering when the workflow or its saved name changes.
+  const titleSource = { selectedWorkflowId, selectedWorkflowName, workflowName }
+  const [shownTitleSource, setShownTitleSource] = useState<typeof titleSource | null>(null)
+
+  if (
+    shownTitleSource?.selectedWorkflowId !== selectedWorkflowId ||
+    shownTitleSource.selectedWorkflowName !== selectedWorkflowName ||
+    shownTitleSource.workflowName !== workflowName
+  ) {
+    setShownTitleSource(titleSource)
+
     if (selectedWorkflowId && selectedWorkflowName !== undefined) {
       setWorkflowTitleDraft(selectedWorkflowName)
-      return
-    }
-    if (!selectedWorkflowId) {
+    } else if (!selectedWorkflowId) {
       setWorkflowTitleDraft(workflowName)
     }
-  }, [selectedWorkflowId, selectedWorkflowName, workflowName])
+  }
 
   const selectWorkflowState = useCallback(
     (workflowId: string) => {
@@ -623,18 +570,11 @@ export function WorkflowsPage({
     }
 
     if (routeWorkflowId !== selectedWorkflowId) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Follows the router location, and the reset path reads workflowsLoadedRef, which render code cannot read.
       selectWorkflowState(routeWorkflowId)
     }
   }, [pathname, resetWorkflowDraft, routeWorkflowId, selectWorkflowState, selectedWorkflowId])
-  const {
-    loadEvents,
-    loadRuns,
-    loadWorkflow,
-    loadWorkflows,
-    submitApproval,
-    workflowDetailFetchSequenceRef,
-    workflowFetchSequenceRef,
-  } = useWorkflowPageData({
+  const { loadRuns, submitApproval } = useWorkflowPageData({
     edges,
     initialDetail: initialData.detail,
     events,
@@ -711,7 +651,6 @@ export function WorkflowsPage({
     setWorkflowHeaderDraftsByNode,
   })
   const {
-    applyWorkflowSave,
     buildWorkflowWithLlm,
     closeWorkflowSaveDialog,
     confirmWorkflowSave,
@@ -719,22 +658,16 @@ export function WorkflowsPage({
     deleteWorkflow,
     deleteWorkflowRun,
     exportSelectedWorkflow,
-    getCurrentWorkflowSaveDialogSummary,
-    getWorkflowSaveDialogSummaryForManifest,
-    hasWorkflowSaveDiffForManifest,
     importWorkflowFile,
     navigationBlocker,
     openWorkflowCreationMode,
     openWorkflowSaveDialog,
-    persistWorkflowSave,
     revertWorkflowSaveDialogChange,
     runTrigger,
     saveBeforeNavigation,
-    saveWorkflow,
     saveWorkflowTitle,
     selectRun,
     setWorkflowEnabled,
-    shouldBlockWorkflowNavigation,
     testTriggerNode,
   } = useWorkflowPageActions({
     builderPrompt,

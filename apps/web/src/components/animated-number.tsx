@@ -2,7 +2,7 @@
 
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, type RefObject } from "react"
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 const ROLL_DURATION = 0.5
@@ -11,14 +11,15 @@ const ROLL_EASE = "power3.out"
 interface RollingDigitProps {
   digit: number
   /** Animate entrance + roll on mount (true for digits added after first render). */
-  animateOnMount: boolean
+  /** Set after the number first mounts, so later columns slide in. */
+  numberMountedRef: RefObject<boolean>
 }
 
 /**
  * A single odometer-style digit: a vertical strip of 0-9 that translates so the
  * active digit sits in a 1em tall window. Roll the strip on value change.
  */
-function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
+function RollingDigit({ digit, numberMountedRef }: RollingDigitProps) {
   const columnRef = useRef<HTMLSpanElement>(null)
   const stripRef = useRef<HTMLSpanElement>(null)
   const isFirstRun = useRef(true)
@@ -37,7 +38,7 @@ function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
       if (isFirstRun.current) {
         isFirstRun.current = false
 
-        if (!animateOnMount) {
+        if (!numberMountedRef.current) {
           gsap.set(strip, { yPercent: targetY })
 
           return
@@ -66,7 +67,7 @@ function RollingDigit({ digit, animateOnMount }: RollingDigitProps) {
         overwrite: "auto",
       })
     },
-    { dependencies: [digit, animateOnMount] },
+    { dependencies: [digit, numberMountedRef] },
   )
 
   return (
@@ -101,7 +102,6 @@ export function AnimatedNumber({ value, className }: AnimatedNumberProps) {
 
   const safeValue = Math.max(0, Math.trunc(value))
   const digits = String(safeValue).split("").map(Number)
-  const animateOnMount = hasMounted.current
 
   return (
     <span className={`inline-flex tabular-nums leading-none ${className ?? ""}`}>
@@ -111,7 +111,7 @@ export function AnimatedNumber({ value, className }: AnimatedNumberProps) {
           // higher-order digit doesn't reshuffle the existing columns.
           const placeValue = digits.length - 1 - index
 
-          return <RollingDigit key={placeValue} digit={digit} animateOnMount={animateOnMount} />
+          return <RollingDigit key={placeValue} digit={digit} numberMountedRef={hasMounted} />
         })}
       </span>
       <span className="sr-only">{safeValue}</span>

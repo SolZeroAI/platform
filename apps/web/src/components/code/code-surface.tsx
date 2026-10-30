@@ -73,20 +73,26 @@ export function CodeSurface({
   const ariaLabel = `${dialogDescription ?? actionLabel}: ${title}`
   const openDialog = () => setOpen(true)
 
-  useEffect(() => {
-    if (!open) {
-      return
+  // Load the value into the dialog while rendering when it opens or the value changes.
+  const openValue = open ? value : null
+  const [loadedOpenValue, setLoadedOpenValue] = useState<string | null>(null)
+
+  if (loadedOpenValue !== openValue) {
+    setLoadedOpenValue(openValue)
+
+    if (openValue !== null) {
+      setDraft(openValue)
+      setFormatError(null)
+      setCopied(false)
     }
+  }
 
-    setDraft(value)
-    setFormatError(null)
-    setCopied(false)
-  }, [open, value])
+  if (!open && dialogContentReady) {
+    setDialogContentReady(false)
+  }
 
   useEffect(() => {
     if (!open) {
-      setDialogContentReady(false)
-
       return
     }
 

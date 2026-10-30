@@ -2,6 +2,7 @@ import { Badge, type BadgeVariant } from "@cloudflare/kumo/components/badge"
 import { Button } from "@cloudflare/kumo/components/button"
 import { type AdminSessionDetailResponse } from "@solzero/api"
 import { RotateCcw, X } from "lucide-react"
+import { useState } from "react"
 import { CodeSurface } from "@/components/code"
 import { type WorkflowRunDetail } from "@/lib/admin-console"
 import { IconButton } from "./table-controls"
@@ -57,6 +58,9 @@ export function RunDetailDrawer({
   onSelectRun: (runId: string) => void
   onRetry: (runId: string) => void
 }) {
+  // Running runs show their duration as of when the drawer opened.
+  const [openedAt] = useState(() => Date.now())
+
   const selectedRun =
     detail.runs.find((run) => run.id === detail.selectedRunId) ?? detail.runs[0] ?? null
 
@@ -103,7 +107,7 @@ export function RunDetailDrawer({
               ["Version", `v${selectedRun.workflowVersion}`],
               [
                 "Duration",
-                formatDuration(selectedRun.startedAt, selectedRun.completedAt ?? Date.now()),
+                formatDuration(selectedRun.startedAt, selectedRun.completedAt ?? openedAt),
               ],
               ["Updated", formatTime(selectedRun.updatedAt)],
               ["Agents", sessionIds.join(", ") || "none"],

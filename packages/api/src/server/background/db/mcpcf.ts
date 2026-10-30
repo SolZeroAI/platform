@@ -399,12 +399,12 @@ export class McpcfRegistryStore {
 
     const deploymentValue = getS0DeploymentConfig<S0McpcfConfig>(this.env, S0_CONFIG_BINDINGS.mcpcf)
 
-    const store = this
+    const { s0Config } = this
 
     return yield* Option.match(deploymentValue, {
       onNone: () =>
         Effect.gen(function* () {
-          const value = yield* store.s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
+          const value = yield* s0Config.getJson(S0_CONFIG_KEYS.mcpcf.config)
           const configured = Option.isSome(value)
 
           const source = Match.value(configured).pipe(
@@ -451,12 +451,12 @@ export class McpcfRegistryStore {
       Option.fromNullishOr(config.adminApiToken),
     )
 
-    const store = this
+    const { s0Config } = this
 
     return yield* Option.match(deploymentTokenReference, {
       onNone: () =>
         Effect.gen(function* () {
-          const configured = yield* store.s0Config.encryptedSecretConfigured(
+          const configured = yield* s0Config.encryptedSecretConfigured(
             S0_CONFIG_KEYS.mcpcf.adminApiToken,
           )
 
@@ -501,20 +501,18 @@ export class McpcfRegistryStore {
       Option.fromNullishOr(config.adminApiToken),
     )
 
-    const store = this
+    const { s0Config } = this
 
     return yield* Option.match(deploymentTokenReference, {
       onNone: () =>
         Effect.gen(function* () {
-          const configured = yield* store.s0Config.encryptedSecretConfigured(
+          const configured = yield* s0Config.encryptedSecretConfigured(
             S0_CONFIG_KEYS.mcpcf.adminApiToken,
           )
 
           const adminApiToken = yield* Match.value(configured).pipe(
             Match.when(false, () => Effect.succeed(Option.none<string>())),
-            Match.orElse(() =>
-              store.s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken),
-            ),
+            Match.orElse(() => s0Config.getEncryptedSecret(S0_CONFIG_KEYS.mcpcf.adminApiToken)),
           )
 
           const source = Match.value(configured).pipe(

@@ -25,7 +25,7 @@ import {
   rectangularSelection,
 } from "@codemirror/view"
 import shiki from "codemirror-shiki"
-import { useEffect, useMemo, useRef } from "react"
+import { type RefObject, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import { useTheme } from "@/lib/theme"
 import type { CodeLanguage } from "./code-utils"
 import { CODE_THEME, getCodeHighlighter } from "./highlighter"
@@ -90,6 +90,21 @@ function getLanguageExtensions(language: CodeLanguage) {
   }
 }
 
+/** Reports document edits to the latest onChange, unless the editor is applying an outside value. */
+function changeListener(input: {
+  readonly onChangeRef: RefObject<CodeEditorProps["onChange"]>
+  readonly readOnly: boolean
+  readonly suppressChangeRef: RefObject<boolean>
+}) {
+  return EditorView.updateListener.of((update) => {
+    if (!update.docChanged || input.suppressChangeRef.current || input.readOnly) {
+      return
+    }
+
+    input.onChangeRef.current?.(update.state.doc.toString())
+  })
+}
+
 export function CodeEditor({
   value,
   language,
@@ -106,8 +121,10 @@ export function CodeEditor({
   const { resolvedTheme } = useTheme()
   const theme = CODE_THEME[resolvedTheme]
 
-  onChangeRef.current = onChange
-  valueRef.current = value
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange
+    valueRef.current = value
+  })
 
   const extensions = useMemo(
     () => [
@@ -145,13 +162,6 @@ export function CodeEditor({
               theme,
             }),
           ]),
-      EditorView.updateListener.of((update) => {
-        if (!update.docChanged || suppressChangeRef.current || readOnly) {
-          return
-        }
-
-        onChangeRef.current?.(update.state.doc.toString())
-      }),
     ],
     [language, readOnly, theme],
   )
@@ -163,7 +173,10 @@ export function CodeEditor({
 
     const view = new EditorView({
       parent: containerRef.current,
-      state: EditorState.create({ doc: valueRef.current, extensions }),
+      state: EditorState.create({
+        doc: valueRef.current,
+        extensions: [...extensions, changeListener({ onChangeRef, readOnly, suppressChangeRef })],
+      }),
     })
 
     viewRef.current = view
@@ -184,7 +197,7 @@ export function CodeEditor({
         viewRef.current = null
       }
     }
-  }, [autoFocus, extensions])
+  }, [autoFocus, extensions, readOnly])
 
   useEffect(() => {
     const view = viewRef.current

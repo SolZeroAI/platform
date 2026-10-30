@@ -379,6 +379,7 @@ export function McpSettings({
     [],
   )
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table's API returns functions by design, and this app does not run the React Compiler.
   const table = useReactTable({
     data: servers,
     columns,

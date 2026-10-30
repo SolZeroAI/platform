@@ -1,7 +1,7 @@
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
 import type { OpenCodeInteractionResponse, SandboxEvent } from "@solzero/shared"
 import { ChevronRight, MessageSquare, ShieldQuestion, X } from "lucide-react"
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
+import { useCallback, useId, useMemo, useState } from "react"
 import { AnimatedLayerCardPrimary } from "@/components/expandable-layer-card"
 
 export function InteractionRequestItem({
@@ -22,24 +22,34 @@ export function InteractionRequestItem({
   const contentId = useId()
   const [isExpanded, setIsExpanded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const userToggledRef = useRef(false)
+  const [userToggled, setUserToggled] = useState(false)
   const isPending = response == null
   const title = event.title || (event.kind === "permission" ? "Permission requested" : "Question")
 
-  useEffect(() => {
+  const collapseSource = `${isPending}:${isProcessing}`
+  const [shownCollapseSource, setShownCollapseSource] = useState(collapseSource)
+  let toggled = userToggled
+
+  if (shownCollapseSource !== collapseSource) {
+    setShownCollapseSource(collapseSource)
+
     if (!isProcessing || !isPending) {
-      userToggledRef.current = false
+      toggled = false
+      setUserToggled(false)
       setIsExpanded(false)
     }
-  }, [isPending, isProcessing])
+  }
 
-  useEffect(() => {
-    if (userToggledRef.current) {
-      return
+  const expandSource = `${isPending}:${isStreamingFocus}`
+  const [shownExpandSource, setShownExpandSource] = useState<string | null>(null)
+
+  if (shownExpandSource !== expandSource) {
+    setShownExpandSource(expandSource)
+
+    if (!toggled) {
+      setIsExpanded(isPending && isStreamingFocus)
     }
-
-    setIsExpanded(isPending && isStreamingFocus)
-  }, [isPending, isStreamingFocus])
+  }
 
   const submitResponse = useCallback(
     (nextResponse: OpenCodeInteractionResponse) => {
@@ -59,7 +69,7 @@ export function InteractionRequestItem({
           <button
             type="button"
             onClick={() => {
-              userToggledRef.current = true
+              setUserToggled(true)
               setIsExpanded((expanded) => !expanded)
             }}
             aria-expanded={isExpanded}

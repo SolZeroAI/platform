@@ -616,19 +616,12 @@ function getStoredSessionToolKind(rawTool: unknown): string | null {
   return typeof kind === "string" ? kind : null
 }
 
+function isSessionToolKind(kind: string): kind is keyof SessionToolRegistry {
+  return Object.hasOwn(SESSION_TOOL_REGISTRY, kind)
+}
+
 function getSessionToolDefinition(kind: string): SessionToolDefinition | undefined {
-  switch (kind) {
-    case "github_repo":
-      return SESSION_TOOL_REGISTRY.github_repo
-    case AI_SEARCH_SESSION_TOOL_KIND:
-      return SESSION_TOOL_REGISTRY[AI_SEARCH_SESSION_TOOL_KIND]
-    case MCPCF_SESSION_TOOL_KIND:
-      return SESSION_TOOL_REGISTRY[MCPCF_SESSION_TOOL_KIND]
-    case "workflow_builder":
-      return SESSION_TOOL_REGISTRY.workflow_builder
-    default:
-      return undefined
-  }
+  return isSessionToolKind(kind) ? SESSION_TOOL_REGISTRY[kind] : undefined
 }
 
 function normalizeSessionTool(rawTool: unknown): SessionToolSpec {

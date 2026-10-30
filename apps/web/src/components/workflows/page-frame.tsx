@@ -74,7 +74,6 @@ export function WorkflowsPageFrame(input: any) {
     nodePickerCollapsed,
     nodes,
     onConnect,
-    onEdgesChange,
     onNodesChange,
     openNodeCatalog,
     openWorkflowConfigError,
