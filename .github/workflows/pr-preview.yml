@@ -77,7 +77,6 @@ jobs:
       APP_DB_MODE: ${{ vars.APP_DB_MODE || 'remote' }}
       PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
     permissions:
-      actions: read
       contents: read
       pull-requests: write
     steps:
@@ -165,24 +164,6 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
           PREVIEW_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
 
-      - name: Capture preview resource ownership
-        id: preview-ownership
-        if: steps.deploy.outcome == 'success'
-        env:
-          ALCHEMY_STAGE: ${{ steps.deploy-lifetime.outputs.stage }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          node scripts/preview-absence.mjs capture
-
-      - name: Preserve ephemeral preview ownership
-        if: steps.preview-ownership.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: preview-ownership-${{ steps.deploy-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .e2e/preview-${{ steps.deploy-lifetime.outputs.stage }}-ownership.json
-          retention-days: 90
-
       - name: Find existing comment
         if: ${{ steps.deploy.outcome == 'success' }}
         id: find-comment
@@ -232,7 +213,6 @@ jobs:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
       DATABASE: d1
     permissions:
-      actions: read
       contents: read
       pull-requests: write
     steps:
@@ -286,22 +266,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/preview-lifecycle.mjs cleanup
 
-      - name: Restore verified preview ownership evidence
-        if: steps.cleanup-lifetime.outputs.permitted == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-        run: node scripts/preview-ownership.mjs
-
-      - name: Capture remaining preview resource ownership
-        id: preview-ownership
-        if: steps.cleanup-lifetime.outputs.permitted == 'true'
-        env:
-          ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/preview-absence.mjs capture
-
       - name: Clean up preview
         id: cleanup
         if: steps.cleanup-lifetime.outputs.permitted == 'true'
@@ -313,24 +277,14 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
           PREVIEW_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
 
-      - name: Verify all captured preview resources are absent
+      - name: Verify that no preview resources remain
         id: cleanup-verified
-        if: steps.cleanup.outcome == 'success'
+        if: ${{ always() && steps.cleanup-lifetime.outputs.permitted == 'true' }}
         env:
           ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/preview-absence.mjs verify
-
-      - name: Preserve preview cleanup evidence for retry
-        if: always() && steps.preview-ownership.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: preview-ownership-${{ steps.cleanup-lifetime.outputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            .e2e/preview-${{ steps.cleanup-lifetime.outputs.stage }}-ownership.json
-            .e2e/preview-cleanup-summary.json
-          retention-days: 90
+        run: node scripts/preview-verify.mjs
 
       - name: Find existing comment
         if: ${{ github.event_name == 'pull_request_target' }}
@@ -342,7 +296,7 @@ jobs:
           body-includes: "<!-- infra-preview -->"
 
       - name: Update comment with cleanup status
-        if: steps.cleanup-verified.outcome == 'success' && steps.find-comment.outputs.comment-id != ''
+        if: steps.cleanup.outcome == 'success' && steps.cleanup-verified.outcome == 'success' && steps.find-comment.outputs.comment-id != ''
         uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
