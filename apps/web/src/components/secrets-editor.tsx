@@ -31,13 +31,8 @@ export type SecretRow = {
 }
 
 function createRow(partial?: Partial<SecretRow>): SecretRow {
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2)
-
   return {
-    id,
+    id: crypto.randomUUID(),
     key: "",
     value: "",
     tags: [],

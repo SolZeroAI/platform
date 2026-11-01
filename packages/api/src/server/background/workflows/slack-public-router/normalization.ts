@@ -16,6 +16,17 @@ import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import { log } from "./log"
 
+// Workers adds SubtleCrypto.timingSafeEqual. The DOM lib interface needs the same method
+// so this Worker call typechecks.
+declare global {
+  interface SubtleCrypto {
+    timingSafeEqual(
+      left: ArrayBuffer | ArrayBufferView,
+      right: ArrayBuffer | ArrayBufferView,
+    ): boolean
+  }
+}
+
 const SLACK_SIGNATURE_VERSION = "v0"
 const SLACK_SIGNATURE_TOLERANCE_SECONDS = 5 * 60
 const EVENTS_PATTERN = /^\/workflows\/slack-apps\/(?<appId>[^/]+)\/events$/
@@ -248,19 +259,28 @@ const signHex = Effect.fn("workflows.slack.signHex")(function* (message: string,
   )
 })
 
-function timingSafeEqual(left: string, right: string): boolean {
-  return Match.value(left.length !== right.length).pipe(
-    Match.when(true, () => false),
-    Match.orElse(
-      () =>
-        Arr.reduce(
-          Arr.makeBy(left.length, (index) => left.charCodeAt(index) ^ right.charCodeAt(index)),
-          0,
-          (accumulator, value) => accumulator | value,
-        ) === 0,
-    ),
+const signaturesMatch = Effect.fn("workflows.slack.signaturesMatch")(function* (
+  provided: string,
+  expected: string,
+) {
+  const encoder = new TextEncoder()
+
+  const [providedHash, expectedHash] = yield* Effect.all(
+    [
+      Effect.tryPromise({
+        try: () => crypto.subtle.digest("SHA-256", encoder.encode(provided)),
+        catch: toError,
+      }),
+      Effect.tryPromise({
+        try: () => crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+        catch: toError,
+      }),
+    ],
+    { concurrency: "unbounded" },
   )
-}
+
+  return crypto.subtle.timingSafeEqual(providedHash, expectedHash)
+})
 
 export const verifySlackSignatureHmac = Effect.fn("workflows.slack.verifySignatureHmac")(function* (
   input: { body: string; signingSecret: string },
@@ -269,8 +289,9 @@ export const verifySlackSignatureHmac = Effect.fn("workflows.slack.verifySignatu
 ) {
   const baseString = `${SLACK_SIGNATURE_VERSION}:${timestamp}:${input.body}`
   const expected = `${SLACK_SIGNATURE_VERSION}=${yield* signHex(baseString, input.signingSecret)}`
+  const matches = yield* signaturesMatch(signature, expected)
 
-  return Match.value(timingSafeEqual(signature, expected)).pipe(
+  return Match.value(matches).pipe(
     Match.when(false, () => json({ error: "Invalid Slack request signature" }, 401)),
     Match.orElse(
       () =>
