@@ -1,6 +1,6 @@
 ---
 name: effect-httpapi-workers-patterns
-description: Build, refactor, or review Effect v4 HttpApi services on Cloudflare Workers. Use when working with effect/unstable/httpapi, HttpApiBuilder, generated Effect clients, typed API contracts, request context, tagged errors, Worker observability, Maple, OpenTelemetry, OTLP, or Cloudflare logs and traces.
+description: Build, refactor, or review Effect v4 HttpApi services on Cloudflare Workers. Use when working with effect/http-api, HttpApiBuilder, generated Effect clients, typed API contracts, request context, tagged errors, Worker observability, OpenTelemetry, OTLP, or Cloudflare logs and traces.
 ---
 
 # Effect HttpApi Workers Patterns
@@ -12,6 +12,7 @@ Use this skill when editing or reviewing an Effect HttpApi stack, generated Effe
 - Keep API contracts separate from server implementation.
   - Contract modules define `HttpApi`, `HttpApiGroup`, endpoints, schemas, tagged errors, and security declarations.
   - Server route modules only implement `HttpApiBuilder.group(...)` live layers.
+- Import `HttpApi`, `HttpApiBuilder`, `HttpApiClient`, and `HttpApiMiddleware` from `effect/http-api`. This repository pins Effect 4.0.3, which does not export `effect/unstable/httpapi` or `effect/httpapi`.
 - Prefer named `Schema.Class` response/request types and `Schema.TaggedError` errors with `httpApiStatus`.
 - Avoid broad `JsonRecord`, `AnyJson`, and generic `{ error: string }` contracts for real endpoints.
 - If a generated client requires `unknown` or extra services, fix the schema contract instead of casting at the call site.
@@ -44,16 +45,9 @@ Use this skill when editing or reviewing an Effect HttpApi stack, generated Effe
   - Production should use metadata/configurable rates.
   - Keep invocation logs enabled until application logs are proven complete.
 - Use Cloudflare Observability destinations for platform OTEL export when possible.
-- If also exporting Effect app spans/logs via `effect/unstable/observability/Otlp`, pass a base OTLP URL. Do not pass a URL that already ends in `/v1/traces`, `/v1/logs`, or `/v1/metrics` because Effect appends those paths.
-- Keep OTLP headers and tokens in secrets/env vars; never in source or non-secret metadata.
-
-## Maple With Effect
-
-- Use `@maple-dev/effect-sdk/cloudflare` for Worker-local Effect logs and traces.
-- Provide the Maple telemetry layer to the same runtime that runs route handlers; do not run route telemetry in a separate runtime.
-- Flush Maple telemetry at the Worker request boundary with `ctx.waitUntil(telemetry.flush(env))` after the response path has scheduled its Effect logs/spans.
-- In local dev, use `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` and run `maple start` before the app dev command.
-- Avoid duplicate exports: route code should use Effect logs/spans, the Worker should provide one Maple layer, and Cloudflare Worker Observability should remain the platform collection path for deployed stages.
+- If a Worker also exports Effect app spans or logs, import `Otlp` from `effect/observability/Otlp`. Pass a base OTLP URL. Do not pass a URL that already ends in `/v1/traces`, `/v1/logs`, or `/v1/metrics`, because Effect appends those paths.
+- Keep OTLP headers and tokens in secrets or env vars. Never put them in source or non-secret metadata.
+- This repository does not install Maple (`@maple-dev/effect-sdk`). Deployed logs and traces go through Cloudflare Worker Observability. Do not add a Maple layer or a local `maple start` collector here.
 
 ## Cloudflare Workers General
 
