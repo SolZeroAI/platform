@@ -123,36 +123,39 @@ nub run typecheck   # Type check
 
 ## Programmatic Client
 
-For headless or script usage, the `BackgroundSessionsClient` is available:
+Scripts call the typed `S0Api` client, `makeS0ApiClient` from `@solzero/api`. Pass a user API key
+as `bearerToken`. User API keys start with `oiak_`, and the client sends `Authorization: Bearer`.
 
 ```ts
-import { BackgroundSessionsClient } from "./src/session-client"
+import { Effect } from "effect"
+import { makeS0ApiClient } from "@solzero/api"
 
-const apiKey = process.env.S0_API_KEY
-if (!apiKey) {
-  throw new Error("S0_API_KEY is required")
+function createSession(apiKey: string) {
+  return Effect.gen(function* () {
+    const client = yield* makeS0ApiClient({
+      baseUrl: "http://localhost:3000/api",
+      bearerToken: apiKey,
+    })
+
+    return yield* client.sessions.create({
+      payload: {
+        sessionKind: "isolate",
+        repoOwner: "cloudflare",
+        repoName: "sandbox-sdk",
+        title: "Investigate flaky e2e test",
+      },
+    })
+  })
 }
-
-const client = new BackgroundSessionsClient({
-  auth: { kind: "api-key", apiKey },
-  baseUrl: "http://localhost:3000/api",
-})
-
-const session = await client.createSession({
-  repoOwner: "cloudflare",
-  repoName: "sandbox-sdk",
-  title: "Investigate flaky e2e test",
-})
 ```
 
-Browser code should instead use `auth: { kind: "browser-session" }` with the same-origin
-`/api` BFF. Do not embed a user API key in a browser bundle.
+Browser code uses `runApi` from `src/lib/api-client.ts`. That client calls the same-origin `/api`
+prefix and sends the session cookie. Do not embed a user API key in a browser bundle.
 
-## API Routes
+## API
 
-- `/api/auth/api-keys` - create/list user API keys
-- `/api/auth/[...all]` - Better Auth proxy routes
-- `/api/sessions` - Session CRUD (proxies to control plane)
-- `/api/sessions/[id]/*` - Session archive, prompt, ws-token (proxies)
-- `/api/repos` - Repository list (proxies)
-- `/api/secrets` - Global secrets (proxies)
+`S0Api` in `@solzero/api` is the public HTTP contract. Callers use the `/api` prefix on the web
+origin. A deployed Cloudflare stage sends `/api` to the API Worker on a path route. Local
+development and `workers.dev` ingress use the TanStack `/api/$` route, which forwards the request
+through the `S0_API` service binding. The binding uses the same Worker entrypoint and the same
+endpoint authentication.

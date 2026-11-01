@@ -27,6 +27,7 @@ export function controlPlaneAuthClient(options: { bearerToken?: string | Redacte
   )
 }
 
+/** Builds the typed `S0Api` client. `bearerToken` is sent as `Authorization: Bearer`. */
 export function makeS0ApiClient(options: {
   baseUrl: string | URL
   bearerToken?: string | Redacted.Redacted
