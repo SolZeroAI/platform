@@ -71,20 +71,6 @@ export function useAuthSession() {
   }
 }
 
-export async function signInWithOAuth(providerId: string, callbackURL = "/") {
-  return authClient.signIn.social({
-    provider: providerId,
-    callbackURL,
-  })
-}
-
-export async function signInWithSocial(providerId: string, callbackURL = "/") {
-  return authClient.signIn.social({
-    provider: providerId,
-    callbackURL,
-  })
-}
-
 export async function linkOAuthProvider(
   providerId: string,
   callbackURL: string,

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router"
 import { ArrowUp, ChevronDown, FolderGit2, KeyRound, Wrench } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import {
+  formatAgentRuntimeLabel,
   getGitHubRepoTool,
   type AgentRuntime,
   type OpenCodeMcpServers,
@@ -44,12 +45,7 @@ import {
   REPOSITORY_TOOLBAR_CLASS_NAME,
   SECRETS_TOOLBAR_CLASS_NAME,
 } from "./page"
-import {
-  AgentRuntimeDialog,
-  AgentRuntimeIcon,
-  addCopyableToast,
-  formatRuntimeLabel,
-} from "./session-kind"
+import { AgentRuntimeDialog, AgentRuntimeIcon, addCopyableToast } from "./session-kind"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 export type HomeContentProps = {
@@ -234,7 +230,7 @@ export function HomeContent({
       ? "Secrets: none attached"
       : `Secrets: ${selectedSecretKeys.length} attached`
 
-  const selectedAgentRuntimeLabel = formatRuntimeLabel(selectedAgentRuntime)
+  const selectedAgentRuntimeLabel = formatAgentRuntimeLabel(selectedAgentRuntime)
   const selectedModelLabel = selectedModelOption?.name || "select model"
   const selectedReasoningLabel = getSelectedReasoningLabel(selectedModelOption, reasoningEffort)
 
