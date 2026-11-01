@@ -13,8 +13,6 @@ import {
   authClient,
   AuthProviderConfigProvider,
   AuthSessionProvider,
-  signInWithOAuth,
-  signInWithSocial,
   useAuthSession,
 } from "@/lib/auth-client"
 import { loadAuthenticatedShellForRoute } from "@/lib/authenticated-shell.functions"
@@ -125,9 +123,10 @@ export function SignInPage({
     try {
       const callbackURL = getCurrentAuthCallback()
 
-      const result = await (provider.kind === "social"
-        ? signInWithSocial(provider.id, callbackURL)
-        : signInWithOAuth(provider.id, callbackURL))
+      const result = await authClient.signIn.social({
+        provider: provider.id,
+        callbackURL,
+      })
 
       if (result.error) {
         showErrorToast(result.error.message ?? "Sign-in failed")
