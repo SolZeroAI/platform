@@ -68,33 +68,10 @@ function normalizeTags(tags: readonly string[] | undefined): string[] {
   return [...normalized].sort()
 }
 
-const popularTagOrder = Order.combine(
-  Order.mapInput(Order.flip(Order.Number), (entry: readonly [string, number]) => entry[1]),
-  Order.mapInput(localeStringOrder, (entry: readonly [string, number]) => entry[0]),
-)
-
 const tagStatOrder = Order.combine(
   Order.mapInput(Order.flip(Order.Number), (row: { tag: string; count: number }) => row.count),
   Order.mapInput(localeStringOrder, (row: { tag: string; count: number }) => row.tag),
 )
-
-export function rankPopularTags(secrets: readonly SecretMetadata[], limit = 5): string[] {
-  const counts = new Map<string, number>()
-  secrets.forEach((secret) =>
-    secret.tags.forEach((tag) => {
-      const trimmed = tag.trim()
-      Option.match(Option.fromNullishOr(trimmed).pipe(Option.filter(Boolean)), {
-        onNone: () => undefined,
-        onSome: (value) => counts.set(value, (counts.get(value) ?? 0) + 1),
-      })
-    }),
-  )
-
-  return [...counts.entries()]
-    .sort(popularTagOrder)
-    .slice(0, limit)
-    .map(([tag]) => tag)
-}
 
 export function filterSecretMetadata(
   secrets: readonly SecretMetadata[],

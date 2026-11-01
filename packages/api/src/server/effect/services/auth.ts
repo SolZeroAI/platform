@@ -154,5 +154,3 @@ export function requestFromSource(request: HttpServerRequest.HttpServerRequest) 
     ),
   )
 }
-
-export const getWebRequest = Effect.map(CurrentRequest, requestFromSource)
