@@ -195,7 +195,7 @@ export function acceptClientSocketWithAuth(
   host: SessionDODelegate,
   server: WebSocket,
 ): Promise<void> {
-  const wsId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const wsId = crypto.randomUUID()
   host.wsManager.acceptClientSocket(server, wsId)
   host.ctx.waitUntil(host.wsManager.enforceAuthTimeout(server, wsId))
 

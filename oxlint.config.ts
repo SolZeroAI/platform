@@ -44,6 +44,17 @@ export default defineConfig({
     "anti-slop/no-unknown-parameters": "off",
     "anti-slop/no-unknown-returns": "off",
     "anti-slop/no-unsafe-dictionary-type": "off",
+    // Workers Web Crypto supplies randomUUID and getRandomValues. Math.random is not a
+    // cryptographic generator, so identifiers and random bytes go through crypto instead.
+    "no-restricted-properties": [
+      "error",
+      {
+        object: "Math",
+        property: "random",
+        message:
+          "Use crypto.randomUUID() for identifiers and crypto.getRandomValues() for random bytes.",
+      },
+    ],
   },
   overrides: [
     {
