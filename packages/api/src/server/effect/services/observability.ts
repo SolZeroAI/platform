@@ -492,10 +492,6 @@ export function annotateCurrentUserIdentity(identity: {
   })
 }
 
-export function annotateCurrentUserId(userId: string) {
-  return annotateCurrentUserIdentity({ userId })
-}
-
 export function observabilityLayer(options: {
   readonly logFormat: "pretty" | "json"
   readonly consoleOutputEnabled: boolean
@@ -513,11 +509,6 @@ export function observabilityLayer(options: {
       ]),
     ),
   )
-}
-
-export function resetApiTelemetryForTests(): void {
-  // Test helper retained for callers that reset global observability state.
-  // Cloudflare-native export is configured on the Worker and has no SDK cache to clear.
 }
 
 export function makeEffectLoggerLayer(options: {

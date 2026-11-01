@@ -119,5 +119,3 @@ export const getPublicAuthProviderRegistry = Effect.fn("authConfig.getPublicAuth
     ) satisfies PublicAuthProviderRegistry
   },
 )
-
-export const getStoredAuthProviderRegistryForTesting = getStoredAuthProviderRegistry
