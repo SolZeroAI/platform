@@ -3,6 +3,7 @@ import { web } from "@e2e-dev/web"
 import { github } from "@e2e-dev/github"
 import { decisionExecutor, decisionFilter } from "@e2e-dev/decision"
 import { appEnvironment } from "./scripts/e2e/environment"
+import { ignoreUnobservedChanges } from "./scripts/e2e/filters"
 import { e2eModels } from "./scripts/e2e/models"
 
 // The suite calls the account's existing default AI Gateway. The token is
@@ -76,7 +77,7 @@ export default {
   },
   credentials,
   secrets,
-  filters: [decisionFilter({ model: decisionModel })],
+  filters: [ignoreUnobservedChanges(decisionFilter({ model: decisionModel }))],
   workers: 1,
   // A second attempt asks the models again, because the gateway does not cache
   // responses.

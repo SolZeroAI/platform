@@ -324,6 +324,12 @@ decision filter keeps only the tests the diff can affect. A change to `e2e.confi
 lockfile keeps every test, and a diff that affects no test passes with no tests. Pushes
 and manual runs run every core test. Preview the pull request selection with
 `nub run test:e2e:list --changed-since origin/master` after you commit.
+`scripts/e2e/filters.ts` removes agent tooling (`.agents/`, `.claude/`,
+`skills-lock.json`, `AGENTS.md`, `CLAUDE.md`) and release files (`VERSION`,
+`CHANGELOG.md`, `.tegami/`) from the diff before the decision filter reads it. A skills
+refresh or a Tegami version pull request then runs no test. Without this step, a large
+skills diff goes past the decision filter's 60 kB limit and every test runs. Keep
+`filters.ts` identical in every SolZero repository.
 On master, a newer commit cancels the older commit's validation and e2e jobs, so only the
 newest commit runs the suite. When every change since the last successful master Validate
 run is in `VERSION`, `CHANGELOG.md` and `.tegami/` (the Tegami version commit), the push runs
