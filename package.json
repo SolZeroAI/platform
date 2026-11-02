@@ -86,7 +86,7 @@
     "@cloudflare/workers-types": "^4.20260702.1",
     "@e2e-dev/decision": "0.3.0",
     "@e2e-dev/github": "0.4.3",
-    "@e2e-dev/web": "0.15.3",
+    "@e2e-dev/web": "0.15.4",
     "@electric-sql/pglite": "0.4.5",
     "@electric-sql/pglite-socket": "0.1.5",
     "@modelcontextprotocol/sdk": "1.32.0",
@@ -155,7 +155,6 @@
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
     "alchemy@2.0.0-beta.81": "patches/alchemy@2.0.0-beta.81.patch",
     "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch",
-    "e2e@0.21.3": "patches/e2e@0.21.3.patch",
-    "@e2e-dev/web@0.15.3": "patches/@e2e-dev+web@0.15.3.patch"
+    "e2e@0.21.3": "patches/e2e@0.21.3.patch"
   }
 }

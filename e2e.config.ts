@@ -50,9 +50,10 @@ export default {
   targets: [
     {
       name: "local-cloudflare",
-      engine: web({ permissions: ["clipboard-read", "clipboard-write"] }),
+      engine: web(),
       app: {
         url: "http://localhost:3000",
+        permissions: { "clipboard-read": "grant", "clipboard-write": "grant" },
         environment: "test",
         command: {
           executable: "nub",
