@@ -78,8 +78,8 @@ flowchart TB
     direction LR
     WebStack["Web<br/>React + TanStack Start/Router<br/>Kumo UI + Tailwind + Vite"]
     ApiStack["Backend<br/>TypeScript + Effect + Effect HttpApi<br/>Better Auth + Drizzle ORM + MCP SDK"]
-    AgentStack["Cloudflare AI stack<br/>Agents SDK + Think + Shell + Code Mode<br/>Dynamic Workflows + Containers + Workers AI provider + AI SDK"]
-    DeliveryStack["Delivery and quality<br/>Alchemy v2 + Nub + Turbo + Wrangler<br/>Oxc: Oxlint + Oxfmt<br/>TypeScript + Vitest"]
+    AgentStack["Cloudflare AI stack<br/>Agents SDK + Think + Shell + Code Mode<br/>Dynamic Workflows + Containers + Agents createAI + AI SDK"]
+    DeliveryStack["Delivery and quality<br/>Alchemy v2 + Nub + Turbo + Wrangler<br/>Oxc: Oxlint + Oxfmt<br/>TypeScript + tester-army/e2e"]
   end
 
   WebEntry --> WebWorker

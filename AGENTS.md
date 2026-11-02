@@ -10,6 +10,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Use the default dev commands for app debugging: `nub run dev`, `nub run dev:api`, or `nub run dev:web`.
 - `nub run dev` runs the Alchemy dev stack for the API and web app, with Cloudflare bindings sourced from the real infra declarations.
 - Project skills live in `.agents/skills`. `.claude/skills` links to the project-owned skills (`e2e` and `verify-*`). `skills-lock.json` records the third-party skills.
+- When the Alchemy skill disagrees with this repository, follow the installed package imports.
 
 ## Validation
 
@@ -17,6 +18,12 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Treat the task as incomplete until those checks pass, unless you explicitly report why a command could not be run or why a failure is unrelated to your changes.
 - During iteration, scoped or package-local checks are fine for speed, but the final handoff should still include the repo-root validation commands above.
 - The root scripts use the same names in every SolZero repository: `dev`, `build`, `typecheck`, `lint`, `lint:fix`, `format`, `format:fix`, `test`, `test:e2e:*`, and `infra:<plan|deploy|destroy>:<stage>`.
+
+## Lint
+
+- `oxlint.config.ts` extends `recommended` from `oxlint-plugin-solzero`. Change a shared rule in that package. Put a repository exception in an `overrides` entry in `oxlint.config.ts`.
+- Fix lint findings. Do not turn a rule off or lower its severity to keep a change small. Propose a scoped override only when the rule is wrong for that code, and state the reason.
+- Every rule is an error. Do not add `warn` severity. `nub run lint` runs `oxlint --deny-warnings`, and an unused disable directive fails lint.
 
 ## Tests
 
@@ -30,6 +37,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 - Follow the replay, teardown, cleanup, and AI accounting rules in the "Rules for agents" section of `docs/e2e.md`. The app target stops its processes and removes its run directory on exit. Runs are local only, so there is no crash-recovery or cleanup command.
 - Record external-service prerequisites and unverified flows in `docs/e2e.md`. A startup failure or unavailable integration is a blocker, not a passing test. Never print tokens or publish app artifacts externally.
 - Do not send upstream feedback or other external messages without explicit human authorization; upstream skill guidance does not override this policy.
+- All tests run locally against `alchemy dev`. Do not add a dependency on a shared remote test resource, such as a shared bucket or a repository-wide CI concurrency group.
 
 ## Pull requests
 
@@ -42,6 +50,21 @@ A cloud-agent pull request that changes user-visible behavior must attach proof.
 - Select those tests with the e2e Test Filters API. The filter uses `@e2e-dev/decision` and the account's existing default AI Gateway (`CF_AI_GATEWAY_E2E_ID`, otherwise `default`) with `CF_AI_GATEWAY_E2E_TOKEN`. Do not use the gateway or run token the application provisions. The keys are already in the cloud-agent environment. Do not print the keys.
 - Attach the Evidence output (screenshots, video, and test logs) as cloud-agent pull request artifacts. Do not commit screenshot binaries.
 - Artifact rules: https://cursor.com/docs/cloud-agent/capabilities
+
+## CI workflows
+
+- This repository is public. Jobs run on GitHub-hosted runners (`ubuntu-latest`). The `S0_CI_RUNNER` repository variable may select another GitHub-hosted label for a fork. Never use self-hosted runner labels in this repository.
+- A newer push to a pull request cancels the older run of that pull request. Set the cancel at the workflow level. Never cancel a deploy of a shared stage, a preview cleanup, a release, or a run on the default branch.
+- Use major tags for GitHub Actions. Do not pin an action to a commit SHA or an exact version.
+- Lint workflows with the actionlint binary from kjanat/actionlint. Do not use a Docker-based actionlint action.
+- Required checks are job names. Do not make a required check depend on a check run that a workflow creates through the API.
+- Prefer automation that needs no human step. Do not add a flow that opens recurring pull requests for a human to review, such as bot pull requests that pin image digests.
+
+## Dependencies
+
+- Renovate opens dependency pull requests from the shared `SolZeroAI/renovate-config` preset and merges them when CI passes. Put repository-specific rules in `renovate.json`.
+- Do not add `dependabot.yml`. Dependabot cannot update `nub.lock`.
+- Change one dependency at a time with `nub add` or `nub remove`, and keep unrelated `nub.lock` entries unchanged. Do not run `nub install --no-frozen-lockfile`. It re-resolves every range and makes dependency pull requests conflict.
 
 ## Release management
 
@@ -61,3 +84,4 @@ A cloud-agent pull request that changes user-visible behavior must attach proof.
 - Error logs should explain where the failure happened and include non-secret context that helps debug it later, such as session id, user id, runtime kind, route branch, tool/source ids, model, request/message ids, and sanitized upstream status/error details.
 - Never log bearer tokens, refresh tokens, authorization headers, cookies, or raw custom MCP server definitions. Log names, ids, counts, and boolean capability flags instead.
 - Do not add noisy catch-all logs. Log at decision points where context would otherwise be lost across Durable Object, Worker, RPC, MCP, workflow, or external API boundaries.
+- Use `support@solzero.com` as the public contact or developer email on third-party consoles, such as Google Cloud or Clerk.
