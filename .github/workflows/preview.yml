@@ -56,7 +56,7 @@ jobs:
       group: pre
       cancel-in-progress: false
     if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && !cancelled() && needs.validate.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     environment: pre
     env:

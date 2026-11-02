@@ -28,7 +28,7 @@ jobs:
   deploy:
     name: Deploy
     if: ${{ vars.CLOUDFLARE_DEPLOY == 'true' }}
-    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
     env:
