@@ -93,17 +93,24 @@ jobs:
       - name: Check formatting
         run: nub run format
 
-      # The local reporter prints findings and fails this step, so the
-      # "Repository validation" check reports actionlint. The default
-      # github-pr-check reporter creates a check run through the API. GitHub
-      # adds that run to an older check suite on the same commit, so the pull
-      # request never shows its status.
+      # reviewdog/action-actionlint is a Docker action. Run the kjanat/actionlint
+      # binary in this job instead. Install shellcheck when it is missing so
+      # actionlint still checks run: scripts. The binary prints findings and
+      # fails this step, so the Repository validation check reports actionlint.
+      - name: Install shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends shellcheck
+          fi
+
       - name: Lint GitHub Actions workflows
-        uses: reviewdog/action-actionlint@v1
-        with:
-          reporter: local
-          fail_level: error
-          filter_mode: nofilter
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/actionlint"
+          mkdir -p "${dest}"
+          curl -fsSL https://raw.githubusercontent.com/kjanat/actionlint/master/distribution/install/download-actionlint.bash | bash -s -- latest "${dest}"
+          "${dest}/actionlint"
 
       - name: Collect end-to-end tests
         run: nub run test:e2e:list
