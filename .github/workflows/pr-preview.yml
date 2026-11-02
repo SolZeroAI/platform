@@ -67,7 +67,7 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'preview') &&
         (contains(fromJSON('["synchronize","reopened"]'), github.event.action) || (github.event.action == 'labeled' && github.event.label.name == 'preview'))
       }}
-    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     environment: pre
     env:
@@ -206,7 +206,7 @@ jobs:
           )
         )
       }}
-    runs-on: ${{ vars.S0_CI_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
+    runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     environment: pre
     env:

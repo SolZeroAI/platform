@@ -97,8 +97,8 @@ streaming, WebSockets and observability before cutting over a production hostnam
 
 ## Private deployment CI
 
-The shared templates support `master` only. Set repository variable `S0_CI_RUNNER` to
-`ubuntu-latest` when a fork does not use the default Blacksmith runner. Set repository variable
+The shared templates support `master` only. CI runs on GitHub-hosted `ubuntu-latest` runners.
+Set repository variable `S0_CI_RUNNER` to another runner label to run the deployment and validation jobs there. Set repository variable
 `S0_CONFIG_PROFILE` so static validation checks the fork's profile. In each GitHub environment
 (`pre` or `prod`), set `S0_CONFIG_PROFILE`, `DATABASE`, `APP_DB_MODE`, and
 `PLANETSCALE_ORGANIZATION` as needed. Empty `DATABASE` retains D1. PlanetScale deployments need
