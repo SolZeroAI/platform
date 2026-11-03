@@ -1,5 +1,5 @@
 import { resolve } from "node:path"
-import * as Cloudflare from "alchemy/Cloudflare"
+import * as Cloudflare from "@alchemy.run/cloudflare"
 import * as Match from "effect/Match"
 import type * as Schema from "effect/Schema"
 import { deployedWebWorkerName, type S0BrandConfig, type StageMetadata } from "@solzero/shared"

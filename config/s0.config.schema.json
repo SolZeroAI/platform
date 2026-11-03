@@ -30,12 +30,7 @@
                     {
                       "anyOf": [
                         { "type": "number", "enum": [0] },
-                        {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991,
-                          "allOf": [{ "minimum": 2 }]
-                        }
+                        { "type": "integer", "minimum": 2, "maximum": 9007199254740991 }
                       ]
                     },
                     { "type": "null" }
