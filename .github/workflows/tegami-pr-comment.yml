@@ -12,6 +12,11 @@ permissions:
   contents: read
   pull-requests: write
 
+# A newer preview of the same branch replaces the comment, so it cancels an older one.
+concurrency:
+  group: tegami-pr-comment-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
 jobs:
   comment:
     # workflow_run is a low-trust trigger. The comment job only reads the
@@ -21,5 +26,8 @@ jobs:
     with:
       runs-on: '"ubuntu-latest"'
       setup-commands: |
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+        # Skip apt when the image already has both packages.
+        dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+        }

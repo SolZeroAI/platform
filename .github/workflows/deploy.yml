@@ -53,8 +53,11 @@ jobs:
 
       - name: Install native dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          # Skip apt when the image already has both packages.
+          dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          }
 
       - name: Install dependencies
         run: nub install --frozen-lockfile
