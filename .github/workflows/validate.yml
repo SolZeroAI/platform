@@ -72,8 +72,11 @@ jobs:
 
       - name: Install native dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          # Skip apt when the image already has both packages.
+          dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          }
 
       - name: Install dependencies
         run: nub install --frozen-lockfile
@@ -133,6 +136,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # Blobless: full history, file contents on demand.
+          filter: blob:none
       # The Tegami version commit changes only VERSION, CHANGELOG.md and .tegami/. The pull
       # requests it releases already ran their tests. A newer master commit cancels an older
       # one's run, so compare with the last successful master run, not the parent commit.
@@ -179,6 +184,8 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.event.pull_request.head.sha || github.ref }}
           # The decision filter needs the base branch and the merge base.
           fetch-depth: 0
+          # Blobless: full history, file contents on demand.
+          filter: blob:none
       - uses: nubjs/setup-nub@v0
         with:
           nub-version: 0.9.6
@@ -187,11 +194,21 @@ jobs:
       - name: Install dependencies
         id: e2e-dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          # Skip apt when the image already has both packages.
+          dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          }
           nub install --frozen-lockfile
       - name: Verify Docker for source-image harnesses
         run: docker info
+      # The browser download is the same for every run of one lockfile. The system
+      # libraries still install on each fresh runner.
+      - name: Restore browser
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: e2e-chromium-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('nub.lock') }}
       - name: Install browser
         run: nub run test:e2e:install
       - name: Generate isolated credentials

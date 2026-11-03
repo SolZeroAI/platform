@@ -25,6 +25,7 @@ PR whose base is not `master` does not trigger the master-only Validate workflow
 `nub run test:config` runs account-free configuration and offline migration contracts in the same runner,
 with owned SQLite, PostgreSQL-wire/PGLite and workerd KV/R2/Durable Object fixtures. It checks bounded
 copying, seed/ID preservation, transactional rollback, secret-safe reports and independent state digests.
+These files declare the `tools` platform, so the Cloudflare suite does not run them again.
 It does not prove old production object-schema compatibility, PlanetScale connectivity, cross-account
 access, callbacks, rotation or live cutover. Those require the [migration gates](migration.md).
 

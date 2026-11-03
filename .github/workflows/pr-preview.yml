@@ -98,6 +98,8 @@ jobs:
           # Full history and tags let the deploy compute the release offset
           # label, for example v1.5.0+2-bbb222.
           fetch-depth: 0
+          # Blobless: full history, file contents on demand.
+          filter: blob:none
 
       - name: Set up Nub
         uses: nubjs/setup-nub@v0
@@ -108,8 +110,11 @@ jobs:
 
       - name: Install native dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          # Skip apt when the image already has both packages.
+          dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          }
 
       - name: Install dependencies
         run: nub install --frozen-lockfile
@@ -233,8 +238,11 @@ jobs:
 
       - name: Install native dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          # Skip apt when the image already has both packages.
+          dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+          }
 
       - name: Install dependencies
         run: nub install --frozen-lockfile

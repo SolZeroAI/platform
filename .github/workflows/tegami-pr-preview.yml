@@ -25,5 +25,8 @@ jobs:
     with:
       runs-on: '"ubuntu-latest"'
       setup-commands: |
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+        # Skip apt when the image already has both packages.
+        dpkg -s pkg-config liblzma-dev >/dev/null 2>&1 || {
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pkg-config liblzma-dev
+        }

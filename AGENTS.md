@@ -41,7 +41,7 @@ Use Plain Language in introductory, expository, friendly, and other sensible com
 
 ## Pull requests
 
-A cloud agent opens the pull request as a draft. Run lint, typecheck, and tests locally before each push. Mark the pull request ready for review when the work is done. CI runs only when the pull request is ready for review, and on each later push.
+A cloud agent opens the pull request as a draft. Run lint, typecheck, and tests locally before each push. `nub install` installs a lefthook pre-push hook (`lefthook.yml`) that runs `nub run typecheck`, `nub run lint`, and `nub run format`. Mark the pull request ready for review when the work is done. CI runs only when the pull request is ready for review, and on each later push.
 
 A cloud-agent pull request that changes user-visible behavior must attach proof. Skip this proof for a pin bump, a config-only change, or a markdown-only change.
 
