@@ -1,6 +1,6 @@
 import { resolve } from "node:path"
 import * as Output from "alchemy/Output"
-import * as Planetscale from "alchemy/Planetscale"
+import * as Planetscale from "@alchemy.run/planetscale"
 import * as PlanetscaleLogicalDb from "alchemy-planetscale-logical-db"
 import * as Effect from "effect/Effect"
 import { DEFAULT_PLANETSCALE_CONFIG, type S0PlanetscaleConfig } from "@solzero/shared"

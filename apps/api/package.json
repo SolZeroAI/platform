@@ -15,8 +15,9 @@
     "@solzero/shared": "workspace:*"
   },
   "devDependencies": {
-    "alchemy": "2.0.0-beta.81",
-    "effect": "4.0.3",
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "alchemy": "2.0.0-beta.84",
+    "effect": "4.0.5",
     "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "^7.0.2"
   }

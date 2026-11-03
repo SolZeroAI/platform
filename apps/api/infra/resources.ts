@@ -1,6 +1,6 @@
 import { resolve } from "node:path"
 import type { Input } from "alchemy/Input"
-import * as Cloudflare from "alchemy/Cloudflare"
+import * as Cloudflare from "@alchemy.run/cloudflare"
 import * as Effect from "effect/Effect"
 import * as Config from "effect/Config"
 import * as Option from "effect/Option"
@@ -70,6 +70,8 @@ function bundledContext(runtime: AgentContainerRuntime) {
 export function createAgentContainerApplication(
   options: CreateAgentContainerOptions & { runtime: AgentContainerRuntime },
 ) {
+  // ContainerPlatform.bind accepts no error channel. Config.option leaves only
+  // a malformed S0_LOCAL_CONTAINER_CONTEXTS, which must stop the deploy.
   return Effect.gen(function* () {
     const { appName, stageMetadata } = options
     // Any local alchemy dev can build container images from this directory.
@@ -96,7 +98,7 @@ export function createAgentContainerApplication(
       instanceType: "standard",
       name: `${appName}-${options.runtime}-agent-${stageMetadata.name}`,
     })
-  })
+  }).pipe(Effect.orDie)
 }
 
 export function createAgentContainerNamespaces() {

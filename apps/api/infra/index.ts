@@ -1,6 +1,6 @@
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import * as Cloudflare from "alchemy/Cloudflare"
+import * as Cloudflare from "@alchemy.run/cloudflare"
 import * as Output from "alchemy/Output"
 import { Self } from "alchemy/Self"
 import * as Effect from "effect/Effect"
