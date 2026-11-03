@@ -25,9 +25,6 @@ patchedDependencies:
   '@cloudflare/containers@0.3.7':
     hash: 3ba0e745e0dcdddc06705fa0c7ee010aaa7259d52fd075bcf84ee0c5990ba44f
     path: patches/@cloudflare__containers@0.3.7.patch
-  '@e2e-dev/web@0.15.3':
-    hash: cdcaafcb54e68753f7b6160f0e181118fd8f7bf5d4750b6c76d5b2517ecac4cf
-    path: patches/@e2e-dev+web@0.15.3.patch
   alchemy@2.0.0-beta.81:
     hash: a57041329816a8c5a428f1445f68a7d616ea53b8e3f7836ad919e8a8b01e51d2
     path: patches/alchemy@2.0.0-beta.81.patch
@@ -74,8 +71,8 @@ importers:
         specifier: 0.4.3
         version: 0.4.3(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))
       '@e2e-dev/web':
-        specifier: 0.15.3
-        version: 0.15.3(patch_hash=cdcaafcb54e68753f7b6160f0e181118fd8f7bf5d4750b6c76d5b2517ecac4cf)(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))
+        specifier: 0.15.4
+        version: 0.15.4(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))
       '@electric-sql/pglite':
         specifier: 0.4.5
         version: 0.4.5
@@ -1190,8 +1187,8 @@ packages:
     peerDependencies:
       e2e: '>=0.15.0 <1'
 
-  '@e2e-dev/web@0.15.3':
-    resolution: {integrity: sha512-S15TxVQsSTvjEd00r/fZs0tX/gvq53EhWMtSCYhydnMA9QdfE83GpgiXeRqrBDzNhfbm6f1TwJeANw+qW/4T4A==}
+  '@e2e-dev/web@0.15.4':
+    resolution: {integrity: sha512-j4bDSP6wV310h9LwrMVfsUHv7uAIIzK516NboLco6Ah92B32uShIHne5V3AI1lvKtLip+PWlpJ+aw848vogBwQ==}
     engines: {node: ^22.22.3 || >=24.8.0}
     hasBin: true
     peerDependencies:
@@ -7397,7 +7394,7 @@ snapshots:
     dependencies:
       e2e: 0.21.3(patch_hash=1f55d7623fea3c16a58e22464d1a4919a5d805ba9da209e0b33068891295ba82)(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1))
 
-  '@e2e-dev/web@0.15.3(patch_hash=cdcaafcb54e68753f7b6160f0e181118fd8f7bf5d4750b6c76d5b2517ecac4cf)(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))':
+  '@e2e-dev/web@0.15.4(e2e@0.21.3(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1)))':
     dependencies:
       e2e: 0.21.3(patch_hash=1f55d7623fea3c16a58e22464d1a4919a5d805ba9da209e0b33068891295ba82)(@ai-sdk/anthropic@4.0.87(zod@4.6.1))(@ai-sdk/openai@4.0.101(zod@4.6.1))(@ai-sdk/openai-compatible@3.0.44(zod@4.6.1))(ai@7.0.152(zod@4.6.1))
       playwright-core: 1.64.1(zod@4.6.1)

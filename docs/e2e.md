@@ -369,8 +369,8 @@ process failure.
 The workflow verifies Docker, builds the current harness source images through local
 `alchemy dev`, installs Chromium separately, runs the core suite with strict replay of
 the committed `.e2e/cache` recordings, and uploads reports and failure artifacts. Other
-`.e2e/` output is ignored locally. Chromium receives native clipboard read/write permissions through the small
-pinned web-engine patch in `patches/`; clipboard contents are never simulated. API keys
+`.e2e/` output is ignored locally. Chromium receives native clipboard read/write permissions through the target's
+`app.permissions`; clipboard contents are never simulated. API keys
 have no Copy button in the current UI. Replay recordings are checked into Git. `test:e2e:live`
 forces fresh model decisions; `test:e2e:cache-strict` fails on stale recordings. Read
 `.e2e/report.json`, `.e2e/summary.md`, failure pages and the ignored stack log to diagnose
