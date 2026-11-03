@@ -14,6 +14,9 @@ permissions:
 
 jobs:
   comment:
+    # workflow_run is a low-trust trigger. The comment job only reads the
+    # dependency cache.
+    cache-mode: read
     uses: SolZeroAI/.github/.github/workflows/tegami-pr-comment.yml@master
     with:
       runs-on: '"ubuntu-latest"'
