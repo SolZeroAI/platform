@@ -18,8 +18,11 @@ on:
 permissions:
   contents: read
 
+# The release of a version commit has its own group. A newer pending run in one group
+# replaces the older pending run, so a later master merge must not replace the only run
+# that publishes a release.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event_name == 'workflow_run' && startsWith(github.event.workflow_run.head_commit.message, 'Version Packages') && '-publish' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -73,26 +76,38 @@ jobs:
       - name: Install dependencies
         run: nub install --frozen-lockfile
 
+      # Only the version commit publishes, so the registry package publishes only from it.
       - name: Skip registry publish when the version tag exists
         id: published
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ startsWith(github.event.workflow_run.head_commit.message, 'Version Packages') && github.event.workflow_run.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com' }}
         run: |
           set -euo pipefail
           version="$(tr -d '[:space:]' < VERSION)"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${version}" >/dev/null 2>&1; then
+          if [ "$RELEASE_COMMIT" = "true" ] && [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${version}" >/dev/null 2>&1; then
             echo "tag=v${version}" >> "$GITHUB_OUTPUT"
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Only the merge of the Tegami version pull request publishes, because only its Validate
+      # run tests the release. Another master push only opens or updates the version pull
+      # request. A push that lands while the release still tests must not publish it first.
+      # To publish again after a failure, re-run the Release run of the version commit.
       - name: Version or publish release
-        run: nub run tegami ci
+        run: |
+          if [ "$RELEASE_COMMIT" = "true" ]; then
+            nub run tegami ci
+          else
+            nub run tegami version --no-checks
+          fi
         env:
           GITHUB_TOKEN: ${{ steps.release-token.outputs.token }}
           S0_CREATIVE_RELEASE_ASSETS: "true"
+          RELEASE_COMMIT: ${{ startsWith(github.event.workflow_run.head_commit.message, 'Version Packages') && github.event.workflow_run.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com' }}
 
   # The only job that requests id-token or uses environment alchemy-new.
   registry:

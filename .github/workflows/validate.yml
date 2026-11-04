@@ -44,13 +44,14 @@ concurrency:
 jobs:
   validate:
     name: Repository validation
-    # A newer master commit holds every change in an older one, so it cancels the older
-    # commit's validation.
+    # A newer release cancels the older release's validation. That release is never
+    # published, and the newer one tests its changes too.
     concurrency:
       group: ${{ github.event_name == 'push' && format('{0}-validate-master', github.workflow) || format('{0}-validate-{1}', github.workflow, github.run_id) }}
       cancel-in-progress: ${{ github.event_name == 'push' }}
-    # The Tegami version pull request and its merge skip this job (see release-only below).
-    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && !(github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    # The Tegami version pull request skips this job. On master only its merge runs it (see
+    # release below).
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && (github.event_name != 'push' || (startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com')) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
@@ -123,38 +124,68 @@ jobs:
         if: github.repository != 'SolZeroAI/platform'
         run: nub run build
 
-  release-only:
-    name: Detect release-only commit
+  release:
+    name: Detect release commit
     if: github.event_name == 'push'
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
-    permissions: {}
+    permissions:
+      contents: read
+      actions: read
     outputs:
-      skip: ${{ steps.check.outputs.skip }}
+      release: ${{ steps.check.outputs.release }}
+      since: ${{ steps.since.outputs.since }}
     steps:
-      # The Tegami version pull request changes only release files, and the pull requests it
-      # releases already ran CI. The pull request is known by its branch and the release
-      # GitHub App that opens it. A push has no branch, so its squash merge is known by its
-      # title and that App as the commit author. Renovate pull requests have the same author,
-      # so the author alone is not enough. Skipped jobs pass the required checks. On a push
-      # this job still runs, because a run whose jobs all skip is not a success, and Release
-      # starts only after a successful Validate run.
+      # Pull requests run their checks. On master only the merge of the Tegami version pull
+      # request runs them, so each release ships a green suite, and Release publishes only
+      # after this run passes. The version pull request skips them, because Tegami rewrites
+      # it after each merge. It is known by its branch and the release GitHub App that opens
+      # it. A push has no branch, so its squash merge is known by its title and that App as
+      # the commit author. Renovate pull requests have the same author, so the author alone is
+      # not enough. Skipped jobs pass the required checks. On a push this job still runs,
+      # because a run whose jobs all skip is not a success.
       - id: check
         env:
-          SKIP: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com' }}
+          RELEASE: ${{ startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com' }}
         run: |
-          echo "Version Packages merge: $SKIP"
-          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
+          echo "Version Packages merge: $RELEASE"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+      - if: steps.check.outputs.release == 'true'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      # The release tests the changes since the last release that passed its tests: the
+      # newest earlier version commit whose Validate run passed. A release whose tests failed
+      # was never published, so the next release tests its changes again. Without one, every
+      # test runs.
+      - id: since
+        if: steps.check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          since=""
+          for sha in $(git log --format=%H --max-count=20 --grep='^Version Packages' HEAD^); do
+            count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/validate.yml/runs?event=push&status=success&head_sha=${sha}&per_page=1" --jq .total_count)"
+            if [ "$count" != "0" ]; then
+              since="$sha"
+              break
+            fi
+          done
+          echo "Release changes since: ${since:-no tested release, so every test runs}"
+          echo "since=$since" >> "$GITHUB_OUTPUT"
 
   e2e:
     name: Cloudflare end-to-end flows
-    needs: release-only
+    needs: release
     # Each run boots its own local Alchemy stack and creates no remote resources. A newer push
-    # to the same pull request, or a newer master commit, supersedes a run.
+    # to the same pull request, or a newer release, supersedes a run.
     concurrency:
       group: ${{ github.event_name == 'push' && format('{0}-e2e-master', github.workflow) || format('{0}-e2e-{1}', github.workflow, github.event.pull_request.number || github.run_id) }}
       cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-    if: ${{ !cancelled() && needs.release-only.outputs.skip != 'true' && !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ !cancelled() && (github.event_name != 'push' || needs.release.outputs.release == 'true') && !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     # The github reporter edits one pull request comment. Artifact recovery reads Actions APIs.
@@ -222,9 +253,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           E2E_RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.e2e_record }}
-          # Pull requests run the tests the decision filter says the diff can affect.
-          # Pushes and manual runs run every test.
-          E2E_CHANGED_SINCE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          # Pull requests run the tests the decision filter says the diff can affect. A
+          # release runs the tests its changes can affect. Manual runs run every test.
+          E2E_CHANGED_SINCE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || needs.release.outputs.since || '' }}
         # Committed recordings replay strictly. A stale recording fails the run.
         run: |
           if [ "$E2E_RECORD" = "true" ]; then
