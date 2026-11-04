@@ -172,10 +172,47 @@ jobs:
             apps/web/dist/client/images
 
   # Pack preview only. No environment and no id-token.
-  registry-dry-run:
-    name: Dry-run alchemy.new registry package
+  package-changes:
+    name: Detect registry package changes
     if: >-
       github.event_name == 'pull_request' &&
+      !(github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # Blobless: full history, file contents on demand.
+          filter: blob:none
+      # The registry package is built from the apps, the packages and their dependencies.
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed=false
+          if git diff --name-only "$BASE...HEAD" | grep -Eq '(^|/)package\.json$|^nub\.lock$|^apps/|^packages/|^\.github/workflows/release\.yml$'; then
+            changed=true
+          fi
+          echo "Registry package inputs changed: $changed"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+  registry-dry-run:
+    name: Dry-run alchemy.new registry package
+    # The Tegami version pull request publishes nothing new, and other pull requests run this
+    # only when they change what the package is built from.
+    needs: package-changes
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.package-changes.outputs.changed == 'true' &&
+      !(github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
