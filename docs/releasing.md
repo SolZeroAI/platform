@@ -56,8 +56,9 @@ combined version and release-note preview. A change with no observable effect ca
 ## Automated release flow
 
 1. Merge a feature pull request with its pending `.tegami/` entries.
-2. Wait for `Validate` to pass on `master`. That workflow runs static checks and isolated Cloudflare e2e checks. The `Release`
-   workflow runs `nub run tegami ci` and opens or updates `tegami/version-packages`. Preview
+2. Wait for `Validate` to pass on `master`. On an ordinary merge it runs no checks: the pull
+   request already ran them, and the release runs them again. The `Release` workflow runs
+   `nub run tegami version --no-checks` and opens or updates `tegami/version-packages`. Preview
    deploys are not required for a GitHub Release. On SolZeroAI/platform, disable `Deploy Preview`
    with Actions → Deploy Preview → Disable workflow (`gh workflow disable preview.yml`), and disable
    `PR Preview` the same way (`gh workflow disable pr-preview.yml`). Keep the
@@ -76,9 +77,16 @@ combined version and release-note preview. A change with no observable effect ca
    or `prod`. Do not fold the Deploy Preview or PR Preview actions into `Deploy`. It runs only when
    `CLOUDFLARE_DEPLOY` is `true`. Put production deploy secrets in a `prod` environment limited to `master`. Only that Deploy job selects `prod`.
 3. Review the version pull request. It updates `VERSION`, prepends `CHANGELOG.md`, consumes the
-   pending entries, and writes `.tegami/publish-lock.yaml`.
-4. Merge the version pull request. After validation, the release workflow pushes the `vX.Y.Z` tag and
-   creates its GitHub Release. The same run publishes the alchemy.new registry package. See
+   pending entries, and writes `.tegami/publish-lock.yaml`. `Validate` skips every job on it,
+   because Tegami rewrites it after each merge.
+4. Merge the version pull request. `Validate` then runs the static checks and the e2e tests that
+   the changes since the last tested release can affect. The last tested release is the newest
+   earlier version commit whose `Validate` run passed. When that run passes, the release workflow
+   runs `nub run tegami ci`, pushes the `vX.Y.Z` tag, and creates its GitHub Release. Only this run
+   publishes. A push that lands while the release tests only updates the version pull request. If
+   the tests fail, nothing is published. Re-run the failed jobs for a flaky test. For a real
+   failure, merge a fix with a `.tegami/` entry and then the next version pull request. Its tests
+   cover every change since the last tested release, the unpublished one included. The same run publishes the alchemy.new registry package. See
    [Registry package](#registry-package).
 
 Do not edit generated version files in a feature pull request. Review them in the version pull request
@@ -117,7 +125,8 @@ That job selects the `release` environment, which is limited to `master`. The Ap
 the SolZeroAI organization secrets `RELEASE_APP_CLIENT_ID` (the `solzero-bot` Client ID) and
 `RELEASE_APP_PRIVATE_KEY`, which the action reads through its `client-id` and `private-key` inputs.
 Do not add repository or environment copies; they override the organization values. The token is limited to this repository. It requests contents write and pull requests write.
-Checkout and `nub run tegami ci` use that token for the version pull request, the `vX.Y.Z` tag, and
+Checkout and `nub run tegami ci` (or `nub run tegami version --no-checks` on a commit that is not the
+version commit) use that token for the version pull request, the `vX.Y.Z` tag, and
 the GitHub Release. The app opens `tegami/version-packages`, so pull request workflows start.
 
 Keep each job's `GITHUB_TOKEN` permissions at the minimum in the workflow file. The release job has

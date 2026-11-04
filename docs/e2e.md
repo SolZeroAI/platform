@@ -318,12 +318,14 @@ are deleted in cleanup; all mutations are limited to the isolated profile.
 ## CI and artifacts
 
 `Validate` runs static checks and discovers all e2e tests without secrets. Its dedicated
-Cloudflare end-to-end job runs on trusted pull requests, pushes and manual runs, including
-the canonical repository. Fork pull requests cannot access its credentials.
+Cloudflare end-to-end job runs on trusted pull requests, release merges and manual runs,
+including the canonical repository. Other pushes to `master` run neither job. Fork pull requests cannot access its credentials.
 On a pull request, the job runs `test:e2e:cache-strict --changed-since origin/<base>`: the
 decision filter keeps only the tests the diff can affect. A change to `e2e.config.ts` or a
-lockfile keeps every test, and a diff that affects no test passes with no tests. Pushes
-and manual runs run every core test. Preview the pull request selection with
+lockfile keeps every test, and a diff that affects no test passes with no tests. The merge
+of the Tegami version pull request runs `--changed-since <last tested release>`, the newest
+earlier version commit whose `Validate` run passed, or every core test when there is none.
+Manual runs run every core test. Preview the pull request selection with
 `nub run test:e2e:list --changed-since origin/master` after you commit.
 `scripts/e2e/filters.ts` removes agent tooling (`.agents/`, `.claude/`,
 `skills-lock.json`, `AGENTS.md`, `CLAUDE.md`) and release files (`VERSION`,
