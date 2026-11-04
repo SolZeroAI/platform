@@ -49,7 +49,8 @@ jobs:
     concurrency:
       group: ${{ github.event_name == 'push' && format('{0}-validate-master', github.workflow) || format('{0}-validate-{1}', github.workflow, github.run_id) }}
       cancel-in-progress: ${{ github.event_name == 'push' }}
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # The Tegami version pull request and its merge skip this job (see release-only below).
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && !(github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     env:
       S0_CONFIG_PROFILE: ${{ vars.S0_CONFIG_PROFILE }}
@@ -127,33 +128,23 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: read
+    permissions: {}
     outputs:
-      skip: ${{ steps.diff.outputs.skip }}
+      skip: ${{ steps.check.outputs.skip }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          # Blobless: full history, file contents on demand.
-          filter: blob:none
-      # The Tegami version commit changes only VERSION, CHANGELOG.md and .tegami/. The pull
-      # requests it releases already ran their tests. A newer master commit cancels an older
-      # one's run, so compare with the last successful master run, not the parent commit.
-      # Without a known base, the suite runs.
-      - id: diff
+      # The Tegami version pull request changes only release files, and the pull requests it
+      # releases already ran CI. The pull request is known by its branch and the release
+      # GitHub App that opens it. A push has no branch, so its squash merge is known by its
+      # title and that App as the commit author. Renovate pull requests have the same author,
+      # so the author alone is not enough. Skipped jobs pass the required checks. On a push
+      # this job still runs, because a run whose jobs all skip is not a success, and Release
+      # starts only after a successful Validate run.
+      - id: check
         env:
-          GH_TOKEN: ${{ github.token }}
+          SKIP: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Version Packages') && github.event.head_commit.author.email == '341870119+solzero-bot[bot]@users.noreply.github.com' }}
         run: |
-          skip=false
-          base="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/validate.yml/runs?branch=master&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty' || true)"
-          if [ -n "$base" ] && git merge-base --is-ancestor "$base" HEAD; then
-            changed="$(git diff --name-only "$base" HEAD)"
-            others="$(printf '%s\n' "$changed" | grep -Ev '(^|/)(VERSION|CHANGELOG\.md)$|^\.tegami/' || true)"
-            if [ -n "$changed" ] && [ -z "$others" ]; then skip=true; fi
-          fi
-          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "Version Packages merge: $SKIP"
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
 
   e2e:
     name: Cloudflare end-to-end flows
@@ -163,7 +154,7 @@ jobs:
     concurrency:
       group: ${{ github.event_name == 'push' && format('{0}-e2e-master', github.workflow) || format('{0}-e2e-{1}', github.workflow, github.event.pull_request.number || github.run_id) }}
       cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-    if: ${{ !cancelled() && needs.release-only.outputs.skip != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ !cancelled() && needs.release-only.outputs.skip != 'true' && !(github.event_name == 'pull_request' && github.head_ref == 'tegami/version-packages' && github.event.pull_request.user.login == 'solzero-bot[bot]') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ${{ vars.S0_CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     # The github reporter edits one pull request comment. Artifact recovery reads Actions APIs.
