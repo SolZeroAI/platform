@@ -155,7 +155,6 @@
   },
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
-    "alchemy-planetscale-logical-db@2.1.0": "patches/alchemy-planetscale-logical-db@2.1.0.patch",
     "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch",
     "e2e@0.21.3": "patches/e2e@0.21.3.patch"
   }
