@@ -25,9 +25,6 @@ patchedDependencies:
   '@cloudflare/containers@0.3.7':
     hash: 3ba0e745e0dcdddc06705fa0c7ee010aaa7259d52fd075bcf84ee0c5990ba44f
     path: patches/@cloudflare__containers@0.3.7.patch
-  alchemy-planetscale-logical-db@2.1.0:
-    hash: 37f307b37756dddbb287d867355df014792200d90e11a5a6c7f96e4f6a0ffea7
-    path: patches/alchemy-planetscale-logical-db@2.1.0.patch
   e2e@0.21.3:
     hash: 1f55d7623fea3c16a58e22464d1a4919a5d805ba9da209e0b33068891295ba82
     path: patches/e2e@0.21.3.patch
@@ -450,8 +447,8 @@ importers:
         specifier: 2.0.0-beta.84
         version: 2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5)
       alchemy-planetscale-logical-db:
-        specifier: 2.1.0
-        version: 2.1.0(patch_hash=37f307b37756dddbb287d867355df014792200d90e11a5a6c7f96e4f6a0ffea7)(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)
+        specifier: 2.2.0
+        version: 2.2.0(@alchemy.run/planetscale@2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5))(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -3762,10 +3759,11 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  alchemy-planetscale-logical-db@2.1.0:
-    resolution: {integrity: sha512-a+1FRf4c78XemeRiUR59XOUpCofpwgiJDd7+x1wr+ASA5wVROm0LpIVFtlHbNWJ3HVSlZobIbwDvtfIKPFMdXQ==}
+  alchemy-planetscale-logical-db@2.2.0:
+    resolution: {integrity: sha512-XOJlpAa52z8AfjaS6cjXoKVGNnxV4TJNQTB9ETmehhNb4uDLzR+fGLN9xh3gIqFIrlZlWSpSP7QUiExHH+AMVQ==}
     engines: {node: '>=24.15.0 <25'}
     peerDependencies:
+      '@alchemy.run/planetscale': '>=2.0.0-beta.84'
       alchemy: '>=2.0.0-beta.81'
       effect: ^4.0.0
 
@@ -6671,12 +6669,32 @@ snapshots:
       - mysql2
       - pg
 
+  '@alchemy.run/planetscale@2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)(pg@8.23.1)':
+    dependencies:
+      '@alchemy.run/sql': 2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)(pg@8.23.1)
+      '@distilled.cloud/core': 1.0.0-rc.17(effect@4.0.5)
+      '@distilled.cloud/planetscale': 1.0.0-rc.17(effect@4.0.5)
+      alchemy: 2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5)
+      effect: 4.0.5
+      pg: 8.23.1
+    transitivePeerDependencies:
+      - '@effect/sql-libsql'
+      - '@effect/sql-mysql2'
+      - '@effect/sql-pg'
+      - mysql2
+
   '@alchemy.run/sigil@0.1.0-alpha.1': {}
 
   '@alchemy.run/sql@2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)':
     dependencies:
       alchemy: 2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5)
       effect: 4.0.5
+
+  '@alchemy.run/sql@2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)(pg@8.23.1)':
+    dependencies:
+      alchemy: 2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5)
+      effect: 4.0.5
+      pg: 8.23.1
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -8988,8 +9006,9 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  alchemy-planetscale-logical-db@2.1.0(patch_hash=37f307b37756dddbb287d867355df014792200d90e11a5a6c7f96e4f6a0ffea7)(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5):
+  alchemy-planetscale-logical-db@2.2.0(@alchemy.run/planetscale@2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5))(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5):
     dependencies:
+      '@alchemy.run/planetscale': 2.0.0-beta.84(alchemy@2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5))(effect@4.0.5)(pg@8.23.1)
       alchemy: 2.0.0-beta.84(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(effect@4.0.5)
       effect: 4.0.5
       pg: 8.23.1
