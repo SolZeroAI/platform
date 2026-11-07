@@ -74,11 +74,11 @@
     "test:e2e:mcp": "e2e mcp"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.5",
-    "alchemy": "2.0.0-beta.84",
+    "@effect/platform-node": "4.1.2",
+    "alchemy": "2.0.0-beta.85",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.5"
+    "effect": "4.1.2"
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "4.0.87",
@@ -116,16 +116,16 @@
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.5",
-    "@effect/platform-node": "4.0.5",
-    "@effect/platform-node-shared": "4.0.5",
-    "@effect/sql-d1": "4.0.3",
-    "@effect/sql-pg": "4.0.5",
-    "@effect/sql-sqlite-do": "4.0.5",
-    "@effect/vitest": "4.0.5",
+    "@effect/platform-node": "4.1.2",
+    "@effect/platform-node-shared": "4.1.2",
+    "@effect/sql-d1": "4.1.2",
+    "@effect/sql-pg": "4.1.2",
+    "@effect/sql-sqlite-do": "4.1.2",
+    "@effect/vitest": "4.1.2",
     "@modelcontextprotocol/sdk": "1.32.0",
     "ai": "7.0.152",
     "chat": "4.40.0",
-    "effect": "4.0.5",
+    "effect": "4.1.2",
     "workerd": "1.20261006.1"
   },
   "devEngines": {
