@@ -25,7 +25,6 @@ import {
   type RuntimeProviderCatalog,
   type RuntimeProviderCatalogEntry,
   type SharedProviderDefinition,
-  type UserCustomProviderSettings,
 } from "@solzero/shared"
 import * as Arr from "effect/Array"
 import * as Match from "effect/Match"
@@ -525,19 +524,6 @@ function isProviderAvailable(provider: ResolvedProviderRecord): boolean {
   return provider.credentialSource === "binding" || isNonEmptyString(provider.apiKey)
 }
 
-export async function isVisibleModelForUser(
-  env: Env,
-  userId: string,
-  model: string,
-): Promise<boolean> {
-  const catalog = await buildRuntimeProviderCatalog(env, userId)
-  const runtimeModelId = normalizeModelId(model)
-
-  return catalog.modelOptions.some((group) =>
-    group.models.some((item) => item.id === runtimeModelId),
-  )
-}
-
 export function getUserProviderSettingsSnapshot(
   env: Env,
   userId: string,
@@ -946,18 +932,5 @@ function splitRuntimeModelId(runtimeModelId: string) {
   return {
     providerId,
     modelId: rest.join("/"),
-  }
-}
-
-export function toEditableCustomProviderSettings(
-  provider: UserCustomProviderSettings,
-): UserCustomProviderSettings {
-  return {
-    providerId: provider.providerId,
-    name: provider.name,
-    npm: provider.npm,
-    options: provider.options,
-    models: provider.models,
-    hasApiKey: provider.hasApiKey,
   }
 }

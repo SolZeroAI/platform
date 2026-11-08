@@ -28,14 +28,6 @@ import * as Result from "effect/Result"
 
 export type WorkflowStorageNodeExecutionInput = WorkflowNodeExecutionInput
 
-const workflowStorageNodeTypes = new Set([
-  "r2-put-object",
-  "r2-get-object",
-  "kv-put",
-  "kv-get",
-  "get-secret",
-])
-
 const workflowR2BucketIds = new Set<string>(
   WORKFLOW_R2_BUCKET_OPTIONS.map((bucket) => bucket.binding),
 )
@@ -51,10 +43,6 @@ const workflowStorageEncodings = new Set<string>(
 )
 
 const R2_CONTENT_ENCODING_MANIFEST_VERSION = 2
-
-export function isWorkflowStorageNodeType(nodeType: string): boolean {
-  return workflowStorageNodeTypes.has(nodeType)
-}
 
 const requireString = (value: Option.Option<string>, message: string) =>
   Option.match(value, {

@@ -74,13 +74,6 @@ export function resolveControlPlaneHandle(db: AppDrizzleDatabase | ControlPlaneD
   )
 }
 
-export function controlPlaneDialectForEngine(engine: S0DatabaseEngine): ControlPlaneDialect {
-  return Match.value(engine).pipe(
-    Match.when("planetscale", () => "postgres" as const),
-    Match.orElse(() => "sqlite" as const),
-  )
-}
-
 interface DatabaseEngineSource {
   readonly [DATABASE_ENV]?: unknown
 }

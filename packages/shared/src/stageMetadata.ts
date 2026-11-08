@@ -217,46 +217,6 @@ function invalidStageError(stageStr: string): InvalidStageError {
   })
 }
 
-export function getAppStageMetadataFromStr(
-  stageStr: string,
-): Result.Result<AppStageMetadata, InvalidStageError> {
-  const lowerCaseStage = stageStr.toLowerCase()
-
-  return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => Result.succeed({ name: "dev", app: Dev.app })),
-    Match.when("test", () => Result.succeed({ name: "test", app: Test.app })),
-    Match.when("prod", () => Result.succeed({ name: "prod", app: Prod.app })),
-    Match.when(
-      (stage) => stage === "pre" || stage.startsWith("pre-"),
-      (stage) => Result.succeed({ name: stage, app: Pre.app }),
-    ),
-    Match.orElse(() => Result.fail(invalidStageError(stageStr))),
-  )
-}
-
-const appStageMetadataFromBinding = ({ name, app }: StageMetadataBinding): AppStageMetadata => ({
-  name,
-  app,
-})
-
-function appStageMetadataFromEnv(env: StageMetadataEnv) {
-  return Option.match(Option.fromUndefinedOr(env.S0_STAGE_METADATA), {
-    onNone: () => getAppStageMetadataFromStr(env.STAGE),
-    onSome: (binding) =>
-      Result.succeed(appStageMetadataFromBinding(decodeStageMetadataBinding(binding))),
-  })
-}
-
-/** App metadata is deterministic and resolves no infrastructure, so browser and Worker callers read it synchronously. */
-export function getAppStageMetadataSync(input: string | StageMetadataEnv): AppStageMetadata {
-  return Match.value(input).pipe(
-    Match.when(Match.string, getAppStageMetadataFromStr),
-    Match.orElse(appStageMetadataFromEnv),
-    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
-    Result.getOrThrow,
-  )
-}
-
 function localInfraStageProps(
   config: StageInfraConfig,
   consoleOutputEnabled: boolean,
