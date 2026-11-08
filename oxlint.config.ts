@@ -78,6 +78,11 @@ export default defineConfig({
         "effect/prefer-namespace-imports": "error",
         "effect/prefer-redacted-config": "error",
         "effect/no-barrel-imports": "error",
+        "effect/use-console-service": "error",
+        "effect/avoid-direct-tag-checks": "error",
+        "effect/throw-in-effect-gen": "error",
+        "effect/prefer-duration-constructors": "error",
+        "effect/avoid-ts-ignore": "error",
       },
     },
     {
