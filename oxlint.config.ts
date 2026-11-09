@@ -70,7 +70,6 @@ export default defineConfig({
         "effect/avoid-process-env": "error",
         "effect/effect-run-in-body": "error",
         "effect/effect-promise-vs-trypromise": "error",
-        "effect/prefer-schema-class": "error",
         "effect/avoid-any": "error",
         "effect/avoid-non-null-assertion": "error",
         "effect/avoid-native-fetch": "error",
@@ -84,27 +83,6 @@ export default defineConfig({
         "effect/prefer-duration-constructors": "error",
         "effect/avoid-ts-ignore": "error",
       },
-    },
-    {
-      // Plain JSON DTOs: config, manifests, provider settings, stage metadata, and values stored in
-      // KV or Durable Object storage. Code builds and spreads them as object literals and writes
-      // them back as JSON. A Schema.Class rejects a plain object on encode while TypeScript still
-      // accepts the literal, and Durable Object RPC cannot serialize a class instance. So these
-      // schemas stay Structs. Decode-only schemas elsewhere are classes.
-      files: [
-        "packages/api/src/server/background/db/errors.ts",
-        "packages/api/src/server/background/workflows/alarm.ts",
-        "packages/api/src/server/mcp/workflow-builder/runtime.ts",
-        "packages/shared/src/admin.ts",
-        "packages/shared/src/auth.ts",
-        "packages/shared/src/provider-config.ts",
-        "packages/shared/src/s0-config.ts",
-        "packages/shared/src/secret-reference.ts",
-        "packages/shared/src/session-artifact-schema.ts",
-        "packages/shared/src/stageMetadata.ts",
-        "packages/shared/src/workflows/manifest-schema.ts",
-      ],
-      rules: { "effect/prefer-schema-class": "off" },
     },
     {
       files: ["apps/api/index.ts", "apps/api/infra/**", "packages/api/src/server/**"],

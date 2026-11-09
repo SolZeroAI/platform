@@ -46,10 +46,8 @@ function liveAiGateway(env: ApiEnv): AiGatewayService {
   }
 }
 
-// oxlint-disable-next-line effect/prefer-schema-class -- A text part of an untrusted Workers AI chat message.
 const WorkersAiTextPart = Schema.Struct({ text: Schema.optional(Schema.String) })
 
-// oxlint-disable-next-line effect/prefer-schema-class -- One untrusted Workers AI chat message.
 const WorkersAiMessage = Schema.Struct({
   role: Schema.String,
   content: Schema.optional(
@@ -57,7 +55,6 @@ const WorkersAiMessage = Schema.Struct({
   ),
 })
 
-// oxlint-disable-next-line effect/prefer-schema-class -- Decodes only the chat messages of an untrusted Workers AI request.
 const WorkersAiRunInput = Schema.Struct({ messages: Schema.Array(WorkersAiMessage) })
 
 type WorkersAiMessageContent = (typeof WorkersAiMessage.Type)["content"]
