@@ -177,21 +177,6 @@ export function toRuntimeActivityRow(row: SandboxActivityRow): RuntimeActivityRo
   }
 }
 
-export function toSandboxActivityRow(row: RuntimeActivityRow): SandboxActivityRow {
-  return {
-    id: row.id,
-    sandbox_id: row.runtimeId,
-    type: row.type,
-    summary: row.summary,
-    status_from: row.statusFrom,
-    status_to: row.statusTo,
-    keep_alive: row.keepAlive == null ? null : row.keepAlive ? 1 : 0,
-    reason: row.reason,
-    data: row.dataJson,
-    created_at: row.createdAt,
-  }
-}
-
 export interface PromptDispatchResult {
   success: boolean
   error?: string

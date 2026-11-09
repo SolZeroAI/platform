@@ -1,6 +1,5 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { ApiEnv } from "infra/types/env"
@@ -224,16 +223,6 @@ export const MockGitHubProvider: GitHubProviderService = {
   },
 }
 
-export const LiveProviderLayer = Layer.mergeAll(
-  Layer.succeed(IdentityProvider, LiveIdentityProvider),
-  Layer.succeed(GitHubProvider, LiveGitHubProvider),
-)
-
-export const MockProviderLayer = Layer.mergeAll(
-  Layer.succeed(IdentityProvider, MockIdentityProvider),
-  Layer.succeed(GitHubProvider, MockGitHubProvider),
-)
-
 export function providerServicesForEnv(env: ApiEnv) {
   return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
     Match.when(true, () => ({
@@ -244,12 +233,5 @@ export function providerServicesForEnv(env: ApiEnv) {
       identityProvider: LiveIdentityProvider,
       githubProvider: LiveGitHubProvider,
     })),
-  )
-}
-
-export function providerLayerForEnv(env: ApiEnv) {
-  return Match.value(env.S0_PROVIDER_LAYER === "mock").pipe(
-    Match.when(true, () => MockProviderLayer),
-    Match.orElse(() => LiveProviderLayer),
   )
 }

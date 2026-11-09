@@ -51,7 +51,6 @@ import * as Option from "effect/Option"
 
 export type WorkflowSessionNodeExecutionInput = WorkflowNodeExecutionInput
 
-const workflowSessionNodeTypes = new Set(["isolate-session", "sandbox-session"])
 const MIN_WORKFLOW_SESSION_CACHE_TTL_SECONDS = 60
 
 function runWorkflowLog(action: () => void) {
@@ -96,10 +95,6 @@ interface WorkflowSessionCacheEntry {
 
 interface WorkflowSessionRunResponse extends WorkflowSessionCacheEntry {
   createdSession?: boolean
-}
-
-export function isWorkflowSessionNodeType(nodeType: string): boolean {
-  return workflowSessionNodeTypes.has(nodeType)
 }
 
 export const executeWorkflowSessionNode = Effect.fn("workflows.executeSessionNode")(function* (

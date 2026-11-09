@@ -95,13 +95,6 @@ export function getGitHubAppConfig(env: {
   )
 }
 
-export function getGitHubAppConfigOrThrow(
-  env: Parameters<typeof getGitHubAppConfig>[0],
-  message: string,
-): GitHubAppConfig {
-  return Option.getOrThrowWith(getGitHubAppConfig(env), () => new GitHubAppError({ message }))
-}
-
 function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,

@@ -90,33 +90,6 @@ export function isCustomMcpServerId(id: string): boolean {
   return id.startsWith(CUSTOM_MCP_SERVER_ID_PREFIX)
 }
 
-export function parseCustomMcpServerId(id: string): {
-  serverName: string
-  hash: string
-} | null {
-  if (!isCustomMcpServerId(id)) {
-    return null
-  }
-
-  const body = id.slice(CUSTOM_MCP_SERVER_ID_PREFIX.length)
-  const separatorIndex = body.lastIndexOf(CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR)
-
-  if (separatorIndex <= 0) {
-    return null
-  }
-
-  const hashStart = separatorIndex + CUSTOM_MCP_SERVER_ID_HASH_SEPARATOR.length
-
-  if (hashStart >= body.length) {
-    return null
-  }
-
-  return {
-    serverName: body.slice(0, separatorIndex),
-    hash: body.slice(hashStart),
-  }
-}
-
 export function parseCustomMcpToolKey(toolKey: string): {
   serverName: string | null
   mcpToolName: string
@@ -731,22 +704,6 @@ export function resolveSessionTools(input: ResolveSessionToolsInput): SessionToo
   return normalizeSessionTools(combined)
 }
 
-export function encodeSessionToolQueryValue(tool: SessionToolSpec): string {
-  if (tool.kind === "github_repo") {
-    return `${tool.kind}:${formatGitHubRepoTool(tool)}`
-  }
-
-  if (tool.kind === "workflow_builder") {
-    return tool.kind
-  }
-
-  if (tool.kind === MCPCF_SESSION_TOOL_KIND) {
-    return `${tool.kind}:${tool.serverId}`
-  }
-
-  return `${tool.kind}:${tool.sourceId}`
-}
-
 export function decodeSessionToolQueryValue(value: string): SessionToolSpec {
   if (value === "workflow_builder") {
     return { kind: "workflow_builder" }
@@ -797,18 +754,6 @@ export function parseSessionToolsFromSearchParams(
   paramName = SESSION_TOOL_QUERY_PARAM,
 ): SessionToolSpec[] {
   return normalizeSessionTools(searchParams.getAll(paramName).map(decodeSessionToolQueryValue))
-}
-
-export function appendSessionToolsToSearchParams(
-  searchParams: URLSearchParams,
-  tools: readonly SessionToolSpec[] | null | undefined,
-  paramName = SESSION_TOOL_QUERY_PARAM,
-): URLSearchParams {
-  normalizeSessionTools(tools).forEach((tool) => {
-    searchParams.append(paramName, encodeSessionToolQueryValue(tool))
-  })
-
-  return searchParams
 }
 
 export function stringifySessionTools(

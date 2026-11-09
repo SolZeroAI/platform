@@ -45,13 +45,6 @@ const PROVIDER_COMPATIBILITY: Record<
     (providerId === "cloudflare-ai-gateway" && providerApi === "messages"),
 }
 
-const MODEL_COMPATIBILITY_DESCRIPTIONS: Record<AgentRuntime, string> = {
-  isolate: "any configured model",
-  opencode: "Cloudflare AI Gateway or LiteLLM models",
-  codex: "Cloudflare AI Gateway OpenAI Responses or LiteLLM OpenAI-compatible models",
-  "claude-code": "Cloudflare AI Gateway or LiteLLM Anthropic Messages models",
-}
-
 const AGENT_RUNTIME_LABELS: Record<AgentRuntime, string> = {
   isolate: "Isolate",
   opencode: "OpenCode",
@@ -65,10 +58,6 @@ export function isAgentRuntimeCompatibleWithProvider(
   providerApi?: string,
 ): boolean {
   return PROVIDER_COMPATIBILITY[agentRuntime](providerId, providerApi)
-}
-
-export function describeAgentRuntimeModelCompatibility(agentRuntime: AgentRuntime): string {
-  return MODEL_COMPATIBILITY_DESCRIPTIONS[agentRuntime]
 }
 
 export function formatAgentRuntimeLabel(agentRuntime: AgentRuntime): string {

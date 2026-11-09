@@ -300,21 +300,6 @@ function buildSetupUrl(env: ApiEnv, extraParams?: Record<string, string>): strin
   )
 }
 
-export function buildSetupResponse(
-  env: ApiEnv,
-  message: string,
-  status: number,
-  extraParams?: Record<string, string>,
-): Response {
-  return json(
-    {
-      error: message,
-      setupUrl: buildSetupUrl(env, extraParams),
-    },
-    status,
-  )
-}
-
 export const failSetup = (
   env: ApiEnv,
   message: string,
