@@ -35,7 +35,7 @@ The environment loader reads the selected private file, then `config/.env` and `
 
 ## Prove behavior
 
-Drive the public UI and HTTP endpoints through the configured e2e browser and live fetch helpers. The stack is local `alchemy dev` (Miniflare D1, KV, R2, and Durable Objects). `decisionExecutor` asks the decision model (default Cloudflare Clef) through the account's existing default AI Gateway for semantic actions and assertions, and the language model (default `anthropic/claude-haiku-5.5`) for `waitFor` and `extract`. The application does not receive that token. Follow each action with an exact deterministic assertion. Use `expect` for waiting.
+Drive the public UI and HTTP endpoints through the configured e2e browser and live fetch helpers. The stack is local `alchemy dev` (Miniflare D1, KV, R2, and Durable Objects). `decisionExecutor` asks the decision model (default Cloudflare Clef) through the account's existing default AI Gateway for semantic actions and assertions, and the language model (default `meta/muse-ember-1.0`, reasoning effort `low`) for `waitFor` and `extract`. The application does not receive that token. Follow each action with an exact deterministic assertion. Use `expect` for waiting.
 
 Verify credential sign-in by reaching the authenticated UI; a healthy port is insufficient. A missing sign-in provider or `Sign-in is not configured for this deployment.` remains a product failure. Verify mutations through reload or a second user-facing view, including saved settings, bot/workflow records, session history, and authorization boundaries. Exercise real Cloudflare services and providers without interception, module mocks, or separate browser/test runners.
 

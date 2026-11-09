@@ -69,7 +69,7 @@ file in every SolZero repository.
 | Setting | Default | Role |
 | --- | --- | --- |
 | `E2E_DECISION_MODEL` | `@cf/cloudflare/clef` | `agent.act` actions, `agent.assert` verdicts and the affected-test filter |
-| `E2E_LANGUAGE_MODEL` | `anthropic/claude-haiku-5.5` | Text: field values, `agent.waitFor` and `agent.extract` |
+| `E2E_LANGUAGE_MODEL` | `meta/muse-ember-1.0` | Text: field values, `agent.waitFor` and `agent.extract` |
 
 CI reads both settings from SolZeroAI organization Actions variables, so one
 change there moves every repository. The defaults serve local runs and match the
@@ -87,8 +87,12 @@ model locally.
 - The language model uses the official provider for its API format on the
   Cloudflare REST API at `/accounts/<account>/ai/v1`. `anthropic/` models use
   `@ai-sdk/anthropic` on the Messages route. Other models, such as `@cf/`
-  Workers AI models and `openai/` models, use `@ai-sdk/openai` on the chat
-  completions route. Third-party models bill through Cloudflare Unified Billing.
+  Workers AI models, `openai/` models, and `meta/muse-ember-1.0`, use
+  `@ai-sdk/openai` on the chat completions route. Third-party models bill
+  through Cloudflare Unified Billing. The agent sends
+  `providerOptions.openai.reasoningEffort` of `low` with every language-model
+  call, so Muse Ember does not spend its output tokens on reasoning. The
+  decision model does not receive those options.
 
 Both models use the account's default gateway. The gateway id is
 `CF_AI_GATEWAY_E2E_ID`, or `default`, sent as `cf-aig-gateway-id`.
