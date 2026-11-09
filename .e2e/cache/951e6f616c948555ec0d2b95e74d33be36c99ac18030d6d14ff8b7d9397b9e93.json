@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-11-09T16:29:47.958Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Documents\" in \"{{param:/label}}\"",
+        "target": {
+          "role": "button",
+          "name": "Documents",
+          "within": "{{param:/label}}"
+        }
+      }
+    ],
+    "executor": {
+      "name": "decision",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "tests/ai-search.external.e2e.ts::administrators%20create%20built-in%20sources%20and%20open%20their%20documents",
+      "targetId": "local-cloudflare",
+      "instructionDigest": "416778188b6ffd4dbdb3a735e3dd1f0e3077defec59f5954becffa183587b79e",
+      "paramsDigest": "44fcbcfb85a7779b6de0f181cfc52ea37d67de119015c2eaf599e1f9843e0d7f",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "recordedBy": {
+      "provider": "anthropic.messages",
+      "model": "anthropic/claude-haiku-5.5"
+    },
+    "summary": "The screen shows the step is done (p=0.924, confidence 0.787).",
+    "startPath": "/admin/ai-search",
+    "endPath": "/admin/ai-search",
+    "endAnchors": [
+      {
+        "text": "Close documents"
+      },
+      {
+        "text": "Uploads are indexed asynchronously. Refresh to check processing status. A matching filename replaces that document. PDF and text files support up to 10 MiB; other formats support up to 4 MiB."
+      },
+      {
+        "role": "button",
+        "name": "Upload document"
+      },
+      {
+        "text": "Refresh documents"
+      },
+      {
+        "text": "Previous documents"
+      },
+      {
+        "text": "Page 1"
+      },
+      {
+        "text": "Next documents"
+      },
+      {
+        "role": "button",
+        "name": "Close documents"
+      }
+    ],
+    "endWaitMs": 11434,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "356bb4dad9f823ea5064055664450c1dbb1e4d9cbbfb201ca71c7993a2c18dcd",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "e18a7246aa64bc6cabcfc1fff593fa36af4d2bccf2dc172e6d2c8d9ad9cb96af",
+      "agentContextDigest": "44e79ebe1b494e7f7d7911f15d6f0a211137848d9b4d3549ff598d1cc728f3e8"
+    }
+  }
+}

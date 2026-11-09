@@ -1,3 +1,8 @@
+import {
+  aiSearchItems,
+  uploadAiSearchItem,
+  deleteAiSearchItem,
+} from "../handlers/admin/ai-search-items"
 import { HttpApiBuilder } from "effect/http-api"
 import { S0Api } from "@solzero/api"
 import {
@@ -91,6 +96,15 @@ export const HttpAdminLive = HttpApiBuilder.group(S0Api, "admin", (handlers) =>
     )
     .handle("exportAiSearchConfig", () =>
       observeRoute("admin", "exportAiSearchConfig", exportAiSearchConfig()),
+    )
+    .handle("aiSearchItems", (input) =>
+      observeRoute("admin", "aiSearchItems", aiSearchItems(input)),
+    )
+    .handle("uploadAiSearchItem", (input) =>
+      observeRoute("admin", "uploadAiSearchItem", uploadAiSearchItem(input)),
+    )
+    .handle("deleteAiSearchItem", (input) =>
+      observeRoute("admin", "deleteAiSearchItem", deleteAiSearchItem(input)),
     )
     .handle("createAiSearchSource", (input) =>
       observeRoute("admin", "createAiSearchSource", createAiSearchSource(input)),

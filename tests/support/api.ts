@@ -6,8 +6,9 @@ export async function api<T, Body extends object = object>(
   path: string,
   method = "GET",
   body?: Body,
+  requestTimeoutMs?: number,
 ): Promise<T> {
-  const response = await authRequest(browser, path, method, body)
+  const response = await authRequest(browser, path, method, body, requestTimeoutMs)
   expect(response.status, `${method} ${path}`).toBeGreaterThanOrEqual(200)
   expect(response.status, `${method} ${path}`).toBeLessThan(300)
 
@@ -20,6 +21,7 @@ export async function authRequest<Body extends object = object>(
   path: string,
   method = "GET",
   body?: Body,
+  requestTimeoutMs?: number,
 ): Promise<{ status: number; payload: unknown }> {
   const cookies = await browser.cookies()
 
@@ -33,6 +35,8 @@ export async function authRequest<Body extends object = object>(
   }
 
   if (body) init.body = JSON.stringify(body)
+
+  if (requestTimeoutMs) init.signal = AbortSignal.timeout(requestTimeoutMs)
 
   const response = await fetch(new URL(path, "http://localhost:3100"), init)
 

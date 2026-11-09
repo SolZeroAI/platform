@@ -29,6 +29,8 @@ export interface WorkflowNodeOptions
     WorkflowSlackAddReactionOptions,
     WorkflowSlackRemoveReactionOptions,
     WorkflowEmailNotificationOptions {
+  aiSearchSourceId?: string
+
   title?: string
   encoding?: string
   inputValues?: Record<string, string>

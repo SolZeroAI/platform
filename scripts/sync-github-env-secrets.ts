@@ -5,7 +5,6 @@ import dotenv from "dotenv"
 const defaultConfig = {
   preVarsPath: "config/.pre.vars",
   prodVarsPath: "config/.prod.vars",
-  infraEnvPath: "config/.env",
 }
 
 const githubSecretNameMap = {
@@ -22,18 +21,13 @@ function isMappedSecretName(name: string): name is keyof typeof githubSecretName
 // and CLOUDFLARE_API_TOKEN must stay off this public repository.
 const orgSecretNames = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"] as const
 
-const repoSecretNames = ["CF_AI_SEARCH_SERVICE_TOKEN_ID"] as const
-
-const skippedRuntimeSecretNameSet = new Set<string>([...orgSecretNames, ...repoSecretNames])
+const skippedRuntimeSecretNameSet = new Set<string>(orgSecretNames)
 
 interface Args {
   repo: string
   preVarsPath: string
   prodVarsPath: string
-  infraEnvPath: string
   apply: boolean
-  syncRuntime: boolean
-  syncInfra: boolean
   useGitHubTokenEnv: boolean
 }
 
@@ -56,9 +50,7 @@ Options:
   --repo <owner/repo>       GitHub repository. Required.
   --pre-vars <path>         Preview runtime vars file. Default: ${defaultConfig.preVarsPath}
   --prod-vars <path>        Production runtime vars file. Default: ${defaultConfig.prodVarsPath}
-  --infra-env <path>        Repo-level infra env file. Default: ${defaultConfig.infraEnvPath}
-  --runtime-only            Sync only pre/prod environment secrets.
-  --infra-only              Sync only repo-level infra secrets.
+  --runtime-only            Sync pre/prod environment secrets (the default).
   --use-github-token-env    Preserve GITHUB_TOKEN when invoking gh.
   --help                    Show this help.
 
@@ -78,10 +70,7 @@ function parseArgs(argv: string[]): Args {
     repo: "",
     preVarsPath: defaultConfig.preVarsPath,
     prodVarsPath: defaultConfig.prodVarsPath,
-    infraEnvPath: defaultConfig.infraEnvPath,
     apply: false,
-    syncRuntime: true,
-    syncInfra: true,
     useGitHubTokenEnv: false,
   }
 
@@ -103,16 +92,7 @@ function parseArgs(argv: string[]): Args {
       case "--prod-vars":
         args.prodVarsPath = readOptionValue(argv, ++i, arg)
         break
-      case "--infra-env":
-        args.infraEnvPath = readOptionValue(argv, ++i, arg)
-        break
       case "--runtime-only":
-        args.syncRuntime = true
-        args.syncInfra = false
-        break
-      case "--infra-only":
-        args.syncRuntime = false
-        args.syncInfra = true
         break
       case "--use-github-token-env":
         args.useGitHubTokenEnv = true
@@ -167,26 +147,6 @@ function runtimeUploads(environment: string, path: string): SecretUpload[] {
         environment,
         sourceName,
         name: mappedSecretName(sourceName),
-        value,
-      },
-    ]
-  })
-}
-
-function infraUploads(path: string): SecretUpload[] {
-  const parsed = parseDotenvFile(path)
-
-  return repoSecretNames.flatMap((name) => {
-    const value = parsed[name]
-
-    if (!value) {
-      return []
-    }
-
-    return [
-      {
-        scope: "repository",
-        name,
         value,
       },
     ]
@@ -290,14 +250,8 @@ function main(): void {
 
   const uploads: SecretUpload[] = []
 
-  if (args.syncRuntime) {
-    uploads.push(...runtimeUploads("pre", args.preVarsPath))
-    uploads.push(...runtimeUploads("prod", args.prodVarsPath))
-  }
-
-  if (args.syncInfra) {
-    uploads.push(...infraUploads(args.infraEnvPath))
-  }
+  uploads.push(...runtimeUploads("pre", args.preVarsPath))
+  uploads.push(...runtimeUploads("prod", args.prodVarsPath))
 
   printPlan(uploads, args.apply)
 
@@ -305,10 +259,8 @@ function main(): void {
     return
   }
 
-  if (args.syncRuntime) {
-    ensureEnvironment(args.repo, "pre", args.useGitHubTokenEnv)
-    ensureEnvironment(args.repo, "prod", args.useGitHubTokenEnv)
-  }
+  ensureEnvironment(args.repo, "pre", args.useGitHubTokenEnv)
+  ensureEnvironment(args.repo, "prod", args.useGitHubTokenEnv)
 
   for (const upload of uploads) {
     setSecret(args.repo, upload, args.useGitHubTokenEnv)

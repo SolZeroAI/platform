@@ -187,8 +187,4 @@
       "generateIfMissing": true,
     },
   },
-  "aiSearch": {
-    // Set when this deployment has a Cloudflare AI Search service-token identifier.
-    // "serviceTokenId": { "env": "CF_AI_SEARCH_SERVICE_TOKEN_ID" }
-  },
 }

@@ -187,7 +187,6 @@ export function createS0Api(options: CreateS0ApiOptions) {
       dev,
       stageMetadata,
       migrationsDir,
-      tokenId: apiEnv.CF_AI_SEARCH_SERVICE_TOKEN_ID,
       databaseEngine,
       appDbMode,
       databaseUrl: databaseUrl ?? LOCAL_PGLITE_DATABASE_URL,

@@ -22,6 +22,7 @@ export const WORKFLOW_NODE_TYPES = [
   "slack-remove-reaction",
   "email-notification",
   "r2-put-object",
+  "ai-search-upload",
   "r2-get-object",
   "kv-put",
   "kv-get",
@@ -119,6 +120,7 @@ export type WorkflowNodeEditorConfiguration =
   | "notification"
   | "slack-action"
   | "session"
+  | "ai-search-upload"
   | "r2-object"
   | "kv-entry"
 
@@ -154,8 +156,9 @@ export const WORKFLOW_R2_BUCKET_OPTIONS = [
   },
   {
     binding: "AI_SEARCH_CONTENT_BUCKET",
-    label: "AI Search content",
-    description: "Stores documents that can be indexed by configured AI Search sources.",
+    label: "Legacy AI Search content",
+    description:
+      "Retained for existing workflows and explicit content migration. Use Upload to AI Search for new ingestion.",
   },
 ] as const
 
@@ -633,6 +636,27 @@ export const WORKFLOW_NODE_CATALOG = [
     validation: workflowNodeBaseValidation,
     runtime: { kind: "adapter", adapterCategory: "notification" },
     editor: { icon: "mail", configuration: "notification" },
+  },
+  {
+    type: "ai-search-upload",
+    label: "Upload to AI Search",
+    description:
+      "Upload a document to a built-in AI Search source. Requires an administrator workflow owner.",
+    category: "storage",
+    inputs: [
+      { id: "sourceId", type: "string" },
+      { id: "name", type: "string" },
+      { id: "content", type: "any" },
+    ],
+    outputs: [
+      { id: "itemId", type: "string" },
+      { id: "key", type: "string" },
+      { id: "status", type: "string" },
+    ],
+    defaults: { strategy: "static", options: {} },
+    validation: { optionRules: [], templateReferences: "connected-inputs" },
+    runtime: { kind: "adapter", adapterCategory: "storage" },
+    editor: { icon: "database", configuration: "ai-search-upload" },
   },
   {
     type: "r2-put-object",

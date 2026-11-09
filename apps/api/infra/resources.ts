@@ -123,7 +123,6 @@ export interface CreateAgentResourcesOptions {
   dev: boolean
   stageMetadata: StageMetadata
   migrationsDir: string
-  tokenId: string
   databaseEngine: S0DatabaseEngine
   appDbMode: AppDbMode
   databaseUrl: string
@@ -191,7 +190,7 @@ function createControlPlaneDatabase(options: CreateAgentResourcesOptions) {
 }
 
 export function createAgentResources(options: CreateAgentResourcesOptions) {
-  const { appName, dev, stageMetadata } = options
+  const { appName, stageMetadata } = options
 
   return Effect.gen(function* () {
     const sessionNamespace = Cloudflare.DurableObject("session", {
@@ -232,12 +231,16 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
       name: `${appName}-skills-${stageMetadata.name}`,
     })
 
+    // Retained for explicit legacy content migration and saved workflow artifacts.
+    // New ingestion uses built-in storage through the namespace Items API.
     const aiSearchContentBucket = yield* Cloudflare.R2.Bucket("ai-search-content", {
       name: `${appName}-ai-search-content-${stageMetadata.name}`,
     })
 
-    const aiSearchNamespaces = yield* Match.value(dev).pipe(
-      Match.when(true, () =>
+    const aiSearchNamespaces = yield* Match.value(
+      stageMetadata.infra.aiSearchNamespaceEnabled,
+    ).pipe(
+      Match.when(false, () =>
         Effect.succeed({
           aiSearchNamespace: undefined,
           workflowAiSearchNamespace: undefined,

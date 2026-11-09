@@ -17,13 +17,8 @@ import { useMemo, useState } from "react"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
 import { CodeSurface } from "@/components/code"
 import { Dialog } from "@/components/ui/dialog"
-import {
-  DocsSectionHeading,
-  EnvLockIcon,
-  Field,
-  SelectField,
-} from "@/components/admin-ai-provider-panel-ui"
-import { useDialogSelectPortalRoot } from "@/lib/dialog-select-portal"
+import { DocsSectionHeading, EnvLockIcon, Field } from "@/components/admin-ai-provider-panel-ui"
+import { AiSearchItemsPanel } from "./ai-search-items-panel"
 import { circleIconButton } from "@/components/ui/kumo-icon-button"
 
 type SourceDraft = {
@@ -32,16 +27,6 @@ type SourceDraft = {
   description: string
   enabled: boolean
   maxResults: string
-  dataSourceType: AdminAiSearchDataSource["type"]
-  r2BucketName: string
-  r2Prefix: string
-  r2Jurisdiction: string
-  websiteDomain: string
-  websiteIncludePaths: string
-  websiteExcludePaths: string
-  websiteSpecificSitemaps: string
-  websiteUseBrowserRendering: boolean
-  websiteIncludeImages: boolean
 }
 
 const EMPTY_DRAFT: SourceDraft = {
@@ -50,23 +35,7 @@ const EMPTY_DRAFT: SourceDraft = {
   description: "",
   enabled: true,
   maxResults: "5",
-  dataSourceType: "r2",
-  r2BucketName: "",
-  r2Prefix: "",
-  r2Jurisdiction: "",
-  websiteDomain: "",
-  websiteIncludePaths: "",
-  websiteExcludePaths: "",
-  websiteSpecificSitemaps: "",
-  websiteUseBrowserRendering: false,
-  websiteIncludeImages: false,
 }
-
-const DATA_SOURCE_OPTIONS = [
-  { value: "built-in", label: "Built-in" },
-  { value: "r2", label: "R2" },
-  { value: "website", label: "Website" },
-]
 
 const SOURCE_FIELD_HELP = {
   sourceId:
@@ -99,14 +68,14 @@ export function AdminAiSearchPanel({
   const [draft, setDraft] = useState<SourceDraft>(EMPTY_DRAFT)
   const [fieldError, setFieldError] = useState("")
 
-  const dialogSelectPortalContainer = useDialogSelectPortalRoot()
+  const [documentSourceId, setDocumentSourceId] = useState<string | null>(null)
 
   const editingSource = useMemo(
     () => data?.sources.find((source) => source.id === editingSourceId) ?? null,
     [data?.sources, editingSourceId],
   )
 
-  const sourceLocked = editingSource?.locked ?? false
+  const sourceLocked = Boolean(editingSource?.locked || editingSource?.migrationRequired)
   const sourceLockEnvVar = sourceLocked ? editingSource?.envVarName : null
   const editingMode: "create" | "update" = editingSource ? "update" : "create"
 
@@ -260,12 +229,28 @@ export function AdminAiSearchPanel({
                       </KumoTable.Cell>
                       <KumoTable.Cell className="align-middle text-kumo-subtle">
                         <div>{formatDataSource(source.dataSource)}</div>
+                        {source.migrationRequired && (
+                          <p>
+                            Migration required. Export the source and copy its documents to a new
+                            built-in source before replacing references. Existing content is
+                            retained.
+                          </p>
+                        )}
                       </KumoTable.Cell>
                       <KumoTable.Cell className="align-middle">
                         <SourceStatus enabled={source.enabled} />
                       </KumoTable.Cell>
                       <KumoTable.Cell className="align-middle">
                         <div className="flex items-center gap-2">
+                          {!source.migrationRequired && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => setDocumentSourceId(source.id)}
+                            >
+                              Documents
+                            </Button>
+                          )}
                           <Tooltip content="Edit source" delay={250} render={<span />}>
                             <Button
                               type="button"
@@ -300,6 +285,12 @@ export function AdminAiSearchPanel({
           </div>
         </section>
 
+        {documentSourceId && (
+          <AiSearchItemsPanel
+            sourceId={documentSourceId}
+            onClose={() => setDocumentSourceId(null)}
+          />
+        )}
         <Dialog.Root
           open={sourceDialogOpen}
           onOpenChange={(open) => {
@@ -358,21 +349,7 @@ export function AdminAiSearchPanel({
                   disabledEnvVarName={sourceLockEnvVar}
                   required
                 />
-                <SelectField
-                  label="Data source"
-                  helpText={SOURCE_FIELD_HELP.dataSource}
-                  value={draft.dataSourceType}
-                  options={DATA_SOURCE_OPTIONS}
-                  onChange={(value) => {
-                    if (isDataSourceType(value)) {
-                      updateDraft("dataSourceType", value)
-                    }
-                  }}
-                  placeholder="Select data source"
-                  disabled={editingMode === "update" || sourceLocked}
-                  disabledEnvVarName={sourceLockEnvVar}
-                  portalContainer={dialogSelectPortalContainer}
-                />
+                <p className="text-sm text-kumo-subtle">Documents use built-in storage.</p>
                 <Field
                   label="Max results"
                   helpText={SOURCE_FIELD_HELP.maxResults}
@@ -393,13 +370,6 @@ export function AdminAiSearchPanel({
                 placeholder="Short source description shown to agents."
                 disabled={sourceLocked}
                 readOnly={sourceLocked}
-              />
-
-              <DataSourceFields
-                draft={draft}
-                disabled={sourceLocked}
-                envVarName={sourceLockEnvVar}
-                updateDraft={updateDraft}
               />
             </div>
 
@@ -501,171 +471,18 @@ export function AdminAiSearchPanel({
   )
 }
 
-function DataSourceFields({
-  draft,
-  disabled,
-  envVarName,
-  updateDraft,
-}: {
-  draft: SourceDraft
-  disabled: boolean
-  envVarName: string | null | undefined
-  updateDraft: <Key extends keyof SourceDraft>(key: Key, value: SourceDraft[Key]) => void
-}) {
-  if (draft.dataSourceType === "built-in") {
-    return (
-      <p className="rounded-md bg-kumo-elevated px-3 py-2 text-sm text-kumo-subtle">
-        Built-in sources do not require additional data source fields.
-      </p>
-    )
-  }
-
-  if (draft.dataSourceType === "r2") {
-    return (
-      <div className="grid gap-5 md:grid-cols-3">
-        <Field
-          label="R2 bucket"
-          value={draft.r2BucketName}
-          onChange={(value) => updateDraft("r2BucketName", value)}
-          placeholder="s0-ai-search-content-prod"
-          disabled={disabled}
-          disabledEnvVarName={envVarName}
-          required
-        />
-        <Field
-          label="R2 prefix"
-          value={draft.r2Prefix}
-          onChange={(value) => updateDraft("r2Prefix", value)}
-          placeholder="docs/"
-          disabled={disabled}
-          disabledEnvVarName={envVarName}
-        />
-        <Field
-          label="R2 jurisdiction"
-          value={draft.r2Jurisdiction}
-          onChange={(value) => updateDraft("r2Jurisdiction", value)}
-          placeholder="Optional"
-          disabled={disabled}
-          disabledEnvVarName={envVarName}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-5">
-      <Field
-        label="Website domain"
-        value={draft.websiteDomain}
-        onChange={(value) => updateDraft("websiteDomain", value)}
-        placeholder="docs.example.com"
-        disabled={disabled}
-        disabledEnvVarName={envVarName}
-        required
-      />
-      <div className="grid gap-5 md:grid-cols-3">
-        <InputArea
-          label="Include paths"
-          value={draft.websiteIncludePaths}
-          onChange={(event) => updateDraft("websiteIncludePaths", event.target.value)}
-          className="min-h-28 w-full"
-          placeholder="/docs/*"
-          disabled={disabled}
-          readOnly={disabled}
-        />
-        <InputArea
-          label="Exclude paths"
-          value={draft.websiteExcludePaths}
-          onChange={(event) => updateDraft("websiteExcludePaths", event.target.value)}
-          className="min-h-28 w-full"
-          placeholder="/blog/*"
-          disabled={disabled}
-          readOnly={disabled}
-        />
-        <InputArea
-          label="Specific sitemaps"
-          value={draft.websiteSpecificSitemaps}
-          onChange={(event) => updateDraft("websiteSpecificSitemaps", event.target.value)}
-          className="min-h-28 w-full"
-          placeholder="https://docs.example.com/sitemap.xml"
-          disabled={disabled}
-          readOnly={disabled}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-6 text-sm text-kumo-subtle">
-        <ToggleField
-          label="Browser rendering"
-          checked={draft.websiteUseBrowserRendering}
-          disabled={disabled}
-          onChange={(value) => updateDraft("websiteUseBrowserRendering", value)}
-        />
-        <ToggleField
-          label="Include images"
-          checked={draft.websiteIncludeImages}
-          disabled={disabled}
-          onChange={(value) => updateDraft("websiteIncludeImages", value)}
-        />
-      </div>
-    </div>
-  )
-}
-
-function ToggleField({
-  checked,
-  disabled,
-  label,
-  onChange,
-}: {
-  checked: boolean
-  disabled: boolean
-  label: string
-  onChange: (value: boolean) => void
-}) {
-  return (
-    <label className="flex items-center gap-2">
-      <Switch checked={checked} onCheckedChange={onChange} size="sm" disabled={disabled} />
-      <span>{label}</span>
-    </label>
-  )
-}
-
 function SourceStatus({ enabled }: { enabled: boolean }) {
   return <Badge variant={enabled ? "secondary" : "error"}>{enabled ? "Enabled" : "Disabled"}</Badge>
 }
 
 function draftFromSource(source: AdminAiSearchSource): SourceDraft {
-  const base = {
-    ...EMPTY_DRAFT,
+  return {
     id: source.id,
     label: source.label,
     description: source.description,
     enabled: source.enabled,
     maxResults: String(source.maxResults),
-    dataSourceType: source.dataSource.type,
   }
-
-  if (source.dataSource.type === "r2") {
-    return {
-      ...base,
-      r2BucketName: source.dataSource.bucketName,
-      r2Prefix: source.dataSource.prefix ?? "",
-      r2Jurisdiction: source.dataSource.r2Jurisdiction ?? "",
-    }
-  }
-
-  if (source.dataSource.type === "website") {
-    return {
-      ...base,
-      websiteDomain: source.dataSource.domain,
-      websiteIncludePaths: source.dataSource.includePaths.join("\n"),
-      websiteExcludePaths: source.dataSource.excludePaths.join("\n"),
-      websiteSpecificSitemaps: source.dataSource.specificSitemaps.join("\n"),
-      websiteUseBrowserRendering: source.dataSource.useBrowserRendering,
-      websiteIncludeImages: source.dataSource.includeImages,
-    }
-  }
-
-  return base
 }
 
 function payloadFromDraft(draft: SourceDraft): AdminAiSearchSourcePayload | string {
@@ -681,58 +498,13 @@ function payloadFromDraft(draft: SourceDraft): AdminAiSearchSourcePayload | stri
     return "Max results must be an integer between 1 and 20."
   }
 
-  const dataSource = dataSourceFromDraft(draft)
-
-  if (typeof dataSource === "string") {
-    return dataSource
-  }
-
   return {
     id,
     label: draft.label.trim(),
     description: draft.description.trim(),
     enabled: draft.enabled,
     maxResults,
-    dataSource,
-  }
-}
-
-function dataSourceFromDraft(draft: SourceDraft): AdminAiSearchDataSource | string {
-  switch (draft.dataSourceType) {
-    case "built-in":
-      return { type: "built-in" }
-    case "r2": {
-      const bucketName = draft.r2BucketName.trim()
-
-      if (!bucketName) {
-        return "R2 bucket is required."
-      }
-
-      return {
-        type: "r2",
-        bucketName,
-        prefix: draft.r2Prefix.trim() || null,
-        r2Jurisdiction: draft.r2Jurisdiction.trim() || null,
-      }
-    }
-
-    case "website": {
-      const domain = draft.websiteDomain.trim()
-
-      if (!domain) {
-        return "Website domain is required."
-      }
-
-      return {
-        type: "website",
-        domain,
-        includePaths: parseList(draft.websiteIncludePaths),
-        excludePaths: parseList(draft.websiteExcludePaths),
-        specificSitemaps: parseList(draft.websiteSpecificSitemaps),
-        useBrowserRendering: draft.websiteUseBrowserRendering,
-        includeImages: draft.websiteIncludeImages,
-      }
-    }
+    dataSource: { type: "built-in" },
   }
 }
 
@@ -747,19 +519,4 @@ function formatDataSource(dataSource: AdminAiSearchDataSource): string {
     case "website":
       return `Website ${dataSource.domain}`
   }
-}
-
-function parseList(value: string): string[] {
-  return Array.from(
-    new Set(
-      value
-        .split(/[\n,]/)
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  )
-}
-
-function isDataSourceType(value: string): value is AdminAiSearchDataSource["type"] {
-  return value === "built-in" || value === "r2" || value === "website"
 }

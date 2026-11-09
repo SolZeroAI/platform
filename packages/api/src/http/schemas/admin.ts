@@ -359,6 +359,7 @@ export class AdminAiSearchSource extends Schema.Class<AdminAiSearchSource>("Admi
   source: Schema.String,
   locked: Schema.Boolean,
   envVarName: Schema.NullOr(Schema.String),
+  migrationRequired: Schema.Boolean,
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 }) {}
@@ -406,7 +407,7 @@ export const AdminAiSearchSourcePayload = Schema.Struct({
   description: Schema.String,
   enabled: Schema.Boolean,
   maxResults: Schema.optionalKey(Schema.NullOr(Schema.Number)),
-  dataSource: AdminAiSearchDataSource,
+  dataSource: Schema.Struct({ type: Schema.Literal("built-in") }),
 })
 
 export type AdminAiSearchSourcePayload = typeof AdminAiSearchSourcePayload.Type
@@ -579,4 +580,26 @@ export class AdminActionResponse extends Schema.Class<AdminActionResponse>("Admi
   targetType: Schema.String,
   targetId: Schema.String,
   runId: Schema.optionalKey(Schema.String),
+}) {}
+
+export const AdminAiSearchItemsQuery = { page: Schema.optionalKey(Schema.String) }
+
+export const AdminAiSearchItemParams = { id: Schema.String, itemId: Schema.String }
+
+export const AdminAiSearchUploadPayload = Schema.Struct({
+  name: Schema.String,
+  contentBase64: Schema.String,
+  contentType: Schema.String,
+})
+
+export type AdminAiSearchUploadPayload = typeof AdminAiSearchUploadPayload.Type
+
+export class AdminAiSearchItemsResponse extends Schema.Class<AdminAiSearchItemsResponse>(
+  "AdminAiSearchItemsResponse",
+)({
+  items: Schema.Array(
+    Schema.Struct({ id: Schema.String, key: Schema.String, status: Schema.String }),
+  ),
+  page: Schema.Number,
+  total: Schema.Number,
 }) {}

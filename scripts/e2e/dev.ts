@@ -5,7 +5,7 @@ import { rmSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { bundleAgentContainer } from "../agent-container-build"
 import { AGENT_CONTAINER_ENTRYPOINTS } from "../../packages/agent-container/src/images"
-import { appEnvironment } from "./environment"
+import { appEnvironment, testDeploymentConfig } from "./environment"
 
 const repo = resolve(import.meta.dirname, "../..")
 const runId = randomUUID()
@@ -68,7 +68,15 @@ try {
 
   // The e2e profile answers model calls inside the Worker, so local alchemy dev needs no deploy token.
   // Alchemy selects Bun when npm_execpath contains "bun", which the Nub binary path can match.
-  const { CLOUDFLARE_API_TOKEN: _deployToken, npm_execpath: _execPath, ...env } = appEnvironment
+  const { CLOUDFLARE_API_TOKEN: deployToken, npm_execpath: _execPath, ...env } = appEnvironment
+
+  // Live AI Search is explicitly enabled by an isolated profile. Its native remote binding
+  // needs the deployment credential; ordinary core runs continue to receive none.
+  if (testDeploymentConfig.deployment.aiSearchEnabledInDev) {
+    if (!deployToken) throw new Error("Live AI Search requires CLOUDFLARE_API_TOKEN.")
+
+    env.CLOUDFLARE_API_TOKEN = deployToken
+  }
 
   // Alchemy dev leads its own process group, so one signal stops its workerd and watch children.
   const child = spawn(
