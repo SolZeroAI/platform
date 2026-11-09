@@ -24,6 +24,3 @@
 # GITHUB_APP_CLIENT_SECRET=
 # GITHUB_APP_PRIVATE_KEY=
 # SLACK_TOKEN=
-
-# Cloudflare AI Search service-token identifier
-# CF_AI_SEARCH_SERVICE_TOKEN_ID=
