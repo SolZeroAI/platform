@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { S0LogoSvg } from "@/components/s0-logo-svg"
+import { primaryNavLabels } from "@/components/primary-nav-labels"
 import {
   ADMIN_SIDEBAR_ITEMS,
   getAdminViewFromLocation,
@@ -139,7 +140,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
                   }`}
                 >
                   <MessageSquare className="h-4 w-4 flex-shrink-0" aria-hidden />
-                  Agents
+                  {primaryNavLabels.agents}
                 </Link>
                 <button
                   type="button"
@@ -171,7 +172,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
                     className={settingsSubLinkClass(isPreviousSessionsActive)}
                   >
                     <History className="h-4 w-4 flex-shrink-0" aria-hidden />
-                    Previous sessions
+                    {primaryNavLabels.previousSessions}
                   </Link>
                 </div>
               ) : null}
@@ -182,7 +183,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
               className={navLinkClass(activeNav === "workflows")}
             >
               <GitBranch className="h-4 w-4 flex-shrink-0" aria-hidden />
-              Workflows
+              {primaryNavLabels.workflows}
             </Link>
             <Link
               to="/bots"
@@ -190,7 +191,7 @@ export function SessionSidebar({ content, isOpen }: SessionSidebarProps) {
               className={navLinkClass(activeNav === "bots")}
             >
               <BotIcon className="h-4 w-4 flex-shrink-0" aria-hidden />
-              Bots
+              {primaryNavLabels.bots}
             </Link>
             <span
               aria-disabled="true"

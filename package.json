@@ -46,6 +46,7 @@
     "migration:storage": "tsx scripts/migration/storage.ts",
     "typecheck:migration": "tsrs --noEmit -p tsconfig.migration.json",
     "creative:release-card": "nub run --filter @solzero/background-web render:release",
+    "creative:og": "nub run --filter @solzero/background-web render:og",
     "github:sync-env-secrets": "tsx scripts/sync-github-env-secrets.ts",
     "tegami": "tsx scripts/tegami.mts",
     "workflow:runtime:audit": "tsx scripts/workflows/audit-runtime-abi.ts",
