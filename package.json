@@ -126,7 +126,7 @@
     "ai": "7.0.152",
     "chat": "4.40.0",
     "effect": "4.1.2",
-    "workerd": "1.20261006.1"
+    "workerd": "1.20261026.1"
   },
   "devEngines": {
     "packageManager": {
