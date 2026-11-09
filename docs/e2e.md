@@ -458,6 +458,9 @@ The isolated live suite is `tests/ai-search.external.e2e.ts`. Launch it with:
 
 ```sh
 E2E_ENV_FILE=/path/to/isolated-test-account.env nub exec tsx scripts/e2e/ai-search.ts
+# Refresh and then verify the changed browser actions against fresh owned resources.
+E2E_ENV_FILE=/path/to/isolated-test-account.env nub exec tsx scripts/e2e/ai-search.ts --record --grep administrators
+E2E_ENV_FILE=/path/to/isolated-test-account.env nub exec tsx scripts/e2e/ai-search.ts --strict-cache --grep administrators
 ```
 
 The private file must supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and

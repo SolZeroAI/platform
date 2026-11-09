@@ -1,5 +1,5 @@
 import { test } from "@e2e-dev/web"
-import { expect } from "e2e"
+import { expect, unique } from "e2e"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import type { Browser } from "@e2e-dev/web"
@@ -240,7 +240,8 @@ test(
       await screen.getByLabel("ID", { exact: true }).fill(id)
       await screen.getByLabel("Label", { exact: true }).fill(label)
       await agent.act(
-        "Click Create Source once. Stop when the button shows Loading Create Source or the dialog closes.",
+        "Submit the source with ID {id} and label {label} by clicking Create Source once. Stop when the button shows Loading Create Source or the dialog closes.",
+        { params: { id: unique(id), label: unique(label) } },
       )
       await expect(screen.getByRole("dialog", "Create Source", { exact: true })).not.toBeVisible({
         timeout: 60_000,
@@ -257,8 +258,8 @@ test(
         screen.getByRole("dialog", "AI Search source created.", { exact: true }),
       ).not.toBeVisible({ timeout: 30_000 })
       await agent.act(
-        "Click Documents in the row labelled {label}. Finish when Close documents is visible.",
-        { params: { label } },
+        "Open Documents for source {id} in the row labelled {label}. Finish when Close documents is visible.",
+        { params: { id: unique(id), label: unique(label) } },
       )
       await expect(screen.getByRole("button", "Close documents")).toBeVisible()
       await expect(screen.getByLabel("Upload document")).toBeVisible()

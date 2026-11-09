@@ -26,10 +26,22 @@ if (spawnSync("docker", ["info"], { stdio: "ignore" }).status !== 0) {
   )
 }
 
-const selection = process.argv.slice(2)
+const args = process.argv.slice(2)
+const record = args.includes("--record")
+const strict = args.includes("--strict-cache")
+const selection = args.filter((arg) => arg !== "--record" && arg !== "--strict-cache")
+
+if (record && strict) throw new Error("Choose either --record or --strict-cache.")
+
+const cacheArgs: string[] = []
+
+if (strict) cacheArgs.push("--strict-cache")
+else if (!record) cacheArgs.push("--no-cache")
 
 if (selection.length !== 0 && (selection.length !== 2 || selection[0] !== "--grep")) {
-  throw new Error("Usage: scripts/e2e/ai-search.ts [--grep <test-title-pattern>]")
+  throw new Error(
+    "Usage: scripts/e2e/ai-search.ts [--record | --strict-cache] [--grep <test-title-pattern>]",
+  )
 }
 
 const run = randomUUID()
@@ -87,7 +99,7 @@ try {
       "run",
       "tests/auth.setup.e2e.ts",
       "tests/ai-search.external.e2e.ts",
-      "--no-cache",
+      ...cacheArgs,
       "--tag",
       "ai-search-live",
       ...selection,
