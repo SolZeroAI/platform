@@ -8,7 +8,7 @@
     "check": "bun scripts/build-skill.ts --check"
   },
   "dependencies": {
-    "effect": "4.0.0",
-    "yaml": "^2.9.1"
+    "effect": "4.1.2",
+    "yaml": "2.9.1"
   }
 }
