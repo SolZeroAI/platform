@@ -7,6 +7,7 @@ export default {
     "tests/migration.e2e.ts",
     "tests/storage-transfer.e2e.ts",
     "tests/api-routing.e2e.ts",
+    "tests/ai-search-contracts.e2e.ts",
   ],
   targets: [{ name: "deployment-cli", platform: "tools" }],
   workers: 1,

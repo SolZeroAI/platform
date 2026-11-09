@@ -262,7 +262,7 @@ starts. Enable the commented integration blocks in this profile:
 | GitHub | `integrations.githubApp.enabled`, appId/clientId/slug; `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`; enable the social GitHub auth provider for linking | Install the app on the fixture repository; link the disposable admin's GitHub account in Accounts |
 | Slack | `integrations.slack.enabled`; `SLACK_TOKEN` | Linked Slack test user for `E2E_SLACK_USER_ID` |
 | MCPCF | `mcpcf.enabled`, baseUrl, userOauthProviderId; `S0_CONFIG_SECRETS_MCPCF_ADMIN_API_TOKEN` | Reachable registry, read-only tool server, OAuth/token linked identity; choose an ID actually returned by `/sessions/mcpcf/servers` |
-| AI Search | `aiSearch.serviceTokenId` referencing `CF_AI_SEARCH_SERVICE_TOKEN_ID` | Seed/index a document, enable the source in Admin > AI Search; choose an ID returned by `/sessions/ai-search/sources` |
+| AI Search | AI Search namespace binding with built-in storage | Seed/index a document, enable the source in Admin > AI Search; choose an ID returned by `/sessions/ai-search/sources` |
 | OIDC | `auth.providers.<id>` kind=oidc, issuer/clientId and a chosen clientSecret env reference; signIn/provisionUsers/link capabilities | Isolated IdP clients with localhost callback URLs; distinct admin/member users |
 | LiteLLM/BYOK | `aiProviders.litellm.enabled`, baseUrl, `S0_CONFIG_SECRETS_AI_PROVIDERS_LITELLM_API_KEY`, or a personal provider in settings | Compatible reachable model endpoint; per-user provider credential; never reuse the e2e AI Gateway token as an application provider |
 
@@ -447,3 +447,45 @@ These rules moved here from `AGENTS.md`. They apply to every agent that runs or 
 - Wrap fresh fixture data in e2e `unique(value)` action params so recordings substitute the current value. Keep choices that change the action flow as ordinary params. Prove warm action replay with `self-finalized` steps and zero model calls; API response-cache hits do not prove replay.
 - The app target stops its own processes and removes its run directory and labelled Docker resources when e2e stops it. Do not add crash-recovery journals, ownership ledgers or retry commands: runs are local only. The launcher boots `alchemy dev` in the run directory and does not create a Cloudflare AI Gateway or account API token, so it does not read `CLOUDFLARE_API_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` stays because the decision model calls the account's default AI Gateway. The application does not receive the e2e token or gateway id. Never sweep shared simulator data or unrelated resources.
 - Keep AI usage accounting content-free. Report only the suite's own decision-model usage from the e2e report. Do not record application inference in the app, the Worker, or the test report, and do not read the application's gateway logs. Preserve unknown token measurements. Upload sanitized usage summaries only; never raw logs or ledgers. Use the official @e2e-dev/github reporter for CI checks/comments and keep its GitHub token out of application children. Disable SDK telemetry with E2E_TELEMETRY_DISABLED=1.
+
+## AI Search built-in storage verification
+
+`nub run test:config` checks the new-source schema, legacy-record/export compatibility, and
+additive workflow manifest support without Cloudflare resources. These are contract checks; they
+do not exercise the Items API or prove indexing.
+
+The isolated live suite is `tests/ai-search.external.e2e.ts`. Launch it with:
+
+```sh
+E2E_ENV_FILE=/path/to/isolated-test-account.env nub exec tsx scripts/e2e/ai-search.ts
+```
+
+The private file must supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and
+`CF_AI_GATEWAY_E2E_TOKEN` for the existing default semantic gateway. No token is minted.
+The deployment credential needs AI Search namespace/instance access and permission to establish
+Alchemy's native remote binding. The launcher generates a unique ignored `e2e-*` profile with
+`deployment.aiSearchEnabledInDev: true`. Ordinary core runs keep this option off and do not
+receive the deployment token. Application model responses remain on the configured mock layer;
+the native AI Search binding reaches Cloudflare's real service.
+
+The suite creates a source through the Admin UI, uploads known content, waits for indexing,
+retrieves its marker through the application MCP route, deletes the item and checks that the
+marker disappears. It runs an administrator-owned workflow using `ai-search-upload`, verifies
+its indexing and retrieval, and rejects unauthenticated and malformed uploads. An ordinary-member
+identity remains necessary for a separate authenticated non-admin role check.
+
+The launcher verifies that both generated namespace names are absent before startup, removes only
+those owned namespaces and any instances left inside them, and verifies absence after cleanup.
+It writes a names-only ownership receipt under `.e2e/ai-search-live/<UUID>/ownership.json`.
+The app target separately stops its processes and removes local run state. Docker must be running for the native remote-binding proxy. Docker-backed agent
+harnesses are not started by this focused suite. A missing binding, unsuccessful cleanup, startup
+failure, or unavailable integration fails the run. Do not reuse standing namespaces or count
+collection alone as proof.
+
+On 2026-11-09 the isolated live API test passed source creation, authenticated Items upload,
+index completion, MCP retrieval, deletion with retrieval removal, workflow ingestion and retrieval,
+and rejection of unauthenticated and malformed uploads. The separate browser test passed source
+creation, persisted built-in configuration, and the Documents panel/upload control. Each run
+verified deletion of its namespace pair. Earlier interrupted/failed attempts are retained in local
+ownership receipts; they are not passing evidence. This does not prove an authenticated
+ordinary-member restriction, external callbacks, pre/prod deployment, or historical-source transfer.

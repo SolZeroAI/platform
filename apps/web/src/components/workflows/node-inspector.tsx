@@ -1,3 +1,4 @@
+import { AiSearchUploadFields } from "./ai-search-upload-fields"
 import { InputGroup } from "@cloudflare/kumo/components/input-group"
 import { ChevronRight, Copy, Trash2 } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -872,6 +873,14 @@ export function NodeInspector({
                     helpText="Attached secrets are injected as environment variables for this agent node."
                   />
                 </>
+              ) : null}
+
+              {node.type === "ai-search-upload" ? (
+                <AiSearchUploadFields
+                  options={node.options}
+                  templates={connectedInputTemplates}
+                  updateOption={updateOption}
+                />
               ) : null}
 
               {node.type === "r2-put-object" || node.type === "r2-get-object" ? (

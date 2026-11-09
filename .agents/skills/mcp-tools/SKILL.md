@@ -37,17 +37,20 @@ When adding or changing a tool:
 AI Search resources in this repo use a common shape:
 
 ```text
-docs in R2 -> Cloudflare AI Search vector index -> shared MCP runtime -> source-specific MCP tools
+Items API uploads -> Cloudflare built-in storage and vector index -> shared MCP runtime -> source-specific MCP tools
 ```
 
 For a new AI Search-backed document source:
 
-1. Create or adopt the R2 content bucket and AI Search namespaces in `createAgentResources` in `apps/api/infra/resources.ts`.
-2. Bind `AI_SEARCH`, `WORKFLOW_AI_SEARCH`, and `AI_SEARCH_CONTENT_BUCKET` in `apps/api/infra/index.ts`.
+1. Create or adopt AI Search namespaces in `createAgentResources` in `apps/api/infra/resources.ts`. New instances use built-in storage through the namespace binding.
+2. Bind `AI_SEARCH` and `WORKFLOW_AI_SEARCH` in `apps/api/infra/index.ts`. Retain `AI_SEARCH_CONTENT_BUCKET` only for explicit legacy-content transition and saved workflow compatibility; it is not a source for new instances.
 3. Add public source metadata in `packages/shared/src/session-tools.ts`.
 4. Persist runtime source records through `AiSearchRegistryStore` in `packages/api/src/server/background/db/ai-search.ts`, keeping `maxResults` explicit. Tool names come from `getAiSearchMcpToolNames`.
 5. Keep MCP tool registration in `packages/api/src/server/mcp/ai-search-server.ts`. Dispatch into the shared runtime in `packages/api/src/server/mcp/ai-search-runtime.ts`.
-6. Run the MCP integration tests and update any session UI source picker affected by the new source.
+6. Upload and delete documents through the namespace Items API. Workflows use the `ai-search-upload` storage adapter, with administrator authorization for global sources.
+7. Run the MCP integration tests and update any session UI source picker affected by the new source. Verify indexing and retrieval against an isolated real namespace.
+
+Keep legacy R2/website source records readable and exportable, with an explicit migration state. Do not rewrite their storage type or delete original content automatically. Follow `docs/ai-search.md` for the transition.
 
 Each AI Search source should expose two MCP tools:
 

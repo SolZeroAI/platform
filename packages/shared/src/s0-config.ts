@@ -75,6 +75,7 @@ export const S0DeploymentConfigSchema = Schema.Struct({
   zone: Schema.String,
   webFqdn: Schema.optional(Schema.String),
   useApiShield: Schema.Boolean,
+  aiSearchEnabledInDev: Schema.optional(Schema.Boolean),
   planetscale: Schema.optional(S0PlanetscaleConfigSchema),
   observability: Schema.Struct({
     logsDestinations: Schema.Array(Schema.String),
@@ -194,9 +195,6 @@ const S0ResolvedConfigFields = {
     slack: S0SlackConfigSchema,
   }),
   security: S0SecurityConfigSchema,
-  aiSearch: Schema.Struct({
-    serviceTokenId: Schema.optional(Schema.NullOr(SecretReferenceSchema)),
-  }),
 } as const
 
 export const S0ResolvedConfigSchema = Schema.Struct({
@@ -534,12 +532,6 @@ const normalizeResolvedConfig = (decoded: S0ResolvedConfig) =>
           "security.repositorySecretsEncryptionKey",
         ),
       }),
-      aiSearch: {
-        serviceTokenId: yield* normalizeOptionalSecret(
-          decoded.aiSearch.serviceTokenId,
-          "aiSearch.serviceTokenId",
-        ),
-      },
     }
 
     yield* ensureConfig(normalized.deployment.appName !== "", () =>
@@ -647,7 +639,6 @@ export function s0ActiveSecretReferences(config: S0ResolvedConfig): SecretRefere
     config.security.mcpcfProxySigningSecret,
     config.security.tokenEncryptionKey,
     config.security.repositorySecretsEncryptionKey,
-    ...enabledSecrets(true, config.aiSearch.serviceTokenId),
   ]
 }
 

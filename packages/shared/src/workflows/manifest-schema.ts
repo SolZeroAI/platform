@@ -96,6 +96,7 @@ export const WorkflowNodeOptionsSchema = Schema.Struct({
   ),
   timestamp: Schema.optional(Schema.String),
   name: Schema.optional(Schema.String),
+  aiSearchSourceId: Schema.optional(Schema.String),
   to: Schema.optional(Schema.String),
   from: Schema.optional(Schema.String),
   subject: Schema.optional(Schema.String),
