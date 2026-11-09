@@ -101,7 +101,7 @@
     "esbuild": "0.28.2",
     "jsonc-parser": "^3.3.1",
     "lefthook": "^2.2.2",
-    "miniflare": "5.20261006.1-alpha",
+    "miniflare": "5.20261101.0-beta",
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",
     "oxlint-plugin-solzero": "^0.1.0",
@@ -112,7 +112,7 @@
     "tsx": "^4.23.13",
     "turbo": "2.11.7",
     "typescript": "^7.0.2",
-    "wrangler": "4.149.0"
+    "wrangler": "4.156.1"
   },
   "overrides": {
     "@cloudflare/codemode": "0.5.5",
@@ -125,8 +125,7 @@
     "@modelcontextprotocol/sdk": "1.32.0",
     "ai": "7.0.152",
     "chat": "4.40.0",
-    "effect": "4.1.2",
-    "workerd": "1.20261026.1"
+    "effect": "4.1.2"
   },
   "devEngines": {
     "packageManager": {
