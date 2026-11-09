@@ -34,22 +34,22 @@
     "typecheck": "tsrs --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@alchemy.run/cloudflare": "2.0.0-beta.84",
-    "@alchemy.run/planetscale": "2.0.0-beta.84",
+    "@alchemy.run/cloudflare": "2.0.0-beta.85",
+    "@alchemy.run/planetscale": "2.0.0-beta.85",
     "@solzero/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.84",
+    "alchemy": "2.0.0-beta.85",
     "alchemy-planetscale-logical-db": "2.2.0",
-    "dotenv": "^17.4.2",
-    "effect": "4.0.5",
-    "jsonc-parser": "^3.3.1"
+    "dotenv": "17.4.2",
+    "effect": "4.1.2",
+    "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "4.20260702.1",
     "@types/node": "24.19.2",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "oxlint": "1.87.0",
     "tsrs": "0.20.0-ts7.1.0-beta",
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
   }
 }

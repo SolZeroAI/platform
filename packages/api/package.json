@@ -32,31 +32,31 @@
     "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.49",
-    "@ai-sdk/openai": "4.0.60",
-    "@ai-sdk/openai-compatible": "3.0.44",
-    "@cfworker/json-schema": "4.1.1",
-    "@cloudflare/codemode": "0.5.5",
-    "@cloudflare/containers": "^0.3.7",
+    "@ai-sdk/anthropic": "4.0.97",
+    "@ai-sdk/openai": "4.0.109",
+    "@ai-sdk/openai-compatible": "3.0.85",
+    "@cfworker/json-schema": "4.1.6",
+    "@cloudflare/codemode": "0.5.6",
+    "@cloudflare/containers": "0.3.7",
     "@cloudflare/dynamic-workflows": "0.1.1",
-    "@cloudflare/shell": "0.4.3",
-    "@cloudflare/think": "0.20.2",
-    "@modelcontextprotocol/sdk": "^1.32.0",
+    "@cloudflare/shell": "0.5.0",
+    "@cloudflare/think": "0.23.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@solzero/shared": "workspace:*",
-    "agents": "0.30.1",
-    "ai": "7.0.152",
-    "better-auth": "1.7.7",
-    "chat": "4.40.0",
+    "agents": "0.33.0",
+    "ai": "7.0.163",
+    "better-auth": "1.7.18",
+    "chat": "4.44.0",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.5",
-    "jose": "^6.2.10",
+    "effect": "4.1.2",
+    "jose": "6.2.16",
     "just-bash": "3.6.0",
-    "postgres": "^3.4.8",
-    "yaml": "^2.9.0"
+    "postgres": "3.4.9",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
     "tsrs": "0.20.0-ts7.1.0-beta",
-    "typescript": "^7.0.2"
+    "typescript": "7.0.2"
   }
 }
