@@ -115,7 +115,7 @@ export default defineConfig({
       },
     },
     {
-      // Carried over from the s0-lint allowlist: the runner imports @cloudflare/dynamic-workflows on demand.
+      // The runner imports @cloudflare/dynamic-workflows on demand.
       files: ["packages/api/src/server/background/workflows/runner.ts"],
       rules: { "solzero/prevent-dynamic-imports": "off" },
     },
