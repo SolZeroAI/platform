@@ -96,6 +96,6 @@
       "generate": "password",
     },
   ],
-  "tags": ["agents", "cloudflare", "effect", "self-hosted"],
+  "tags": ["agents", "cloudflare", "self-hosted"],
   "website": "https://solzero.dev",
 }
