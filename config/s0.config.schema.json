@@ -28,12 +28,8 @@
                 },
                 "replicas": {
                   "anyOf": [
-                    {
-                      "anyOf": [
-                        { "type": "number", "enum": [0] },
-                        { "type": "integer", "minimum": 2, "maximum": 9007199254740991 }
-                      ]
-                    },
+                    { "type": "number", "enum": [0] },
+                    { "type": "integer", "minimum": 2, "maximum": 9007199254740991 },
                     { "type": "null" }
                   ]
                 },
@@ -261,12 +257,8 @@
             "enabled": { "type": "boolean" },
             "cacheTtl": {
               "anyOf": [
-                {
-                  "anyOf": [
-                    { "type": "number" },
-                    { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] }
-                  ]
-                },
+                { "type": "number" },
+                { "type": "string", "enum": ["Infinity", "-Infinity", "NaN"] },
                 { "type": "null" }
               ]
             },
@@ -333,21 +325,17 @@
                   },
                   "interleaved": {
                     "anyOf": [
+                      { "type": "boolean", "enum": [true] },
                       {
-                        "anyOf": [
-                          { "type": "boolean", "enum": [true] },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "field": {
-                                "type": "string",
-                                "enum": ["reasoning_content", "reasoning_details"]
-                              }
-                            },
-                            "required": ["field"],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string",
+                            "enum": ["reasoning_content", "reasoning_details"]
                           }
-                        ]
+                        },
+                        "required": ["field"],
+                        "additionalProperties": false
                       },
                       { "type": "null" }
                     ]

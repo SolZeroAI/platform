@@ -22,7 +22,7 @@ export const PLANETSCALE_SERVICE_TOKEN_ID_ENV = "PLANETSCALE_SERVICE_TOKEN_ID"
 export const PLANETSCALE_SERVICE_TOKEN_ENV = "PLANETSCALE_SERVICE_TOKEN"
 export const PLANETSCALE_ORGANIZATION_ENV = "PLANETSCALE_ORGANIZATION"
 
-/** Alchemy 2.0.0-beta.84 AuthProvider names. Mapped from service-token env at Layer merge. */
+/** Alchemy 2.0.0-beta.85 AuthProvider names. Mapped from service-token env at Layer merge. */
 export const PLANETSCALE_ALCHEMY_TOKEN_ID_ENV = "PLANETSCALE_API_TOKEN_ID"
 export const PLANETSCALE_ALCHEMY_TOKEN_ENV = "PLANETSCALE_API_TOKEN"
 

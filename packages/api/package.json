@@ -48,7 +48,7 @@
     "better-auth": "1.7.7",
     "chat": "4.40.0",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.5",
+    "effect": "4.1.2",
     "jose": "^6.2.10",
     "just-bash": "3.6.0",
     "postgres": "^3.4.8",
