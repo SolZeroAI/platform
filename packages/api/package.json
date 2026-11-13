@@ -32,9 +32,9 @@
     "typecheck": "tsrs --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.49",
-    "@ai-sdk/openai": "4.0.60",
-    "@ai-sdk/openai-compatible": "3.0.44",
+    "@ai-sdk/anthropic": "4.0.99",
+    "@ai-sdk/openai": "4.0.111",
+    "@ai-sdk/openai-compatible": "3.0.87",
     "@cfworker/json-schema": "4.1.1",
     "@cloudflare/codemode": "0.5.5",
     "@cloudflare/containers": "^0.3.7",
@@ -44,7 +44,7 @@
     "@modelcontextprotocol/sdk": "^1.32.0",
     "@solzero/shared": "workspace:*",
     "agents": "0.30.1",
-    "ai": "7.0.152",
+    "ai": "7.0.166",
     "better-auth": "1.7.7",
     "chat": "4.40.0",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
