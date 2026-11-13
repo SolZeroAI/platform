@@ -132,7 +132,6 @@ const encodeHttpApiError = new Map<number, (message: string) => unknown>([
   [502, (message) => Schema.encodeSync(UpstreamError)(new UpstreamError({ message }))],
 ])
 
-// oxlint-disable-next-line effect/prefer-schema-class -- Reads only the legacy error message of a failure payload.
 const LegacyErrorPayload = Schema.Struct({ error: Schema.String })
 
 /**
@@ -297,21 +296,6 @@ function buildSetupUrl(env: ApiEnv, extraParams?: Record<string, string>): strin
   return Match.value(params.size > 0).pipe(
     Match.when(true, () => `${baseUrl}/settings?${params.toString()}`),
     Match.orElse(() => `${baseUrl}/settings`),
-  )
-}
-
-export function buildSetupResponse(
-  env: ApiEnv,
-  message: string,
-  status: number,
-  extraParams?: Record<string, string>,
-): Response {
-  return json(
-    {
-      error: message,
-      setupUrl: buildSetupUrl(env, extraParams),
-    },
-    status,
   )
 }
 

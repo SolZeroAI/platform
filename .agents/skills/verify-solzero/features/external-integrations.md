@@ -30,3 +30,8 @@ Keep these product facts honest:
 The user deferred live positive results for these fixtures. Authored cases and preflight
 remain available; do not claim green external coverage without a real passing run.
 Broader linking/clone/webhook/event paths remain unverified in `docs/e2e.md`.
+
+Built-in AI Search creation, Items upload/index/search/delete, workflow ingestion, and Admin UI
+checks live in `tests/ai-search.external.e2e.ts`. Use the isolated launcher in `docs/e2e.md`;
+it creates a fresh namespace pair and verifies cleanup. No seeded standing source is reused.
+An API proof does not establish the separate browser authoring flow.

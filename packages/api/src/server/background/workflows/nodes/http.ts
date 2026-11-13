@@ -19,13 +19,8 @@ import * as Result from "effect/Result"
 
 export type WorkflowHttpNodeExecutionInput = WorkflowNodeExecutionInput
 
-const workflowHttpNodeTypes = new Set(["http-request"])
 const workflowHttpMethods = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 const workflowResponseTypes = new Set(["auto", "json", "text"])
-
-export function isWorkflowHttpNodeType(nodeType: string): boolean {
-  return workflowHttpNodeTypes.has(nodeType)
-}
 
 const requireString = (value: Option.Option<string>, message: string) =>
   Option.match(value, {

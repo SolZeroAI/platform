@@ -173,7 +173,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     (data: ServerMessage) => {
       switch (data.type) {
         case "subscribed":
-          console.log("WebSocket subscribed to session")
           subscribedRef.current = true
           // Clear existing state since we're about to receive fresh history
           setEvents([])
@@ -491,20 +490,14 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
 
       // Use ref to avoid race conditions with React StrictMode
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log("WebSocket already open")
-
         return
       }
 
       if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-        console.log("WebSocket already connecting")
-
         return
       }
 
       if (connectingRef.current) {
-        console.log("Connection in progress (ref)")
-
         return
       }
 
@@ -571,8 +564,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       }
 
       const wsUrl = `${getWebSocketOrigin()}/sessions/${sessionId}/ws`
-      console.log("WebSocket connecting to:", wsUrl)
-
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
@@ -589,7 +580,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           return
         }
 
-        console.log("WebSocket connected!")
         connectingRef.current = false
         setConnected(true)
         setConnecting(false)
@@ -623,11 +613,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           return
         }
 
-        console.log("WebSocket closed:", {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-        })
         connectingRef.current = false
         subscribedRef.current = false
         setConnected(false)
@@ -666,7 +651,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           if (reconnectAttempts.current < 5) {
             const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
             reconnectAttempts.current++
-            console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`)
 
             reconnectTimeoutRef.current = setTimeout(() => {
               if (mountedRef.current) {
@@ -710,8 +694,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
 
       return
     }
-
-    console.log("Sending prompt:", content, "with model:", model, "reasoning:", reasoningEffort)
 
     // Optimistically set isProcessing for immediate feedback
     // Server will confirm with processing_status message

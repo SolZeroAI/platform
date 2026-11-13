@@ -12,7 +12,7 @@ Use this skill when editing or reviewing an Effect HttpApi stack, generated Effe
 - Keep API contracts separate from server implementation.
   - Contract modules define `HttpApi`, `HttpApiGroup`, endpoints, schemas, tagged errors, and security declarations.
   - Server route modules only implement `HttpApiBuilder.group(...)` live layers.
-- Import `HttpApi`, `HttpApiBuilder`, `HttpApiClient`, and `HttpApiMiddleware` from `effect/http-api`. This repository pins Effect 4.0.3, which does not export `effect/unstable/httpapi` or `effect/httpapi`.
+- Import `HttpApi`, `HttpApiBuilder`, `HttpApiClient`, and `HttpApiMiddleware` from `effect/http-api`. This repository pins Effect 4.0.5, which does not export `effect/unstable/httpapi` or `effect/httpapi`.
 - Prefer named `Schema.Class` response/request types and `Schema.TaggedError` errors with `httpApiStatus`.
 - Avoid broad `JsonRecord`, `AnyJson`, and generic `{ error: string }` contracts for real endpoints.
 - If a generated client requires `unknown` or extra services, fix the schema contract instead of casting at the call site.

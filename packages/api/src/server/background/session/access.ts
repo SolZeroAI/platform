@@ -1,5 +1,4 @@
 import * as Effect from "effect/Effect"
-import { runOptionPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type { SessionIndexRecord, SessionIndexStore } from "../db/session-index"
@@ -45,15 +44,3 @@ export const resolveSessionAccess = Effect.fn("session.resolveSessionAccess")(fu
     ),
   )
 })
-
-/**
- * Promise bridge for non-Effect callers: resolves to
- * the access grant or `null` so imperative request plumbing can branch without importing Effect.
- */
-export function resolveSessionAccessPromise(
-  store: SessionAccessStore,
-  sessionId: string,
-  userId: string,
-): Promise<SessionAccessGrant | null> {
-  return runOptionPromise(resolveSessionAccess(store, sessionId, userId))
-}

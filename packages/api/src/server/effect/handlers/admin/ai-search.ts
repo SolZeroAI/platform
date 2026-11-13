@@ -26,6 +26,7 @@ function formatSource(input: AiSearchSourceWithPresence) {
     source: input.recordSource,
     locked: input.locked,
     envVarName: input.envVarName,
+    migrationRequired: input.source.dataSource.type !== "built-in",
     createdAt: input.source.createdAt,
     updatedAt: input.source.updatedAt,
   }

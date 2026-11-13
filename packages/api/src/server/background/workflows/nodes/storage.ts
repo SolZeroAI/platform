@@ -1,3 +1,6 @@
+import { AiSearchRegistryStore } from "../../db/ai-search"
+import { isAdminEmailForEnv } from "../../db/admin-config"
+import { runControlPlaneSqlFirst } from "../../../effect/db/control-plane-db"
 import {
   WORKFLOW_KV_NAMESPACE_OPTIONS,
   WORKFLOW_R2_BUCKET_OPTIONS,
@@ -25,16 +28,9 @@ import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
+import * as P from "effect/Predicate"
 
 export type WorkflowStorageNodeExecutionInput = WorkflowNodeExecutionInput
-
-const workflowStorageNodeTypes = new Set([
-  "r2-put-object",
-  "r2-get-object",
-  "kv-put",
-  "kv-get",
-  "get-secret",
-])
 
 const workflowR2BucketIds = new Set<string>(
   WORKFLOW_R2_BUCKET_OPTIONS.map((bucket) => bucket.binding),
@@ -52,10 +48,6 @@ const workflowStorageEncodings = new Set<string>(
 
 const R2_CONTENT_ENCODING_MANIFEST_VERSION = 2
 
-export function isWorkflowStorageNodeType(nodeType: string): boolean {
-  return workflowStorageNodeTypes.has(nodeType)
-}
-
 const requireString = (value: Option.Option<string>, message: string) =>
   Option.match(value, {
     onNone: () => workflowNodeFail(message),
@@ -66,6 +58,7 @@ export const executeWorkflowStorageNode = Effect.fn("workflows.executeStorageNod
   input: WorkflowStorageNodeExecutionInput,
 ) {
   return yield* Match.value(input.node.type).pipe(
+    Match.when("ai-search-upload", () => runAiSearchUploadNode(input)),
     Match.when("r2-put-object", () => runR2PutObjectNode(input)),
     Match.when("r2-get-object", () => runR2GetObjectNode(input)),
     Match.when("kv-put", () => runKvPutNode(input)),
@@ -539,4 +532,63 @@ const runGetSecretNode = Effect.fn("workflows.runGetSecretNode")(function* (
       value: value ?? null,
     },
   }
+})
+
+const runAiSearchUploadNode = Effect.fn("workflows.uploadAiSearchItem")(function* (
+  input: WorkflowStorageNodeExecutionInput,
+) {
+  const userId = getActionUserId(input)
+
+  const user = yield* Effect.tryPromise({
+    try: () =>
+      runControlPlaneSqlFirst<{ email: string }>(
+        input.env,
+        `SELECT "email" FROM "user" WHERE "id" = ?1 LIMIT 1`,
+        [userId],
+      ),
+    catch: toError,
+  })
+
+  const allowed = yield* Option.match(Option.fromNullishOr(user), {
+    onNone: () => Effect.succeed(false),
+    onSome: (owner) => isAdminEmailForEnv(input.env, owner.email),
+  })
+
+  yield* workflowNodeFailWhen(
+    !allowed,
+    "Only administrators can ingest documents into global AI Search sources",
+  )
+
+  const options = input.node.options ?? {}
+
+  const sourceId = yield* requireString(
+    Option.orElse(getString(input.inputs.sourceId), () => getString(options.aiSearchSourceId)),
+    "AI Search source ID is required",
+  )
+
+  const name = yield* requireString(
+    Option.orElse(getString(input.inputs.name), () => getString(options.name)),
+    "AI Search document name is required",
+  )
+
+  const content = Match.value(input.inputs.content).pipe(
+    Match.when(P.isString, (text) => text),
+    Match.orElse((value) => stringifyJsonPretty(value ?? null)),
+  )
+
+  const context = createNodeContext(input)
+
+  const item = yield* new AiSearchRegistryStore(input.env).uploadItem(
+    renderTemplate(sourceId, context),
+    renderTemplate(name, context),
+    content,
+  )
+
+  yield* recordWorkflowNodeRunEvent(input, {
+    eventType: "ai_search_upload",
+    message: "AI Search upload queued",
+    data: { sourceId, itemId: item.id },
+  })
+
+  return { outputs: { itemId: item.id, key: item.key, status: item.status } }
 })

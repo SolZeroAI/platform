@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-11-09T16:29:47.957Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"New Source\"",
+        "target": {
+          "role": "button",
+          "name": "New Source"
+        }
+      }
+    ],
+    "executor": {
+      "name": "decision",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "tests/ai-search.external.e2e.ts::administrators%20create%20built-in%20sources%20and%20open%20their%20documents",
+      "targetId": "local-cloudflare",
+      "instructionDigest": "a09dac185a810615ce3ee09265cc9c5ec6490c161918d7e86dbb71c0863cadc2",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "recordedBy": {
+      "provider": "anthropic.messages",
+      "model": "anthropic/claude-haiku-5.5"
+    },
+    "summary": "The screen shows the step is done (p=0.968, confidence 0.905).",
+    "startPath": "/admin/ai-search",
+    "endPath": "/admin/ai-search",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Create Source"
+      },
+      {
+        "text": "Configure the Cloudflare AI Search instance exposed to agent sessions."
+      },
+      {
+        "role": "button",
+        "name": "Close AI Search source dialog"
+      },
+      {
+        "text": "ID"
+      },
+      {
+        "text": "Used as the source ID, Cloudflare AI Search instance ID, and basis for MCP tool names."
+      },
+      {
+        "role": "textbox",
+        "name": "ID",
+        "placeholder": "product-docs"
+      },
+      {
+        "text": "Label"
+      },
+      {
+        "text": "Human-readable name shown to admins and used in agent-facing tool descriptions."
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "link",
+        "name": "Fork Fixture"
+      },
+      {
+        "role": "link",
+        "name": "Agents"
+      },
+      {
+        "role": "button",
+        "name": "Expand agents menu"
+      },
+      {
+        "role": "link",
+        "name": "Workflows"
+      },
+      {
+        "role": "link",
+        "name": "Bots"
+      },
+      {
+        "text": "Mini Apps (coming soon)"
+      },
+      {
+        "text": "Admin"
+      },
+      {
+        "role": "link",
+        "name": "AI Search"
+      }
+    ],
+    "endWaitMs": 11299,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "356bb4dad9f823ea5064055664450c1dbb1e4d9cbbfb201ca71c7993a2c18dcd",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "e18a7246aa64bc6cabcfc1fff593fa36af4d2bccf2dc172e6d2c8d9ad9cb96af",
+      "agentContextDigest": "44e79ebe1b494e7f7d7911f15d6f0a211137848d9b4d3549ff598d1cc728f3e8"
+    }
+  }
+}

@@ -14,6 +14,7 @@
         "zone": { "type": "string" },
         "webFqdn": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         "useApiShield": { "type": "boolean" },
+        "aiSearchEnabledInDev": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] },
         "planetscale": {
           "anyOf": [
             {
@@ -631,27 +632,6 @@
       ],
       "additionalProperties": false
     },
-    "aiSearch": {
-      "type": "object",
-      "properties": {
-        "serviceTokenId": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "env": { "type": "string" },
-                "generateIfMissing": { "anyOf": [{ "type": "boolean" }, { "type": "null" }] }
-              },
-              "required": ["env"],
-              "additionalProperties": false
-            },
-            { "type": "null" },
-            { "type": "null" }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "brand": {
       "anyOf": [
         {
@@ -684,8 +664,7 @@
     "auth",
     "aiProviders",
     "integrations",
-    "security",
-    "aiSearch"
+    "security"
   ],
   "additionalProperties": false
 }

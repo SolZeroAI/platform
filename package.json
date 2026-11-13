@@ -81,40 +81,41 @@
     "effect": "4.1.2"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "4.0.87",
-    "@ai-sdk/openai": "4.0.101",
-    "@ai-sdk/typesafe-ai": "3.0.26",
+    "@ai-sdk/anthropic": "4.0.99",
+    "@ai-sdk/openai": "4.0.111",
+    "@ai-sdk/typesafe-ai": "3.0.35",
     "@cloudflare/workers-types": "^4.20260702.1",
-    "@e2e-dev/decision": "0.3.0",
-    "@e2e-dev/github": "0.4.3",
-    "@e2e-dev/web": "0.15.4",
-    "@electric-sql/pglite": "0.4.5",
-    "@electric-sql/pglite-socket": "0.1.5",
+    "@e2e-dev/decision": "0.3.2",
+    "@e2e-dev/github": "0.4.4",
+    "@e2e-dev/web": "0.15.5",
+    "@electric-sql/pglite": "0.4.6",
+    "@electric-sql/pglite-socket": "0.1.6",
     "@modelcontextprotocol/sdk": "1.32.0",
-    "@mpsuesser/oxlint-plugin-effect": "0.2.2",
+    "@mpsuesser/oxlint-plugin-effect": "0.6.0",
     "@types/node": "24.19.2",
     "@types/semver": "7.8.0",
-    "@yielded/effect-tsrs": "0.2.2",
-    "ai": "7.0.152",
+    "@yielded/effect-tsrs": "0.2.3",
+    "ai": "7.0.166",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "e2e": "0.21.3",
+    "e2e": "0.23.0",
     "esbuild": "0.28.2",
     "jsonc-parser": "^3.3.1",
     "lefthook": "^2.2.2",
     "miniflare": "5.20261101.0-beta",
-    "oxfmt": "0.74.0",
-    "oxlint": "1.89.0",
+    "oxfmt": "0.78.0",
+    "oxlint": "1.93.0",
     "oxlint-plugin-solzero": "^0.1.0",
     "postgres": "3.4.9",
-    "semver": "7.8.5",
+    "semver": "7.8.6",
     "tegami": "1.5.0",
-    "tsrs": "0.20.0-ts7.1.0-beta",
+    "tsrs": "0.23.0-ts7.1.0-beta",
     "tsx": "^4.23.13",
-    "turbo": "2.11.7",
+    "turbo": "2.11.10",
     "typescript": "^7.0.2",
     "wrangler": "4.156.1"
   },
   "overrides": {
+    "@ai-sdk/provider": "4.0.37",
     "@cloudflare/codemode": "0.5.5",
     "@effect/platform-node": "4.1.2",
     "@effect/platform-node-shared": "4.1.2",
@@ -123,14 +124,14 @@
     "@effect/sql-sqlite-do": "4.1.2",
     "@effect/vitest": "4.1.2",
     "@modelcontextprotocol/sdk": "1.32.0",
-    "ai": "7.0.152",
+    "ai": "7.0.166",
     "chat": "4.40.0",
     "effect": "4.1.2"
   },
   "devEngines": {
     "packageManager": {
       "name": "nub",
-      "version": "0.9.6",
+      "version": "0.10.0",
       "onFail": "warn"
     },
     "runtime": {
@@ -141,7 +142,7 @@
   "engines": {
     "node": ">=24.15.0 <25"
   },
-  "packageManager": "nub@0.9.6",
+  "packageManager": "nub@0.10.0",
   "allowScripts": {
     "@mongodb-js/zstd": true,
     "core-js-pure": true,
@@ -155,6 +156,6 @@
   "patchedDependencies": {
     "@cloudflare/containers@0.3.7": "patches/@cloudflare__containers@0.3.7.patch",
     "@ai-sdk/harness-codex@1.0.43": "patches/@ai-sdk+harness-codex@1.0.43.patch",
-    "e2e@0.21.3": "patches/e2e@0.21.3.patch"
+    "e2e@0.23.0": "patches/e2e@0.23.0.patch"
   }
 }

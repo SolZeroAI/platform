@@ -30,6 +30,7 @@ export interface StageInfraConfig {
   readonly apiObservabilityTracesDestinations: Option.Option<readonly string[]>
   readonly apiObservabilityLogsHeadSamplingRate: Option.Option<number>
   readonly apiObservabilityTracesHeadSamplingRate: Option.Option<number>
+  readonly aiSearchEnabledInDev: Option.Option<boolean>
   readonly useApiShield: Option.Option<boolean>
   readonly alchemyStateStore: Option.Option<AlchemyStateStoreKind>
 }
@@ -41,6 +42,7 @@ const EMPTY_STAGE_INFRA_CONFIG: StageInfraConfig = {
   apiObservabilityTracesDestinations: Option.none(),
   apiObservabilityLogsHeadSamplingRate: Option.none(),
   apiObservabilityTracesHeadSamplingRate: Option.none(),
+  aiSearchEnabledInDev: Option.none(),
   useApiShield: Option.none(),
   alchemyStateStore: Option.none(),
 }
@@ -62,6 +64,7 @@ function stageInfraConfigFromDeployment(config: S0DeploymentConfig): StageInfraC
     apiObservabilityTracesHeadSamplingRate: Option.some(
       config.observability.tracesHeadSamplingRate,
     ),
+    aiSearchEnabledInDev: Option.fromUndefinedOr(config.aiSearchEnabledInDev),
     useApiShield: Option.some(config.useApiShield),
     alchemyStateStore: Option.none(),
   }
@@ -87,6 +90,7 @@ export interface InfraStageProps {
   readonly authTrustedOrigins: readonly string[]
   /** Custom domains to bind to the web worker for this stage. */
   readonly webDomains: readonly string[]
+  readonly aiSearchNamespaceEnabled: boolean
   readonly useApiShield: boolean
   /**
    * Origin (scheme + host + optional port) the sandbox container uses to reach
@@ -153,6 +157,7 @@ const InfraStagePropsSchema = Schema.Struct({
   authBaseUrl: Schema.String,
   authTrustedOrigins: Schema.Array(Schema.String),
   webDomains: Schema.Array(Schema.String),
+  aiSearchNamespaceEnabled: Schema.Boolean,
   useApiShield: Schema.Boolean,
   internalMcpOrigin: Schema.String,
   internalMcpOutboundHost: Schema.NullOr(Schema.String),
@@ -217,46 +222,6 @@ function invalidStageError(stageStr: string): InvalidStageError {
   })
 }
 
-export function getAppStageMetadataFromStr(
-  stageStr: string,
-): Result.Result<AppStageMetadata, InvalidStageError> {
-  const lowerCaseStage = stageStr.toLowerCase()
-
-  return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => Result.succeed({ name: "dev", app: Dev.app })),
-    Match.when("test", () => Result.succeed({ name: "test", app: Test.app })),
-    Match.when("prod", () => Result.succeed({ name: "prod", app: Prod.app })),
-    Match.when(
-      (stage) => stage === "pre" || stage.startsWith("pre-"),
-      (stage) => Result.succeed({ name: stage, app: Pre.app }),
-    ),
-    Match.orElse(() => Result.fail(invalidStageError(stageStr))),
-  )
-}
-
-const appStageMetadataFromBinding = ({ name, app }: StageMetadataBinding): AppStageMetadata => ({
-  name,
-  app,
-})
-
-function appStageMetadataFromEnv(env: StageMetadataEnv) {
-  return Option.match(Option.fromUndefinedOr(env.S0_STAGE_METADATA), {
-    onNone: () => getAppStageMetadataFromStr(env.STAGE),
-    onSome: (binding) =>
-      Result.succeed(appStageMetadataFromBinding(decodeStageMetadataBinding(binding))),
-  })
-}
-
-/** App metadata is deterministic and resolves no infrastructure, so browser and Worker callers read it synchronously. */
-export function getAppStageMetadataSync(input: string | StageMetadataEnv): AppStageMetadata {
-  return Match.value(input).pipe(
-    Match.when(Match.string, getAppStageMetadataFromStr),
-    Match.orElse(appStageMetadataFromEnv),
-    // oxlint-disable-next-line effect/avoid-option-getorthrow -- Synchronous boundary for non-Effect callers: invalid input throws the typed error by contract.
-    Result.getOrThrow,
-  )
-}
-
 function localInfraStageProps(
   config: StageInfraConfig,
   consoleOutputEnabled: boolean,
@@ -276,6 +241,7 @@ function localInfraStageProps(
       "http://[::1]:3000",
     ],
     webDomains: [],
+    aiSearchNamespaceEnabled: Option.getOrElse(config.aiSearchEnabledInDev, () => false),
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
     internalMcpOrigin: INTERNAL_MCP_LOCAL_ORIGIN,
     internalMcpOutboundHost: null,
@@ -346,6 +312,7 @@ function deployedInfraStageProps(input: {
     authBaseUrl,
     authTrustedOrigins: [authBaseUrl],
     webDomains: [webFqdn],
+    aiSearchNamespaceEnabled: true,
     useApiShield: Option.getOrElse(config.useApiShield, () => false),
     internalMcpOrigin: INTERNAL_MCP_INTERNAL_ORIGIN,
     internalMcpOutboundHost: INTERNAL_MCP_INTERNAL_HOST,

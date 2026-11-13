@@ -70,6 +70,9 @@ export default {
   agents: {
     default: {
       executor: decisionExecutor({ model: decisionModel, textModel: languageModel }),
+      // Muse Ember spends most output tokens on reasoning unless effort is low.
+      // The runner forwards this into language-model generateText calls only.
+      providerOptions: { openai: { reasoningEffort: "low" } },
       maxModelCalls: 20,
       maxSteps: 20,
       context:

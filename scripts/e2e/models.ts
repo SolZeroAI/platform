@@ -8,7 +8,7 @@ import * as P from "effect/Predicate"
 // variables, so CI changes models for the fleet in one place. The defaults
 // below serve local runs and must match the DNA page.
 const DEFAULT_DECISION_MODEL = "@cf/cloudflare/clef"
-const DEFAULT_LANGUAGE_MODEL = "anthropic/claude-haiku-5.5"
+const DEFAULT_LANGUAGE_MODEL = "meta/muse-ember-1.0"
 
 /**
  * Official AI SDK providers pointed at the Cloudflare AI Gateway REST API.

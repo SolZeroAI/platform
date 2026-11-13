@@ -17,6 +17,8 @@
     "zone": "localhost",
     // "webFqdn": "ai.example.com",
     "useApiShield": false,
+    // Optional: creates real remote namespaces during local development; requires explicit cleanup.
+    "aiSearchEnabledInDev": false,
     // Control-plane engine is process env DATABASE (alchemy.new select): d1 | planetscale.
     // Omit DATABASE or set d1 for Cloudflare D1. PlanetScale is not a deployment provider.
     "observability": {
@@ -200,9 +202,5 @@
       "env": "REPO_SECRETS_ENCRYPTION_KEY",
       "generateIfMissing": true,
     },
-  },
-  "aiSearch": {
-    // Set when this deployment has a Cloudflare AI Search service-token identifier.
-    // "serviceTokenId": { "env": "CF_AI_SEARCH_SERVICE_TOKEN_ID" }
   },
 }
