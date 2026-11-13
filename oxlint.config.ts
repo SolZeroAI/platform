@@ -25,6 +25,8 @@ export default defineConfig({
   jsPlugins: [{ name: "effect", specifier: "@mpsuesser/oxlint-plugin-effect" }],
   ignorePatterns: [
     ...agentToolIgnorePatterns,
+    ".agents/skills/**",
+    ".claude/skills/**",
     "**/.cursor/plans/**",
     "node_modules",
     "dist",
