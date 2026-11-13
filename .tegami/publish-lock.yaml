@@ -1,17 +1,13 @@
 core:changelogs:
-  - content: "---\npackages:\n  release:solzero:\n    type: major\n---\n\n## Upload documents directly to AI Search\n\nAI Search sources now use built-in storage. Administrators can upload and delete documents and\ninspect indexing status without an external-storage service token. Workflows can ingest text and\nJSON with the new Upload to AI Search node.\n\nR2 and website source creation is removed. Existing source records and original content remain\nintact and are marked as requiring migration; these sources are unavailable for retrieval until\noperators copy their originals into new built-in sources and update their selections. Follow\n`docs/ai-search.md` before cutover. Deployment does not copy or delete legacy content. Workflow\nartifact and skill storage remain unchanged.\n"
-    filename: 2026-11-09-ai-search-built-in-storage.md
+  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Deploy with Alchemy 2.0.0-beta.85 and Effect 4.1.2\n\nDeploys use Alchemy 2.0.0-beta.85 with its `@alchemy.run/cloudflare` and `@alchemy.run/planetscale` provider packages, and Effect 4.1.2.\n"
+    filename: 2026-11-07-alchemy-effect-bump.md
     v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Complete manual test-recording refreshes\n\nSuccessful manual validation runs now execute the requested recording-commit step when release\ndetection is skipped. Failed or cancelled tests cannot publish recordings.\n"
-    filename: 2026-11-09-commit-manual-test-recordings.md
-    v: 0.0.0
-  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Name the alchemy.new listing \"SolZero SI Platform\"\n\nThe alchemy.new manifest now names the package \"SolZero SI Platform\" and describes it as a self-hosted SI agent platform. alchemy.new search results and the deploy page show the new name after this release.\n"
-    filename: 2026-11-10-alchemy-new-si-platform-name.md
+  - content: "---\npackages:\n  release:solzero:\n    type: patch\n---\n\n## Deploy a published SolZero package\n\nDeploying SolZero from the alchemy.new registry no longer fails while loading the API stack. The published package keeps the Alchemy Cloudflare libraries that the deployment loads.\n"
+    filename: 2026-11-13-deploy-published-package.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-11-09-ai-search-built-in-storage.md
-      - 2026-11-09-commit-manual-test-recordings.md
-      - 2026-11-10-alchemy-new-si-platform-name.md
+      - 2026-11-07-alchemy-effect-bump.md
+      - 2026-11-13-deploy-published-package.md
     id: release:solzero
     updated: true
