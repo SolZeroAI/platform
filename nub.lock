@@ -44,7 +44,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: 1.0.0-rc.5-ab785fc
-        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7)
+        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7)
       effect:
         specifier: 4.1.2
         version: 4.1.2
@@ -59,8 +59,8 @@ importers:
         specifier: 3.0.35
         version: 3.0.35(zod@4.6.7)
       '@cloudflare/workers-types':
-        specifier: ^4.20260702.1
-        version: 4.20260702.1
+        specifier: ^5.0.0
+        version: 5.20261112.1
       '@e2e-dev/decision':
         specifier: 0.3.2
         version: 0.3.2(ai@7.0.166(zod@4.6.7))(e2e@0.23.0(@ai-sdk/anthropic@4.0.99(zod@4.6.7))(@ai-sdk/openai@4.0.111(zod@4.6.7))(@ai-sdk/openai-compatible@3.0.87(zod@4.6.7))(ai@7.0.166(zod@4.6.7)))
@@ -96,7 +96,7 @@ importers:
         version: 7.0.166(zod@4.6.7)
       drizzle-kit:
         specifier: 1.0.0-rc.5-ab785fc
-        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(pg@8.23.1)(sql.js@1.16.0)
+        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(sql.js@1.16.0)
       e2e:
         specifier: 0.23.0
         version: 0.23.0(patch_hash=1f55d7623fea3c16a58e22464d1a4919a5d805ba9da209e0b33068891295ba82)(@ai-sdk/anthropic@4.0.99(zod@4.6.7))(@ai-sdk/openai@4.0.111(zod@4.6.7))(@ai-sdk/openai-compatible@3.0.87(zod@4.6.7))(ai@7.0.166(zod@4.6.7))
@@ -144,7 +144,7 @@ importers:
         version: 7.0.2
       wrangler:
         specifier: 4.156.1
-        version: 4.156.1(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2)
+        version: 4.156.1(@cloudflare/workers-types@5.20261112.1)(@types/node@24.19.2)
 
   apps/api:
     dependencies:
@@ -420,7 +420,7 @@ importers:
         version: 3.4.9
       yaml:
         specifier: ^2.9.0
-        version: 2.9.1
+        version: 2.9.0
     devDependencies:
       '@types/node':
         specifier: 24.19.2
@@ -460,14 +460,14 @@ importers:
         version: 3.3.1
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20260702.1
-        version: 4.20260702.1
+        specifier: ^5.0.0
+        version: 5.20261112.1
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
       drizzle-kit:
         specifier: 1.0.0-rc.5-ab785fc
-        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(pg@8.23.1)(sql.js@1.16.0)
+        version: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(sql.js@1.16.0)
       oxlint:
         specifier: 1.93.0
         version: 1.93.0
@@ -6577,7 +6577,8 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20261101.1':
     optional: true
 
-  '@cloudflare/workers-types@4.20260702.1': {}
+  '@cloudflare/workers-types@4.20260702.1':
+    optional: true
 
   '@cloudflare/workers-types@5.20261112.1': {}
 
@@ -8501,7 +8502,7 @@ snapshots:
       zod: 4.6.7
     optionalDependencies:
       '@tanstack/react-start': 1.169.5(react@19.2.8)(react-dom@19.2.8(react@19.2.8))(rolldown@1.2.19)(supports-color@10.2.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      drizzle-kit: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(pg@8.23.1)(sql.js@1.16.0)
+      drizzle-kit: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(sql.js@1.16.0)
       drizzle-orm: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7)
       pg: 8.23.1
       react: 19.2.8
@@ -8774,7 +8775,7 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-kit@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(pg@8.23.1)(sql.js@1.16.0):
+  drizzle-kit@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(effect@4.1.2)(sql.js@1.16.0):
     dependencies:
       '@drizzle-team/brocli': 0.12.1
       '@js-temporal/polyfill': 0.5.1
@@ -8783,7 +8784,7 @@ snapshots:
       jiti: 2.7.0
     optionalDependencies:
       '@electric-sql/pglite': 0.4.6
-      drizzle-orm: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7)
+      drizzle-orm: 1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7)
       pg: 8.23.1
       postgres: 3.4.9
       zod: 4.6.7
@@ -8833,6 +8834,18 @@ snapshots:
   drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@4.20260702.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7):
     optionalDependencies:
       '@cloudflare/workers-types': 4.20260702.1
+      '@effect/sql-d1': 4.1.2(effect@4.1.2)
+      '@electric-sql/pglite': 0.4.6
+      effect: 4.1.2
+      pg: 8.23.1
+      postgres: 3.4.9
+      react: 19.2.8
+      sql.js: 1.16.0
+      zod: 4.6.7
+
+  drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261112.1)(@effect/sql-d1@4.1.2(effect@4.1.2))(@electric-sql/pglite@0.4.6)(effect@4.1.2)(pg@8.23.1)(postgres@3.4.9)(sql.js@1.16.0)(zod@4.6.7):
+    optionalDependencies:
+      '@cloudflare/workers-types': 5.20261112.1
       '@effect/sql-d1': 4.1.2(effect@4.1.2)
       '@electric-sql/pglite': 0.4.6
       effect: 4.1.2
@@ -10891,7 +10904,7 @@ snapshots:
       '@ai-sdk/anthropic': 4.0.99(zod@4.6.7)
       '@ai-sdk/openai': 4.0.111(zod@4.6.7)
 
-  wrangler@4.156.1(@cloudflare/workers-types@4.20260702.1)(@types/node@24.19.2):
+  wrangler@4.156.1(@cloudflare/workers-types@5.20261112.1)(@types/node@24.19.2):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261101.1)
@@ -10902,7 +10915,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20261101.1
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20260702.1
+      '@cloudflare/workers-types': 5.20261112.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
