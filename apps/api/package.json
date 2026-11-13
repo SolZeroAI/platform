@@ -10,13 +10,13 @@
     "typecheck": "tsrs --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
     "@cloudflare/containers": "^0.3.7",
     "@solzero/api": "workspace:*",
-    "@solzero/shared": "workspace:*"
+    "@solzero/shared": "workspace:*",
+    "alchemy": "2.0.0-beta.84"
   },
   "devDependencies": {
-    "@alchemy.run/cloudflare": "2.0.0-beta.84",
-    "alchemy": "2.0.0-beta.84",
     "effect": "4.0.5",
     "tsrs": "0.23.0-ts7.1.0-beta",
     "typescript": "^7.0.2"
