@@ -1,5 +1,17 @@
 # Writing tests
 
+## Contents
+
+- A complete file
+- Registration
+- Fixtures
+- Locators
+- expect
+- Sign-in sessions
+- Start near the screen under test
+- The browser fixture (browser only)
+- Habits
+
 ## A complete file
 
 ```ts
@@ -60,12 +72,17 @@ test.skip('later', async () => {});
 test.only('focus', async () => {});         // local only: CI fails with ONLY_IN_CI
 test('conditional', async () => { test.skip(await onlyOneOrg(), 'nothing to switch to'); }); // throws: the body stops here, reported skipped; call it before the first step
 test('later', async () => { test.skip('waiting on the API'); }); // bare skip from the body
+test.fail('known gap', async () => {}); // expected to fail: a test failure passes it, a pass fails it with UNEXPECTED_PASS
+test('gap on web', async ({ platform }) => { test.fail(platform === 'web', 'known gap'); }); // marks, does not throw; the body runs on
 test.setup('sign in', { sessions: ['admin'] }, async ({ app, screen, session }) => {}); // see Sign-in sessions
 const wsTest = test.extend<{ ws: Ws }>({ ws: async ({ browser }, use) => { await use(await seed()); await drop(); } });
 wsTest('uses the workspace', async ({ ws }) => {}); // code after use() is teardown, runs after failures too
 ```
 
-A setup test cannot skip from its body (`INVALID_ARGUMENT`).
+A setup test cannot skip from its body (`INVALID_ARGUMENT`), and neither a
+setup test nor a serial member can call `test.fail`. `test.fail` covers test
+failures and timeouts only: an infrastructure error such as `ENGINE_FAILURE`
+or a blocked agent verdict still fails the test.
 
 | Option | Default | Notes |
 | --- | --- | --- |
@@ -73,16 +90,17 @@ A setup test cannot skip from its body (`INVALID_ARGUMENT`).
 | `retries` | `config.retries` | 0 to 10; a serial group's value applies to its members. |
 | `tags` | `[]` | Distinct, non-blank, no comma or edge whitespace (`'Login Form'` is fine); union across layers. `--tag smoke` selects, `--tag-mode all` requires every tag. |
 | `skip` | unset | `true` or a reason string. |
+| `fail` | unset | `true` or a reason string: expected to fail, as `test.fail`. Tests only, not groups or setup tests. |
 | `platforms` | unset | Only targets with these platforms, e.g. `['ios']`. |
 | `requires` | `[]` | Engine capabilities, e.g. `['browser']`; missing ones skip the test at selection rather than failing it with `UNSUPPORTED_CAPABILITY`. |
 | `session` | unset | Restore state saved by a setup test. |
 | `agentContext` | unset | Extra context for `agent.*` calls in this test or group. |
 | `agent` | the run's agent | A configured name (`agents.<name>`) or a list run once per agent; `--agent` narrows the list, a setup test takes one name. Innermost wins; `agent.act(..., { agent })` names another for one call. |
-| `trace`, `video` | the target's | `'off'`, `'on'`, `'retain-on-failure'`, `'on-first-retry'`, `'on-all-retries'`. Innermost wins over `--trace` / `--video`, the target, and the config; recording where the engine cannot is `UNSUPPORTED_ARTIFACT` for the run. |
+| `trace`, `video` | the target's | `'off'`, `'on'`, `'retain-on-failure'`, `'on-first-retry'`, `'on-all-retries'`: whether the test keeps a trace page, which attempts record video. Innermost wins over `--trace` / `--video`, the target, and the config; video where the engine cannot record is `UNSUPPORTED_ARTIFACT` for the run. |
 | `serial` | `false` | Groups only. Members share app state, run in order on one worker, retry as a whole, and take the group's `trace` and `video`. |
 
 Serial members cannot set `retries`, `trace`, `video`, `session`,
-`platforms`, `requires`, `skip`, or `only`, nor can a nested `describe` set
+`platforms`, `requires`, `skip`, `fail`, or `only`, nor can a nested `describe` set
 `trace` or `video`; nesting serial groups is a `COLLECTION_ERROR`.
 
 Hooks nest: outer `beforeEach` first, inner `afterEach` first. `beforeAll`
@@ -106,7 +124,8 @@ label. `browser` (`Browser`): browser targets, import `test` from `@e2e-dev/web`
 ### app
 
 - `baseUrl` (`string | undefined`): the target's app URL with the run's
-  port; `undefined` when the target declares no `app.url`.
+  port and no trailing slash (`${app.baseUrl}/api/users`); `undefined` when
+  the target declares no `app.url`. `string` with `test` from `@e2e-dev/web`.
 - `open(path?)`: opens the target's `app.url`, a relative path, or an absolute
   http(s) URL. On a device it takes no path and relaunches the pinned app.
 - `back()`: one history step back.
@@ -115,7 +134,11 @@ label. `browser` (`Browser`): browser targets, import `test` from `@e2e-dev/web`
 - `clearState()`: clears cookies and storage, recreates the context, reopens
   the base URL.
 - `screenshot(label?)`: saves a redacted screenshot artifact and returns its
-  path. Denied after a secret fill (see Sign-in sessions).
+  absolute path; the `list` summary names the first 10 under `Screenshots`. It masks
+  secure fields only (see Sign-in sessions).
+- `startRecording({ name? })`, then `stopRecording()`: records one span and
+  returns its videos (`path` or hosted `url`). Fails while the test's
+  `video` records: set `{ video: 'off' }` on the test.
 
 `clearState()` is `UNSUPPORTED_CAPABILITY` with `connect.reconnectEndpoint`
 or an attempt-scoped browser provider; on a device with no pinned `app`, both
@@ -132,8 +155,8 @@ assertion. Every query also exists on a locator, scoped to its subtree.
 | `getByLabel(text, { exact?, visible? })` | Form controls by label. |
 | `getByPlaceholder(text, { exact?, visible? })` | Inputs by placeholder. |
 | `getByText(text, { exact?, visible? })` | Visible text. |
-| `getByDisplayValue(value, { exact?, visible? })` | Inputs by current value; on the web it cannot scope child queries or be a `filter({ has })` target. |
-| `getByTestId(id, { visible? })` | `data-testid` on the web (or `web({ testIdAttribute })`), accessibility identifier or resource id on a device; a string matches the whole id, a RegExp tests it. Last resort. |
+| `getByDisplayValue(value, { exact?, visible? })` | Inputs by current value; on the web it cannot scope child queries or be a `filter({ has })` or `filter({ hasNot })` target. |
+| `getByTestId(id, { visible? })` | `data-testid` on the web (or `web({ testIdAttribute })`), accessibility identifier or resource id on a device (React Native `testID`, SwiftUI `.accessibilityIdentifier`, Compose `testTag` with `testTagsAsResourceId` on Android, Flutter `Semantics(identifier:)`, .NET MAUI `AutomationId`, NativeScript `testID`); a string matches the whole id, a RegExp tests it; on Android the `<package>:id/` prefix may be left off. Last resort. |
 
 Roles: `button`, `link`, `textbox`, `searchbox`, `combobox`, `listbox`,
 `option`, `checkbox`, `radio`, `radiogroup`, `switch`, `slider`, `spinbutton`,
@@ -158,15 +181,21 @@ echoing its child does not count twice. `exact: false` is a case-insensitive
 substring; a `RegExp` matches as written.
 
 - Exactly one match per action, read, or assertion. Two fail at once with
-  `LOCATOR_AMBIGUOUS`; at zero, actions and assertions poll until the
-  timeout then `LOCATOR_NOT_FOUND`, a read fails at once. Exceptions:
+  `LOCATOR_AMBIGUOUS`; at zero, actions and reads poll until the action
+  timeout then `LOCATOR_NOT_FOUND`, assertions until the assertion timeout
+  then `ASSERTION_FAILED`. Exceptions:
   `toHaveCount`, `toBeVisible`, `toBeHidden`, `toBeAttached`, list-form
   `toHaveText` and `toContainText`, `isVisible()` (false at zero),
   `isHidden()` (true), `count()`, `all()`, `allTextContents()`.
 - Narrow with `filter({ hasText })` (a case-insensitive substring, unlike a
-  query), `filter({ has: locator })`, `first()`, `last()`, `nth(i)`, or
-  scoping under another locator. Any other `filter` key (`hasNot`,
-  `hasNotText`) or an empty `filter({})` is `INVALID_LOCATOR`.
+  query), `filter({ hasNotText })` to exclude matching subtree text,
+  `filter({ has: locator })`, `filter({ hasNot: locator })`, `first()`,
+  `last()`, `nth(i)`, or scoping under another locator. Any other `filter`
+  key (`visible`) or an empty `filter({})` is `INVALID_LOCATOR`. `a.or(b)`
+  matches either, still strict: add `first()` when both may match. Both
+  locators must come from the same screen and attempt. Web branches need
+  identical literal frame-selector chains; display-value branches cannot be
+  composed.
 - `visible: true` drops nodes the page hides (a closed drawer) before the
   exactly-one rule. Visibility is what renders, as `toBeVisible()` reads it:
   an `aria-hidden` spinner that paints is visible, so `toBeHidden()` waits
@@ -183,14 +212,14 @@ substring; a `RegExp` matches as written.
 
 Each action resolves one node, waits up to `config.actionTimeout` (30 s, or
 `{ timeout }`) for it to be actionable, and does one thing: `tap()` (alias
-`click()`), `doubleTap()`, `secondaryTap()` (each takes
+`click()`), `doubleTap()` (alias `dblclick()`), `secondaryTap()` (each takes
 `{ modifiers: ['Shift'] }`), `longPress({ duration? })`
 (100 to 10000 ms; default 500 on the web, 1000 on a device),
 `fill(value | Secret)`, `pressSequentially(text, { delay? })`, `clear()`,
 `press(key)`, `check()`, `uncheck()`,
 `selectOption(label | { label } | { value } | { index })` (one option; an
 array is `INVALID_ARGUMENT`), `focus()`, `hover()`, `setInputFiles(paths)`
-(relative to the project root), `dragTo(locator)`, `scrollIntoView()`,
+(relative to the project root; `[]` clears), `dragTo(locator)`, `scrollIntoView()`,
 `swipe({ direction, momentum? })`. Web only, `UNSUPPORTED_CAPABILITY` on a
 device: `secondaryTap`, `selectOption`, `setInputFiles`, `scrollIntoView`,
 and `modifiers`.
@@ -201,26 +230,32 @@ field and types one character per `delay`, plain string only (a `Secret` is
 `INVALID_ARGUMENT` and goes through `fill`).
 
 Coordinates are CSS pixels, for what the tree does not list: `tap({ position:
-{ x, y } })` offsets from the node's top-left corner (with `modifiers` it is
+{ x, y } })` offsets from the node's top-left corner inside its border (with `modifiers` it is
 `INVALID_ARGUMENT`), `screen.tapAt({ x, y })` taps a viewport point,
-`screen.swipe({ from, to })` swipes along a path,
+`screen.swipe({ from, to, duration? })` swipes along a path,
 `screen.swipe({ direction, momentum? })` swipes the viewport. Prefer a
 locator; a point moves with the layout.
 
 ### Reads
 
-Reads resolve once, no retry: `textContent()`, `inputValue()`,
-`getAttribute(name)`, `isVisible()`, `isHidden()`, `isEnabled()`,
-`isDisabled()`, `isChecked()`, `boundingBox()`, `count()`. `all()` gives one
+`textContent()`, `inputValue()`, `getAttribute(name)`, `isEnabled()`,
+`isDisabled()`, `isChecked()`, and `boundingBox()` wait for one match until
+the action timeout, then read once with no retry for a value. `isVisible()`,
+`isHidden()`, and `count()` answer at once. `all()` gives one
 `nth(i)` locator per current match and `allTextContents()` every match's
 text, both `[]` at zero. Text is the rendered text, whitespace collapsed: on
 the web what `innerText` reads (`text-transform` applies, `display: none`
-drops out, `<br>` is a space); `toHaveText` reads the same. `isChecked()` is
-`false`, not an error, on a node with no checked state, so query checkable
-controls by role. `waitFor({ state?: 'attached' | 'detached' | 'visible' | 'hidden', timeout? })` waits
+drops out, `<br>` is a space); `toHaveText` reads the same. `isChecked()` on a
+node that cannot be checked (a button), and `inputValue()` on one that holds
+no value (a heading), throw `ACTION_FAILED`. `waitFor({ state?: 'attached' | 'detached' | 'visible' | 'hidden', timeout? })` waits
 within `actionTimeout`, else `LOCATOR_NOT_FOUND`. For a value that has to
 settle use `expect`, not a read. Reading a password field's value or
 attributes is `POLICY_DENIED`, as is `toHaveAttribute` on one, negated too.
+
+`screen.tree()` returns the whole screen as the agent reads it (one node
+per line, secrets redacted) and `screen.debug()` prints it to the test's
+output. Both read once without waiting. A locator does not have them, and
+a frame throws `INVALID_ARGUMENT`.
 
 ## expect
 
@@ -235,11 +270,11 @@ attempt); a throwing read keeps polling, and it is not a report step. A
 poll that the body or a hook returns without awaiting is cancelled and fails
 that phase with `STEP_NOT_AWAITED`.
 `expect.soft(x)` keeps a failure instead of throwing; the attempt fails
-after the body with every soft failure listed. If the body calls `test.skip`,
-the test stays skipped and the failures remain in `secondaryErrors`. The CLI
-shows `Skipped After Failure`, also when a retry skips after an earlier
-failure. Set `failOnSkippedFailure: true` in the config to fail the run with
-exit code 1 in either case. The default is `false`; clean skips stay green.
+after the body with every soft failure listed. If the body then calls
+`test.skip`, the attempt still fails, with the skip reason in its `skip`.
+A retry that skips after an earlier failed attempt stays skipped; the CLI shows
+it under `Skipped After Failure`, and `failOnSkippedFailure: true` in the
+config fails the run with exit code 1. The default is `false`.
 `expect.any(Class)`, `expect.anything()`, `expect.objectContaining(obj)`,
 `expect.arrayContaining(arr)`, `expect.stringContaining(s)`, and
 `expect.stringMatching(s | RegExp)` stand in for values inside `toEqual`,
@@ -259,7 +294,7 @@ typed; prefer it when the app already has a schema for the response.
 
 | Locator matchers | Browser matchers | Value matchers |
 | --- | --- | --- |
-| `toBeVisible`, `toBeHidden`, `toBeAttached`, `toBeEnabled`, `toBeDisabled`, `toBeChecked`, `toBeSelected`, `toBeExpanded`, `toBeFocused`, `toHaveText`, `toContainText`, `toHaveValue`, `toHaveAttribute`, `toHaveCount`, `toHaveAccessibleName` | `toHaveURL`, `toHaveTitle`, `toHaveClass(locator, expected)` | `toBe`, `toEqual`, `toMatchObject`, `toBeTruthy`, `toBeFalsy`, `toBeNull`, `toBeUndefined`, `toBeDefined`, `toHaveLength`, `toHaveProperty`, `toContain`, `toMatch`, `toBeGreaterThan`, `toBeGreaterThanOrEqual`, `toBeLessThan`, `toBeLessThanOrEqual`, `toBeCloseTo`, `toMatchSchema` |
+| `toBeVisible`, `toBeHidden`, `toBeAttached`, `toBeEnabled`, `toBeDisabled`, `toBeChecked`, `toBeSelected`, `toBeExpanded`, `toBeFocused`, `toHaveText`, `toContainText`, `toHaveValue`, `toHaveAttribute`, `toHaveCount`, `toHaveAccessibleName`, `toHaveScreenshot` (also on `screen`) | `toHaveURL`, `toHaveTitle`, `toHaveClass(locator, expected)` | `toBe`, `toEqual`, `toMatchObject`, `toBeTruthy`, `toBeFalsy`, `toBeNull`, `toBeUndefined`, `toBeDefined`, `toHaveLength`, `toHaveProperty`, `toContain`, `toMatch`, `toBeGreaterThan`, `toBeGreaterThanOrEqual`, `toBeLessThan`, `toBeLessThanOrEqual`, `toBeCloseTo`, `toMatchSchema` |
 
 `toHaveText` compares the whole normalized text, `toContainText` a substring
 or RegExp, `toHaveValue` a form control's value as is, whitespace included
@@ -277,6 +312,19 @@ and `{ attached: false }` flip their matchers, and `{ ignoreCase: true }`
 works on `toHaveText`, `toContainText`, `toHaveAccessibleName`,
 `toHaveAttribute(name, value)`, and `expect(browser).toHaveURL`. Any other option, `indeterminate` or
 `useInnerText` included, is `INVALID_ARGUMENT`, in JavaScript too.
+
+Screenshots: `await expect(screen).toHaveScreenshot('home.png')` compares the
+screen, `expect(locator).toHaveScreenshot()` one element's box, against
+`<test file>-snapshots/<name>-<target>-<os>.png`, on web, iOS, and Android
+alike. Commit the files. The first run writes the file and fails: look at it,
+commit it, rerun. A CI run writes nothing into the project and attaches a
+missing one at `snapshots/<path>` in the test's results. `--update-snapshots`
+(`-u`) writes missing and different files and passes, after an intended UI
+change. Options: `threshold`, `maxDiffPixels`, `maxDiffPixelRatio`, `mask`
+(locators painted over, for clocks and other changing content), `maskColor`,
+`timeout`. A failure attaches `-expected`, `-actual`, and `-diff` images to the
+step. Files are per target and OS (`-web-linux.png`): screenshots written on a
+Mac never serve Linux CI, so write CI's from a CI job with `-u`.
 
 ## Sign-in sessions
 
@@ -314,11 +362,10 @@ test('the dashboard opens directly', { session: 'admin' }, async ({ app, screen 
   match `[A-Za-z0-9_.-]{1,128}`.
 - A session holds cookies, local storage, and IndexedDB for one run,
   encrypted and deleted at cleanup; server state is not part of it.
-- Once a secret is filled, model pixels and assertion screenshots are
-  withheld for the rest of that session (later serial members included) and
-  `app.screenshot()` is `POLICY_DENIED`. A restored session keeps its setup's
-  taint; a setup that signs in without a fill (`browser.setCookies`, say) leaves
-  screenshots available.
+- Screenshots, the model's and the artifacts', mask secure fields only,
+  after a secret fill too. A generic secret in a plain input, or a value the
+  app shows anywhere else (a show-password toggle, a toast), is in the image
+  and reaches the model provider: use test credentials.
 - Credentials live in the config, values in the environment:
 
 ```ts
@@ -329,7 +376,8 @@ credentials: {
 
 - A static password or secret needs 6 or more code points, else
   `INVALID_CONFIG` at config load, so an unset variable fails every command.
-  A function is read at fill time and redacted only from that fill on.
+  A function `password` is read at fill time and redacted only from that fill
+  on; `username` is always a string.
 - `E2E_USER_<NAME>_USERNAME` and `E2E_USER_<NAME>_PASSWORD` override either
   field per run, even over a function; `<NAME>` is the credential name
   uppercased, every character outside `[A-Z0-9]` as `_`. Two credentials (or
@@ -351,6 +399,72 @@ credentials: {
   `<secret:stripe-key>` (and so does the test id, for a value in a title),
   so the agent cannot type it. Pass the handle.
 
+## Start near the screen under test
+
+A test pays for every step before the screen it checks, on every run and on
+every rerun while you fix it. A wrong locator at the end of a long flow
+reruns the whole flow, then waits out the 30 s action timeout. Begin each
+test as close to its screen as the app allows:
+
+- Sign in once in a setup test and declare `session` on the test (Sign-in
+  sessions). Only the setup fills the sign-in form. A session lasts one run,
+  so the setup still runs on every run, once per target for all the selected
+  tests that declare its session.
+- Open the screen by its path, `app.open('/projects/42/settings')`, not the
+  home page and three taps. `observe` over MCP prints the path of the screen
+  you reached.
+- Create the data the screen needs through the app's API in a `test.extend`
+  fixture. Click through a creation flow only in the test that covers it.
+  A declared session is restored before fixtures run, so when the app signs
+  in with a cookie, `browser.cookies()` signs the fixture's requests in.
+  Check the response in the fixture: a
+  failed seed then fails there, not 30 s later on a locator. While exploring
+  over MCP, a project tool that seeds data (topic `agent`) gets there in one
+  `call`.
+
+```ts
+import { test } from '@e2e-dev/web';
+import { expect } from 'e2e';
+import { z } from 'zod';
+
+const projectTest = test.extend<{ project: { id: string } }>({
+  project: async ({ app, browser }, use) => {
+    const cookie = (await browser.cookies()).map((c) => `${c.name}=${c.value}`).join('; ');
+    const api = (path: string, init: RequestInit = {}) =>
+      fetch(`${app.baseUrl}${path}`, { ...init, headers: { cookie, 'content-type': 'application/json' } });
+    const created = await api('/api/projects', { method: 'POST', body: JSON.stringify({ name: `Project ${Date.now()}` }) });
+    const project = expect(await created.json()).toMatchSchema(z.object({ id: z.string() }));
+    await use(project);
+    await api(`/api/projects/${project.id}`, { method: 'DELETE' }); // runs after a failure too
+  },
+});
+
+projectTest('renames a project', { session: 'admin' }, async ({ app, screen, project }) => {
+  await app.open(`/projects/${project.id}/settings`); // straight to the screen under test
+  await screen.getByLabel('Name').fill('Atlas');
+  await screen.getByRole('button', 'Save').tap();
+  await expect(screen.getByRole('status')).toHaveText('Saved');
+});
+```
+
+On a device there are no sessions and `app.open()` takes no path:
+`device.openLink('myapp://projects/42')` opens a route, or a sign-in link,
+in the app.
+
+Grow a test that spans several screens one screen at a time when you have
+not checked its steps live: write up to the next screen you have not seen
+pass, run it, then add the next. A passing locator step takes milliseconds,
+and an `agent.act` that a later check confirmed replays from the cache with
+no model call. The cache keeps those entries when a later line fails, so
+each run pays model calls only for its new part. That holds for a first
+attempt with a read-write cache: a retry never replays, and with `CI` set
+the cache records nothing by default, so grow the test outside `CI` and
+pass `--retries 0` when the config retries. Keep the title and the
+goals already written as they are while the test grows: a cache entry
+belongs to the test's file and title path and the goal's instruction and
+params. A fixture's run-unique value in a goal's params goes in as
+`unique(value)` (topic `agent`), or every run misses.
+
 ## The browser fixture (browser only)
 
 Prefer `app` and `screen`; `browser` is for what only a browser has, and a
@@ -367,7 +481,8 @@ the app opens itself (`target="_blank"`, `window.open`) is not followed:
 - `locator(css)`: raw CSS or XPath; not portable, a last resort.
 - `frameLocator(css)`: a `Screen` scoped to one iframe
   (`browser.frameLocator('#payment').getByLabel('Card number')`); keeps
-  `locator(css)` and `frameLocator(css)` for nesting.
+  `locator(css)` and `frameLocator(css)` for nesting. The agent's tree
+  leaves out a frame from another site, so script steps there with it.
 - `evaluate(fn | source, arg?)`: runs a function or source string in the
   page, JSON in and out, no closures; a throw in the page is
   `EVALUATE_FAILED`.
@@ -375,27 +490,46 @@ the app opens itself (`target="_blank"`, `window.open`) is not followed:
   before the page's own scripts; call it before `app.open`. `arg` is JSON.
 - `route(pattern, handler)`, `unroute(pattern)`: intercept requests, newest
   route first; `route.request` has `url`, `method`, `headers`, `postData`.
+  `route.fetch()` reads upstream without deciding the route and returns
+  `{ url, status, headers, body(), text(), json() }`; redirects are not followed.
+  Hand binary bodies on with `body()`, never `text()`.
   The handler calls exactly one of
-  `fulfill({ status?, headers?, contentType?, json | body | path })`,
+  `fulfill({ status?, headers?, contentType?, json | body | path })` (`body`
+  a string or bytes; several cookies as one `\n`-joined `set-cookie`),
   `continue({ url?, method?, headers?, postData? })` (straight to the
-  network), `fallback()` (the route registered before it), or `abort()`;
+  network; a header set to `undefined` is dropped, configured site headers
+  still added), `fallback()` (the route registered before it), or `abort()`;
   none or two fails the next step with `ACTION_FAILED`, an unsupported
   option with `INVALID_ARGUMENT`.
+- `unrouteAll()` removes every route; configured site headers stay.
 - `waitForResponse(pattern, { timeout? })`: resolves once the headers
-  arrive, with `{ url, status, headers, json(), text() }`; `text()` and
-  `json()` wait for the body (up to the action timeout) and reject with
-  `ACTION_FAILED` when it could not be read.
+  arrive, with `{ url, status, headers, body(), json(), text() }`; the body
+  readers wait for the body (up to the action timeout) and reject with
+  `ACTION_FAILED` when it could not be read. Start the wait before the
+  request, including the first `browser.goto` or `app.open`.
 - `cookies()`, `setCookies([...])`: a target is an http(s) URL or a domain.
+- `clearCookies({ name?, domain?, path? })`: remove cookies matching every
+  string or RegExp filter; no options removes all cookies, other storage stays.
 - `setViewport({ width, height })`: resize.
+- `emulateMedia({ colorScheme?, reducedMotion? })`: what the page's `@media`
+  rules and `matchMedia` read, for the rest of the test. Call it before
+  `app.open` to load the page with it; a feature left out keeps its value.
 - `onDialog('accept' | 'dismiss' | handler)`: awaited; resolves to an async
   unsubscribe. Register it before the tap that opens the dialog. A handler
-  gets `{ message, accept(text?), dismiss() }`, `accept` taking the prompt
+  gets `{ type, message, accept(text?), dismiss() }`, where `type` is
+  `alert`, `confirm`, `prompt`, or `beforeunload`, `accept` taking the prompt
   text; no handler, or one that neither accepts nor dismisses, fails the
-  next step with `INVALID_STATE`.
+  next step with `INVALID_STATE`. A throwing handler's unanswered dialog is
+  dismissed too, and its error fails the next step.
 - `waitForDownload(() => trigger, { timeout? })`: returns
-  `{ path, suggestedFilename }`.
-- `keyboard.press(key)`, `keyboard.type(text)`, `mouse.*`: unfocused input;
-  prefer `locator.press` and `locator.fill`.
+  `{ path, absolutePath, suggestedFilename }`; `absolutePath` names the saved
+  runner-side file for reading its contents, including with a hosted browser.
+- `waitForDownloads(() => trigger, { count, timeout? })`: calls the trigger
+  once and returns `count` of those results in start order.
+- `keyboard.press(key)`, `keyboard.type(text)`, `keyboard.down(key)`,
+  `keyboard.up(key)`, `mouse.*`: unfocused input. Only `down(key)` holds a
+  key or modifier until `up(key)`. `press(key)` presses and releases within
+  the call. Prefer `locator.press` and `locator.fill`.
 
 A `route`, `unroute`, or `waitForResponse` pattern is a glob string or
 `RegExp` matched against the full URL (`*` stays within one path segment,
@@ -409,9 +543,13 @@ A `route`, `unroute`, or `waitForResponse` pattern is a glob string or
   `browser.locator('.btn-primary')`.
 - Test data gets a run-unique name (`Invoice ${Date.now()}`) and `afterEach`
   cleanup, so replays and retries never trip over leftovers.
-- APIs live in the same suite: `fetch(new URL('/api/users', app.baseUrl))`
+- APIs live in the same suite: ``fetch(`${app.baseUrl}/api/users`)``
   plus value matchers, in a `test.extend` fixture that reads `browser.cookies()`
   when the API needs the session.
-- No sleeps or polling loops; a matcher with a longer `timeout` instead.
+- No sleeps, fixed delays, or polling loops. Wait for the state, not a
+  duration: `agent.waitFor('the import finished')` with a `timeout` long
+  enough for the slowest case (topic `agent` lists its model and budget
+  limits), or a matcher with a longer `timeout` when a locator names the
+  state exactly.
 - `await` every step call and `expect.poll`, else `STEP_NOT_AWAITED` at the line of the call.
 - Assert the fact a model produced with `toContain`, not its exact sentence.

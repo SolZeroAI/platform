@@ -1,3 +1,26 @@
+## solzero@3.0.0
+
+### Upload documents directly to AI Search
+
+AI Search sources now use built-in storage. Administrators can upload and delete documents and
+inspect indexing status without an external-storage service token. Workflows can ingest text and
+JSON with the new Upload to AI Search node.
+
+R2 and website source creation is removed. Existing source records and original content remain
+intact and are marked as requiring migration; these sources are unavailable for retrieval until
+operators copy their originals into new built-in sources and update their selections. Follow
+`docs/ai-search.md` before cutover. Deployment does not copy or delete legacy content. Workflow
+artifact and skill storage remain unchanged.
+
+### Complete manual test-recording refreshes
+
+Successful manual validation runs now execute the requested recording-commit step when release
+detection is skipped. Failed or cancelled tests cannot publish recordings.
+
+### Name the alchemy.new listing "SolZero SI Platform"
+
+The alchemy.new manifest now names the package "SolZero SI Platform" and describes it as a self-hosted SI agent platform. alchemy.new search results and the deploy page show the new name after this release.
+
 ## solzero@2.0.0
 
 ### Open created bot details

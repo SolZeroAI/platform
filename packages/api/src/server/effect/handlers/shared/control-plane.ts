@@ -132,7 +132,6 @@ const encodeHttpApiError = new Map<number, (message: string) => unknown>([
   [502, (message) => Schema.encodeSync(UpstreamError)(new UpstreamError({ message }))],
 ])
 
-// oxlint-disable-next-line effect/prefer-schema-class -- Reads only the legacy error message of a failure payload.
 const LegacyErrorPayload = Schema.Struct({ error: Schema.String })
 
 /**
