@@ -4,41 +4,21 @@ import { useEffect, useId, useRef, type ReactNode } from "react"
 import { hasCustomS0Logo } from "@solzero/shared"
 import { getS0Brand } from "@/lib/brand"
 import { S0LogoSvg } from "@/components/s0-logo-svg"
+import {
+  LOADER_ASSEMBLY_DURATION,
+  LOADER_ASSEMBLY_START,
+  LOADER_CYCLE_SECONDS,
+  LOADER_DEPARTURE_DURATION,
+  LOADER_DEPARTURE_START,
+  LOADER_PIECE_STAGGER,
+  LOADER_PIECES,
+  SOLZERO_MARK_PATH,
+} from "@/components/s0-loader-motion"
 
 interface S0LoaderProps {
   size?: number
   className?: string
 }
-
-const SOLZERO_OUTER_PATH =
-  "M376 188V377C376 480.76 291.76 565 188 565C84.24 565 0 480.76 0 377V188C0 84.24 84.24 0 188 0C291.76 0 376 84.24 376 188Z"
-
-const SOLZERO_STAR_PATH =
-  "M188 94.5C188 197.634 272.866 282.5 376 282.5C272.866 282.5 188 367.366 188 470.5C188 367.366 103.134 282.5 0 282.5C103.134 282.5 188 197.634 188 94.5Z"
-
-const SOLZERO_MARK_PATH = `${SOLZERO_OUTER_PATH}${SOLZERO_STAR_PATH}`
-
-const CYCLE_DURATION = 2.8
-const ASSEMBLY_START = CYCLE_DURATION * 0.12
-const ASSEMBLY_DURATION = CYCLE_DURATION * 0.28
-const DEPARTURE_START = CYCLE_DURATION * 0.64
-const DEPARTURE_DURATION = CYCLE_DURATION * 0.14
-const PIECE_STAGGER = CYCLE_DURATION * 0.06
-
-const LOADER_PIECES = [
-  { name: "north-west", height: 282.5, offsetX: -34, offsetY: -26, width: 188, x: 0, y: 0 },
-  { name: "north-east", height: 282.5, offsetX: 34, offsetY: -26, width: 188, x: 188, y: 0 },
-  {
-    name: "south-east",
-    height: 282.5,
-    offsetX: 34,
-    offsetY: 26,
-    width: 188,
-    x: 188,
-    y: 282.5,
-  },
-  { name: "south-west", height: 282.5, offsetX: -34, offsetY: 26, width: 188, x: 0, y: 282.5 },
-] as const
 
 function sanitizeSvgId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, "")
@@ -120,30 +100,30 @@ function SolZeroLoader({ size = 64, className = "" }: S0LoaderProps) {
               .to(
                 piece,
                 {
-                  duration: ASSEMBLY_DURATION,
+                  duration: LOADER_ASSEMBLY_DURATION,
                   ease: "power2.out",
                   opacity: 1,
                   scale: 1,
                   x: 0,
                   y: 0,
                 },
-                ASSEMBLY_START + index * PIECE_STAGGER,
+                LOADER_ASSEMBLY_START + index * LOADER_PIECE_STAGGER,
               )
               .to(
                 piece,
                 {
-                  duration: DEPARTURE_DURATION,
+                  duration: LOADER_DEPARTURE_DURATION,
                   ease: "power2.in",
                   opacity: 0,
                   scale: 0.94,
                   x: motion.offsetX,
                   y: motion.offsetY,
                 },
-                DEPARTURE_START + index * PIECE_STAGGER,
+                LOADER_DEPARTURE_START + index * LOADER_PIECE_STAGGER,
               )
           })
 
-          timeline.set({}, {}, CYCLE_DURATION)
+          timeline.set({}, {}, LOADER_CYCLE_SECONDS)
         })
       }, containerRef)
 

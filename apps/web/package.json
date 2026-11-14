@@ -13,7 +13,8 @@
     "deploy:pre": "nub run --cwd ../../packages/infra deploy:web:pre",
     "deploy:prod": "nub run --cwd ../../packages/infra deploy:web:prod",
     "typecheck": "tsrs --noEmit",
-    "render:release": "tsx scripts/render-release-card.ts render-release"
+    "render:release": "tsx scripts/render-release-card.ts render-release",
+    "render:og": "tsx scripts/render-og.ts"
   },
   "dependencies": {
     "@cloudflare/kumo": "^2.12.0",
