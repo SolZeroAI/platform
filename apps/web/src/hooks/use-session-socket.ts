@@ -441,7 +441,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
 
         case "error":
           console.error("Session error:", data)
-          // Reset loading state if a fetch_history request was rejected
+          // Any session error ends history pagination loading, including a rejected fetch_history.
           setLoadingHistory(false)
           break
       }
