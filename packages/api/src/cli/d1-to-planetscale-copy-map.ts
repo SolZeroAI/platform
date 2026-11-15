@@ -60,13 +60,6 @@ export function mapSqliteRowToPostgres(row: Record<string, unknown>, destTable: 
   return mapped
 }
 
-export function normalizePostgresRow(
-  row: Record<string, unknown>,
-  destTable: Table,
-): Record<string, unknown> {
-  return mapSqliteRowToPostgres(row, destTable)
-}
-
 export function primaryKeyToken(
   row: Record<string, unknown>,
   primaryKeys: readonly string[],

@@ -12,7 +12,6 @@ import {
 import {
   canonicalCopyRow,
   mapSqliteRowToPostgres,
-  normalizePostgresRow,
   primaryKeyToken,
   rowsEqual,
 } from "./d1-to-planetscale-copy-map"
@@ -280,7 +279,7 @@ async function needsSeedReconciliation(
 
   if (!seed) return false
 
-  if (!rowsEqual(normalizePostgresRow(seed, skills.spec.postgres), originalBuiltinSeed))
+  if (!rowsEqual(mapSqliteRowToPostgres(seed, skills.spec.postgres), originalBuiltinSeed))
     throw new CopyConflictError(
       "Destination PR built-in is not the untouched migration seed. Refusing to delete it.",
     )
@@ -314,7 +313,7 @@ async function verifyTable(source: SourceTable, dest: CopyDestination, batchSize
     const byKey = new Map(
       destination.map((row) => [
         primaryKeyToken(row, source.spec.primaryKeys),
-        normalizePostgresRow(row, source.spec.postgres),
+        mapSqliteRowToPostgres(row, source.spec.postgres),
       ]),
     )
 
@@ -392,7 +391,7 @@ async function runCopy(input: CopyInput): Promise<CopyReport> {
         const byKey = new Map(
           destination.map((row) => [
             primaryKeyToken(row, source.spec.primaryKeys),
-            normalizePostgresRow(row, source.spec.postgres),
+            mapSqliteRowToPostgres(row, source.spec.postgres),
           ]),
         )
 

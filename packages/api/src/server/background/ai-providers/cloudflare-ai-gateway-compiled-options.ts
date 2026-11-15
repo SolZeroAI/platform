@@ -91,11 +91,11 @@ export async function compileCloudflareAiGatewayProviderOptions(input: {
     Option.filter(
       () =>
         input.providerId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID &&
-        input.providerId === input.selectedProviderId,
+        input.selectedProviderId === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
     ),
   )
 
-  return await Option.match(byokProvider, {
+  return Option.match(byokProvider, {
     onNone: () => Promise.resolve(Option.none<Record<string, unknown>>()),
     onSome: (provider) => compileSelectedProviderOptions(input, provider),
   })
