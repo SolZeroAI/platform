@@ -38,7 +38,7 @@ function includesMarker(message: string, markers: readonly string[]): boolean {
   return markers.some((marker) => normalized.includes(marker))
 }
 
-export function classifyCloudflareAiGatewayError(
+function classifyCloudflareAiGatewayError(
   message: string,
   status?: number,
 ): CloudflareAiGatewayActionableErrorKind | null {
