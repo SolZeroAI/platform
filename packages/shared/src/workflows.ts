@@ -30,7 +30,6 @@ export {
   validateWorkflowJsonObjectFieldName,
   WORKFLOW_JSON_OBJECT_FIELD_NAME_PATTERN,
   WORKFLOW_NODE_CATALOG,
-  WORKFLOW_NODE_CATALOG_COMPLETE,
   WORKFLOW_NODE_TYPES,
   WORKFLOW_KV_NAMESPACE_OPTIONS,
   WORKFLOW_R2_BUCKET_OPTIONS,
@@ -99,7 +98,6 @@ export type {
 
 export {
   parseWorkflowManifest,
-  parseWorkflowManifestDraft,
   parseWorkflowNodeOptions,
   SessionToolSpecSchema,
   WorkflowManifestDraftSchema,

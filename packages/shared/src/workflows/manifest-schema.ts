@@ -163,10 +163,6 @@ const decodeOptions = Schema.decodeUnknownOption(WorkflowNodeOptionsSchema, {
   onExcessProperty: "ignore",
 })
 
-const decodeDraft = Schema.decodeUnknownOption(WorkflowManifestDraftSchema, {
-  onExcessProperty: "ignore",
-})
-
 const decodeManifest = Schema.decodeUnknownOption(WorkflowManifestSchema, {
   onExcessProperty: "ignore",
 })
@@ -203,10 +199,6 @@ export function parseWorkflowNodeOptions(value: unknown): WorkflowNodeOptions {
     onNone: () => ({}),
     onSome: (options) => toWorkflowNodeOptions(options),
   })
-}
-
-export function parseWorkflowManifestDraft(value: unknown): Option.Option<WorkflowManifestDraft> {
-  return decodeDraft(value)
 }
 
 export function parseWorkflowManifest(value: unknown): Option.Option<WorkflowManifest> {
