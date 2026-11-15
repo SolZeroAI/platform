@@ -119,6 +119,12 @@ export interface InfraStageProps {
   readonly apiObservabilityLogFormat: "pretty" | "json"
   /** Whether API request logs should be written to the console. */
   readonly apiObservabilityConsoleOutputEnabled: boolean
+  /**
+   * Local dev waits for request telemetry before the response returns, so the
+   * workerd console shows the log on the same request. Other stages record it
+   * with waitUntil and do not block the response.
+   */
+  readonly apiObservabilityAwaitTelemetryFlush: boolean
   /** Cloudflare Workers Observability destinations for exported API logs. */
   readonly apiObservabilityLogsDestinations: readonly string[]
   /** Cloudflare Workers Observability destinations for exported API traces. */
@@ -166,6 +172,7 @@ const InfraStagePropsSchema = Schema.Struct({
   apiObservabilityTracesHeadSamplingRate: Schema.Number,
   apiObservabilityLogFormat: Schema.Literals(["pretty", "json"]),
   apiObservabilityConsoleOutputEnabled: Schema.Boolean,
+  apiObservabilityAwaitTelemetryFlush: Schema.Boolean,
   apiObservabilityLogsDestinations: Schema.Array(Schema.String),
   apiObservabilityTracesDestinations: Schema.Array(Schema.String),
   alchemyStateStore: Schema.Literals(["local", "cloudflare"]),
@@ -224,7 +231,10 @@ function invalidStageError(stageStr: string): InvalidStageError {
 
 function localInfraStageProps(
   config: StageInfraConfig,
-  consoleOutputEnabled: boolean,
+  options: {
+    readonly consoleOutputEnabled: boolean
+    readonly awaitTelemetryFlush: boolean
+  },
 ): InfraStageProps {
   const zone = "localhost"
   const authBaseUrl = "http://localhost:3000"
@@ -255,7 +265,8 @@ function localInfraStageProps(
       () => 1,
     ),
     apiObservabilityLogFormat: "pretty",
-    apiObservabilityConsoleOutputEnabled: consoleOutputEnabled,
+    apiObservabilityConsoleOutputEnabled: options.consoleOutputEnabled,
+    apiObservabilityAwaitTelemetryFlush: options.awaitTelemetryFlush,
     apiObservabilityLogsDestinations: Option.getOrElse(
       config.apiObservabilityLogsDestinations,
       () => [],
@@ -327,6 +338,7 @@ function deployedInfraStageProps(input: {
     ),
     apiObservabilityLogFormat: "json",
     apiObservabilityConsoleOutputEnabled: true,
+    apiObservabilityAwaitTelemetryFlush: false,
     apiObservabilityLogsDestinations: Option.getOrElse(
       config.apiObservabilityLogsDestinations,
       () => [],
@@ -356,7 +368,10 @@ export class Dev extends Data.TaggedClass("dev")<StageProps> {
     return new Dev({
       name: "dev",
       app,
-      infra: localInfraStageProps(config, true),
+      infra: localInfraStageProps(config, {
+        consoleOutputEnabled: true,
+        awaitTelemetryFlush: true,
+      }),
     })
   }
 }
@@ -378,7 +393,10 @@ export class Test extends Data.TaggedClass("test")<StageProps> {
     return new Test({
       name: "test",
       app,
-      infra: localInfraStageProps(config, false),
+      infra: localInfraStageProps(config, {
+        consoleOutputEnabled: false,
+        awaitTelemetryFlush: false,
+      }),
     })
   }
 }
@@ -440,6 +458,42 @@ export class Prod extends Data.TaggedClass("prod")<StageProps> {
   }
 }
 
+export type StageMetadataTag = "dev" | "test" | "pre" | "prod"
+
+/** The stage class for a stage name. `pre` and `pre-*` are both preview. */
+export function stageMetadataTagForName(
+  stage: string,
+): Result.Result<StageMetadataTag, InvalidStageError> {
+  const lowerCaseStage = stage.toLowerCase()
+
+  return Match.value(lowerCaseStage).pipe(
+    Match.when("dev", () => Result.succeed("dev" as const)),
+    Match.when("test", () => Result.succeed("test" as const)),
+    Match.when("prod", () => Result.succeed("prod" as const)),
+    Match.when(
+      (value) => value === "pre" || value.startsWith("pre-"),
+      () => Result.succeed("pre" as const),
+    ),
+    Match.orElse(() => Result.fail(invalidStageError(stage))),
+  )
+}
+
+/** Dev and test use a local application database unless the operator selects remote. */
+export function stageDefaultsToLocalAppDatabase(stage: string): boolean {
+  return Result.match(stageMetadataTagForName(stage), {
+    onFailure: () => false,
+    onSuccess: (tag) => tag === "dev" || tag === "test",
+  })
+}
+
+/** Alchemy's local dev process is the default only for the dev stage. */
+export function stageDefaultsToAlchemyDev(stage: string): boolean {
+  return Result.match(stageMetadataTagForName(stage), {
+    onFailure: () => false,
+    onSuccess: (tag) => tag === "dev",
+  })
+}
+
 export function getStageMetadataFromStr(
   stageStr: string,
   config: StageInfraConfig = EMPTY_STAGE_INFRA_CONFIG,
@@ -451,15 +505,14 @@ export function getStageMetadataFromStr(
     Option.map(Option.fromUndefinedOr(application), configuredAppStageProps),
   )
 
-  return Match.value(lowerCaseStage).pipe(
-    Match.when("dev", () => Result.succeed(Dev.make(config, app))),
-    Match.when("test", () => Result.succeed(Test.make(config, app))),
-    Match.when("prod", () => Result.succeed(Prod.make(config, app))),
-    Match.when(
-      (stage) => stage === "pre" || stage.startsWith("pre-"),
-      (stage) => Result.succeed(Pre.make(stage, config, app)),
+  return Result.map(stageMetadataTagForName(stageStr), (tag) =>
+    Match.value(tag).pipe(
+      Match.when("dev", () => Dev.make(config, app)),
+      Match.when("test", () => Test.make(config, app)),
+      Match.when("prod", () => Prod.make(config, app)),
+      Match.when("pre", () => Pre.make(lowerCaseStage, config, app)),
+      Match.exhaustive,
     ),
-    Match.orElse(() => Result.fail(invalidStageError(stageStr))),
   )
 }
 

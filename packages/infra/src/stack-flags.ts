@@ -1,4 +1,4 @@
-import { APP_DB_MODE_ENV, DATABASE_ENV } from "@solzero/shared"
+import { APP_DB_MODE_ENV, DATABASE_ENV, stageDefaultsToAlchemyDev } from "@solzero/shared"
 import {
   appDbModeForStage,
   bindPlanetscaleAlchemyAuthFromServiceTokens,
@@ -20,7 +20,7 @@ export function planetscaleStackFlags(
   const mode = appDbModeForStage(
     stage,
     input.appDbMode ?? process.env[APP_DB_MODE_ENV],
-    input.alchemyDev ?? stage === "dev",
+    input.alchemyDev ?? stageDefaultsToAlchemyDev(stage),
   )
 
   const planetscale = needsPlanetscaleProviders(engine, mode)

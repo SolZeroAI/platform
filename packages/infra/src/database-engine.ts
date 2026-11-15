@@ -8,6 +8,7 @@ import {
   PLANETSCALE_SERVICE_TOKEN_ID_ENV,
   parseAppDbMode,
   parseS0DatabaseEngine,
+  stageDefaultsToLocalAppDatabase,
   type AppDbMode,
   type S0DatabaseEngine,
 } from "@solzero/shared"
@@ -21,7 +22,8 @@ export function appDbModeForStage(
   configured: unknown,
   alchemyDev: boolean,
 ): AppDbMode {
-  const fallback: AppDbMode = alchemyDev || stage === "dev" || stage === "test" ? "local" : "remote"
+  const fallback: AppDbMode =
+    alchemyDev || stageDefaultsToLocalAppDatabase(stage) ? "local" : "remote"
 
   return parseAppDbMode(configured, fallback)
 }

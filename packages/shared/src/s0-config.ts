@@ -18,6 +18,7 @@ import {
 } from "./provider-config"
 import { type S0DatabaseEngine } from "./database-engine"
 import { resolveS0Brand, type S0BrandEnvironment } from "./s0-brand"
+import { stageMetadataTagForName } from "./stageMetadata"
 import {
   normalizeSecretReference,
   SecretReferenceSchema,
@@ -224,14 +225,8 @@ export const S0_CONFIG_JSON_SCHEMA_OPTIONS = {
 const S0_CONFIG_PROFILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function s0ConfigStageForStage(stage: string): S0ConfigStageName {
-  return Match.value(stage.trim().toLowerCase()).pipe(
-    Match.when(
-      (normalized) => normalized.startsWith("pre-"),
-      (): S0ConfigStageName => "pre",
-    ),
-    Match.when(Match.is(...S0_CONFIG_STAGE_NAMES), (normalized) => normalized),
-    Match.option,
-    Result.fromOption(
+  return stageMetadataTagForName(stage.trim()).pipe(
+    Result.mapError(
       () =>
         new ConfigValidationError({
           message: `Invalid stage '${stage}' for s0 config file selection. Expected dev, test, pre, pre-*, or prod`,

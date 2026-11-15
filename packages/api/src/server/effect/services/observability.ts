@@ -71,6 +71,7 @@ export interface RequestObservabilityContext {
   readonly workerName: string
   readonly logFormat: "pretty" | "json"
   readonly consoleOutputEnabled: boolean
+  readonly awaitTelemetryFlush: boolean
   readonly traceparent: string | null
   readonly tracestate: string | null
   readonly cfRay: string | null
@@ -158,6 +159,7 @@ export function makeRequestObservability(
     workerName: env.WORKER_NAME,
     logFormat: stageMetadata.infra.apiObservabilityLogFormat,
     consoleOutputEnabled: stageMetadata.infra.apiObservabilityConsoleOutputEnabled,
+    awaitTelemetryFlush: stageMetadata.infra.apiObservabilityAwaitTelemetryFlush,
     traceparent: request.headers.get("traceparent"),
     tracestate: request.headers.get("tracestate"),
     cfRay,
@@ -643,7 +645,7 @@ export function createApiRequestObserver(
 
       const telemetryFlush = Promise.allSettled(pendingTelemetryRuns).then(() => undefined)
       ctx.waitUntil(telemetryFlush)
-      await Match.value(context.stage === "dev").pipe(
+      await Match.value(context.awaitTelemetryFlush).pipe(
         Match.when(true, () => telemetryFlush),
         Match.orElse(() => Promise.resolve()),
       )
