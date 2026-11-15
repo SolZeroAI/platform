@@ -199,7 +199,7 @@ export const logControlPlaneError = Effect.fn("controlPlane.logError")(function*
 
 export { describeError }
 
-/** Logs an unhandled control-plane error and renders the legacy 500 response. */
+/** Logs an unhandled error and returns a 500 with the S0Api error body plus the legacy `error` field. */
 const respondUnhandledError = Effect.fn("controlPlane.respondUnhandledError")(function* (
   cause: unknown,
 ) {
