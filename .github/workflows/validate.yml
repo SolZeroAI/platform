@@ -247,7 +247,7 @@ jobs:
           E2E_AI_VALIDATED_SHA="$(git rev-parse HEAD)"
           export E2E_AI_VALIDATED_SHA
           echo "E2E_AI_VALIDATED_SHA=$E2E_AI_VALIDATED_SHA" >> "$GITHUB_ENV"
-          node scripts/e2e/ai-report.mjs init
+          nub scripts/e2e/ai-report.mjs init
       - name: Run core real-stack flows
         id: e2e-run
         env:
@@ -268,7 +268,7 @@ jobs:
       - name: Summarize measured AI usage
         if: always() && steps.ai-usage-init.outcome == 'success'
         id: ai-usage-summary
-        run: node scripts/e2e/ai-report.mjs summarize
+        run: nub scripts/e2e/ai-report.mjs summarize
       - name: Upload recorded action replays
         if: github.event_name == 'workflow_dispatch' && inputs.e2e_record && steps.e2e-run.outcome == 'success'
         uses: actions/upload-artifact@v7
