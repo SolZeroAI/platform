@@ -152,7 +152,7 @@ jobs:
         id: deploy-lifetime
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/preview-lifecycle.mjs deploy
+        run: nub scripts/preview-lifecycle.mjs deploy
 
       - name: Deploy preview
         id: deploy
@@ -269,7 +269,7 @@ jobs:
         id: cleanup-lifetime
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/preview-lifecycle.mjs cleanup
+        run: nub scripts/preview-lifecycle.mjs cleanup
 
       - name: Clean up preview
         id: cleanup
@@ -288,7 +288,7 @@ jobs:
           ALCHEMY_STAGE: ${{ steps.cleanup-lifetime.outputs.stage }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/preview-verify.mjs
+        run: nub scripts/preview-verify.mjs
 
       - name: Find existing comment
         if: ${{ github.event_name == 'pull_request_target' }}
