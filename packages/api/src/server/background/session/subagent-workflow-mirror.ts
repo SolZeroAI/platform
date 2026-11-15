@@ -219,7 +219,7 @@ async function authorizedWorkflowContext(input: {
     ),
   )
 
-  return await Option.match(candidate, {
+  return Option.match(candidate, {
     onNone: () => Promise.resolve(Option.none<WorkflowCallbackContext>()),
     onSome: ({ context, participant }) =>
       authorizeStoredWorkflowRun(input.workflowStore, context, participant.user_id),

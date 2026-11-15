@@ -12,10 +12,6 @@ export interface CreatePlanetscaleAppDatabaseInput {
   readonly config?: S0PlanetscaleConfig
 }
 
-export function pgMigrationsDir() {
-  return resolve(INFRA_DIR, "migrations/pg")
-}
-
 export function createPlanetscaleAppDatabase(input: CreatePlanetscaleAppDatabaseInput) {
   return Effect.gen(function* () {
     const { logicalDatabaseName, region, ...provisioning } =
@@ -45,7 +41,7 @@ export function createPlanetscaleAppDatabase(input: CreatePlanetscaleAppDatabase
       adminOrigin: adminRole.origin,
       appRoleName: Output.map(appRole.username, PlanetscaleLogicalDb.postgresRoleNameFromUsername),
       appRolePrivilegesVersion: 1,
-      migrationsDir: pgMigrationsDir(),
+      migrationsDir: resolve(INFRA_DIR, "migrations/pg"),
       name: logicalDatabaseName,
     })
 
