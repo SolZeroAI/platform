@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/ai/bedrock
      upstream: website/src/content/docs/aws/ai/bedrock.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Bedrock & Effect AI
 
@@ -29,7 +29,7 @@ scoped to exactly that model:
 
 ```typescript
 // src/Api.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import { LanguageModel } from "effect/ai";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";

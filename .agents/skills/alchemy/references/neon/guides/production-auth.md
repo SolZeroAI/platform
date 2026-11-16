@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/guides/production-auth
      upstream: website/src/content/docs/neon/guides/production-auth.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Production Auth
 
@@ -20,7 +20,7 @@ requires deliberate, resource-scoped adoption and review of its users and settin
 ## Set the application name
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const auth = yield* Neon.Auth("Auth", {
   branch,

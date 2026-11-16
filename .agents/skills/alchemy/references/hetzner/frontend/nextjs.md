@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/frontend/nextjs
      upstream: website/src/content/docs/hetzner/frontend/nextjs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Next.js
 
@@ -33,9 +33,7 @@ The build integration is not bundled with alchemy. Install
 used at build time, so a dev dependency is enough. Your app still
 needs `next`, `react`, and `react-dom` as usual:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Next.js
 
@@ -52,7 +50,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Website = Hetzner.Website.Nextjs("Website");
 ```
@@ -125,9 +123,7 @@ export function GET() {
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs `next dev` (native HMR, Turbopack) instead of
 deploying; `site.url` is the local address and no Hetzner resources

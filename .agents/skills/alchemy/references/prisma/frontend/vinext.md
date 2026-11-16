@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/vinext
      upstream: website/src/content/docs/prisma/frontend/vinext.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vinext
 
@@ -17,10 +17,7 @@ Keep `vinext`, `react`, `react-dom`, and `react-server-dom-webpack` in your
 application dependencies, and install `vite` and `@vitejs/plugin-rsc` for
 building. Add the Alchemy integration and dependency tracer:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure vinext
 
@@ -42,7 +39,7 @@ is required in `vite.config.ts`. Configure deployment settings on
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Vinext("Website", {
   rootDir: ".",
@@ -106,9 +103,7 @@ used by Fly, Hetzner, and Railway.
 
 ## Local development
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 The Website runs `vinext dev` with native HMR without creating a Prisma project,
 Compute service, or custom domain. Other resources declared in the Stack retain
@@ -123,7 +118,7 @@ const site = yield* Prisma.Website.Vinext("Web", {
 });
 ```
 
-The app must use the project's default branch. Configure the returned DNS records
+Configure the returned DNS records
 and verify domain status before routing traffic; see
 [Custom domains](/prisma/frontend/websites#custom-domains).
 

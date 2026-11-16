@@ -1,13 +1,13 @@
 <!-- source: https://alchemy.run/railway/frontend/react-router
      upstream: website/src/content/docs/railway/frontend/react-router.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React Router
 
-> Deploy React Router v7 (framework mode) to Railway with Railway.Website.ReactRouter — SSR on a container Service, client assets in the image, and React Router's own Vite dev server under alchemy dev.
+> Deploy React Router v8 (framework mode) to Railway with Railway.Website.ReactRouter — SSR on a container Service, client assets in the image, and React Router's own Vite dev server under alchemy dev.
 
 `Railway.Website.ReactRouter` deploys a
-[React Router](https://reactrouter.com) v7 app in framework mode to
+[React Router](https://reactrouter.com) v8 app in framework mode to
 Railway. React Router builds through Vite, so Alchemy runs your
 project's own build: the SSR server plus client assets run on one
 [`Railway.Service`](/railway/compute/services). Alchemy creates a
@@ -23,9 +23,7 @@ The build integration is not bundled with alchemy. Install
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 The React Router side is whatever `npx create-react-router@latest`
 scaffolds — `react-router`, `@react-router/dev`, `@react-router/node`,
@@ -82,7 +80,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.ReactRouter("Website");
 ```
@@ -225,9 +223,7 @@ there is nothing to mirror on the resource.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs React Router's own Vite dev server (native HMR)
 instead of deploying; `site.url` is the local address and no Railway

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/guides/preview-branches
      upstream: website/src/content/docs/neon/guides/preview-branches.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Preview branches per PR
 
@@ -20,14 +20,14 @@ The project is a normal resource, created once by the stage that
 owns it:
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const project = yield* Neon.Project("app-db", {
   region: "aws-us-east-1",
 });
 ```
 
-Deploy it with `bun alchemy deploy --stage staging`. The state for
+Deploy it with `alchemy deploy --stage staging`. The state for
 `Neon.Project("app-db")` lands in the `staging` state file — that's
 what PR stages will look up.
 
@@ -44,7 +44,7 @@ const { stage } = yield* Alchemy.Stack;
 ```
 
 `stage` is whatever was passed to
-`bun alchemy deploy --stage <name>` — `staging`, `prod`, or
+`alchemy deploy --stage <name>` — `staging`, `prod`, or
 `pr-147`.
 
 ## Reference the project from PR stages
@@ -121,9 +121,7 @@ deploy updates the branch in place.
 
 ## Tear a preview down
 
-```sh
-bun alchemy destroy --stage pr-147
-```
+<PackageManagers run="alchemy destroy --stage pr-147" />
 
 Destroy deletes the stage's resources — including its branch — but
 leaves the referenced project untouched: the PR stage doesn't own

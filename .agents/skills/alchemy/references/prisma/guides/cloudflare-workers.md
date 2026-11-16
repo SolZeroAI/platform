@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/guides/cloudflare-workers
      upstream: website/src/content/docs/prisma/guides/cloudflare-workers.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Connect from Cloudflare Workers
 
@@ -10,10 +10,10 @@ A Worker can consume a Prisma Postgres database two ways. Both start
 from the same resources:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle/Postgres";
-import * as Prisma from "alchemy/Prisma";
-import * as SQL from "alchemy/SQL/Postgres";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle/Postgres";
+import * as Prisma from "@alchemy.run/prisma";
+import * as SQL from "@alchemy.run/sql/Postgres";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

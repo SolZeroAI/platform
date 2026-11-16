@@ -1,18 +1,18 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/react-router
      upstream: website/src/content/docs/cloudflare/frontend/react-router.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React Router
 
-> Deploy React Router v7 — including React Server Components — to Cloudflare with Cloudflare.Website.Vite and viteEnvironments.
+> Deploy React Router v8 — including React Server Components — to Cloudflare with Cloudflare.Website.Vite and viteEnvironments.
 
-[React Router](https://reactrouter.com) v7 builds through Vite, so
+[React Router](https://reactrouter.com) v8 builds through Vite, so
 [`Cloudflare.Website.Vite`](/cloudflare/frontend/vite) deploys it — one
 resource, no Wrangler config, no manual entrypoint. In React Server
 Components mode the build emits **multiple server environments** (`rsc`
 and `ssr`) instead of the single `ssr` environment most SSR frameworks
 produce, and `viteEnvironments` is the prop that tells Alchemy how those
-environments assemble into one Worker. The configuration on this page is
+environments assemble into one Worker. This configuration is
 a supported, live-tested shape: Alchemy's test suite deploys it to real
 Cloudflare and asserts that server-rendered HTML and client routes both
 serve.
@@ -37,12 +37,10 @@ renderer, and the Worker handler.
 
 ## Install the dependencies
 
-React Server Components need React Router 7.16+ and the RSC Vite
+React Server Components need React Router 8+ and the RSC Vite
 plugin:
 
-```sh
-bun add react react-dom react-router\nbun add -d vite @vitejs/plugin-react @vitejs/plugin-rsc
-```
+<PackageManagers add={deps} dev={devDeps} />
 
 `@vitejs/plugin-rsc` is what splits the build into `client`, `ssr`, and
 `rsc` environments; `@vitejs/plugin-react` handles the usual JSX/HMR
@@ -126,7 +124,7 @@ Stack) and describe the environment topology with `viteEnvironments`:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Website = Cloudflare.Website.Vite("Website", {
   viteEnvironments: {
@@ -234,9 +232,7 @@ single-environment SSR build — needs no `viteEnvironments` at all.
 
 ## Deploy and verify
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 This exact shape is exercised by Alchemy's live test suite ("Vite:
 React Router RSC deploys from a distilled manifest"): the test deploys

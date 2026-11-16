@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/data/branches
      upstream: website/src/content/docs/prisma/data/branches.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Branches
 
@@ -14,13 +14,31 @@ inside a project. Prisma tracks two separate properties:
 - `isDefault` identifies the branch new resources use when they omit
   a branch.
 
+<Tree
+  nodes={[
+    { id: "proj", label: "my-app", type: "project" },
+    { id: "main", label: "main", type: "branch · role: production · default", parent: "proj" },
+    { id: "db1", label: "app", type: "Postgres", parent: "main", tone: "accent" },
+    { id: "c1", label: "api", type: "Compute", parent: "main" },
+    { id: "pr", label: "preview", type: "branch · role: preview", parent: "proj" },
+    { id: "db2", label: "app", type: "Postgres", parent: "pr", tone: "accent" },
+    { id: "c2", label: "api", type: "Compute", parent: "pr" },
+  ]}
+  caption="A branch groups a database and apps under one name. Its role decides which environment variables its apps get, production or preview."
+/>
+
 The first branch created with a project has the immutable
 `production` role. Additional branches have the `preview` role.
 Promoting a preview branch changes `isDefault`; it does not change
 that branch's role.
 
+:::note
+Branches come from Prisma's Management API, which marks its branch endpoints
+experimental, so their behaviour may change.
+:::
+
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 const branch = yield* Prisma.Branch("preview", { project });
 ```

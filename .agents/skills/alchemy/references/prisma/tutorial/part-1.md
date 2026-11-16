@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/tutorial/part-1
      upstream: website/src/content/docs/prisma/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Project
 
@@ -13,7 +13,7 @@ contains the final application and its deployment test.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+ installed locally.
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh) installed locally.
 - A Prisma workspace with access to Compute and Postgres.
 - A workspace service token from the [Prisma Console](https://console.prisma.io).
 
@@ -34,28 +34,19 @@ Keep all of the following files in this directory.
 
 ## Initialize the package
 
-  <TabItem label="bun" icon="bun"><Code code="bun init -y" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npm init -y" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm init" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn init -y" lang="sh" /></TabItem>
+<PackageManagers init />
 
 This creates the `package.json` that records your dependencies.
 
 ## Install Alchemy
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add ${pkgs}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install ${pkgs}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add ${pkgs}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add ${pkgs}`} lang="sh" /></TabItem>
+<PackageManagers add={pkgs} />
 
 Use matching Effect versions for Alchemy and the platform packages.
 
 ## Configure credentials
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy profile edit --add Prisma" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy profile edit --add Prisma" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy profile edit --add Prisma" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy profile edit --add Prisma" lang="sh" /></TabItem>
+<PackageManagers run="alchemy profile edit --add Prisma" />
 
 Enter your service token when prompted. [Setup](/prisma/setup) explains
 profiles and the `PRISMA_SERVICE_TOKEN` environment variable used in CI.
@@ -80,7 +71,7 @@ Create `alchemy.run.ts`:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -99,7 +90,7 @@ records what this Stack owns. For shared deployments, use a
 Create `src/Database.ts`:
 
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Project = Prisma.Project("Project", {
   createDatabase: false,
@@ -129,10 +120,7 @@ value visible in the deployment output.
 
 ## Deploy
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy deploy" lang="sh" /></TabItem>
+<PackageManagers run="alchemy deploy" />
 
 Alchemy creates the Project and prints `projectId`. Use the same profile and
 stage throughout the tutorial so each deployment updates this Stack.

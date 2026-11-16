@@ -1,12 +1,16 @@
 # neon index
 
-31 pages. Declare Neon Postgres, Functions, storage, Auth, AI Gateway and websites together in an Alchemy Stack.
+36 pages. Declare Neon Postgres projects, branches and roles, plus Functions, storage, Auth, the Data API and AI Gateway, in an Alchemy Stack, with a branch per preview stage.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Neon | `_overview.md` | Declare Neon Postgres, Functions, storage, Auth, AI Gateway and websites together in an Alchemy Stack. |
+| Neon | `_overview.md` | Declare Neon Postgres projects, branches and roles, plus Functions, storage, Auth, the Data API and AI Gateway, in an Alchemy Stack, with a branch per preview stage. |
+| Functions | `functions.md` | How Neon Functions run Node.js Fetch handlers next to a branch's database, in native or Effect form, how they subscribe to uploads and schedules, and why every handler authenticates its callers. |
 | Organization governance | `governance.md` | Manage existing Neon organization access, billing alerts, and private-network associations with explicit ownership and restoration. |
+| Organizations and keys | `organizations-and-keys.md` | How a Neon organization holds your projects and their branches, how an API key and orgId decide where Alchemy deploys, and why apps connect with their own credentials. |
 | Setup | `setup.md` | Prepare Neon credentials, service access, regions, and external dependencies before deploying with Alchemy. |
+| Storage | `storage.md` | How Neon Buckets store files on a branch through an S3-compatible API, how typed Objects hold configuration as values, and how Functions read and write them through bindings. |
+| What is Neon? | `what-is-neon.md` | The concepts behind Neon — organizations, projects, branches, computes, roles, connections, migrations, and the Functions, storage, Auth, Data API and AI Gateway around them — and how @alchemy.run/neon models each of them. |
 
 ## data/
 
@@ -15,13 +19,14 @@
 | Branching | `data/branching.md` | Neon branches are copy-on-write forks of a parent branch — create them per stage or preview, pin them to a point in time, copy schema only, and let them expire on their own. |
 | Connections | `data/connections.md` | Every Neon project and branch exposes direct and pooled connection URIs plus pre-parsed origin outputs — feed the direct origin to Hyperdrive and the pooled one to everything else. |
 | Migrations | `data/migrations.md` | Apply SQL migrations and seed data to Neon projects and branches as part of every deploy — ordered, hashed, and tracked in Alchemy's __alchemy_migrations table. |
+| Roles | `data/roles.md` | Create Postgres roles on a Neon branch with Neon.Role — separate logins for your app and your migrations, with passwords as Redacted outputs. |
 
 ## frontend/
 
 | Page | File | Covers |
 | --- | --- | --- |
 | Astro | `frontend/astro.md` | Package Astro SSR or prerendered pages for Neon Functions, with native Astro development. |
-| Foldkit | `frontend/foldkit.md` | Package a client-only Foldkit Vite app for Neon Functions with SPA routing. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Neon Functions with native local development. |
 | Next.js | `frontend/nextjs.md` | Build Next.js for a Neon Function Fetch entry and use next dev locally. |
 | Nuxt | `frontend/nuxt.md` | Package Nuxt SSR and public assets for Neon Functions, with native Nuxt development. |
 | Octane | `frontend/octane.md` | Package Octane rendering and server routes as a Neon Function Fetch artifact. |

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/frontend/vite
      upstream: website/src/content/docs/aws/frontend/vite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vite
 
@@ -20,9 +20,7 @@ The build integration is not bundled with alchemy. Install
 `/vite/aws` exports from your project at deploy time. It is only used
 at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -50,7 +48,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.Vite("Website");
 ```
@@ -81,9 +79,7 @@ Deploying uploads the build output to S3, writes the file manifest to
 a CloudFront KeyValueStore, and creates the distribution that serves
 it at the edge.
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 See
 [examples/aws-website-vite](https://github.com/alchemy-run/alchemy/tree/main/examples/aws-website-vite)
@@ -225,9 +221,7 @@ it entirely.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Vite's own dev server (native HMR) instead of
 deploying; `site.url` is the local address and no AWS resources are
@@ -288,8 +282,8 @@ this resource. Each client-only stack has its own page building on it:
 - [React SPA](/aws/frontend/vite-spa) — from a bare `index.html` to
   the `create-vite` template.
 - [Vue](/aws/frontend/vue) — Vue 3 SPAs with `vue-router` deep links.
-- [Foldkit](/aws/frontend/foldkit) — builds through the same Vite
-  pipeline under its own `AWS.Website.Foldkit` resource.
+- [Foldkit](/aws/frontend/foldkit) — deploys SPA, SSR, and prerendered apps
+  through `AWS.Website.Foldkit`.
 
 ## SSR frameworks
 

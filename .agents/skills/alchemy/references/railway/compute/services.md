@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/compute/services
      upstream: website/src/content/docs/railway/compute/services.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Services
 
@@ -39,7 +39,7 @@ the program that runs in it.
 
 ```typescript
 // src/api.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 import { Site } from "./project.ts";
 
@@ -65,7 +65,7 @@ image.
 Return `fetch` from the constructor Effect to boot an HTTP server.
 
 ```diff lang="typescript"
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Site } from "./project.ts";
@@ -224,9 +224,8 @@ daemon. No registry.
 Changed code is a new Railway build and an in-place update.
 Unchanged code is a no-op.
 
-`build.install: ["pg"]` ships `pg` unbundled. Rolldown's CJS interop
-turns `pg.Client` into a namespace (`The superclass is not a
-constructor`) if you bundle it.
+`build.install` ships packages unbundled, installed with npm inside
+the image. Use it for native addons such as `sharp`.
 
 ```typescript
 export default class Api extends Railway.Service<Api>()(
@@ -234,7 +233,7 @@ export default class Api extends Railway.Service<Api>()(
   {
     project: Site,
     main: import.meta.url,
-    build: { install: ["pg"] },
+    build: { install: ["sharp"] },
   },
   Effect.gen(function* () {
     return {
@@ -291,8 +290,8 @@ Omit `fetch`. Use `ServerHost.run` for a long-running loop:
 
 ```typescript
 // src/worker.ts
-import * as Railway from "alchemy/Railway";
-import { ServerHost } from "alchemy/Server";
+import * as Railway from "@alchemy.run/railway";
+import { ServerHost } from "alchemy/Runtime/Process";
 import * as Effect from "effect/Effect";
 import { Site } from "./project.ts";
 

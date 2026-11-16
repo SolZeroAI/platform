@@ -1,10 +1,10 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/frontends
      upstream: website/src/content/docs/cloudflare/frontend/frontends.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Frontend frameworks
 
-> Deploy Vite, Astro, Next.js, vinext, Nuxt, SvelteKit, Waku, or any static build to Cloudflare Workers with first-class Website resources.
+> Deploy Vite, Foldkit, Astro, Next.js, vinext, Nuxt, SvelteKit, Waku, or any static build to Cloudflare Workers with first-class Website resources.
 
 Alchemy deploys frontends to Cloudflare with a family of
 `Cloudflare.Website` resources. Each one builds your project
@@ -17,6 +17,9 @@ natively; Alchemy layers its Cloudflare integration on top.
 - [`Vite`](/cloudflare/frontend/vite) — any pure-Vite app: SPAs and
   Vite-plugin frameworks like TanStack Start, React Router, Vue, and
   SolidStart; your `vite.config.ts` loads natively.
+- [`Foldkit`](/cloudflare/frontend/foldkit) — Foldkit apps; one
+  `vite build` emits the client bundle and, for a server-rendered or
+  prerendered app, the fetch handler that becomes the Worker.
 - [`Astro`](/cloudflare/frontend/astro) — Astro sites, server-rendered
   or fully static, with an auto-provisioned session KV namespace;
   your `astro.config.*` loads natively.
@@ -83,6 +86,11 @@ and a single `vite build` produces the whole app — TanStack Start,
 React Router, Vue, SolidStart, or a plain SPA. See
 [what "pure Vite" means](/cloudflare/frontend/vite#what-pure-vite-means).
 
+Use `Foldkit` for a Foldkit app. It is `Vite` with Foldkit's
+defaults: one `vite build`, and asset routing derived from what that
+build wrote down, because the same project can ship client-only,
+prerendered, server-rendered, or hybrid.
+
 Use `StaticSite` when the build is an arbitrary shell command that
 emits a directory of files — Zola, Hugo, or any other generator
 without a dedicated resource.
@@ -99,6 +107,7 @@ without a dedicated resource.
   [TanStack Start](/cloudflare/frontend/tanstack-start),
   [React Router](/cloudflare/frontend/react-router),
   [Vue](/cloudflare/frontend/vue),
+  [Foldkit](/cloudflare/frontend/foldkit),
   [SolidStart](/cloudflare/frontend/solidstart),
   [Astro](/cloudflare/frontend/astro),
   [Next.js](/cloudflare/frontend/nextjs),

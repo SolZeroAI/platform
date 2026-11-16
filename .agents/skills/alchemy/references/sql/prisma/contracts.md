@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/prisma/contracts
      upstream: website/src/content/docs/sql/prisma/contracts.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Contracts
 
@@ -15,7 +15,7 @@ Choose one authoritative source: **Prisma Schema Language (PSL)** or
 [Alchemy migration resources](/sql/prisma/migrations).
 
 :::caution
-This guide targets Prisma ORM v8 release candidates and PostgreSQL 17+.
+Contracts need Prisma ORM v8 release candidates and PostgreSQL 17+.
 The contract toolchain is different from earlier Prisma versions; expect
 breaking changes between release candidates. See [Postgres](/sql/prisma/postgres)
 for dependencies and the client API, or the [Cloudflare integration](/cloudflare/data/prisma)
@@ -68,7 +68,7 @@ Point Prisma at the source and register Alchemy's Effect outputs in
 ```typescript
 import { defineConfig as ormConfig } from "@prisma/orm-postgres/config";
 import { definePrismaConfig } from "prisma/config";
-import { withEffect } from "alchemy/Prisma/ORM/generator";
+import { withEffect } from "@alchemy.run/prisma/ORM/generator";
 
 export default definePrismaConfig({
   orm: withEffect(
@@ -86,7 +86,7 @@ additional outputs; it does not generate files when the config is imported.
 Run:
 
 ```sh
-pnpm exec alchemy prisma generate
+pnpm exec alchemy provider prisma generate
 ```
 
 This runs offline and emits Prisma's contract artifacts plus the selected
@@ -116,7 +116,7 @@ shared Effect runtime, rather than generating another ORM implementation.
 Create `src/prisma/contract.ts` with the equivalent native Prisma builders:
 
 ```typescript
-import { defineContract } from "alchemy/Prisma/ORM";
+import { defineContract } from "@alchemy.run/prisma/ORM";
 
 export const contract = defineContract({}, ({ field, model, rel }) => ({
   models: {
@@ -187,7 +187,7 @@ Effect clients or standalone schemas.
 Pass the source contract directly to `Postgres` inside an Effect:
 
 ```typescript
-import { Postgres } from "alchemy/Prisma/ORM/Postgres";
+import { Postgres } from "@alchemy.run/prisma/ORM/Postgres";
 import { contract } from "./prisma/contract.ts";
 
 const db = yield* Postgres(connectionString, { contract });
@@ -200,7 +200,7 @@ behave the same as the PSL-first factory.
 
 ## Choose generated outputs
 
-`alchemy prisma generate` supports both authoring forms. The second argument
+`alchemy provider prisma generate` supports both authoring forms. The second argument
 to `withEffect` controls which Effect modules it emits:
 
 | Options | Effect outputs |
@@ -231,7 +231,7 @@ needs validators without importing the contract builder.
 TypeScript-first applications can derive schemas directly:
 
 ```typescript
-import { makeSchemas } from "alchemy/Prisma/ORM/Schema";
+import { makeSchemas } from "@alchemy.run/prisma/ORM/Schema";
 import * as Schema from "effect/Schema";
 import { contract } from "./prisma/contract.ts";
 
@@ -292,7 +292,7 @@ Mappings must describe the codec's actual row representation.
 Watch your source while developing:
 
 ```sh
-pnpm exec alchemy prisma generate --watch
+pnpm exec alchemy provider prisma generate --watch
 ```
 
 Use `--config ./path/to/prisma.config.ts` to choose another configuration.
@@ -304,7 +304,7 @@ Invalid source reports an error; the watcher remains available for the next edit
 In a PSL-first project, run generation before type checking or bundling:
 
 ```sh
-pnpm exec alchemy prisma generate
+pnpm exec alchemy provider prisma generate
 pnpm exec tsc --noEmit
 ```
 
@@ -329,7 +329,7 @@ migration packages during deployment. `Prisma.Migrate` applies those packages.
 Neither resource runs the optional Effect generator: PSL-first applications
 must generate their client before compiling or bundling it.
 
-Changing a source file or running `alchemy prisma generate` does not change
+Changing a source file or running `alchemy provider prisma generate` does not change
 the database. Follow [Migrations](/sql/prisma/migrations) to review and apply
 schema changes, including changes that need an explicit data backfill.
 

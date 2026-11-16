@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/solidstart
      upstream: website/src/content/docs/prisma/frontend/solidstart.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SolidStart
 
@@ -22,17 +22,11 @@ Nitro is a second plugin managed by Alchemy.
 Install the build integration; the resource loads `/solidstart` and
 `/solidstart/node` from your project:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 Install the Nitro plugin dependency too:
 
-  <TabItem label="bun" icon="bun"><Code code="bun add @solidjs/vite-plugin-nitro-2" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npm install @solidjs/vite-plugin-nitro-2" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm add @solidjs/vite-plugin-nitro-2" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn add @solidjs/vite-plugin-nitro-2" lang="sh" /></TabItem>
+<PackageManagers add="@solidjs/vite-plugin-nitro-2" />
 
 ## Configure Vite
 
@@ -55,7 +49,7 @@ fail the build. Put Nitro overrides in the resource's `nitro` bag.
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.SolidStart("Website", {
   rootDir: "./app",

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-2
      upstream: website/src/content/docs/git/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Control access
 
@@ -123,9 +123,7 @@ for the tutorial. Anyone with this credential has full access to the host.
 
 ## Deploy the access policy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Copy the printed credential:
 

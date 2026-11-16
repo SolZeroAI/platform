@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/frontend/solidstart
      upstream: website/src/content/docs/railway/frontend/solidstart.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SolidStart
 
@@ -16,7 +16,7 @@ server plus client assets (prerendered pages included) run on one
 adapter.
 
 :::note[Verified version line]
-This page tracks `@solidjs/start` **2.x** with
+Verified with `@solidjs/start` **2.x** and
 `@solidjs/vite-plugin-nitro-2` — the Vite-native line where
 `solidStart()` is a plain Vite plugin and nitro is a second plugin.
 :::
@@ -29,16 +29,12 @@ The build integration is not bundled with alchemy. Install
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 `@solidjs/vite-plugin-nitro-2` is the server half of a SolidStart
 build and must be a project dependency too:
 
-```sh
-bun add @solidjs/vite-plugin-nitro-2
-```
+<PackageManagers add="@solidjs/vite-plugin-nitro-2" />
 
 ## Configure Vite
 
@@ -70,7 +66,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.SolidStart("Website");
 ```
@@ -188,9 +184,7 @@ owned by the Node deploy target, and a foreign preset is a hard error.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs SolidStart's own Vite dev server (native HMR)
 instead of deploying; `site.url` is the local address and no Railway

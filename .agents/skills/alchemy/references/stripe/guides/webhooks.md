@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/stripe/guides/webhooks
      upstream: website/src/content/docs/stripe/guides/webhooks.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React to Stripe events
 
@@ -10,6 +10,19 @@ Stripe tells you what happened asynchronously. A payment succeeded, a
 renewal was declined, a merchant finished onboarding — none of these
 come back on the request that started them. Anything your app needs to
 *know* about billing state, it learns from webhooks.
+
+<Timeline
+  end={10}
+  lanes={[{ id: "evt", label: "evt_1Q…", type: "invoice.paid" }]}
+  bars={[
+    { lane: "evt", start: 0.2, end: 1.4, label: "500", tone: "danger" },
+    { lane: "evt", start: 2.2, end: 3.4, label: "500", tone: "danger" },
+    { lane: "evt", start: 4.6, end: 6.2, label: "timeout", tone: "danger" },
+    { lane: "evt", start: 8.4, end: 9.6, label: "200" },
+  ]}
+  marks={[{ at: 8.4, label: "handled once" }]}
+  caption="Stripe retries a delivery, further apart each time, until your endpoint answers 2xx. The same event can arrive more than once, so check its signature and skip an event id you've already handled."
+/>
 
 There are two levels:
 
@@ -27,8 +40,8 @@ delivery is verified before your handler sees it.
 
 ```typescript
 // src/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Stripe from "alchemy/Stripe";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Stripe from "@alchemy.run/stripe";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -60,7 +73,9 @@ export default class Api extends Cloudflare.Worker<Api>()(
     return {
       fetch: Effect.succeed(HttpServerResponse.text("ok")),
     };
-  }).pipe(Effect.provide(Stripe.ConsumeEventsLive)),
+  }).pipe(
+    Effect.provide(Stripe.ConsumeEventsLive),
+  ),
 ) {}
 ```
 
@@ -83,7 +98,7 @@ is the usual shape.
 
 ## Which events
 
-The classes exported from `alchemy/Stripe`:
+The classes exported from `@alchemy.run/stripe`:
 
 | Class | Event | You'll want it when |
 |---|---|---|

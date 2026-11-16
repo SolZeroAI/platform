@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/mysql
      upstream: website/src/content/docs/better-auth/databases/mysql.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # MySQL
 
@@ -10,9 +10,7 @@ This example connects a Better Auth Lambda to an existing MySQL database over TC
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely mysql2
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely mysql2" />
 
 Configure AWS through an [Alchemy profile](/environments/profiles) and set `DATABASE_URL` in the deploying environment. Both the deployer and Lambda must be able to reach that URL.
 
@@ -40,7 +38,7 @@ The URL is bound during host construction; the `mysql2` pool opens per invocatio
 
 ```typescript title="src/function.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import { AuthDatabase } from "./auth-database.ts";
@@ -70,7 +68,7 @@ The function exposes Better Auth at `/api/auth` through a public Function URL. T
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import AuthApi from "./src/function.ts";
 
@@ -91,9 +89,7 @@ Preserve and protect the local `.alchemy` state directory across deployments. Th
 
 ## Deploy and migrate
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Automatic migrations use the resolved URL and the same pool options before updating the function. The deployer needs schema-changing permissions; migrations create auth tables inside the existing database.
 

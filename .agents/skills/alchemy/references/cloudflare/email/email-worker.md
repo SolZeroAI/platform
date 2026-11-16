@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/email/email-worker
      upstream: website/src/content/docs/cloudflare/email/email-worker.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Receive email in a Worker
 
@@ -32,7 +32,7 @@ program.
 
 ```typescript
 // src/Inbox.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Cloudflare.Worker(

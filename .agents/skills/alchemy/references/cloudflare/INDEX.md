@@ -1,12 +1,14 @@
 # cloudflare index
 
-78 pages. Build and deploy full applications on Cloudflare with Alchemy — one Worker runtime plus resources like Durable Objects, D1, R2, Queues, and Hyperdrive, wired together by typed bindings.
+87 pages. Build on Cloudflare with Alchemy. Declare Workers, Durable Objects, R2, D1, KV and Queues in TypeScript, and bind each one into the Worker that uses it with a typed client.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Cloudflare | `_overview.md` | Build and deploy full applications on Cloudflare with Alchemy — one Worker runtime plus resources like Durable Objects, D1, R2, Queues, and Hyperdrive, wired together by typed bindings. |
+| Cloudflare | `_overview.md` | Build on Cloudflare with Alchemy. Declare Workers, Durable Objects, R2, D1, KV and Queues in TypeScript, and bind each one into the Worker that uses it with a typed client. |
+| Accounts and API tokens | `accounts-and-tokens.md` | How a Cloudflare account holds your Workers, storage and zones, how Alchemy signs in to it with OAuth or an API token, and how your Stack mints scoped tokens for CI and runtimes. |
 | Local development | `local-development.md` | alchemy dev runs Workers in workerd with local simulators for KV, R2, D1, Queues, Hyperdrive, Workflows, Containers, and the Worker binding surface — browser rendering, images, email, cron, Stream, and more. |
 | Setup | `setup.md` | Install Alchemy, create a Cloudflare account, and connect the two — OAuth or API token, saved to a local profile. No environment variables required. |
+| What is Cloudflare? | `what-is-cloudflare.md` | The concepts behind Cloudflare — accounts, zones, the global network, Workers, bindings, Durable Objects, storage, queues, workflows, containers and API tokens — and how @alchemy.run/cloudflare models each of them. |
 
 ## ai/
 
@@ -15,7 +17,6 @@
 | Add an AI Gateway | `ai/ai-gateway.md` | Wire an AI Gateway into your Worker, turn it into a typed Effect LanguageModel, and run generations and streams through Workers AI with caching, rate limiting, and logs. |
 | Add AI Search (AutoRAG) | `ai/ai-search.md` | Stand up a Cloudflare AI Search (AutoRAG) pipeline over an R2 bucket with one Search call, bind it into your Worker as a typed Effect client, and answer questions over your own documents. |
 | Effect AI | `ai/effect-ai.md` | Wire Effect's LanguageModel and Chat services into a Cloudflare Worker — read API keys with effect/Config, provide the model layer to your handler, plug in persistence. |
-| Build a release-automation agent | `ai/release-agent.md` | Case study of the cloudflare-agent example — GitHub push events routed through a Worker to a per-release Durable Object that drives an AI agent with container-backed tools. |
 | Vector search with Vectorize | `ai/vectorize.md` | Create a Vectorize index, bind it to a Worker with SearchIndex, and run filtered nearest-neighbor queries over vector embeddings. |
 | Run Workers AI models | `ai/workers-ai.md` | Bind Workers AI into your Worker with Cloudflare.Workers.AI — run inference and list models directly, or turn the binding into a typed Effect LanguageModel, no gateway required. |
 
@@ -34,9 +35,12 @@
 | Add a Workflow | `compute/add-a-workflow.md` | Orchestrate durable, multi-step work with Cloudflare Workflows — automatic retries, replayable steps, and at-least-once delivery. |
 | Browser rendering | `compute/browser-rendering.md` | Attach Cloudflare Browser Rendering to a Worker — run quick actions like markdown and scrape, stream screenshots and PDFs, or drive the raw binding with puppeteer. |
 | Workers Cache | `compute/cache.md` | Serve responses from Cloudflare's edge cache before your Worker even runs — enable it with one yield, control it with standard headers, purge it by tag from inside a handler. |
+| Code updates | `compute/code-updates.md` | What happens to running Workers and Durable Objects when you deploy, how to choose when Durable Objects pick up new code, and how to write tests that see the code you just deployed. |
+| Container lifecycle | `compute/container-lifecycle.md` | Start, stop, wait for, and restore a Cloudflare Container from its Durable Object — and save its filesystem as a snapshot to restore later. |
 | Containers | `compute/containers.md` | Cloudflare Containers run long-lived processes beside a Durable Object — declare a typed container class, implement its runtime in a separate file, and alchemy builds the image, pushes it, and wires the DO pairing. |
 | Bind to another Worker's Durable Object | `compute/cross-worker-durable-object.md` | Share a Durable Object across multiple Workers — one Worker hosts the runtime, others bind to it by scriptName for a typed RPC stub — and move the host later with the data intact. |
 | Durable Objects | `compute/durable-objects.md` | Durable Objects are globally-unique stateful instances with transactional storage — define one as an Effect, persist state per key, expose typed RPC methods, and stream values back to the caller. |
+| Effect workflows | `compute/effect-workflows.md` | Run Effect workflows on Cloudflare, on Durable Objects or Cloudflare Workflows. Declare a workflow with effect/workflow, implement it with Workflows.layer, start runs with Workflows.RunWorkflow, and let them sleep, wait for signals and undo steps durably. |
 | Gradual deployments | `compute/gradual-deployments.md` | Roll out Worker deploys incrementally — upload preview versions, canary a percentage of live traffic, ramp to 100%, pin users to a version during the rollout, and verify which version served each request. |
 | Accept WebSockets | `compute/hibernatable-websockets.md` | Accept WebSocket connections in a Durable Object, broadcast between peers, and survive Cloudflare's hibernation. |
 | Worker Previews | `compute/previews.md` | Deploy a branch or pull request as a first-class Preview of another Worker — its own URL, bindings, and isolated Durable Object state, without touching production traffic. |
@@ -55,13 +59,16 @@
 | Store Git Repos with Artifacts | `data/artifacts.md` | Use Cloudflare Artifacts to create Git repos at runtime and hand out clone tokens, all from a tiny Worker. |
 | Branch from a shared database | `data/branch-from-shared-database.md` | Have ephemeral PR-preview stages reference a long-lived Neon or PlanetScale database from a staging stage instead of provisioning their own — fast previews, cheap branches, no extra clusters. |
 | Drizzle on D1 | `data/d1-drizzle.md` | Deploy committed SQLite migrations to D1 and query the database from a Worker with Drizzle. |
-| D1 | `data/d1.md` | Cloudflare D1 is serverless SQLite — create a database, apply migrations on deploy, and query it from a Worker through a typed binding. |
+| D1 | `data/d1.md` | How D1 runs a SQLite database for your app, where its primary and read replicas live, how migrations are applied on deploy, and how Workers query it through a binding or Effect SQL. |
 | Add Drizzle ORM | `data/drizzle.md` | Deploy a Cloudflare Worker with Drizzle queries, Hyperdrive connections, and reviewed, committed migrations on Neon or PlanetScale. |
+| Private database (Workers VPC) | `data/hyperdrive-private-database.md` | Connect Hyperdrive to a database inside a private network — such as Aurora in an AWS VPC — through a Cloudflare Tunnel and a Workers VPC Service, with no public endpoint. |
 | Hyperdrive | `data/hyperdrive.md` | Cloudflare Hyperdrive pools connections to your external Postgres or MySQL database at the edge — provision a database (Neon or PlanetScale), front it with Hyperdrive, and bind the connection into your Worker. |
-| KV | `data/kv.md` | Cloudflare Workers KV is edge key-value storage — create a namespace, bind it into a Worker with read/write-scoped bindings, and get/put values with metadata. |
+| Iceberg tables | `data/iceberg-tables.md` | Turn an R2 bucket into an Apache Iceberg warehouse with Cloudflare's catalog, manage tables with schema evolution and maintenance, and query them from Spark, DuckDB, or PyIceberg. |
+| KV | `data/kv.md` | How Workers KV replicates values to every city for fast reads, what eventual consistency means for writes, and how Workers read, write, list and expire keys through access-scoped bindings. |
+| Pipelines | `data/pipelines.md` | Ingest events into R2 with Cloudflare Pipelines — a typed stream, a SQL pipeline, and a sink that writes JSON or Parquet files, or Apache Iceberg tables. |
 | Prisma ORM with Postgres | `data/prisma.md` | Deploy Prisma ORM v8 on Cloudflare Workers with Neon Postgres, Hyperdrive, controlled migrations, and Effect-native queries. |
 | R2 presigned URLs | `data/r2-presigned-urls.md` | Mint presigned R2 URLs so browsers upload and download objects directly, with the same code in alchemy dev and in production, from Effect-native or async Workers. |
-| R2 | `data/r2.md` | Cloudflare R2 is object storage — create a bucket, bind it into a Worker with read/write-scoped bindings, and stream objects in and out. |
+| R2 | `data/r2.md` | How R2 Buckets store objects under keys with no egress fees, how Workers read and write them through access-scoped bindings, and how to share, serve, expire and delete what you store. |
 | Shared database across stages | `data/shared-database.md` | Have ephemeral PR-preview stages reference a long-lived Neon or PlanetScale database from a staging stage instead of provisioning their own — fast previews, copy-on-write branches, no extra clusters. |
 
 ## email/
@@ -76,14 +83,14 @@
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Astro | `frontend/astro.md` | Deploy an Astro site to Cloudflare Workers with Cloudflare.Website.Astro — SSR in the Worker, prerendered pages as static assets, sessions backed by an auto-provisioned KV namespace. |
-| Foldkit | `frontend/foldkit.md` | Deploy a Foldkit app to Cloudflare with the Foldkit resource — one declaration, no Wrangler config. |
-| Frontend frameworks | `frontend/frontends.md` | Deploy Vite, Astro, Next.js, vinext, Nuxt, SvelteKit, Waku, or any static build to Cloudflare Workers with first-class Website resources. |
+| Astro | `frontend/astro.md` | Deploy an Astro site to Cloudflare Workers with Cloudflare.Website.Astro — SSR in the Worker, prerendered pages as static assets, sessions backed by an auto-provisioned KV namespace, and route caching on Workers Cache. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Cloudflare Workers. |
+| Frontend frameworks | `frontend/frontends.md` | Deploy Vite, Foldkit, Astro, Next.js, vinext, Nuxt, SvelteKit, Waku, or any static build to Cloudflare Workers with first-class Website resources. |
 | Full-stack TanStack Start + RPC + Drizzle | `frontend/full-stack-tanstack-rpc-drizzle.md` | Build a reactive full-stack app on Cloudflare — a TanStack Start UI that drives an Effect RPC backend over Drizzle and Neon Postgres, with browser state wired through Effect 4's native atom RPC. |
 | Next.js | `frontend/nextjs.md` | Deploy a Next.js app to Cloudflare Workers with Cloudflare.Website.Nextjs — the OpenNext pipeline, writable ISR, and wrangler-free local dev. |
 | Nuxt | `frontend/nuxt.md` | Deploy a Nuxt app to Cloudflare Workers with Cloudflare.Website.Nuxt — nitro's cloudflare_module preset, native nuxt.config.ts loading, and wrangler-free local dev. |
 | Octane | `frontend/octane.md` | Deploy an OctaneJS fullstack app to Cloudflare Workers with Cloudflare.Website.Octane — native Octane and Vite configuration, no hosting adapter or Wrangler file required. |
-| React Router | `frontend/react-router.md` | Deploy React Router v7 — including React Server Components — to Cloudflare with Cloudflare.Website.Vite and viteEnvironments. |
+| React Router | `frontend/react-router.md` | Deploy React Router v8 — including React Server Components — to Cloudflare with Cloudflare.Website.Vite and viteEnvironments. |
 | SolidStart | `frontend/solidstart.md` | Deploy SolidStart to Cloudflare with Cloudflare.Website.Vite — plus the hand-rolled SolidJS SSR variant for full control over the server entry. |
 | Static sites | `frontend/static-site.md` | Deploy any build command's output directory as Cloudflare Worker static assets with Cloudflare.Website.StaticSite — custom edge Workers, framework-native local dev, and memoized rebuilds. |
 | SvelteKit | `frontend/sveltekit.md` | Deploy a SvelteKit app to Cloudflare Workers with Cloudflare.Website.SvelteKit — a wrangler-free in-memory adapter, real bindings on platform.env, and full-HMR local dev. |
@@ -100,7 +107,8 @@
 | --- | --- | --- |
 | Scheduled jobs with Cron Triggers | `messaging/cron.md` | Run Worker code on a schedule — declare a cron expression with an Effect handler, deploy it, and prove the trigger fires with a bounded polling test. |
 | React to GitHub events from a Worker | `messaging/github-events.md` | Subscribe a Cloudflare Worker to GitHub repository webhooks with typed payloads — alchemy provisions the webhook and verifies delivery signatures. |
-| Queues | `messaging/queues.md` | Cloudflare Queues give you reliable, at-least-once message delivery between Workers — a WriteQueue producer binding on one side and an Effect-style consumeQueueMessages handler with automatic ack/retry on the other. |
+| K2 streams | `messaging/k2.md` | Cloudflare K2 is a durable, replayable log. Produce records from Workers with the WriteStream binding, then consume them from a long-running host with consumeStreamRecords. |
+| Queues | `messaging/queues.md` | How Cloudflare Queues carry messages from producer Workers to a consumer in batches, with retries and dead-letter queues, and how platform events like Workflow completions arrive on a Queue. |
 
 ## networking/
 
@@ -108,6 +116,7 @@
 | --- | --- | --- |
 | Custom domains & routes | `networking/custom-domains.md` | Serve Workers from your own domain — create or adopt a Zone, attach custom domains, route hostname patterns, manage DNS records, and control the workers.dev subdomain. |
 | Domains & DNS | `networking/domains.md` | Manage Cloudflare zones, DNS records, DNSSEC, and zone settings as resources — and safely adopt the domains you already have. |
+| Federated APIs | `networking/federated-apis.md` | Serve one API at one URL from many Workers — each path handled by its own least-privilege Worker, routed by Cloudflare's zone routes with no gateway Worker, and emulated locally by alchemy dev. |
 | Expose private origins with Tunnel | `networking/tunnel.md` | Connect a private origin to Cloudflare's edge with a Tunnel, declare its ingress rules as a Configuration resource, and point DNS at it with a proxied CNAME. |
 
 ## observability/

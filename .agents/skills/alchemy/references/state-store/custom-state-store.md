@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/state-store/custom-state-store
      upstream: website/src/content/docs/state-store/custom-state-store.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Custom State Store
 
@@ -12,10 +12,10 @@ A state store is just an Effect `Layer` that provides Alchemy's
 already run Postgres, S3, Redis, or DynamoDB, you can back state
 with that instead.
 
-This guide builds a Postgres-backed state store from scratch. By the
-end you'll have a `postgresState()` layer you can drop into any
-`Alchemy.Stack`, and a test that round-trips a resource through it.
-(If you just want a Postgres store, use the built-in one from `alchemy/State/PostgresState`, which adds advisory locking — this guide builds a simplified version to teach the interface.)
+Take a Postgres-backed state store, built from scratch: a
+`postgresState()` layer you can drop into any `Alchemy.Stack`, and a
+test that round-trips a resource through it.
+(If you just want a Postgres store, use the built-in one from `@alchemy.run/sql/PostgresState`, which adds advisory locking. The version here is simplified, to teach the interface.)
 
 See [State Store](/state-store) for an overview of what
 state Alchemy persists and why.
@@ -338,7 +338,7 @@ stores:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { postgresState } from "./src/postgres-state.ts";
 

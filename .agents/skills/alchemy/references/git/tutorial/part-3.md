@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-3
      upstream: website/src/content/docs/git/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Publish a repository
 
@@ -27,7 +27,7 @@ Create `src/public-read.ts`:
 
 ```typescript
 // src/public-read.ts
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as HttpRouter from "effect/http/HttpRouter";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
@@ -89,9 +89,7 @@ the public reads you just defined.
 
 ## Deploy the policy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 This updates the Worker. The public flag you set earlier remains stored in the
 registry.

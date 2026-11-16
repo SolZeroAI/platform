@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/command
      upstream: website/src/content/docs/command/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Command
 
@@ -15,6 +15,8 @@ merged into both `AWS.providers()` and `Cloudflare.providers()`, so
 big-hub users have it for free; a standalone Stack registers it with
 `{ providers: Command.providers(), state: Alchemy.localState() }`.
 Import from `alchemy/Command`.
+
+**New here?** [How commands work](/command/what-is-command) explains builds, execs, dev servers and memoization, once each. Then [Memoization](/command/memoization) and [Dev servers](/command/dev-servers) go deeper.
 
 ## Resources
 

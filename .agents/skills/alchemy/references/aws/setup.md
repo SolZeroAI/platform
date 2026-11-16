@@ -1,28 +1,24 @@
 <!-- source: https://alchemy.run/aws/setup
      upstream: website/src/content/docs/aws/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
-> Connect Alchemy to AWS with SSO, stored access keys, or CI environment credentials.
+> Connect Alchemy to AWS with SSO, console login, stored access keys, or CI environment credentials.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - An AWS account and an IAM identity with permission to create
   the resources you plan to deploy
 
 ## Create a project
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## How Alchemy gets AWS credentials
 
@@ -32,15 +28,19 @@ authentication method. The choice is saved to your **`default`**
 command; a deploy with nothing configured fails with that exact
 command to run. Authentication changes only through the `profile` command.
 
-There are two local profile methods:
+There are three local profile methods. Start with console login unless your organization already signs in through IAM Identity Center.
 
-### SSO (recommended)
+### Console login (recommended)
 
-Alchemy runs `aws sso login --profile <name>` for you and loads
-credentials from the AWS SSO cache. You pick which profile from
-`~/.aws/config` to use; the account ID and region come from that
-profile. When the SSO session expires, run
-`alchemy profile edit --reconfigure AWS` to refresh it.
+Console login is AWS's keyless sign-in for every account. You sign in to the AWS Management Console in your browser, as the root user, an IAM user or through federation, and the AWS CLI receives short-lived credentials for that same identity. There's nothing to set up in the account, and no long-lived access keys on your machine.
+
+Alchemy runs `aws login --profile <name>` (AWS CLI v2.32+) for you and loads the session it writes to `~/.aws/config` (`login_session`). When the session expires, run `alchemy profile refresh`.
+
+### SSO through IAM Identity Center
+
+SSO is for organizations that have set up **IAM Identity Center**: a single sign-in for many accounts, with users and permission sets managed centrally, often connected to Okta, Google Workspace or Entra ID. It takes setup in an AWS Organization, so it pays off when a team works across several accounts.
+
+Alchemy runs `aws sso login --profile <name>` for you and loads credentials from the AWS SSO cache. The profile you pick in `~/.aws/config` decides the account and region. When the session expires, run `alchemy profile refresh`.
 
 ### Stored access keys
 
@@ -68,7 +68,7 @@ The region is required. The account ID is taken from
 ## Managing credentials
 
 Re-run the setup at any time (e.g. to switch from stored keys to
-SSO, or to configure a separate `prod` profile):
+SSO or console login, or to configure a separate `prod` profile):
 
 ```sh
 alchemy profile edit --reconfigure AWS
@@ -88,12 +88,15 @@ profiles with `--profile` or `$ALCHEMY_PROFILE`.
 ## State storage
 
 For AWS stacks, pass `AWS.state()` as the Stack's `state`
-option. Deploy state is stored in an account-regional S3 bucket
-(`alchemy-state-{accountId}-{region}-an`), created lazily on the
-first deploy — the same configuration works locally and in CI
-with no extra setup. For purely local iteration,
-`Alchemy.localState()` writes state under `.alchemy/` next to
-your code instead.
+option. Deploy state is stored in a DynamoDB table
+(`alchemy-state`), created lazily on the first deploy. In CI,
+provision it once with `alchemy state bootstrap --backend aws`.
+For purely local iteration, `Alchemy.localState()` writes state
+under `.alchemy/` next to your code instead.
+
+State from earlier versions lives in an S3 bucket; move it with
+`alchemy state migrate`. See
+[Migrating from the S3 store](/state-store#migrating-from-the-s3-store).
 
 ## Next steps
 

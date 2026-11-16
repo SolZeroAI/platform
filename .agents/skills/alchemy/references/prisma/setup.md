@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/setup
      upstream: website/src/content/docs/prisma/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -8,14 +8,17 @@
 
 Sign up at [prisma.io](https://www.prisma.io) and create a service
 token in the [Prisma Console](https://console.prisma.io) (workspace
-settings → service tokens). Register the provider next to your
-cloud's:
+settings → service tokens). Install `@alchemy.run/prisma`:
+
+<PackageManagers add="@alchemy.run/prisma" />
+
+Then register the provider next to your cloud's:
 
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Prisma from "alchemy/Prisma";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Prisma from "@alchemy.run/prisma";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -46,7 +49,7 @@ and switched.
 
 ## Local dev
 
-`bun alchemy dev` needs no Prisma credentials. Database resources run
+`alchemy dev` needs no Prisma credentials. Database resources run
 against a local `@prisma/dev` Postgres, Compute resources run their
 configured `dev.command`, and the remaining Prisma resources return
 compatible local outputs. See

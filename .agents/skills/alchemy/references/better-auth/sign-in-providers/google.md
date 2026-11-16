@@ -1,18 +1,16 @@
 <!-- source: https://alchemy.run/better-auth/sign-in-providers/google
      upstream: website/src/content/docs/better-auth/sign-in-providers/google.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Google
 
 > Add Google sign-in to a D1-backed Alchemy Worker, one step at a time.
 
-Start in an existing Alchemy project with [Bun](https://bun.sh) and a [configured Cloudflare profile](/cloudflare/setup). This page supplies every application file and uses Google's server-side authorization-code flow, not the Google browser SDK.
+Start in an existing Alchemy project on [Node.js](https://nodejs.org) or [Bun](https://bun.sh) and a [configured Cloudflare profile](/cloudflare/setup). The app uses Google's server-side authorization-code flow, not the Google browser SDK.
 
 ## Add the auth dependencies
 
-```sh
-bun add @alchemy.run/better-auth better-auth@1.7.5 kysely
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@1.7.5 kysely" />
 
 Use an integration release matching your installed Alchemy version. All file paths below are relative to your project root.
 
@@ -89,7 +87,7 @@ The service exposes the inferred Better Auth instance to the Worker. Its layer c
 Create `src/database.ts`:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const AuthDb = Cloudflare.D1.Database("AuthDb");
 ```
@@ -118,7 +116,7 @@ export const AuthLive = Auth.layer.pipe(
 Create `src/worker.ts`:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Auth } from "./auth.ts";
 import { AuthLive } from "./auth-live.ts";
@@ -145,7 +143,7 @@ Use this as `alchemy.run.ts`:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthWorker from "./src/worker.ts";
 
@@ -274,9 +272,7 @@ This creates `public/client.js` for the HTML script tag. Rebuild it after editin
 
 ## Discover the local origin
 
-```sh
-bunx alchemy dev --stage google-guide
-```
+<PackageManagers run="alchemy dev --stage google-guide" />
 
 Alchemy allocates an available port and prints the URL; open that exact URL, but leave sign-in alone until Google is configured. Keep `GOOGLE_ENABLED` and `AUTH_BASE_URL` unset on this first run so OAuth remains disabled and no origin is guessed.
 
@@ -316,9 +312,7 @@ Copy the web client's ID and secret into these template values. Keep this file g
 
 Stop the first dev process, then run:
 
-```sh
-bunx alchemy dev --stage google-guide --env-file .env.local
-```
+<PackageManagers run="alchemy dev --stage google-guide --env-file .env.local" />
 
 If the printed origin changed, update Google's exact redirect registration before signing in. An optional `AUTH_BASE_URL` override must equal that origin without a trailing slash or `/api/auth`; leaving it unset avoids pinning an old dev port.
 

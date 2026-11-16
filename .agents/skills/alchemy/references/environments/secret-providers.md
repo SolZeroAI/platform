@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/secret-providers
      upstream: website/src/content/docs/environments/secret-providers.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Secret providers
 
@@ -13,7 +13,7 @@ normally reads the process environment with `.env` as a fallback; an
 explicit `--env-file` takes precedence over the process environment.
 
 ```typescript
-import * as Doppler from "alchemy/Doppler";
+import * as Doppler from "@alchemy.run/doppler";
 
 export default Alchemy.Stack(
   "MyApp",

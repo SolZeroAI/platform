@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-code/stack
      upstream: website/src/content/docs/infrastructure-as-code/stack.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Stacks
 
@@ -17,7 +17,7 @@ file:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -59,9 +59,9 @@ their layers with `Layer.mergeAll`:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as AWS from "@alchemy.run/aws";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -166,7 +166,7 @@ service. But a Resource's props can themselves be an Effect —
 stack, useful for parameterizing names by stage:
 
 ```typescript
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 import { Stack } from "alchemy/Stack";
 
 export const Traces = Axiom.Dataset(

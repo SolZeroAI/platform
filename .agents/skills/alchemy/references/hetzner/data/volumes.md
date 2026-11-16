@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/data/volumes
      upstream: website/src/content/docs/hetzner/data/volumes.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Volumes
 
@@ -11,10 +11,20 @@ storage: a durable disk (10 GB minimum) with its own lifecycle,
 attachable to one Server at a time in the same location. Servers
 come and go; Volumes keep the data.
 
+<Tree
+  nodes={[
+    { id: "loc", label: "fsn1", type: "location" },
+    { id: "s1", label: "web-1", type: "Server", parent: "loc" },
+    { id: "v1", label: "data", type: "Volume · 10 GB · attached", parent: "s1", tone: "accent" },
+    { id: "s2", label: "web-2", type: "Server · replacement", parent: "loc", tone: "muted" },
+  ]}
+  caption="A Volume attaches to one Server at a time, in its own location. Replace the Server, and the Volume moves to the new one with its data."
+/>
+
 ## Create a Volume
 
 ```typescript
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Data = Hetzner.Volume("data", {
   size: 10,

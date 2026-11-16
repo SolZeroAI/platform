@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/waku
      upstream: website/src/content/docs/prisma/frontend/waku.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Waku
 
@@ -16,10 +16,7 @@ upload. There is no Docker image or registry.
 Install the build-time integration in your project; the resource loads
 its `/waku` and `/waku/node` exports:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Waku
 
@@ -54,7 +51,7 @@ export const Website = Prisma.Website.Waku("Website", {
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Waku("Website");
 ```
@@ -115,7 +112,7 @@ The RSC server runs on Bun. Server components and API routes can read
 
 ## Local dev
 
-`bun alchemy dev` runs Waku's own server with HMR instead of deploying.
+`alchemy dev` runs Waku's own server with HMR instead of deploying.
 The Website creates no Prisma resources. Opt into the live path with:
 
 ```typescript
@@ -133,7 +130,7 @@ const site = yield* Prisma.Website.Waku("Web", {
 ```
 
 `domain` creates `Prisma.CustomDomain` and makes `site.url` the HTTPS
-hostname. The app must be on the project's current default branch.
+hostname.
 Configure returned DNS records yourself and verify status before cutover;
 see [Custom domains](/prisma/frontend/websites#custom-domains).
 

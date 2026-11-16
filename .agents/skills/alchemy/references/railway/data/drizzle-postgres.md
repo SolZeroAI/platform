@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/data/drizzle-postgres
      upstream: website/src/content/docs/railway/data/drizzle-postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Drizzle Postgres on Railway
 
@@ -11,8 +11,8 @@ Run Drizzle in a Railway container beside [Railway Postgres](/railway/data/postg
 ## Install the database dependencies
 
 ```sh
-pnpm add drizzle-orm@1.0.0-rc.5-ab785fc @effect/sql-pg pg
-pnpm add -D drizzle-kit@1.0.0-rc.5-ab785fc
+pnpm add @alchemy.run/drizzle drizzle-orm@1.0.0-rc.5 @effect/sql-pg
+pnpm add -D drizzle-kit@1.0.0-rc.5
 ```
 
 The Drizzle versions match the repository's Effect integration.
@@ -58,26 +58,13 @@ Commit the schema, SQL, and snapshots together rather than generating migrations
 
 ```typescript
 // src/db.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import { Site } from "./project.ts";
 
 export const Db = Railway.Postgres("Db", { project: Site });
 ```
 
 Use the same Project and environment as the Service; omitting `environment` on both selects the Project's primary environment.
-
-## Install the driver in the Service image
-
-```diff lang="typescript"
- // src/api.ts
- {
-   project: Site,
-   main: import.meta.url,
-+  build: { install: ["pg"] },
- }
-```
-
-Use `Railway.Service`, whose image can install `pg`, rather than assuming the single-file Canvas `Railway.Function` has the same packaging support.
 
 ## Bind Postgres
 
@@ -118,7 +105,7 @@ The generated Railway Postgres URLs currently include `sslmode=no-verify`; a pub
 ## Open the runtime client
 
 ```diff lang="typescript"
-+import * as Drizzle from "alchemy/Drizzle/Postgres";
++import * as Drizzle from "@alchemy.run/drizzle/Postgres";
 
  const conn = yield* Railway.ConnectPostgres(Db);
 +const db = yield* Drizzle.Postgres(conn.connectionString);
@@ -152,4 +139,4 @@ For later changes, generate, review, and commit the schema, SQL, and snapshots b
 
 ## Continue
 
-See the [SQL database comparison](/sql/databases), [Postgres client guide](/sql/drizzle/postgres), and [migration workflow](/sql/drizzle/migrations). The [railway-service example](https://github.com/alchemy-run/alchemy/tree/main/examples/railway-service) contains the Service, `pg` installation, and Postgres binding used here.
+See the [SQL database comparison](/sql/databases), [Postgres client guide](/sql/drizzle/postgres), and [migration workflow](/sql/drizzle/migrations). The [railway-service example](https://github.com/alchemy-run/alchemy/tree/main/examples/railway-service) contains the Service and Postgres binding used here.

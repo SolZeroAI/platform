@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/tutorial/part-4
      upstream: website/src/content/docs/kubernetes/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Install a Helm Chart
 
@@ -72,9 +72,7 @@ must skip verifying them. Charts take their configuration as
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

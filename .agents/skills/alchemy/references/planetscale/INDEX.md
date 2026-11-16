@@ -1,11 +1,13 @@
 # planetscale index
 
-9 pages. Serverless MySQL (Vitess) and Postgres with database branching — databases, branches, and credentials as Stack resources.
+11 pages. Declare PlanetScale Postgres and MySQL databases, branches and credentials in your Stack with Alchemy, apply migrations on deploy, and give every preview stage its own branch.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| PlanetScale | `_overview.md` | Serverless MySQL (Vitess) and Postgres with database branching — databases, branches, and credentials as Stack resources. |
+| PlanetScale | `_overview.md` | Declare PlanetScale Postgres and MySQL databases, branches and credentials in your Stack with Alchemy, apply migrations on deploy, and give every preview stage its own branch. |
+| Organizations and tokens | `organizations-and-tokens.md` | How a PlanetScale organization holds your databases and members, how Alchemy signs in with OAuth or a service token, and how database credentials differ from deploy credentials. |
 | Setup | `setup.md` | Connect alchemy to PlanetScale — account, credentials, and profiles. |
+| What is PlanetScale? | `what-is-planetscale.md` | The concepts behind PlanetScale — organizations, databases, the Postgres and Vitess engines, cluster sizes, branches, credentials, connections, migrations and backups — and how @alchemy.run/planetscale models each of them. |
 
 ## data/
 

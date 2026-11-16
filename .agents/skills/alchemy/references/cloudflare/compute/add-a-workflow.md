@@ -1,12 +1,12 @@
 <!-- source: https://alchemy.run/cloudflare/compute/add-a-workflow
      upstream: website/src/content/docs/cloudflare/compute/add-a-workflow.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Add a Workflow
 
 > Orchestrate durable, multi-step work with Cloudflare Workflows — automatic retries, replayable steps, and at-least-once delivery.
 
-This guide builds a Workflow end to end: a durable multi-step job
+Take a Workflow, built end to end: a durable multi-step job
 that writes to KV and broadcasts each task's progress back to a chat
 `Room` Durable Object. For the concept, start at
 [Workflows](/cloudflare/compute/workflows).
@@ -26,7 +26,7 @@ workflow's return value flows through to `instance.status().output`:
 
 ```typescript
 // src/NotifyWorkflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Room from "./room.ts";
 
@@ -55,7 +55,7 @@ a KV namespace by declaring it in its own file:
 
 ```typescript
 // src/KV.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const KV = Cloudflare.KV.Namespace("KV");
 ```
@@ -73,7 +73,7 @@ returns a typed Effect-native client whose methods (`get`, `put`,
 
 ```diff lang="typescript"
 // src/NotifyWorkflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { KV } from "./KV.ts";
 import Room from "./room.ts";
@@ -105,7 +105,7 @@ calls, binding I/O, file writes — in a task:
 
 ```diff lang="typescript"
 // src/NotifyWorkflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { KV } from "./KV.ts";
 import Room from "./room.ts";
@@ -153,7 +153,7 @@ Add another task that fans the stored value out to the matching
 
 ```diff lang="typescript"
 // src/NotifyWorkflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { KV } from "./KV.ts";
 import Room from "./room.ts";
@@ -199,7 +199,7 @@ required because Cloudflare uses them as replay keys:
 
 ```diff lang="typescript"
 // src/NotifyWorkflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { KV } from "./KV.ts";
 import Room from "./room.ts";
@@ -253,15 +253,17 @@ binding on the workflow at plantime and hands back a
 `Redacted<string>` for use inside steps:
 
 ```diff lang="typescript"
- import * as Cloudflare from "alchemy/Cloudflare";
+ import * as Cloudflare from "@alchemy.run/cloudflare";
 +import * as Config from "effect/Config";
  import * as Effect from "effect/Effect";
+ import { KV } from "./KV.ts";
  import Room from "./room.ts";
 
  export default class NotifyWorkflow extends Cloudflare.Workflow<NotifyWorkflow>()(
    "Notifier",
    Effect.gen(function* () {
      const rooms = yield* Room;
+     const kv = yield* Cloudflare.KV.ReadWriteNamespace(KV);
 +    const apiKey = yield* Config.Redacted("API_KEY");
 ```
 
@@ -284,31 +286,33 @@ body. Unwrap with `Redacted.value` only at the call
 site that needs it (here, an `Authorization` header):
 
 ```diff lang="typescript"
+// src/NotifyWorkflow.ts
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Config from "effect/Config";
+import * as Effect from "effect/Effect";
 +import * as Redacted from "effect/Redacted";
 +import * as HttpClient from "effect/http/HttpClient";
 +import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import { KV } from "./KV.ts";
+import Room from "./room.ts";
 
- export default class NotifyWorkflow extends Cloudflare.Workflow<NotifyWorkflow>()(
-   "Notifier",
-   Effect.gen(function* () {
-     const rooms = yield* Room;
-     const apiKey = yield* Config.Redacted("API_KEY");
+export default class NotifyWorkflow extends Cloudflare.Workflow<NotifyWorkflow>()(
+  "Notifier",
+  Effect.gen(function* () {
+    const rooms = yield* Room;
+    const kv = yield* Cloudflare.KV.ReadWriteNamespace(KV);
+    const apiKey = yield* Config.Redacted("API_KEY");
 
-     return Effect.gen(function* () {
-       const env = yield* Cloudflare.Workers.WorkerEnvironment;
-       const event = yield* Cloudflare.Workflows.WorkflowEvent;
-       const { roomId, message } = event.payload as {
-         roomId: string;
-         message: string;
-       };
+    return Effect.fn(function* (input: { roomId: string; message: string }) {
+      const { roomId, message } = input;
 
-       const stored = yield* Cloudflare.Workflows.task("kv-roundtrip", /* ... */);
+      const stored = yield* Cloudflare.Workflows.task("kv-roundtrip", /* ... */);
 
-       const room = rooms.getByName(roomId);
-       yield* Cloudflare.Workflows.task(
-         "broadcast",
-         room.broadcast(`[workflow] ${stored}`),
-       );
+      const room = rooms.getByName(roomId);
+      yield* Cloudflare.Workflows.task(
+        "broadcast",
+        room.broadcast(`[workflow] ${stored}`),
+      );
 
 +      yield* Cloudflare.Workflows.task(
 +        "fetch-with-auth",
@@ -319,10 +323,17 @@ site that needs it (here, an `Authorization` header):
 +        ),
 +      );
 
-       return { roomId, message: stored };
-     });
-   }),
- ) {}
+      yield* Cloudflare.Workflows.sleep("cooldown", "2 seconds");
+
+      yield* Cloudflare.Workflows.task(
+        "finalize",
+        room.broadcast(`[workflow] complete for ${roomId}`),
+      );
+
+      return { roomId, message: stored };
+    });
+  }),
+) {}
 ```
 
 `HttpClient.execute` runs inside
@@ -339,7 +350,7 @@ Worker's Construction phase. Use `create()` to start an instance and
 
 ```diff lang="typescript"
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -392,9 +403,7 @@ returned) or `error`.
 
 Deploy:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Add a test that POSTs to `/workflow/start/:roomId`, then polls
 `/workflow/status/:instanceId` until the workflow reaches
@@ -402,8 +411,8 @@ Add a test that POSTs to `/workflow/start/:roomId`, then polls
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as Schedule from "effect/Schedule";

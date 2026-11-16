@@ -1,30 +1,29 @@
 <!-- source: https://alchemy.run/aws/frontend/tanstack-start
      upstream: website/src/content/docs/aws/frontend/tanstack-start.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # TanStack Start
 
-> Deploy TanStack Start (React or Solid) to AWS with AWS.Website.TanStackStart — SSR on a streaming Lambda Function URL, client assets on S3 + CloudFront, and TanStack Start's own Vite dev server under alchemy dev.
+> Deploy TanStack Start (React or Solid) to AWS with AWS.Website.TanStackStart — SSR on a Lambda Web Function, client assets on S3 + CloudFront, and TanStack Start's own Vite dev server under alchemy dev.
 
 `AWS.Website.TanStackStart` deploys a
 [TanStack Start](https://tanstack.com/start) app to AWS. TanStack Start
 is pure Vite, so Alchemy runs your project's own `vite build`: the SSR
-server runs on a Lambda Function URL with response streaming, and client
-assets are served from a private S3 bucket through CloudFront. A
-CloudFront Function routes each request at the edge — uploaded files go
-to S3, everything else streams from the Lambda.
+server runs on a [Lambda Web Function](/aws/compute/web-functions) and
+streams its responses, and client assets are served from a private S3
+bucket through CloudFront. A CloudFront Function routes each request at
+the edge — uploaded files go to S3, everything else streams from the
+server.
 
 ## Install
 
 The build integration is not bundled with alchemy. Install
 `@alchemy.run/frontend-frameworks`; the resource loads its
-`/tanstack-start` and `/tanstack-start/aws` exports from your project at
+`/tanstack-start` and `/tanstack-start/node` exports from your project at
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -43,8 +42,8 @@ export default defineConfig({
 ```
 
 Alchemy drives that config's `builder.buildApp()` and forces the SSR
-bundle to be self-contained, then wraps its fetch handler as a streaming
-Lambda handler.
+bundle to be self-contained, then serves its fetch handler from a Node
+server.
 
 :::caution[Remove @cloudflare/vite-plugin if present]
 The TanStack CLI adds `@cloudflare/vite-plugin` when scaffolding a new
@@ -76,7 +75,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.TanStackStart("Website");
 ```
@@ -115,7 +114,7 @@ export default Alchemy.Stack(
 
 Requests matching a built client asset are served straight from S3;
 everything else — SSR routes, server routes, server functions — falls
-through to the Lambda.
+through to the server.
 
 ## Add environment variables
 
@@ -124,17 +123,17 @@ The server function's environment is configured under `env`:
 ```diff lang="typescript"
 // alchemy.run.ts
 export const Website = AWS.Website.TanStackStart("Website", {
-+  memorySize: 2048,
 +  env: {
 +    API_BASE: "https://api.example.com",
 +  },
 });
 ```
 
-`env` values are set on the Lambda on deploy and injected into
+`env` values are set on the server on deploy and injected into
 the dev server's process environment under `alchemy dev`, so server code
 reads the same values in both modes. Sibling props tune the
-Lambda itself (`memorySize`, `timeout`, `architecture`, `runtime`).
+server itself (`timeout`, `maxConcurrencyPerEnvironment`,
+`maxEnvironments`).
 
 An output from another resource only exists once that resource is
 yielded, so declare the site inside the Stack generator instead:
@@ -154,7 +153,7 @@ Effect.gen(function* () {
 
 ## Read the environment in a server function
 
-The TanStack Start server runs in a plain Node Lambda, so server
+The TanStack Start server is a plain Node server, so server
 functions read the environment from `process.env`:
 
 ```typescript
@@ -172,7 +171,7 @@ instead, as `import.meta.env.VITE_*` — set those in the shell that runs
 
 ## Read the environment in a server route
 
-Server routes run on the same Lambda and read `process.env` the same
+Server routes run on the same server and read `process.env` the same
 way:
 
 ```typescript
@@ -231,11 +230,24 @@ The build runs through your project's own `vite.config.ts` — the
 vite's default `build.outDir` (`dist`); the integration reads the
 server and client output from `dist/server` and `dist/client`.
 
+## Run on a Lambda Function
+
+Web Functions run in a subset of Regions. Elsewhere, set
+`server: "function"`: the app builds with the `/tanstack-start/aws` deploy target
+and runs on a Lambda Function behind a streaming Function URL, tuned with
+`memorySize`, `architecture`, and `runtime`:
+
+```diff lang="typescript"
+// alchemy.run.ts
+export const Website = AWS.Website.TanStackStart("Website", {
++  server: "function",
++  memorySize: 2048,
+});
+```
+
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs TanStack Start's own Vite dev server (native HMR)
 instead of deploying anything; `site.url` is the dev server's

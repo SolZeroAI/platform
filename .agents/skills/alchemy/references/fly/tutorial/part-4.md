@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/tutorial/part-4
      upstream: website/src/content/docs/fly/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Secrets and Cleanup
 
@@ -71,9 +71,7 @@ the raw string.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to update
@@ -110,9 +108,7 @@ with [`app`](/fly/compute/services#group-services-in-one-app).
 You're done — tear everything down so Machine and Volume billing
 stops:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 Deleting the Service deletes its Machine, its Volume, and the App it
 created, along with the App's addresses.

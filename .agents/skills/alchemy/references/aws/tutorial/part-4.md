@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/tutorial/part-4
      upstream: website/src/content/docs/aws/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Stages
 
@@ -18,13 +18,11 @@ the infrastructure.
 You've been using stages all along. If you don't pass `--stage`,
 Alchemy deploys to **`live_$USER`** (e.g. `live_sam`):
 
-```sh
-$ whoami
+<PackageManagers script={`$ whoami
 sam
 
-$ bun alchemy deploy
-# deploys to stage `live_sam`
-```
+$ {run} alchemy deploy
+# deploys to stage \`live_sam\``} />
 
 Each developer on your team automatically gets a personal sandbox
 without any config. The resolution order is:
@@ -39,9 +37,7 @@ without any config. The resolution order is:
 Pass `--stage` to deploy a completely separate instance of the same
 program:
 
-```sh
-bun alchemy deploy --stage staging
-```
+<PackageManagers run="alchemy deploy --stage staging" />
 
 ```text
 Plan: 2 to create
@@ -92,8 +88,8 @@ to the surrounding Stack context, including the current `stage`:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as AWS from "alchemy/AWS";
-import * as S3 from "alchemy/AWS/S3";
+import * as AWS from "@alchemy.run/aws";
+import * as S3 from "@alchemy.run/aws/S3";
 +import { Stack } from "alchemy/Stack";
 import * as Effect from "effect/Effect";
 // ...
@@ -104,7 +100,7 @@ export default class Api extends AWS.Lambda.Function<Api>()(
 +  Stack.useSync((stack) => ({
 +    main: import.meta.url,
 +    functionUrl: true,
-+    memory: stack.stage === "prod" ? 1024 : 512,
++    memorySize: stack.stage === "prod" ? 1024 : 512,
 +  })),
   Effect.gen(function* () {
     /* ... */
@@ -120,9 +116,7 @@ configuration, no separate config files.
 
 When you're done with an environment, tear down just that stage:
 
-```sh
-bun alchemy destroy --stage staging
-```
+<PackageManagers run="alchemy destroy --stage staging" />
 
 The plan lists everything in `staging` for deletion and leaves every
 other stage alone.

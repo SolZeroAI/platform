@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/prisma/postgres
      upstream: website/src/content/docs/sql/prisma/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -17,11 +17,9 @@ and CLI release candidates pinned by your Alchemy release; expect breaking
 changes between RC versions.
 :::
 
-Prisma ORM and its CLI are optional Alchemy peers:
+Install `@alchemy.run/prisma` with Prisma ORM and its CLI, which are optional Alchemy peers:
 
-```sh
-bun add @prisma/orm-postgres@8.0.0-rc.11\nbun add -d prisma@8.0.0-rc.15
-```
+<PackageManagers add={deps} dev={devDeps} />
 
 ## Start with a contract
 
@@ -34,7 +32,7 @@ query APIs and [migration resources](/sql/prisma/migrations).
 
 ```typescript
 // src/queries.ts
-import * as PrismaPostgres from "alchemy/Prisma/ORM/Postgres";
+import * as PrismaPostgres from "@alchemy.run/prisma/ORM/Postgres";
 import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 import { contract } from "./prisma/contract.ts";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/tanstack-start
      upstream: website/src/content/docs/prisma/frontend/tanstack-start.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # TanStack Start
 
@@ -17,10 +17,7 @@ is no Docker image or registry.
 Install the build-time integration; the resource loads `/tanstack-start`
 and `/tanstack-start/node` from your project:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -63,7 +60,7 @@ export default defineConfig({
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.TanStackStart("Website", {
   rootDir: "./app",
@@ -146,7 +143,7 @@ independent CDN site.
 
 ## Local dev
 
-`bun alchemy dev` starts TanStack Start's native Vite server with HMR
+`alchemy dev` starts TanStack Start's native Vite server with HMR
 and creates no Prisma resources for the Website. Opt into live deployment
 during dev explicitly:
 

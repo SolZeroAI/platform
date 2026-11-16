@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/tutorial/part-5
      upstream: website/src/content/docs/aws/tutorial/part-5.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 5: CI/CD
 
@@ -22,8 +22,8 @@ assumes the role at runtime and no secret ever exists to leak.
 CI needs to share state across runs, so a local `.alchemy/` directory
 won't cut it. You already configured `AWS.state()` back in
 [Part 1](/aws/tutorial/part-1#where-state-lives), which stores state
-in an account-regional S3 bucket. Every deploy — local or from CI —
-reads and writes state through that bucket.
+in a DynamoDB table in your account. Every deploy — local or from CI —
+reads and writes state through that table.
 
 Double-check it's still wired up in `alchemy.run.ts`:
 
@@ -90,8 +90,8 @@ profile) to provision the IAM role CI will use.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
-import * as GitHub from "alchemy/GitHub";
+import * as AWS from "@alchemy.run/aws";
+import * as GitHub from "@alchemy.run/github";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -333,8 +333,8 @@ Post the live URL as a comment on every PR. Update `alchemy.run.ts`:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
-+import * as GitHub from "alchemy/GitHub";
+import * as AWS from "@alchemy.run/aws";
++import * as GitHub from "@alchemy.run/github";
 +import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 +import * as Layer from "effect/Layer";

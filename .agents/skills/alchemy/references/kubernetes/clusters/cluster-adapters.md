@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/clusters/cluster-adapters
      upstream: website/src/content/docs/kubernetes/clusters/cluster-adapters.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Cluster adapters
 
@@ -56,12 +56,12 @@ never lands in Alchemy's state:
 
 ```typescript
 // src/env-token-adapter.ts
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-declare module "alchemy/Kubernetes" {
+declare module "@alchemy.run/kubernetes" {
   interface AuthRegistry {
     "env-token": {
       /** Environment variable holding the bearer token. */
@@ -154,7 +154,7 @@ A platform adapter such as `aws-eks` goes further:
   gone.
 
 Platforms extend the typed surfaces through module augmentation of
-`alchemy/Kubernetes`:
+`@alchemy.run/kubernetes`:
 
 - `AuthRegistry` holds connection kinds.
 - `IdentityStateRegistry` and `RegistryStateRegistry` hold persisted

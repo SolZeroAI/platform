@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/observability/analytics-engine
      upstream: website/src/content/docs/cloudflare/observability/analytics-engine.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Analytics Engine
 
@@ -16,7 +16,7 @@ Worker writes to it through a typed binding.
 
 ```typescript
 // src/dataset.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Events = Cloudflare.AnalyticsEngine.Dataset("Events", {
   dataset: "app_events",
@@ -36,7 +36,7 @@ provide `WriteDatasetBinding` as a layer:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -75,6 +75,20 @@ export default Cloudflare.Worker(
 );
 ```
 
+<Records
+  title="usage · Analytics Engine dataset"
+  columns={["timestamp", "index1", "blob1", "double1"]}
+  keys={2}
+  rows={[
+    ["09:12:04", "account-1", "signup", "1"],
+    ["09:12:09", "account-2", "api_call", "1"],
+    ["09:13:30", "account-1", "signup", "1"],
+    ["09:14:02", "account-1", "api_call", "1"],
+  ]}
+  query={{ label: "SELECT blob1, SUM(double1) … GROUP BY blob1", rows: [0, 2] }}
+  caption="Each writeDataPoint is a row. Indexes pick how rows are sampled, blobs are what you group by, and doubles are what you add up."
+/>
+
 A data point has three optional field groups — `indexes` (the
 sampling key, typically a customer or tenant ID), `blobs` (string
 dimensions to group by), and `doubles` (numeric values to aggregate).
@@ -88,7 +102,7 @@ binding object directly.
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Worker from "./src/worker.ts";
 
@@ -105,9 +119,7 @@ export default Alchemy.Stack(
 );
 ```
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Deploying the Worker attaches the `analytics_engine` binding; hit
 `/signup` and the data point lands in `app_events`.

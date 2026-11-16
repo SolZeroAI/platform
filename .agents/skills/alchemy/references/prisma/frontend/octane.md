@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/octane
      upstream: website/src/content/docs/prisma/frontend/octane.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Octane
 
@@ -17,10 +17,7 @@ not a Docker Node container.
 Install the build-time integration; the resource loads `/octane` and
 `/octane/node` from your project:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Octane
 
@@ -61,7 +58,7 @@ export default defineConfig({
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Octane("Website");
 ```
@@ -126,7 +123,7 @@ paths run in Compute; static assets are not a separate CDN deployment.
 
 ## Local dev
 
-`bun alchemy dev` starts Octane's Vite server with its in-process SSR,
+`alchemy dev` starts Octane's Vite server with its in-process SSR,
 server routes, RPC, and HMR. The Website creates no Prisma resources.
 Use `.pipe(Alchemy.remote())` to opt into live deployment during dev.
 
@@ -138,8 +135,7 @@ const site = yield* Prisma.Website.Octane("Web", {
 });
 ```
 
-`Prisma.CustomDomain` requires the project's current default branch.
-Configure its returned DNS records yourself and verify status before
+Configure the returned DNS records yourself and verify status before
 cutover; see [Custom domains](/prisma/frontend/websites#custom-domains).
 
 ## Where next

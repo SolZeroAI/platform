@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/setup
      upstream: website/src/content/docs/kubernetes/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -8,14 +8,14 @@
 
 Alchemy deploys to any Kubernetes cluster whose API server it can
 reach. That includes a cluster on your machine, GKE, AKS, EKS,
-DigitalOcean, k3s, or an on-prem fleet. This page covers what you
-need before the first deploy. You need the alchemy package, a
+DigitalOcean, k3s, or an on-prem fleet.
+You need the `alchemy` and `@alchemy.run/kubernetes` packages, a
 cluster to deploy to, a registry for images built from your code,
 and permission to manage objects in the cluster.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - [Docker](https://docs.docker.com/get-started/get-docker/), to build
   images from your code and to run a local cluster
 - A cluster. Use [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
@@ -30,15 +30,11 @@ and permission to manage objects in the cluster.
 
 ## Create a project directory
 
-```sh
-mkdir my-cluster && cd my-cluster && bun init -y
-```
+<PackageManagers init dir="my-cluster" />
 
 ## Install
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Add the providers
 
@@ -48,7 +44,7 @@ Every Stack that uses Kubernetes resources needs
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

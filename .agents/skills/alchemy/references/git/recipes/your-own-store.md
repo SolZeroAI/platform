@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/recipes/your-own-store
      upstream: website/src/content/docs/git/recipes/your-own-store.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Bring your own store
 
@@ -47,7 +47,7 @@ serving path.
 ## The Layer
 
 ```typescript
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/nextjs
      upstream: website/src/content/docs/cloudflare/frontend/nextjs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Next.js
 
@@ -24,9 +24,7 @@ The build integration is not bundled with alchemy. Install
 loads the package's `/nextjs` export from your project at deploy time.
 They are only used at build time, so dev dependencies are enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks @opennextjs/cloudflare
-```
+<PackageManagers dev={devDeps} />
 
 Alchemy leaves native `next.config.*` and Tailwind configuration unchanged.
 No Alchemy plugin is required. OpenNext configuration is optional; without it,
@@ -40,7 +38,7 @@ Stack) and derive the typed shape of its bindings from it:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Website = Cloudflare.Website.Nextjs("Website");
 
@@ -230,9 +228,7 @@ export const Website = Cloudflare.Website.Nextjs("Website", {
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` defaults to **preview parity**: the OpenNext worker is
 built and served under workerd locally, with the Worker's bindings

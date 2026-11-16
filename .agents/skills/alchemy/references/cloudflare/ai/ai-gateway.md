@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/ai/ai-gateway
      upstream: website/src/content/docs/cloudflare/ai/ai-gateway.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Add an AI Gateway
 
@@ -12,6 +12,21 @@ Cloudflare track is an **AI Gateway** — a stable account-scoped
 endpoint that fronts every model provider (Workers AI, OpenAI,
 Anthropic, Bedrock, …) and gives you caching, rate limiting, retries,
 DLP, and a single dashboard of every request, token, and cost.
+
+<Records
+  title="Gateway · request log"
+  columns={["time", "provider · model", "tokens", "cost", "cache"]}
+  keys={0}
+  rows={[
+    ["10:02:11", "workers-ai · llama-3.3", "812", "$0.0002", "miss"],
+    ["10:02:40", "openai · gpt-4o-mini", "1,204", "$0.0007", "miss"],
+    ["10:02:52", "openai · gpt-4o-mini", "1,204", "$0", "hit"],
+    ["10:03:05", "anthropic · claude-haiku", "960", "$0.0012", "miss"],
+    ["10:03:09", "workers-ai · llama-3.3", "812", "$0", "hit"],
+  ]}
+  query={{ label: "served from cache", rows: [2, 4] }}
+  caption="Every call, to any provider, goes through the gateway and lands in one log with its tokens and cost. A repeat of a prompt inside cacheTtl is answered from the cache, at no cost."
+/>
 
 In Alchemy the gateway is a single resource. Once you've declared and
 bound it, `.model({...})` returns an Effect `LanguageModel.LanguageModel`
@@ -34,7 +49,7 @@ show up in the AI Gateway dashboard.
 
 ```typescript
 // src/AiGateway.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Gateway = Cloudflare.AI.Gateway("Gateway", {
   cacheTtl: 60,
@@ -80,7 +95,7 @@ the gateway endpoint, `getLog`/`patchLog` for the request log, and
 
 ```diff lang="typescript"
 // src/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { Gateway } from "./AiGateway.ts";
 
@@ -178,12 +193,10 @@ need typed handling instead, `Effect.catchTag("AiError", …)` works.
 
 ## Try it
 
-```sh
-bun alchemy deploy
-curl -X POST "$(bun alchemy stack output url)/generate" \
-  -H "content-type: application/json" \
-  -d '{"prompt":"Write a haiku about Effect"}'
-```
+<PackageManagers script={`{run} alchemy deploy
+curl -X POST "$({run} alchemy stack output url)/generate" \\
+  -H "content-type: application/json" \\
+  -d '{"prompt":"Write a haiku about Effect"}'`} />
 
 The first call takes ~1–2 seconds. Send the **exact same** prompt
 again and it returns in milliseconds — that's the `cacheTtl: 60`
@@ -228,11 +241,9 @@ flushes through the Worker → edge → client without buffering.
 `Effect.provide` — the `LanguageModel` needs to be available for the
 entire lifetime of the stream, not just the initial setup.
 
-```sh
-curl -N -X POST "$(bun alchemy stack output url)/stream" \
-  -H "content-type: application/json" \
-  -d '{"prompt":"Write a haiku about Effect, slowly."}'
-```
+<PackageManagers script={`curl -N -X POST "$({run} alchemy stack output url)/stream" \\
+  -H "content-type: application/json" \\
+  -d '{"prompt":"Write a haiku about Effect, slowly."}'`} />
 
 `-N` disables curl's response buffering so you see each SSE event as
 soon as the Worker flushes it.
@@ -258,7 +269,7 @@ export const Gateway = Cloudflare.AI.Gateway("Gateway", {
 ```
 
 Bumping `cacheTtl`, `rateLimitingLimit`, or toggling `authentication`
-is a single `bun alchemy deploy` away — the diff updates the gateway
+is a single `alchemy deploy` away — the diff updates the gateway
 in place.
 
 ## What you have now

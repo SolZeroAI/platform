@@ -1,18 +1,16 @@
 <!-- source: https://alchemy.run/better-auth/sign-in-providers/custom-oauth
      upstream: website/src/content/docs/better-auth/sign-in-providers/custom-oauth.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Custom OAuth and OIDC
 
 > Add Keycloak OIDC sign-in to an Alchemy Worker with D1, one small step at a time.
 
-Start in an existing Alchemy project with [Bun](https://bun.sh) and a [configured Cloudflare profile](/cloudflare/setup). This standalone walkthrough uses Keycloak and Better Auth 1.7.5's `genericOAuth`; all application files are introduced below.
+Start in an existing Alchemy project on [Node.js](https://nodejs.org) or [Bun](https://bun.sh) and a [configured Cloudflare profile](/cloudflare/setup). This standalone walkthrough uses Keycloak and Better Auth 1.7.5's `genericOAuth`; all application files are introduced below.
 
 ## Add the auth dependencies
 
-```sh
-bun add @alchemy.run/better-auth better-auth@1.7.5 kysely
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@1.7.5 kysely" />
 
 Use an `@alchemy.run/better-auth` release matching your installed Alchemy release. Keep your existing `alchemy` and `effect` dependencies.
 
@@ -100,7 +98,7 @@ In 1.7.5, `genericOAuth` registers a social provider named `company`, using `sig
 Create `src/database.ts`:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const AuthDb = Cloudflare.D1.Database("AuthDb");
 ```
@@ -129,7 +127,7 @@ export const AuthLive = Auth.layer.pipe(
 Create `src/worker.ts`:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Auth } from "./auth.ts";
 import { AuthLive } from "./auth-layer.ts";
@@ -156,7 +154,7 @@ Use this as `alchemy.run.ts` for the walkthrough:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthWorker from "./src/worker.ts";
 
@@ -278,9 +276,7 @@ The final client is the initial `src/client.ts` block followed by the three appe
 
 ## Discover the local origin
 
-```sh
-bunx alchemy dev --stage company-guide
-```
+<PackageManagers run="alchemy dev --stage company-guide" />
 
 Run without provider credentials or `OIDC_ENABLED=true` for this first start; Alchemy allocates a port and prints the actual origin. Keep OIDC disabled until the registration below is ready, and rebuild the browser bundle whenever you edit `src/client.ts`.
 
@@ -318,9 +314,7 @@ Discovery must be reachable from the Worker and publish the expected issuer, aut
 
 ## Enable OIDC locally
 
-```sh
-bunx alchemy dev --stage company-guide --env-file .env.local
-```
+<PackageManagers run="alchemy dev --stage company-guide --env-file .env.local" />
 
 Stop the first dev process before running this command, and update Keycloak's callback if the newly printed origin changes. Open that origin, select **Sign in with company**, then use **Read session** and **Sign out** to exercise the roundtrip.
 

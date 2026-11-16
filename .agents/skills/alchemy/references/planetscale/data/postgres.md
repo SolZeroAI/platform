@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/data/postgres
      upstream: website/src/content/docs/planetscale/data/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -16,6 +16,17 @@ Lambda) as typed outputs.
 New here? [Set up credentials](/planetscale/setup) first. For the
 MySQL (Vitess) family, see [MySQL](/planetscale/data/mysql).
 
+<Tree
+  nodes={[
+    { id: "db", label: "app", type: "PostgresDatabase · PS_10" },
+    { id: "main", label: "main", type: "branch · production", parent: "db" },
+    { id: "r1", label: "app_rw", type: "PostgresRole", parent: "main", tone: "accent" },
+    { id: "pr", label: "pr-42", type: "branch · preview stage", parent: "db" },
+    { id: "r2", label: "app_rw", type: "PostgresRole", parent: "pr", tone: "accent" },
+  ]}
+  caption="The database is the long-lived cluster. Each branch is its own Postgres with its own roles, so a preview stage forks a branch, connects with a role on it, and deletes both when it goes."
+/>
+
 ## Create a database
 
 `PostgresDatabase` owns the long-lived cluster. `clusterSize` is
@@ -25,7 +36,7 @@ Network-attached (NAS) sizes like `"PS_10"` are expanded to the full
 SKU using the target region and architecture:
 
 ```typescript
-import * as Planetscale from "alchemy/Planetscale";
+import * as Planetscale from "@alchemy.run/planetscale";
 
 const database = yield* Planetscale.PostgresDatabase("app-db", {
   region: { slug: "us-east" },
@@ -148,7 +159,7 @@ into consumers like [Cloudflare Hyperdrive](/cloudflare/data/hyperdrive):
   direct connection, e.g. Hyperdrive's local-dev origin.
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("app-hyperdrive", {
   origin: role.origin, // direct — Hyperdrive pools at the edge
@@ -168,7 +179,7 @@ an Interface VPC endpoint. With private DNS enabled, use
 `privateHost` for workloads in that VPC:
 
 ```typescript
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 const endpoint = yield* AWS.EC2.VpcEndpoint("postgres-private-link", {
   vpcId: vpc.vpcId,

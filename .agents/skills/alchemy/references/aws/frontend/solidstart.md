@@ -1,22 +1,22 @@
 <!-- source: https://alchemy.run/aws/frontend/solidstart
      upstream: website/src/content/docs/aws/frontend/solidstart.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SolidStart
 
-> Deploy a SolidStart app to AWS with AWS.Website.SolidStart — nitro's aws-lambda preset on a streaming Lambda Function URL, S3 assets behind CloudFront, and SolidStart's own Vite dev server under alchemy dev.
+> Deploy a SolidStart app to AWS with AWS.Website.SolidStart — SSR on a Lambda Web Function, S3 assets behind CloudFront, and SolidStart's own Vite dev server under alchemy dev.
 
 `AWS.Website.SolidStart` deploys a
 [SolidStart](https://start.solidjs.com) app to AWS. It runs your
-project's own `vite build` and appends nitro's `aws-lambda` preset:
-the SSR server runs on a Lambda Function URL with response streaming,
-and client assets plus prerendered pages are served from a private S3
-bucket through CloudFront. A CloudFront Function routes each request
-at the edge — uploaded files go to S3, everything else streams from
-the Lambda.
+project's own `vite build` and appends nitro's `node` preset: the SSR
+server runs on a [Lambda Web Function](/aws/compute/web-functions) and
+streams its responses, and client assets plus prerendered pages are
+served from a private S3 bucket through CloudFront. A CloudFront
+Function routes each request at the edge — uploaded files go to S3,
+everything else streams from the server.
 
 :::note[Verified version line]
-This page tracks `@solidjs/start` **2.x** with
+Verified with `@solidjs/start` **2.x** and
 `@solidjs/vite-plugin-nitro-2` — the Vite-native line where
 `solidStart()` is a plain Vite plugin and nitro is a second plugin.
 :::
@@ -25,20 +25,16 @@ This page tracks `@solidjs/start` **2.x** with
 
 The build integration is not bundled with alchemy. Install
 `@alchemy.run/frontend-frameworks`; the resource loads its
-`/solidstart` and `/solidstart/aws` exports from your project at
+`/solidstart` and `/solidstart/node` exports from your project at
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 `@solidjs/vite-plugin-nitro-2` is the server half of a SolidStart
 build and must be a project dependency too:
 
-```sh
-bun add @solidjs/vite-plugin-nitro-2
-```
+<PackageManagers add="@solidjs/vite-plugin-nitro-2" />
 
 ## Configure Vite
 
@@ -56,7 +52,8 @@ export default defineConfig({
 ```
 
 Alchemy appends its own `nitroV2Plugin()` instance at build time,
-carrying the `aws-lambda` preset with response streaming enabled.
+carrying nitro's `node` preset (`aws-lambda`, streaming enabled, with
+`server: "function"`).
 Don't register `nitroV2Plugin()` yourself — the appended instance
 would discard its options, so the build fails with an actionable
 error instead. Pass nitro options through the resource's `nitro`
@@ -69,7 +66,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.SolidStart("Website");
 ```
@@ -113,17 +110,17 @@ The server function's environment is configured under `env`:
 ```diff lang="typescript"
 // alchemy.run.ts
 export const Website = AWS.Website.SolidStart("Website", {
-+  memorySize: 2048,
 +  env: {
 +    API_BASE: "https://api.example.com",
 +  },
 });
 ```
 
-`env` values are set on the Lambda on deploy and injected into
+`env` values are set on the server on deploy and injected into
 the dev server's process environment under `alchemy dev`, so server
 code reads the same values in both modes. Sibling props tune the
-Lambda itself (`memorySize`, `timeout`, `architecture`, `runtime`).
+server itself (`timeout`, `maxConcurrencyPerEnvironment`,
+`maxEnvironments`).
 
 An output from another resource only exists once that resource is
 yielded, so declare the site inside the Stack generator instead:
@@ -143,7 +140,7 @@ Effect.gen(function* () {
 
 ## Read the environment in server code
 
-The SolidStart server runs in a plain Node Lambda, so API routes,
+The SolidStart server is a plain Node server, so API routes,
 server functions, and SSR read the environment from `process.env`:
 
 ```typescript
@@ -174,13 +171,26 @@ from prerendered pages to prerender them too (`crawlLinks`). The
 `nitro` prop is the home for all nitro options (route rules, storage,
 ...) — the integration owns the plugin instance, so they cannot live
 in `vite.config.ts`. Values must be JSON-serializable; `preset` is
-owned by the AWS deploy target, and a foreign preset is a hard error.
+owned by the deploy target, and a foreign preset is a hard error.
+
+## Run on a Lambda Function
+
+Web Functions run in a subset of Regions. Elsewhere, set
+`server: "function"`: the app builds with the `/solidstart/aws` deploy target
+and runs on a Lambda Function behind a streaming Function URL, tuned with
+`memorySize`, `architecture`, and `runtime`:
+
+```diff lang="typescript"
+// alchemy.run.ts
+export const Website = AWS.Website.SolidStart("Website", {
++  server: "function",
++  memorySize: 2048,
+});
+```
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs SolidStart's own Vite dev server (native HMR)
 instead of deploying anything; `site.url` is the dev server's

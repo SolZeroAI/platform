@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/data/backups
      upstream: website/src/content/docs/planetscale/data/backups.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Backups & restores
 
@@ -14,6 +14,20 @@ backup's schema and data.
 Both `MySQLBranch` and `PostgresBranch` accept the same two props:
 `backupId` restores a specific backup, `seedData` restores the parent
 branch's last successful backup.
+
+<BranchGraph
+  end={10}
+  branches={[
+    { id: "main", label: "main", type: "production", tone: "accent" },
+    { id: "restored", label: "restored", type: "backupId: backup-123", from: { branch: "main", at: 3 } },
+  ]}
+  points={[
+    { branch: "main", at: 3, label: "backup-123" },
+    { branch: "main", at: 6.5, label: "bad migration" },
+    { branch: "restored", at: 7, label: "schema + data as of the backup", below: true },
+  ]}
+  caption="A restored branch starts from the backup, not from main as it is now, so it comes up without the changes made after the backup."
+/>
 
 ## Restore a branch from a backup
 

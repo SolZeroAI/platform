@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/compute/regions
      upstream: website/src/content/docs/fly/compute/regions.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Regions
 
@@ -80,6 +80,21 @@ export default class Api extends Fly.Service<Api>()(
   }),
 ) {}
 ```
+
+<WorldMap
+  places={[
+    { id: "iad", label: "2 Machines", type: "iad · Ashburn", lat: 39, lon: -77.5, tone: "accent", place: "left" },
+    { id: "lhr", label: "2 Machines", type: "lhr · London", lat: 51.5, lon: -0.1, tone: "accent", place: "left" },
+    { id: "sao", label: "visitor", type: "São Paulo", lat: -23.5, lon: -46.6, place: "right" },
+    { id: "ber", label: "visitor", type: "Berlin", lat: 52.5, lon: 13.4, place: "right" },
+  ]}
+  links={[
+    { from: "sao", to: "iad", bend: 0.25 },
+    { from: "ber", to: "lhr", bend: 0.4 },
+  ]}
+  crop={{ west: -120, east: 50, north: 72, south: -40 }}
+  caption="One hostname, Machines in two regions. Fly's Anycast proxy sends each visitor to the nearest healthy Machine."
+/>
 
 This runs four Machines: two in `iad` and two in `lhr`. `api.regions`
 is `["iad", "lhr"]`, and `api.url` serves from both.

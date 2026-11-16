@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/tutorial/part-3
      upstream: website/src/content/docs/hetzner/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Persist Data with a Volume
 
@@ -18,7 +18,7 @@ Add a Volume next to the Server in `src/server.ts`:
 
 ```diff lang="typescript"
 // src/server.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Key = Hetzner.SshKey("laptop", { /* ... */ });
 
@@ -48,7 +48,7 @@ required:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -143,9 +143,7 @@ return HttpServerResponse.text("Hello from Hetzner!");
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create, 1 to update

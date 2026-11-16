@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/apis/effect-rpc
      upstream: website/src/content/docs/aws/apis/effect-rpc.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Effect RPC on Lambda
 
@@ -113,7 +113,7 @@ Function URL:
 
 ```typescript
 // src/JobFunction.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default class JobFunction extends AWS.Lambda.Function<JobFunction>()(
@@ -246,7 +246,7 @@ DynamoDB's HTTP API, signed with the Lambda's execution role.
 
 ```typescript
 // src/JobFunction.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { RpcSerialization, RpcServer } from "effect/rpc";
@@ -317,7 +317,7 @@ export default class JobFunction extends AWS.Lambda.Function<JobFunction>()(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import JobFunction from "./src/JobFunction.ts";
 
@@ -340,9 +340,7 @@ with the two table-scoped statements, and the Function URL.
 
 ## 5. Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ## 6. Call it from a typed client
 
@@ -394,7 +392,7 @@ explicitly.
 
 ## Choosing an API style
 
-- **External Effect/TypeScript consumers** — this page.
+- **External Effect/TypeScript consumers** — Effect RPC, with a typed client.
 - **External plain-HTTP consumers** (curl, non-TypeScript clients) —
   [Effect HTTP API on Lambda](/aws/apis/effect-http-api).
 - **Internal service-to-service calls** —
@@ -418,7 +416,7 @@ explains the service-Layer pattern it uses.
 - [Lambda](/aws/compute/lambda) — how the Function class, Function URLs, and
   the test harness work.
 - [Effect HTTP API on Lambda](/aws/apis/effect-http-api) — the
-  REST-style sibling of this guide, same wiring.
+  REST-style sibling, with the same wiring.
 - [Effect RPC on Workers](/cloudflare/apis/effect-rpc) — the same
   `RpcGroup` deployed to Cloudflare, plus streaming and Durable
   Object routing.

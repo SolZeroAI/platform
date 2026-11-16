@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/data/postgres
      upstream: website/src/content/docs/railway/data/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -39,7 +39,7 @@ Yield `ConnectPostgres` in the Service's constructor. Provide
 SQL.
 
 ```typescript
-import * as Drizzle from "alchemy/Drizzle/Postgres";
+import * as Drizzle from "@alchemy.run/drizzle/Postgres";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
 export default class Api extends Railway.Service<Api>()(
@@ -47,7 +47,6 @@ export default class Api extends Railway.Service<Api>()(
   {
     project: Site,
     main: import.meta.url,
-    build: { install: ["pg"] },
   },
   Effect.gen(function* () {
     const conn = yield* Railway.ConnectPostgres(Db);
@@ -70,9 +69,6 @@ To store Railway's `${{Db.DATABASE_URL}}` template instead of a
 resolved URI, pass [`Railway.ref`](/providers/railway/ref)
 (`Railway.ref(Db, "DATABASE_URL")`) as a
 [Variable](/railway/data/variables) `value`.
-
-`build.install: ["pg"]` is required. Rolldown's CJS interop breaks
-`pg.Client` if you bundle it.
 
 ## Public TCP
 
@@ -126,7 +122,7 @@ Resource-valued props accept the resource or an Effect producing it.
 
 ```typescript
 // src/db.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Site = Railway.Project("Site");
 export const Db = Railway.Postgres("Db", { project: Site });

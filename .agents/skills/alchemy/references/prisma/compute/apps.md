@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/compute/apps
      upstream: website/src/content/docs/prisma/compute/apps.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Apps
 
@@ -117,8 +117,7 @@ export default Prisma.Compute(
 
 ## Custom domains
 
-Custom domains can only attach to an app on the project's current
-default branch. Creating the resource starts DNS and certificate
+Creating the resource starts DNS and certificate
 provisioning; use `domain.dnsRecords` to configure DNS and inspect
 `domain.status` before directing production traffic:
 
@@ -135,7 +134,7 @@ remove the old resource.
 
 ## Local dev
 
-Under `bun alchemy dev`, `dev.command` runs your app locally (e.g.
+Under `alchemy dev`, `dev.command` runs your app locally (e.g.
 `vite dev`) with the same env the deployed app would see — including
 connection bindings, which resolve to the local
 [dev database](/prisma/data/postgres#local-dev):

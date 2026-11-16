@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/compute/apps
      upstream: website/src/content/docs/fly/compute/apps.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Apps
 
@@ -21,6 +21,21 @@ when you need one directly:
   to a `Fly.App`, not to a Service's own App.
 - Several Services share one hostname, secrets, or domain — see
   [Group Services in one App](/fly/compute/services#group-services-in-one-app).
+
+<Tree
+  nodes={[
+    { id: "app", label: "api", type: "App · global · api.fly.dev" },
+    { id: "iad", label: "iad", type: "region", parent: "app", dashed: true },
+    { id: "lhr", label: "lhr", type: "region", parent: "app", dashed: true },
+    { id: "m1", label: "Machine", type: "shared-cpu-1x", parent: "iad", tone: "accent" },
+    { id: "m2", label: "Machine", type: "shared-cpu-1x", parent: "iad", tone: "accent" },
+    { id: "m3", label: "Machine", type: "shared-cpu-1x", parent: "lhr", tone: "accent" },
+    { id: "secrets", label: "Secrets", type: "env on every Machine", parent: "app", side: true },
+    { id: "ips", label: "IPs", type: "shared v4 · v6", parent: "app", side: true },
+    { id: "cert", label: "Certificate", type: "api.example.com", parent: "app", side: true },
+  ]}
+  caption="An App is global. Its Machines run in regions, and its secrets, addresses and certificates belong to the App, so every Machine shares them."
+/>
 
 ## Create an App
 
@@ -110,7 +125,7 @@ Declare the App once. Pass it into every child.
 
 ```typescript
 // src/app.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Site = Fly.App("Site");
 ```

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/static-site
      upstream: website/src/content/docs/cloudflare/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static sites
 
@@ -45,7 +45,7 @@ the Worker's `url` as a stack output:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

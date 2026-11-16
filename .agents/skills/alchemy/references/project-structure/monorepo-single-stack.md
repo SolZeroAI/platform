@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/project-structure/monorepo-single-stack
      upstream: website/src/content/docs/project-structure/monorepo-single-stack.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Single Stack
 
@@ -27,7 +27,7 @@ The entire Stack:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Path } from "effect/Path";
 import Service from "./backend/src/Service.ts";
@@ -58,8 +58,8 @@ export default Alchemy.Stack(
 ```
 
 Run `alchemy deploy` (or `alchemy dev`) from the workspace root and both apps
-go up in one plan, tracked in one state file. The rest of this page explains
-the two lines that make the monorepo shape work: `main: import.meta.url` and
+go up in one plan, tracked in one state file. Two lines make the monorepo shape
+work: `main: import.meta.url` and
 `rootDir`.
 
 ## Anchor every path
@@ -90,7 +90,7 @@ Each app declares its own Worker in its own package:
 
 ```typescript
 // backend/src/Service.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -178,7 +178,7 @@ package with an anchored `main`, import them all into the one Stack, and
 
 ```typescript
 // apps/api/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Api = Cloudflare.Worker("Api", {
   main: new URL("./src/worker.ts", import.meta.url).href,

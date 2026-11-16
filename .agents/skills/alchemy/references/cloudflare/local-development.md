@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/local-development
      upstream: website/src/content/docs/cloudflare/local-development.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Local development
 
@@ -102,6 +102,14 @@ export default Sandbox.make(
 All three image sources work locally: `main` (a bundled Effect
 program), `context` (your own Dockerfile), and `image` (a
 pre-built remote image).
+
+### FUSE mounts
+
+A container can mount a FUSE filesystem locally, such as an R2
+bucket through `s3fs` or `tigrisfs`, just as it can once deployed.
+Every local container gets the Docker privileges FUSE needs:
+`CAP_SYS_ADMIN`, the `/dev/fuse` device, and an unconfined AppArmor
+profile.
 
 ## What's emulated
 

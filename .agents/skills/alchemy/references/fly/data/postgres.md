@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/data/postgres
      upstream: website/src/content/docs/fly/data/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -46,7 +46,7 @@ Yield `ConnectPostgres` in the Service's constructor. Provide
 SQL.
 
 ```typescript
-import * as Drizzle from "alchemy/Drizzle/Postgres";
+import * as Drizzle from "@alchemy.run/drizzle/Postgres";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
 export default class Api extends Fly.Service<Api>()(

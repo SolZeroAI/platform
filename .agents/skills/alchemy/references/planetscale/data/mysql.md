@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/data/mysql
      upstream: website/src/content/docs/planetscale/data/mysql.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # MySQL
 
@@ -19,7 +19,7 @@ here? [Set up credentials](/planetscale/setup) first.
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Planetscale from "alchemy/Planetscale";
+import * as Planetscale from "@alchemy.run/planetscale";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -114,7 +114,7 @@ The password's `origin` attribute is the exact shape
 the branch is one resource:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("app-hyperdrive", {
   origin: password.origin,

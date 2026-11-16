@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/frontend/react-router
      upstream: website/src/content/docs/neon/frontend/react-router.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React Router
 
@@ -33,7 +33,7 @@ or deployment adapter is needed in the app.
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

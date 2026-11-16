@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/tutorial/part-2
      upstream: website/src/content/docs/aws/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Add a Lambda
 
@@ -19,7 +19,7 @@ declaration:
 
 ```typescript
 // src/api.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default class Api extends AWS.Lambda.Function<Api>()(
@@ -47,7 +47,7 @@ wired up to handle incoming HTTP requests:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -77,9 +77,10 @@ handling a request.
 
 ## Expose a public URL
 
-`fetch` exists, but no one can call it yet. Set `functionUrl: true` on the
-props to ask AWS for a public **Function URL** — no API Gateway, no
-auth, just a public HTTPS endpoint:
+Every Lambda Function gets a public **Function URL** by default:
+`functionUrl` defaults to `true`, which creates an unauthenticated HTTPS
+endpoint (`authType: "NONE"`) and lets anyone invoke it. Spell it out
+so the access level is visible in the code:
 
 ```diff lang="typescript"
 export default class Api extends AWS.Lambda.Function<Api>()(
@@ -94,8 +95,18 @@ export default class Api extends AWS.Lambda.Function<Api>()(
 ) {}
 ```
 
-The resolved `Api` resource will now expose a `functionUrl` field
+The resolved `Api` resource exposes a `functionUrl` field
 carrying that endpoint — we'll surface it from the Stack in a moment.
+
+`functionUrl` takes three access choices. `false` creates no URL,
+`true` creates a public one, and `{ authType: "AWS_IAM" }` requires
+SigV4-signed requests.
+
+:::caution
+Omitting `functionUrl` gives you a public URL. A Function that only
+consumes events (SQS, SNS, EventBridge, Kinesis, S3) should set
+`functionUrl: false`.
+:::
 
 ## Move the Bucket into the function
 
@@ -106,8 +117,8 @@ everything about the function in one file. Add it to the constructor:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as AWS from "alchemy/AWS";
-+import * as S3 from "alchemy/AWS/S3";
+import * as AWS from "@alchemy.run/aws";
++import * as S3 from "@alchemy.run/aws/S3";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -153,7 +164,7 @@ Both capability calls return a callable Effect: `putObject` takes a
 Alchemy fills in for you) and `getObject` takes a `GetObjectRequest`.
 Each call is 1:1 with an IAM statement on the execution role — delete
 a capability call and the matching statement disappears next deploy.
-See [S3 → One binding, one IAM statement](/aws/data/s3#one-binding-one-iam-statement)
+See [IAM and bindings](/aws/iam#bindings-write-the-policy)
 for the exact mapping.
 
 ## Write objects with `PUT /:key`
@@ -163,8 +174,8 @@ object key and writes the request body to the bucket:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as AWS from "alchemy/AWS";
-import * as S3 from "alchemy/AWS/S3";
+import * as AWS from "@alchemy.run/aws";
+import * as S3 from "@alchemy.run/aws/S3";
 import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -264,7 +275,7 @@ case).
 
 Bindings declare a capability; **runtime layers** implement it. For
 S3 those are `S3.PutObjectHttp` and `S3.GetObjectHttp` — both ship in
-`alchemy/AWS/S3` and depend only on the AWS SDK and the ambient
+`@alchemy.run/aws/S3` and depend only on the AWS SDK and the ambient
 credentials. Provide them at the bottom of the function:
 
 ```diff lang="typescript"
@@ -295,7 +306,7 @@ Stack's Effect is what registers the resource and starts the deploy:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 +import Api from "./src/api.ts";
 
@@ -346,9 +357,7 @@ Construction phase runs — it just isn't surfaced as a stack output anymore.
 Deploy again. Alchemy detects the new function and the unchanged
 bucket:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

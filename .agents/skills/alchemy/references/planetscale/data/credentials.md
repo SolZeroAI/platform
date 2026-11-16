@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/data/credentials
      upstream: website/src/content/docs/planetscale/data/credentials.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Credentials
 
@@ -14,13 +14,31 @@ Alchemy stores it `Redacted` in state, and any change it can't apply
 in place mints a fresh credential whose new plaintext propagates to
 downstream resources automatically.
 
+<Sequence
+  actors={[
+    { id: "ps", label: "PlanetScale" },
+    { id: "alchemy", label: "Alchemy", type: "state" },
+    { id: "hd", label: "Hyperdrive", type: "or any consumer", tone: "accent" },
+  ]}
+  steps={[
+    { from: "alchemy", to: "ps", label: "create PostgresRole" },
+    { from: "ps", to: "alchemy", label: "user + password, shown once", dashed: true },
+    { note: "stored Redacted", over: "alchemy" },
+    { from: "alchemy", to: "hd", label: "password as a typed output" },
+    { divider: "a change that can't apply in place" },
+    { from: "alchemy", to: "ps", label: "create a new role" },
+    { from: "alchemy", to: "hd", label: "the new password, on the same deploy" },
+  ]}
+  caption="PlanetScale never shows a password again, so Alchemy keeps it, redacted, and hands it on. A replaced credential reaches its consumers in the same deploy."
+/>
+
 ## Postgres roles
 
 `PostgresRole` mints a Postgres user + password on a branch;
 permissions come from `inheritedRoles`:
 
 ```typescript
-import * as Planetscale from "alchemy/Planetscale";
+import * as Planetscale from "@alchemy.run/planetscale";
 
 const reader = yield* Planetscale.PostgresRole("reader", {
   database,
@@ -111,7 +129,7 @@ consumers like [Cloudflare Hyperdrive](/cloudflare/data/hyperdrive).
 5432), `pooledOrigin` goes through PSBouncer (port 6432):
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("app-hyperdrive", {
   origin: role.origin, // direct — Hyperdrive pools at the edge

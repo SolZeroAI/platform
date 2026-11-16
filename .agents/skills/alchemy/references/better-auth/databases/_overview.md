@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases
      upstream: website/src/content/docs/better-auth/databases/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Choose a database
 

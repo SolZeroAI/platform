@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/renewal
      upstream: website/src/content/docs/acme/renewal.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Renewal & revocation
 
@@ -18,7 +18,7 @@ In the certificate from [Getting started](/acme/getting-started):
  const certificate = yield* ACME.Certificate("Site", {
    account,
    identifiers: ["example.com"],
-   solver: Cloudflare.DNS.AcmeSolver({
+   solver: Cloudflare.ACME.ZoneSolver({
      zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
    }),
 +  renewBefore: "30 days",
@@ -73,7 +73,7 @@ process needs explicit revocation after cutover.
  const certificate = yield* ACME.Certificate("Site", {
    account,
    identifiers: ["example.com"],
-   solver: Cloudflare.DNS.AcmeSolver({
+   solver: Cloudflare.ACME.ZoneSolver({
      zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
    }),
 +  revokeOnDelete: true,

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/prisma
      upstream: website/src/content/docs/cloudflare/data/prisma.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Prisma ORM with Postgres
 
@@ -14,10 +14,7 @@ Requires Prisma ORM **8.0.0-rc** and **PostgreSQL 17+**. Pin the ORM and CLI ver
 
 ## Install the dependencies
 
-```sh
-bun add alchemy effect @prisma/orm-postgres arktype
-bun add -d prisma
-```
+<PackageManagers add="alchemy @alchemy.run/cloudflare @alchemy.run/neon @alchemy.run/prisma effect @prisma/orm-postgres arktype" dev="prisma" />
 
 [Cloudflare setup](/cloudflare/setup) · [Neon setup](/neon/setup) · [Define a contract](/sql/prisma/contracts)
 
@@ -34,7 +31,7 @@ Import the bootstrap before the contract builder:
 
 ```typescript
 import "./validation.ts";
-import { defineContract } from "alchemy/Prisma/ORM";
+import { defineContract } from "@alchemy.run/prisma/ORM";
 ```
 
 If your package uses `"sideEffects": false`, preserve this module:
@@ -49,8 +46,8 @@ PSL-first projects skip this step.
 
 ```typescript
 // src/db.ts
-import * as Neon from "alchemy/Neon";
-import * as Prisma from "alchemy/Prisma";
+import * as Neon from "@alchemy.run/neon";
+import * as Prisma from "@alchemy.run/prisma";
 import * as Effect from "effect/Effect";
 
 export const Db = Effect.gen(function* () {
@@ -73,7 +70,7 @@ export const Db = Effect.gen(function* () {
 
 ```typescript
 // src/db.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Hyperdrive = Effect.gen(function* () {
   const branch = yield* Db;
@@ -90,8 +87,8 @@ Caching is disabled so reads immediately reflect writes. [Hyperdrive guide](/clo
 
 ```typescript
 // src/api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as PrismaPostgres from "alchemy/Prisma/ORM/Postgres";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as PrismaPostgres from "@alchemy.run/prisma/ORM/Postgres";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { contract } from "./prisma/contract.ts";
@@ -132,9 +129,9 @@ const db = yield* makeDatabase(conn.connectionString);
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
-import * as Prisma from "alchemy/Prisma";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
+import * as Prisma from "@alchemy.run/prisma";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import Api from "./src/api.ts";
@@ -158,18 +155,14 @@ export default Alchemy.Stack(
 
 ## Deploy and query
 
-```sh
-bun alchemy deploy
-curl https://<your-worker>.workers.dev
-```
+<PackageManagers script={`{run} alchemy deploy
+curl https://<your-worker>.workers.dev`} />
 
 This demo route is public. Add authentication before exposing private data.
 
 ## Clean up
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 Destroy removes the example's Worker, Hyperdrive configuration, and Neon resources, including the database data.
 

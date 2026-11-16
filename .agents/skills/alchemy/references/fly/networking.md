@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/networking
      upstream: website/src/content/docs/fly/networking.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # IPs & certificates
 
@@ -14,6 +14,23 @@ your organization with `public: false`. Fly's proxy load-balances
 IPs and certificates you declare yourself attach to a
 [`Fly.App`](/fly/compute/apps): use them for Machines, for Services
 grouped in one App, and for your own domain.
+
+<Boundaries
+  nodes={[
+    { id: "visitor", label: "visitor", col: 0, row: 0 },
+    { id: "proxy", label: "Fly proxy", type: "api.fly.dev · TLS", col: 1, row: 0 },
+    { id: "api", label: "api", type: "Machines", col: 2, row: 0, tone: "accent" },
+    { id: "orders", label: "orders", type: "Flycast only", col: 2, row: 1 },
+  ]}
+  zones={[{ id: "net", label: "organization", type: "private network", nodes: ["api", "orders"], tone: "warn" }]}
+  links={[
+    { from: "visitor", to: "proxy", label: "GET" },
+    { from: "proxy", to: "api", label: "balanced" },
+    { from: "api", to: "orders", label: "orders.flycast" },
+    { from: "visitor", to: "net", kind: "blocked", label: "no public address" },
+  ]}
+  caption="Public traffic enters through Fly's proxy, which balances it across the App's Machines. A private Service has only a Flycast address on the organization's network, so only its neighbours reach it."
+/>
 
 ## Public Services
 
@@ -72,10 +89,9 @@ returns a typed client for its methods — see
 [Call one Service from another](/fly/compute/services#call-one-service-from-another).
 Bound calls go to `privateUrl` through Fly's proxy, so service checks,
 `autostart`, and the traffic switch of a
-[blue/green deployment](/fly/compute/deployments) apply. Only Services
-that bind the target receive its caller token, and the target checks
-Fly's `Fly-Src` signature, so a method answers only bound callers on
-Fly's private network. The traffic is plain HTTP inside Fly's
+[blue/green deployment](/fly/compute/deployments) apply. The target checks
+Fly's `Fly-Src` signature, which names the calling App, so a method
+answers only the Apps that bind it on Fly's private network. The traffic is plain HTTP inside Fly's
 WireGuard-encrypted network.
 
 Turning `public` on or off updates the Service in place. Its App and
@@ -199,14 +215,14 @@ the identity. Changing `app`, `hostname`, or `kind` replaces.
 
 ## Issue a certificate independently
 
-Use `alchemy/ACME` when you want to choose the certificate authority or
+Use `@alchemy.run/acme` when you want to choose the certificate authority or
 issue a wildcard with DNS-01. The account and certificate are independent
 of Fly; this example uploads the result to a Fly App.
 
 ```typescript
-import * as ACME from "alchemy/ACME";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Fly from "alchemy/Fly";
+import * as ACME from "@alchemy.run/acme";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Fly from "@alchemy.run/fly";
 import * as Layer from "effect/Layer";
 
 const providers = Layer.mergeAll(
@@ -230,7 +246,7 @@ const account = yield* ACME.Account("LetsEncrypt", {
 const certificate = yield* ACME.Certificate("Wildcard", {
   account,
   identifiers: ["*.example.com"],
-  solver: Cloudflare.DNS.AcmeSolver(zone),
+  solver: Cloudflare.ACME.ZoneSolver(zone),
 });
 yield* Fly.Certificate("WildcardUpload", {
   app: site,

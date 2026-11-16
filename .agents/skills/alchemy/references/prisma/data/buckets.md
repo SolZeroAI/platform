@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/data/buckets
      upstream: website/src/content/docs/prisma/data/buckets.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Buckets
 
@@ -11,7 +11,7 @@ project. A `Prisma.BucketAccessKey` is an access key for one bucket and
 yields the S3 credentials your app connects with.
 
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 const bucket = yield* Prisma.Bucket("uploads", {
   project,

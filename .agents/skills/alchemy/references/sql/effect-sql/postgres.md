@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/effect-sql/postgres
      upstream: website/src/content/docs/sql/effect-sql/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -8,16 +8,14 @@
 
 `SQL.Postgres` provides tagged-template queries over a Postgres connection. Queries are Effects with typed `SqlError` failures, interruption, and tracing.
 
-Install the optional Postgres driver:
+Install `@alchemy.run/sql` and the Effect Postgres driver:
 
-```sh
-bun add @effect/sql-pg pg
-```
+<PackageManagers add={deps} />
 
 ## Connect
 
 ```typescript
-import * as SQL from "alchemy/SQL/Postgres";
+import * as SQL from "@alchemy.run/sql/Postgres";
 import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 
@@ -103,7 +101,7 @@ The layer provides `SqlClient.SqlClient` and `@effect/sql-pg`'s `PgClient` from 
 
 ## Provider setup
 
-Choose a database and deployment guide in [SQL databases](/sql/databases); the client above only needs a connection URL. [Hyperdrive](/cloudflare/data/hyperdrive#use-effect-sql) and [Fly Managed Postgres](/fly/data/postgres) cover runtime-specific bindings.
+Choose a database and deployment guide in [SQL databases](/sql/databases); the client above only needs a connection URL. [Hyperdrive](/cloudflare/data/hyperdrive#bind-hyperdrive-to-your-worker) and [Fly Managed Postgres](/fly/data/postgres) cover runtime-specific bindings.
 
 ## Where next
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/compute/projects
      upstream: website/src/content/docs/railway/compute/projects.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Projects
 
@@ -9,6 +9,20 @@
 A [`Railway.Project`](/providers/railway/project) is a workspace-scoped
 namespace. It owns environments and services. Names are unique per
 workspace.
+
+<Tree
+  nodes={[
+    { id: "ws", label: "acme", type: "workspace" },
+    { id: "proj", label: "my-app-prod", type: "project", parent: "ws" },
+    { id: "prod", label: "production", type: "environment · created with the project", parent: "proj" },
+    { id: "api", label: "api", type: "Service", parent: "prod", tone: "accent" },
+    { id: "pg", label: "Postgres", type: "database", parent: "prod" },
+    { id: "stg", label: "staging", type: "Environment", parent: "proj", dashed: true },
+    { id: "api2", label: "api", type: "Service", parent: "stg", tone: "accent" },
+    { id: "pg2", label: "Postgres", type: "database", parent: "stg" },
+  ]}
+  caption="A project belongs to a workspace and holds environments. Each environment runs its own copy of the project's services and databases."
+/>
 
 ## Create a Project
 
@@ -89,7 +103,7 @@ Declare the Project once. Pass it into every child.
 
 ```typescript
 // src/project.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Site = Railway.Project("Site");
 ```

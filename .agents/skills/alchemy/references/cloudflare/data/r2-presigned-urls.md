@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/r2-presigned-urls
      upstream: website/src/content/docs/cloudflare/data/r2-presigned-urls.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # R2 presigned URLs
 
@@ -11,6 +11,22 @@ A presigned URL lets a browser upload or download one object in an
 Worker mints the URL, and the same code works deployed and under
 `alchemy dev`.
 
+<Sequence
+  actors={[
+    { id: "browser", label: "browser" },
+    { id: "worker", label: "Api", type: "Worker" },
+    { id: "r2", label: "Uploads", type: "R2 bucket", tone: "accent" },
+  ]}
+  steps={[
+    { from: "browser", to: "worker", label: "POST /upload-url" },
+    { note: "sign a PUT for one key, 60s", over: "worker" },
+    { from: "worker", to: "browser", label: "presigned URL", dashed: true },
+    { from: "browser", to: "r2", label: "PUT the file, straight to R2" },
+    { from: "r2", to: "browser", label: "200", dashed: true },
+  ]}
+  caption="The Worker only signs. The file goes from the browser to R2 directly, and the URL works for one object until it expires."
+/>
+
 ## Effect-native Workers
 
 Bind the bucket with `PresignPutObject` / `PresignGetObject` and
@@ -18,7 +34,7 @@ provide their `*Token` layers:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
@@ -59,7 +75,7 @@ export default Cloudflare.Worker(
 );
 ```
 
-Deployed, Alchemy mints a scoped API token for the Worker, and the
+Deployed, Alchemy mints an API token scoped to the bucket for the Worker, and the
 URLs point at `https://{accountId}.r2.cloudflarestorage.com`. Under
 `alchemy dev` they point at the Worker's local R2 endpoint,
 `http://localhost:{port}/cdn-cgi/local/r2/s3`. Signing happens inside
@@ -103,7 +119,7 @@ its S3 keys. Declare it on `env`:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Uploads } from "./src/uploads.ts";
 
 export const Api = Cloudflare.Worker("Api", {
@@ -122,7 +138,7 @@ Then sign with any S3 client. This one uses
 ```typescript
 // src/worker.ts
 import { AwsClient } from "aws4fetch";
-import type * as Cloudflare from "alchemy/Cloudflare";
+import type * as Cloudflare from "@alchemy.run/cloudflare";
 import type { ApiEnv } from "../alchemy.run.ts";
 
 export default {
@@ -171,7 +187,7 @@ rules, so a missing origin or header only shows up once deployed.
 
 ```typescript
 // src/uploads.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Uploads = Cloudflare.R2.Bucket("Uploads", {
   cors: [

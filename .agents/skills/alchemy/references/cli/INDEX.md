@@ -1,13 +1,14 @@
 # cli index
 
-14 pages. Every alchemy command at a glance — the command map, common options, and how the interactive TUI decides when to render.
+15 pages. Every alchemy command at a glance — the command map, common options, and how the interactive TUI decides when to render.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | CLI | `_overview.md` | Every alchemy command at a glance — the command map, common options, and how the interactive TUI decides when to render. |
 | Adopting Resources | `adopting-resources.md` | How alchemy takes ownership of pre-existing cloud resources — recovery by default, --adopt for foreign resources, and the programmatic AdoptPolicy. |
+| Programmatic API | `api.md` | Run deploy, plan, destroy, drift, nuke, logs, and state from your own scripts with alchemy/Alchemist. |
 | aws | `aws.md` | AWS provider commands — bootstrap the per-account assets bucket that Lambda deployments rely on. |
-| cloudflare | `cloudflare.md` | Cloudflare provider commands — bootstrap the state-store worker, mint API tokens, and inspect state-store logs. |
+| cloudflare | `cloudflare.md` | Cloudflare provider commands — mint API tokens. |
 | deploy | `deploy.md` | Compute a plan, ask for approval, and create/update/delete resources to match the desired state. |
 | destroy | `destroy.md` | Delete every resource in a stack — plan all existing resources for deletion, ask for approval, and remove them in dependency order. |
 | dev | `dev.md` | Run your stack in development mode with hot reloading — resources deploy to the cloud while Workers run in the local dev runtime. |

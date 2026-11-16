@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/tutorial/part-3
      upstream: website/src/content/docs/kubernetes/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Effect Jobs
 
@@ -20,7 +20,7 @@ namespace, and the Deployment. Move them out of `alchemy.run.ts` into
 
 ```typescript
 // src/infra.ts
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 
 export const Cluster = Kubernetes.LocalCluster("Cluster", {
@@ -72,7 +72,7 @@ Replace the inline declarations in `alchemy.run.ts`:
 
 ```diff lang="typescript"
 import * as Alchemy from "alchemy";
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 +import { Cluster, Web } from "./src/infra.ts";
 
@@ -110,7 +110,7 @@ takes two Effects, one for its props and one for its implementation:
 
 ```typescript
 // src/SmokeTest.ts
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 import { Cluster, Namespace } from "./infra.ts";
 
@@ -146,7 +146,7 @@ Inside the cluster, a Service is reachable at
 Deployment's attributes in the Job's implementation:
 
 ```diff lang="typescript"
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 +import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 -import { Cluster, Namespace } from "./infra.ts";
@@ -266,9 +266,7 @@ return {
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

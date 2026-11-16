@@ -1,30 +1,28 @@
 <!-- source: https://alchemy.run/git/getting-started
      upstream: website/src/content/docs/git/getting-started.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Getting Started
 
 > A complete quickstart for a Git host protected by a shared credential. Deploy it to Cloudflare, push a repository, and clone it back.
 
 For a step-by-step explanation, start with [Push your first repository](/git/tutorial/part-1).
-This page provides a complete host protected by one shared credential.
+Here is a complete host, protected by one shared credential.
 
 You need a Cloudflare account with Workers, Durable Objects, and R2
 enabled. [Cloudflare setup](/cloudflare/setup) connects one.
 
 ## Install
 
-```sh
-bun add alchemy
-```
+<PackageManagers add="alchemy @alchemy.run/cloudflare @alchemy.run/git effect" />
 
 ## Define the host
 
 ```typescript
 // src/git.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Git from "alchemy/Git";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as HttpRouter from "effect/http/HttpRouter";
@@ -76,7 +74,7 @@ export default class GitHost extends Cloudflare.Worker<GitHost>()(
   Effect.gen(function* () {
     const fetch = yield* HttpRouter.toHttpEffect(GitLive);
     return { fetch };
-  }),
+  }).pipe(Effect.provide(Cloudflare.R2.ReadWriteBucketBinding)),
 ) {}
 ```
 
@@ -101,7 +99,7 @@ so the stack can output its value:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 import * as Redacted from "effect/Redacted";
@@ -123,12 +121,10 @@ export default Alchemy.Stack(
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
-The stack prints the Worker's URL and the secret. The rest of this page
-calls them `$HOST` and `$GIT_SECRET`:
+The stack prints the Worker's URL and the secret. From here on they're
+`$HOST` and `$GIT_SECRET`:
 
 ```sh
 export HOST=...

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/tutorial/part-2
      upstream: website/src/content/docs/kubernetes/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Namespaces & Configuration
 
@@ -102,9 +102,7 @@ Tell the scheduler what each pod needs:
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create, 1 to update

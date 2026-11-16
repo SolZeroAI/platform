@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/observability/workers-tracing
      upstream: website/src/content/docs/cloudflare/observability/workers-tracing.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Native Workers tracing
 
@@ -80,6 +80,27 @@ http.server GET
    └─ audit
 ```
 
+<Timeline
+  end={10}
+  lanes={[
+    { id: "http", label: "http.server GET" },
+    { id: "handle", label: "  └ handle" },
+    { id: "load", label: "    └ load.user" },
+    { id: "kv", label: "      └ kv_get" },
+    { id: "enrich", label: "    └ enrich" },
+    { id: "audit", label: "    └ audit" },
+  ]}
+  bars={[
+    { lane: "http", start: 0, end: 10 },
+    { lane: "handle", start: 0.3, end: 9.6 },
+    { lane: "load", start: 0.5, end: 4.2 },
+    { lane: "kv", start: 0.8, end: 3.9, tone: "default" },
+    { lane: "enrich", start: 4.4, end: 9.2 },
+    { lane: "audit", start: 4.4, end: 7.1 },
+  ]}
+  caption="The same trace as a waterfall. Cloudflare's own spans, like kv_get, nest under your Effect spans, and enrich and audit run side by side."
+/>
+
 ### Attributes
 
 Scalar annotations (`string`, `number`, `boolean`) are forwarded to the
@@ -94,12 +115,16 @@ yield* Effect.annotateCurrentSpan("input", { nested }); // Effect-local
 
 ### Outcome
 
-Cloudflare has no outcome setter yet, so completion is recorded as the
-`effect.exit` attribute: `success`, `failure`, or `interrupted`.
+Completion is recorded as the `effect.exit` attribute: `success`,
+`failure`, or `interrupted`. A failure also sets the span status to
+`error`, with the first error's message, so OpenTelemetry destinations
+mark the span as failed. Success and interruption leave the status
+`unset`. The Workers Observability dashboard doesn't show span status
+yet, so filter on `effect.exit` there.
 
 ```typescript
 yield* Effect.fail(new Error("boom")).pipe(
-  Effect.withSpan("failing"), // effect.exit = "failure"
+  Effect.withSpan("failing"), // effect.exit = "failure", status = error
   Effect.ignore,
 );
 const fiber = yield* Effect.forkChild(

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/guides/private-networking
      upstream: website/src/content/docs/neon/guides/private-networking.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Private networking
 
@@ -23,7 +23,7 @@ plan entitlement.
 
 The AWS client application, VPC endpoint, and Neon project must use the same
 supported AWS region. Copy the organization ID from Organization Settings and
-verify the project's region before creating endpoints. This guide concerns
+verify the project's region before creating endpoints. Private networking covers
 Postgres traffic, not a private network for Function, Auth, storage, or AI URLs.
 Check each service's network limitations before combining it with a restricted
 database; [Neon Auth](https://neon.com/docs/auth/overview) currently documents
@@ -52,7 +52,7 @@ and retain the AWS resource ownership information for later cleanup.
 Inside your stack, register an endpoint that you created in AWS:
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const network = yield* Neon.OrganizationVPCEndpoint("PrivateNetwork", {
   orgId: "org-example",

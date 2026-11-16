@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/axiom/guides/annotations
      upstream: website/src/content/docs/axiom/guides/annotations.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Deploy markers & annotations
 
@@ -18,7 +18,7 @@ and a dataset to annotate ([ingest](/axiom/data/ingest)).
 ## Drop a point marker
 
 ```typescript
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 yield* Axiom.Annotation("release-1.2.3", {
   type: "deploy",

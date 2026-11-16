@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/neon
      upstream: website/src/content/docs/better-auth/databases/neon.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Neon
 
@@ -10,9 +10,7 @@ This example provisions Neon and serves Better Auth from a Cloudflare Worker. Th
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely @neondatabase/serverless
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely @neondatabase/serverless" />
 
 Configure Cloudflare and Neon through [Alchemy profiles](/environments/profiles), or supply `NEON_API_KEY` for Neon. You provide account credentials; the project resource creates the database, not the API key.
 
@@ -20,7 +18,7 @@ Configure Cloudflare and Neon through [Alchemy profiles](/environments/profiles)
 
 ```typescript title="src/auth-database.ts"
 import { Neon as NeonDatabase } from "@alchemy.run/better-auth/Neon";
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -37,7 +35,7 @@ The project's `connectionUri` Output is bound into the host environment and also
 
 ```typescript title="src/worker.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { AuthDatabase } from "./auth-database.ts";
 
@@ -63,8 +61,8 @@ This is an auth-only endpoint, with no frontend or application routes. Alchemy g
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import AuthApi from "./src/worker.ts";
@@ -86,9 +84,7 @@ Keep the local `.alchemy` state directory protected and persistent so subsequent
 
 ## Deploy and verify
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The deployer must reach Neon with schema-changing permissions; migrations complete before the Worker is updated. Set `AUTH_ORIGIN` to the printed URL to check the endpoint:
 

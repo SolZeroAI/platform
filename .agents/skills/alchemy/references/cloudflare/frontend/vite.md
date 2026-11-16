@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/vite
      upstream: website/src/content/docs/cloudflare/frontend/vite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vite
 
@@ -10,9 +10,8 @@
 project whose entire build is `vite build` with plugins from your
 `vite.config.ts`. That covers a plain `index.html`, a React or Vue
 SPA, and full-stack SSR frameworks like TanStack Start or React
-Router. This page explains the resource itself; each supported
-framework has [its own landing page](#frameworks) that flows from
-here.
+Router. Each supported framework also has
+[its own landing page](#frameworks).
 
 ## One resource, one build
 
@@ -245,9 +244,7 @@ const site = yield* Cloudflare.Website.Vite("Docs", {
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` boots Vite's own dev server programmatically with the
 Cloudflare plugin attached — you get HMR on your application code
@@ -274,6 +271,9 @@ resource:
 - [React Router](/cloudflare/frontend/react-router) — including
   React Server Components via `viteEnvironments`.
 - [Vue](/cloudflare/frontend/vue) — Vue 3 SPAs.
+- [Foldkit](/cloudflare/frontend/foldkit) — Foldkit apps via
+  `Website.Foldkit`; client-only, server-rendered, or prerendered,
+  with asset routing derived from the build.
 - [SolidStart](/cloudflare/frontend/solidstart) — SolidStart and
   hand-rolled SolidJS SSR.
 - [Octane](/cloudflare/frontend/octane#octane-spas-use-vite-instead) —

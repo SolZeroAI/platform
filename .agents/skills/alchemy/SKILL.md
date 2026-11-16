@@ -1,6 +1,6 @@
 ---
 name: alchemy
-description: Answers Alchemy (alchemy.run) questions from an indexed local copy of the full documentation. Covers Stacks, Resources, Actions, Outputs, bindings, the Effect-based deploy/runtime phase model, the alchemy CLI, state stores, stages, secret providers (dotenv, Doppler, Infisical), Better Auth, SQL clients (Effect SQL, Drizzle, Prisma ORM), and provider guides for Cloudflare, AWS, Fly, Railway, Hetzner, Neon, PlanetScale, Prisma, Stripe, Docker, and Axiom. Use when the user mentions "alchemy", "alchemy.run", "alchemy.run.ts", "Alchemy.Stack", "Infrastructure-as-Effects", "alchemy deploy", or asks how to define a Resource, bind a resource into a Worker or Lambda, or deploy an Effect program to Cloudflare or AWS with Alchemy.
+description: Answers Alchemy (alchemy.run) questions from an indexed local copy of the full documentation. Covers Stacks, Resources, Actions, Outputs, bindings, the Effect-based deploy/runtime phase model, the alchemy CLI, state stores, stages, secret providers (dotenv, Doppler, Infisical), Better Auth, SQL clients (Effect SQL, Drizzle, Prisma ORM), and provider guides for Cloudflare, AWS, GCP, Kubernetes, Fly, Railway, Hetzner, Neon, PlanetScale, Prisma, Turso, Rivet, Stripe, Docker, and Axiom, sandbox providers (Modal, Daytona, E2B, Boat, Archil), Effect Cluster, and the Effect domain-driven design framework. Use when the user mentions "alchemy", "alchemy.run", "alchemy.run.ts", "Alchemy.Stack", "Infrastructure-as-Effects", "alchemy deploy", or asks how to define a Resource, bind a resource into a Worker or Lambda, or deploy an Effect program to Cloudflare or AWS with Alchemy.
 argument-hint: "[topic]"
 ---
 
@@ -12,7 +12,7 @@ this skill's directory.
 
 <!-- BEGIN GENERATED: corpus-stats -->
 
-Indexed from `alchemy-run/alchemy` @ `e354a45` (2026-09-30), alchemy `2.0.0-beta.79` on `effect@4.0.0-rc.118`: **484 topic files** across 28 areas.
+Indexed from `alchemy-run/alchemy` @ `21c6012` (2026-11-12), alchemy `2.0.0-beta.86` on `effect@4.1.4`: **807 topic files** across 37 areas.
 
 Reference paths mirror site URLs exactly, so a path is derivable without
 searching: `https://alchemy.run/cloudflare/compute/workers` ->
@@ -192,37 +192,46 @@ yourself.
 
 - `references/getting-started.md` -- Install Alchemy and create your first Stack in under two minutes.
 - `references/migrating-from-v1.md` -- Migrate your Alchemy v1 (async/await) project to Alchemy v2.
-- `references/what-is-alchemy.md` -- Alchemy is Infrastructure as Code built in pure Effect, with Infrastructure as Effects on top. Declare your cloud resources and the code that runs on them in one type-safe TypeScript program, and deploy it with one command.
+- `references/what-is-alchemy.md` -- Alchemy is a TypeScript framework for building cloud applications with Effects and Layers. Your infrastructure and the code that runs on it are written, type-checked, and deployed together.
 
 ### Areas
 
-- `references/acme/` (8) -- Manage TLS certificates independently of your hosting provider, at deploy time or from an application.
+- `references/acme/` (9) -- Manage TLS certificates independently of your hosting provider, at deploy time or from an application.
 - `references/apis/` (4) -- Every Function and Server returns { fetch, ...rpcs } — schemaless typed calls are the default for internal communication; Effect RPC and Effect HTTP add schemas where data crosses a trust boundary.
-- `references/aws/` (54) -- Build AWS applications with Alchemy — a runtime (usually Lambda) plus typed resources, wired together by bindings that mint least-privilege IAM policies.
-- `references/axiom/` (6) -- Observability as resources — OTEL datasets, ingest tokens, monitors, notifiers, and dashboards declared next to the code that emits the data.
-- `references/better-auth/` (28) -- Build authentication with an Effect service, automatic database bindings, and deploy-time migrations.
-- `references/cli/` (14) -- Every alchemy command at a glance — the command map, common options, and how the interactive TUI decides when to render.
-- `references/cloudflare/` (78) -- Build and deploy full applications on Cloudflare with Alchemy — one Worker runtime plus resources like Durable Objects, D1, R2, Queues, and Hyperdrive, wired together by typed bindings.
-- `references/command/` (3) -- Alchemy's cloud-agnostic primitives for local processes in the deploy graph — memoized builds, one-off commands, and dev servers.
-- `references/docker/` (5) -- Images, containers, networks, and volumes as Stack resources, driven through your active Docker CLI context.
-- `references/environments/` (10) -- Stages, per-environment config, secrets, local dev, and CI.
-- `references/fly/` (35) -- Deploy Effect programs to Fly.io as Apps, Machines, Services, and Sprites.
-- `references/gcp/` (6) -- Google Cloud in one Effect program — Cloud Run services and jobs, Firestore, Pub/Sub, BigQuery, Secret Manager, and Memorystore, with IAM granted by the bindings themselves.
-- `references/git/` (25) -- A pluggable, embeddable, self-hostable git server on Cloudflare Workers, Durable Objects, and R2. Smart HTTP for any client, a typed REST plane with pull requests, and a GitHub-compatible API.
-- `references/github/` (5) -- Repositories, Actions secrets and variables, webhooks, and repository event sources as Stack resources — the glue for CI/CD.
-- `references/hetzner/` (27) -- Build applications on Hetzner Cloud with Alchemy — Servers running your Effect programs as Services, plus volumes, networks, firewalls, load balancers, and DNS, all in one typed program.
-- `references/infrastructure-as-code/` (10) -- The noun graph: Stacks, Resources, Actions, Outputs, references, lifecycle, providers.
-- `references/infrastructure-as-effects/` (9) -- One Effect program models runtime code and infrastructure: Runtimes carry code, Bindings wire resources into them, Phases split deploy from runtime, and Layers package it behind typed services.
-- `references/kubernetes/` (19) -- Run containers and Effect programs on any Kubernetes cluster with Alchemy. Declare Deployments, Jobs, raw manifests, and Helm charts in the same typed program as the rest of your infrastructure. No YAML, no kubectl apply.
-- `references/neon/` (31) -- Declare Neon Postgres, Functions, storage, Auth, AI Gateway and websites together in an Alchemy Stack.
-- `references/planetscale/` (9) -- Serverless MySQL (Vitess) and Postgres with database branching — databases, branches, and credentials as Stack resources.
-- `references/prisma/` (29) -- Prisma Postgres and Prisma Compute — projects, databases, connections, and deployed apps as Stack resources, with a zero-config local database in dev.
+- `references/archil/` (20) -- Run commands, processes and programs serverlessly against durable disks, in Firecracker microVMs, with Alchemy. Declare disks, sandboxes, images and branches in TypeScript.
+- `references/aws/` (62) -- Build on AWS with Alchemy. Declare Lambda Functions, containers, tables, buckets and queues in TypeScript, and let bindings write each runtime's IAM policy from the calls its code makes.
+- `references/axiom/` (8) -- Observability as resources — OTEL datasets, ingest tokens, monitors, notifiers, and dashboards declared next to the code that emits the data.
+- `references/better-auth/` (29) -- Build authentication with an Effect service, automatic database bindings, and deploy-time migrations.
+- `references/boat/` (19) -- Run sandboxes on Boat with Alchemy. Declare sandboxes, snapshots, environments and webhooks in TypeScript, and create sandboxes from any Worker or Function.
+- `references/cli/` (15) -- Every alchemy command at a glance — the command map, common options, and how the interactive TUI decides when to render.
+- `references/cloudflare/` (87) -- Build on Cloudflare with Alchemy. Declare Workers, Durable Objects, R2, D1, KV and Queues in TypeScript, and bind each one into the Worker that uses it with a typed client.
+- `references/cluster/` (23) -- Run Effect Cluster entities, workflows, singletons and crons with Alchemy — a Postgres database and a pool of runners on Docker, AWS, GCP, Kubernetes, Fly or Hetzner, or Durable Objects on Cloudflare.
+- `references/command/` (4) -- Alchemy's cloud-agnostic primitives for local processes in the deploy graph — memoized builds, one-off commands, and dev servers.
+- `references/daytona/` (20) -- Run code you don't fully trust in Daytona sandboxes. Declare snapshots, volumes and secrets in your Stack, and create, drive and delete sandboxes from any Worker or Lambda.
+- `references/docker/` (17) -- Docker builds applications into images and runs them as isolated containers on a Docker engine, on your laptop, a CI runner or a server.
+- `references/domain/` (44) -- A domain-driven design framework for Effect. Model your business as commands, aggregates, events, views, projections and policies, test it in memory, and run it on Durable Objects on Cloudflare, Rivet or Effect Cluster.
+- `references/e2b/` (17) -- Run sandboxes for agents on E2B with Alchemy. Declare templates, warm snapshots, volumes and secrets in TypeScript, and create sandboxes from any Worker or Function.
+- `references/environments/` (11) -- Stages, per-environment config, secrets, local dev, and CI.
+- `references/fly/` (38) -- Run Effect programs on Fly.io with Alchemy. Declare Services, Machines, Volumes, Postgres, Redis and Tigris in TypeScript, in the regions near your users.
+- `references/gcp/` (51) -- Build on Google Cloud with Alchemy. Declare Cloud Run services, jobs, Firestore, Cloud Storage and Pub/Sub in TypeScript, and let bindings grant each runtime's service account the roles its code uses.
+- `references/git/` (26) -- A pluggable, embeddable, self-hostable git server on Cloudflare Workers, Durable Objects, and R2. Smart HTTP for any client, a typed REST plane with pull requests, and a GitHub-compatible API.
+- `references/github/` (7) -- Repositories, Actions secrets, variables and environments, webhooks, repository event sources and pull request comments as Stack resources — the glue for CI/CD.
+- `references/hetzner/` (29) -- Run Effect programs on Hetzner Cloud Servers with Alchemy. Declare Servers, Services, Volumes, networks, firewalls, load balancers and DNS in one TypeScript program.
+- `references/infrastructure-as-code/` (12) -- The noun graph: Stacks, Resources, Actions, Outputs, references, lifecycle, providers.
+- `references/infrastructure-as-effects/` (10) -- One Effect program models runtime code and infrastructure: Runtimes carry code, Bindings wire resources into them, Phases split deploy from runtime, and Layers package it behind typed services.
+- `references/kubernetes/` (20) -- Run containers and Effect programs on any Kubernetes cluster with Alchemy. Declare Deployments, Jobs, raw manifests, and Helm charts in the same typed program as the rest of your infrastructure. No YAML, no kubectl apply.
+- `references/modal/` (28) -- Run Functions, Servers and Sandboxes on Modal with Alchemy. Declare apps, images, volumes and secrets in TypeScript, and create sandboxes from any Worker or Lambda.
+- `references/neon/` (36) -- Declare Neon Postgres projects, branches and roles, plus Functions, storage, Auth, the Data API and AI Gateway, in an Alchemy Stack, with a branch per preview stage.
+- `references/planetscale/` (11) -- Declare PlanetScale Postgres and MySQL databases, branches and credentials in your Stack with Alchemy, apply migrations on deploy, and give every preview stage its own branch.
+- `references/prisma/` (31) -- Declare Prisma Postgres databases, connections, branches and Compute apps as Stack resources with Alchemy, and run the same Stack against a local Postgres in dev.
 - `references/project-structure/` (4) -- How to lay out single-stack and multi-stack repos.
-- `references/railway/` (36) -- Deploy Effect programs to Railway as Projects, Services, databases, Volumes, and Buckets.
-- `references/sql/` (14) -- Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations.
+- `references/railway/` (38) -- Run Effect programs on Railway with Alchemy. Declare Projects, Services, Functions, Postgres, MySQL, Redis, Volumes and Buckets in one TypeScript program.
+- `references/rivet/` (29) -- Build on Rivet with Alchemy. Declare Durable Objects and Durable Streams in TypeScript, run the control plane and its nodes on the cloud you choose or on Rivet Cloud, and call any instance by name from any runtime.
+- `references/sql/` (17) -- Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations.
 - `references/state-store/` (2) -- How Alchemy persists resource state between deploys to compute diffs and track infrastructure.
-- `references/stripe/` (5) -- Sell subscriptions and onboard merchants from a Cloudflare Worker — catalog, Checkout, the Billing Portal, Connect, and webhooks declared next to the code that uses them.
+- `references/stripe/` (7) -- Sell subscriptions and onboard merchants from a Cloudflare Worker — catalog, Checkout, the Billing Portal, Connect, and webhooks declared next to the code that uses them.
 - `references/testing/` (5) -- How Alchemy tests work — real clouds by default, local emulators on demand, one Stack deploy per suite, isolated stages, deploy → assert → destroy.
+- `references/turso/` (14) -- Create Turso SQLite databases and query them from your Workers.
 
 Each area has an `INDEX.md` listing every page with what it covers. Read
 it only to disambiguate; read the topic file to answer.
@@ -234,12 +243,21 @@ Every page in the corpus. Append `.md` and prefix `references/<area>/`.
 ```
 acme/                      _overview certificate-authorities dns-validation
                            getting-started renewal runtime troubleshooting
-                           using-certificates
+                           using-certificates what-is-acme
 apis/                      _overview effect-http effect-rpc schemaless
-aws/                       _overview ai/bedrock apis/api-gateway apis/effect-http-api
-                           apis/effect-rpc apis/schemaless-rpc
-                           compute/choosing-a-runtime compute/ec2 compute/ecs
-                           compute/eks compute/hyperpod compute/lambda compute/microvms
+archil/                    _overview compute/choosing-a-runtime compute/images
+                           compute/programs compute/sandboxes organization-and-keys
+                           security/credentials security/network setup storage/branches
+                           storage/disks storage/mounting storage/your-own-bucket
+                           tutorial/part-1 tutorial/part-2 tutorial/part-3
+                           tutorial/part-4 tutorial/part-5 tutorial/part-6
+                           what-is-archil
+aws/                       _overview accounts-and-regions ai/bedrock apis/api-gateway
+                           apis/effect-http-api apis/effect-rpc apis/schemaless-rpc
+                           compute/choosing-a-runtime compute/ec2 compute/ecs-sandboxes
+                           compute/ecs compute/effect-workflows compute/eks
+                           compute/hyperpod compute/lambda compute/microvms
+                           compute/nitro-sandboxes compute/web-functions
                            data/drizzle-aurora data/drizzle-dsql data/dynamodb data/rds
                            data/s3 email/receiving email/sending frontend/astro
                            frontend/foldkit frontend/full-stack-tanstack-rpc-drizzle
@@ -248,14 +266,16 @@ aws/                       _overview ai/bedrock apis/api-gateway apis/effect-htt
                            frontend/static-site frontend/sveltekit
                            frontend/tanstack-start frontend/vinext frontend/vite-spa
                            frontend/vite frontend/vue frontend/waku frontend/websites
-                           local-development messaging/dynamodb-streams
+                           iam local-development messaging/dynamodb-streams
                            messaging/eventbridge messaging/kinesis messaging/s3-events
                            messaging/sns messaging/sqs networking/_overview
                            networking/custom-domains observability/cloudwatch
-                           security/secrets-env setup tutorial/part-1 tutorial/part-2
-                           tutorial/part-3 tutorial/part-4 tutorial/part-5
+                           security/federated-identity security/secrets-env setup
+                           tutorial/part-1 tutorial/part-2 tutorial/part-3
+                           tutorial/part-4 tutorial/part-5 what-is-aws
 axiom/                     _overview data/ingest guides/alerting guides/annotations
-                           guides/dashboards setup
+                           guides/dashboards organizations-and-tokens setup
+                           what-is-axiom
 better-auth/               _overview databases/_overview databases/aurora-data-api
                            databases/cloudflare-d1 databases/cloudflare-hyperdrive
                            databases/drizzle databases/memory databases/mysql
@@ -267,22 +287,32 @@ better-auth/               _overview databases/_overview databases/aurora-data-a
                            sign-in-providers/google sign-in-providers/microsoft
                            tutorial/part-1 tutorial/part-2 tutorial/part-3
                            tutorial/part-4 tutorial/part-5 tutorial/part-6
-                           upgrades/from-1-6-to-1-7
-cli/                       _overview adopting-resources aws cloudflare deploy destroy
-                           dev drift inspecting-state logs nuke plan profile state
-cloudflare/                _overview ai/ai-gateway ai/ai-search ai/effect-ai
-                           ai/release-agent ai/vectorize ai/workers-ai
-                           apis/effect-http-api apis/effect-rpc apis/schemaless-rpc
-                           compute/add-a-workflow compute/browser-rendering
-                           compute/cache compute/containers
+                           upgrades/from-1-6-to-1-7 what-is-better-auth
+boat/                      _overview account-and-keys sandboxes/choosing-a-runtime
+                           sandboxes/lifecycle-events sandboxes/ports sandboxes/programs
+                           sandboxes/sandboxes sandboxes/snapshots
+                           security/credential-profiles security/credentials
+                           security/environments setup tutorial/part-1 tutorial/part-2
+                           tutorial/part-3 tutorial/part-4 tutorial/part-5
+                           tutorial/part-6 what-is-boat
+cli/                       _overview adopting-resources api aws cloudflare deploy
+                           destroy dev drift inspecting-state logs nuke plan profile
+                           state
+cloudflare/                _overview accounts-and-tokens ai/ai-gateway ai/ai-search
+                           ai/effect-ai ai/vectorize ai/workers-ai apis/effect-http-api
+                           apis/effect-rpc apis/schemaless-rpc compute/add-a-workflow
+                           compute/browser-rendering compute/cache compute/code-updates
+                           compute/container-lifecycle compute/containers
                            compute/cross-worker-durable-object compute/durable-objects
-                           compute/gradual-deployments compute/hibernatable-websockets
-                           compute/previews compute/python-workers compute/rate-limiting
+                           compute/effect-workflows compute/gradual-deployments
+                           compute/hibernatable-websockets compute/previews
+                           compute/python-workers compute/rate-limiting
                            compute/run-a-container compute/worker-loader
                            compute/workers-for-platforms compute/workers
                            compute/workflows data/artifacts
                            data/branch-from-shared-database data/d1-drizzle data/d1
-                           data/drizzle data/hyperdrive data/kv data/prisma
+                           data/drizzle data/hyperdrive-private-database data/hyperdrive
+                           data/iceberg-tables data/kv data/pipelines data/prisma
                            data/r2-presigned-urls data/r2 data/shared-database
                            email/_overview email/email-worker email/send-and-receive
                            frontend/astro frontend/foldkit frontend/frontends
@@ -291,32 +321,78 @@ cloudflare/                _overview ai/ai-gateway ai/ai-search ai/effect-ai
                            frontend/solidstart frontend/static-site frontend/sveltekit
                            frontend/tanstack-start frontend/vinext frontend/vite-spa
                            frontend/vite frontend/vue frontend/waku local-development
-                           messaging/cron messaging/github-events messaging/queues
-                           networking/custom-domains networking/domains
-                           networking/tunnel observability/analytics-engine
+                           messaging/cron messaging/github-events messaging/k2
+                           messaging/queues networking/custom-domains networking/domains
+                           networking/federated-apis networking/tunnel
+                           observability/analytics-engine
                            observability/axiom-observability
                            observability/workers-tracing security/access
                            security/secrets-env security/secrets-store
                            security/turnstile setup tutorial/part-1 tutorial/part-2
                            tutorial/part-3 tutorial/part-4 tutorial/part-5
-                           tutorial/part-6
-command/                   _overview dev-servers memoization
-docker/                    _overview build-and-push local-services setup swarm
+                           tutorial/part-6 what-is-cloudflare
+cluster/                   _overview aws calling cloudflare crons databases docker
+                           entities existing-programs fly gcp hetzner kubernetes
+                           middleware pools setup singletons tutorial/part-1
+                           tutorial/part-2 tutorial/part-3 tutorial/part-4
+                           what-is-effect-cluster workflows
+command/                   _overview dev-servers memoization what-is-command
+daytona/                   _overview networking/network observability/telemetry
+                           organization/organization organizations-and-keys
+                           sandboxes/programs sandboxes/runners sandboxes/sandboxes
+                           sandboxes/snapshots sandboxes/toolbox sandboxes/volumes
+                           security/secrets setup tutorial/part-1 tutorial/part-2
+                           tutorial/part-3 tutorial/part-4 tutorial/part-5
+                           tutorial/part-6 what-is-daytona
+docker/                    _overview build-caches build-images cloud-runtimes containers
+                           effectful-services engines-and-contexts limits-and-security
+                           local-services networks registries remote-images services
+                           setup swarm volumes what-is-docker
+domain/                    _overview aggregate annotations api backfill better-auth cli
+                           cloudflare command deadlines effect-cluster event
+                           external-system foldkit http-api in-memory local-first mcp
+                           model observability optimistic-updates policy project-layout
+                           projection query rivet saga sessions story stream
+                           testing-apis testing-models tutorial/part-1 tutorial/part-2
+                           tutorial/part-3 tutorial/part-4 tutorial/part-5
+                           tutorial/part-6 tutorial/part-7 tutorial/part-8 unique-values
+                           view-security view what-is-ddd
+e2b/                       _overview api-keys lifecycle-events network-and-secrets
+                           programs sandboxes setup snapshots templates tutorial/part-1
+                           tutorial/part-2 tutorial/part-3 tutorial/part-4
+                           tutorial/part-5 tutorial/part-6 volumes what-is-e2b
 environments/              auth-providers ci custom-auth-provider doppler infisical
                            local-development profiles secret-providers secrets stages
+                           worktrees
 fly/                       _overview compute/apps compute/connecting-services
                            compute/deployments compute/machines compute/regions
                            compute/services compute/sprites data/drizzle-postgres
                            data/postgres data/redis data/secrets data/tigris
-                           data/volumes frontend/astro frontend/foldkit frontend/nextjs
-                           frontend/nuxt frontend/octane frontend/react-router
-                           frontend/solidstart frontend/static-site frontend/sveltekit
+                           data/volumes federated-identity frontend/astro
+                           frontend/foldkit frontend/nextjs frontend/nuxt
+                           frontend/octane frontend/react-router frontend/solidstart
+                           frontend/static-site frontend/sveltekit
                            frontend/tanstack-start frontend/vinext frontend/vite
                            frontend/vocs frontend/waku frontend/websites networking
+                           organizations-and-tokens setup tutorial/part-1
+                           tutorial/part-2 tutorial/part-3 tutorial/part-4 what-is-fly
+gcp/                       _overview ai/vertex-ai apis/effect-http-api apis/effect-rpc
+                           compute/choosing-a-runtime compute/cloud-functions
+                           compute/cloud-run compute/gke compute/jobs compute/sidecars
+                           compute/worker-pools data/bigquery data/cloud-sql
+                           data/firestore data/memorystore data/storage frontend/astro
+                           frontend/foldkit frontend/nextjs frontend/nuxt
+                           frontend/octane frontend/react-router frontend/solidstart
+                           frontend/static-site frontend/sveltekit
+                           frontend/tanstack-start frontend/vinext frontend/vite-spa
+                           frontend/vite frontend/vocs frontend/vue frontend/waku
+                           frontend/websites messaging/eventarc messaging/pubsub
+                           messaging/scheduler messaging/storage-events
+                           networking/private-services networking/vpc
+                           observability/monitoring projects-and-regions
+                           security/federated-identity security/iam security/secrets-kms
                            setup tutorial/part-1 tutorial/part-2 tutorial/part-3
-                           tutorial/part-4
-gcp/                       _overview guides/bindings guides/cloud-run-api
-                           guides/event-pipeline guides/memorystore setup
+                           tutorial/part-4 tutorial/part-5 what-is-gcp
 git/                       _overview blocks/_overview blocks/auth blocks/blob-store
                            blocks/engine blocks/hasher blocks/registry
                            blocks/repositories blocks/server clone-and-push
@@ -324,8 +400,9 @@ git/                       _overview blocks/_overview blocks/auth blocks/blob-st
                            recipes/cloudflare-aws recipes/cloudflare recipes/scaling
                            recipes/your-own-store repositories tutorial/part-1
                            tutorial/part-2 tutorial/part-3 tutorial/part-4
-                           tutorial/part-5 tutorial/part-6
-github/                    _overview actions-config events repository setup
+                           tutorial/part-5 tutorial/part-6 what-is-git
+github/                    _overview accounts-and-tokens actions-config events
+                           repository setup what-is-github
 hetzner/                   _overview compute/servers compute/services
                            data/drizzle-postgres data/volumes frontend/astro
                            frontend/foldkit frontend/nextjs frontend/nuxt
@@ -333,32 +410,46 @@ hetzner/                   _overview compute/servers compute/services
                            frontend/static-site frontend/sveltekit
                            frontend/tanstack-start frontend/vinext frontend/vite
                            frontend/vocs frontend/waku frontend/websites
-                           networking/_overview networking/dns setup tutorial/part-1
-                           tutorial/part-2 tutorial/part-3 tutorial/part-4
-infrastructure-as-code/    action custom-provider local-provider outputs provider
-                           references renaming resource-lifecycle resource stack
-infrastructure-as-effects/ binding circular-bindings custom-runtime event-sources layers
-                           phases runtime sinks telemetry
+                           networking/_overview networking/dns projects-and-tokens setup
+                           tutorial/part-1 tutorial/part-2 tutorial/part-3
+                           tutorial/part-4 what-is-hetzner
+infrastructure-as-code/    action contributions custom-provider dns-adapters
+                           local-provider outputs provider references renaming
+                           resource-lifecycle resource stack
+infrastructure-as-effects/ binding circular-bindings custom-runtime event-sources
+                           identity-federation layers phases runtime sinks telemetry
 kubernetes/                _overview clusters/cluster-adapters clusters/connecting
                            clusters/eks clusters/local clusters/registries
                            objects/helm-charts objects/manifests setup tutorial/part-1
                            tutorial/part-2 tutorial/part-3 tutorial/part-4
-                           tutorial/part-5 workloads/bindings workloads/deployments
-                           workloads/images workloads/jobs workloads/object-lifecycle
+                           tutorial/part-5 what-is-kubernetes workloads/bindings
+                           workloads/deployments workloads/images workloads/jobs
+                           workloads/object-lifecycle
+modal/                     _overview compute/choosing-a-runtime networking/network
+                           sandboxes/images sandboxes/persistent sandboxes/programs
+                           sandboxes/sandboxes sandboxes/snapshots
+                           security/access-control security/secrets services/autoscaling
+                           services/calling-python services/functions services/operating
+                           services/servers services/web-endpoints setup storage/dicts
+                           storage/queues storage/volumes tutorial/part-1
+                           tutorial/part-2 tutorial/part-3 tutorial/part-4
+                           tutorial/part-5 tutorial/part-6 what-is-modal
+                           workspaces-and-tokens
 neon/                      _overview data/branching data/connections data/migrations
-                           frontend/astro frontend/foldkit frontend/nextjs frontend/nuxt
-                           frontend/octane frontend/react-router frontend/solidstart
-                           frontend/static-site frontend/sveltekit
+                           data/roles frontend/astro frontend/foldkit frontend/nextjs
+                           frontend/nuxt frontend/octane frontend/react-router
+                           frontend/solidstart frontend/static-site frontend/sveltekit
                            frontend/tanstack-start frontend/vite frontend/vocs
-                           frontend/waku governance guides/ai-gateway
+                           frontend/waku functions governance guides/ai-gateway
                            guides/custom-domains guides/drizzle guides/preview-branches
                            guides/private-networking guides/production-auth
-                           guides/state-recovery setup tutorial/_overview
-                           tutorial/backend tutorial/frontend tutorial/functions
-                           tutorial/previews
+                           guides/state-recovery organizations-and-keys setup storage
+                           tutorial/_overview tutorial/backend tutorial/frontend
+                           tutorial/functions tutorial/previews what-is-neon
 planetscale/               _overview data/backups data/credentials data/migrations
                            data/mysql data/postgres guides/drizzle
-                           guides/preview-branches setup
+                           guides/preview-branches organizations-and-tokens setup
+                           what-is-planetscale
 prisma/                    _overview compute/apps compute/deployments data/branches
                            data/buckets data/connections data/drizzle-postgres
                            data/postgres frontend/astro frontend/foldkit frontend/nextjs
@@ -368,6 +459,7 @@ prisma/                    _overview compute/apps compute/deployments data/branc
                            frontend/vocs frontend/waku frontend/websites
                            guides/cloudflare-workers setup tutorial/part-1
                            tutorial/part-2 tutorial/part-3 tutorial/part-4
+                           what-is-prisma workspaces-and-tokens
 project-structure/         file-layout monorepo-multi-stack monorepo-single-stack
                            monorepo
 railway/                   _overview compute/environments compute/functions
@@ -380,17 +472,27 @@ railway/                   _overview compute/environments compute/functions
                            frontend/tanstack-start frontend/vinext frontend/vite
                            frontend/vocs frontend/waku frontend/websites networking
                            setup tutorial/part-1 tutorial/part-2 tutorial/part-3
-                           tutorial/part-4
-sql/                       _overview databases drizzle/d1 drizzle/migrations
-                           drizzle/mysql drizzle/postgres effect-sql/d1
-                           effect-sql/lifecycle effect-sql/migrations effect-sql/mysql
-                           effect-sql/postgres prisma/contracts prisma/migrations
-                           prisma/postgres
+                           tutorial/part-4 what-is-railway workspaces-and-tokens
+rivet/                     _overview actors aws calling concurrency control-planes
+                           docker durable-objects durable-streams fly gcp hetzner
+                           kubernetes namespaces pools railway rivet-cloud
+                           rivetkit-effect rivetkit-rust rivetkit secrets setup storage
+                           tokens-and-networks tutorial/part-1 tutorial/part-2
+                           tutorial/part-3 tutorial/part-4 what-is-rivet
+sql/                       _overview databases drizzle/d1 drizzle/libsql
+                           drizzle/migrations drizzle/mysql drizzle/postgres
+                           effect-sql/d1 effect-sql/libsql effect-sql/lifecycle
+                           effect-sql/migrations effect-sql/mysql effect-sql/postgres
+                           prisma/contracts prisma/migrations prisma/postgres
+                           what-is-sql
 state-store/               _overview custom-state-store
-stripe/                    _overview guides/connect guides/subscriptions guides/webhooks
-                           setup
+stripe/                    _overview accounts-and-keys guides/connect
+                           guides/subscriptions guides/webhooks setup what-is-stripe
 testing/                   _overview observability test-harness testing-a-stack
                            testing-providers
+turso/                     _overview connections database-per-tenant databases groups
+                           migrations organization preview-databases setup tokens
+                           tutorial/part-1 tutorial/part-2 tutorial/part-3 what-is-turso
 ```
 
 <!-- END GENERATED: routing -->
@@ -494,14 +596,15 @@ from the conceptual pages.
 
 ## Version notes
 
-Alchemy v2 is **pre-release** and moving fast. It pins the exact Effect 4
-release candidate named in the corpus stats above (peer range
-`>=4.0.0-rc.118 || >=4.0.0`, installed as `effect@rc`); the `effect-ts` skill
-documents that same version, so use it for Effect APIs. Since `4.0.0-rc.118`,
-unstable modules import without an `unstable` segment (for example
-`effect/http/HttpServerResponse` and `effect/http-api/HttpApi`); rewrite any
-older `effect/unstable/...` or `effect/httpapi/...` import. Drizzle is pinned to an exact prerelease
-build (`drizzle-orm@1.0.0-rc.5-ab785fc`); do not suggest `drizzle-orm@latest`.
+Alchemy v2 is **pre-release** and moving fast. It builds against the exact
+stable Effect 4 release named in the corpus stats above (peer range `^4.1.4`
+for `effect`, `@effect/platform-bun`, and `@effect/platform-node`, installed
+from the npm `latest` dist-tag, not `effect@rc`); the `effect-ts` skill
+documents that same version, so use it for Effect APIs. Unstable modules import
+without an `unstable` segment (for example `effect/http/HttpServerResponse` and
+`effect/http-api/HttpApi`); rewrite any older `effect/unstable/...` or
+`effect/httpapi/...` import. Drizzle is pinned to an exact prerelease
+(`drizzle-orm@1.0.0-rc.5`); do not suggest `drizzle-orm@latest`.
 Prisma ORM v8 is also a release candidate (`prisma@8.0.0-rc.*`). Better Auth is
 on the 1.7 line. Node floor is 22+ (the upstream repo develops on Node 24), Bun
 recommended.

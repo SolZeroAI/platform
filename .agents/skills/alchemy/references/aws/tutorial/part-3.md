@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/tutorial/part-3
      upstream: website/src/content/docs/aws/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Testing
 
@@ -9,6 +9,12 @@
 In [Part 2](/aws/tutorial/part-2) you deployed a Lambda with S3
 bindings. Now you'll write integration tests that deploy the stack,
 hit the live Function URL over HTTP, and verify it works.
+
+## Install the test harness
+
+`Test.make` ships in `@alchemy.run/test`. Add it as a dev dependency:
+
+<PackageManagers dev="@alchemy.run/test" />
 
 ## Create the test file
 
@@ -19,8 +25,8 @@ you used in your `Stack`:
 
 ```typescript
 // test/integ.test.ts
-import * as AWS from "alchemy/AWS";
-import * as Test from "alchemy/Test/Bun";
+import * as AWS from "@alchemy.run/aws";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import Stack from "../alchemy.run.ts";
@@ -35,10 +41,11 @@ const { test, beforeAll, afterAll, deploy, destroy } = Test.make({
 `bun:test` directly — `Test.make` only provides the Effect-aware test
 runner pieces.
 
-:::note[Using Vitest?]
-`alchemy/Test/Vitest` exposes the exact same API — swap the import
-and take `expect` from `@effect/vitest` instead. See
-[Test harness → Bun vs Vitest](/testing/test-harness#bun-vs-vitest).
+:::note[Using Vitest or alchemy-test?]
+`@alchemy.run/test/Vitest` and `@alchemy.run/test/Alchemy` expose the exact same
+API — swap the import and take `expect` from `@effect/vitest` or
+`@alchemy.run/test` instead. See
+[Test harness → Runners](/testing/test-harness#runners).
 :::
 
 ## Deploy the stack before tests
@@ -105,8 +112,8 @@ function actually handles requests:
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as AWS from "alchemy/AWS";
-import * as Test from "alchemy/Test/Bun";
+import * as AWS from "@alchemy.run/aws";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 +import * as HttpBody from "effect/http/HttpBody";

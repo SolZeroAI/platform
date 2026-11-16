@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/data/drizzle-postgres
      upstream: website/src/content/docs/fly/data/drizzle-postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Drizzle Postgres on Fly
 
@@ -11,8 +11,8 @@ Run Drizzle in a `Fly.Service`, with [Fly Managed Postgres](/fly/data/postgres) 
 ## Install the database dependencies
 
 ```sh
-pnpm add drizzle-orm@1.0.0-rc.5-ab785fc @effect/sql-pg pg
-pnpm add -D drizzle-kit@1.0.0-rc.5-ab785fc
+pnpm add @alchemy.run/drizzle drizzle-orm@1.0.0-rc.5 @effect/sql-pg
+pnpm add -D drizzle-kit@1.0.0-rc.5
 ```
 
 The Drizzle versions match the repository's Effect integration.
@@ -58,25 +58,12 @@ Commit the schema, SQL, and snapshots together; CI deploys this reviewed history
 
 ```typescript
 // src/db.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Db = Fly.Postgres("Db", { region: "iad" });
 ```
 
 This provisions a billed Managed Postgres cluster, not an unmanaged Postgres Machine.
-
-## Keep the driver outside the bundle
-
-```diff lang="typescript"
- // src/api.ts — the Service from the tutorial
- {
-   main: import.meta.url,
-   region: "iad",
-+  build: { install: ["pg"] },
- }
-```
-
-`pg` must be installed in the Service image because bundling its CommonJS exports breaks the driver's interop.
 
 ## Bind the cluster
 
@@ -113,7 +100,7 @@ Supply the cluster's `connectionUri` as the migration runner's secret `DATABASE_
 ## Open the runtime client
 
 ```diff lang="typescript"
-+import * as Drizzle from "alchemy/Drizzle/Postgres";
++import * as Drizzle from "@alchemy.run/drizzle/Postgres";
 
  const conn = yield* Fly.ConnectPostgres(Db);
 +const db = yield* Drizzle.Postgres(conn.connectionString);
@@ -143,11 +130,11 @@ Queries run inside the request scope, rather than during infrastructure construc
 pnpm alchemy deploy
 ```
 
-For subsequent schema changes, generate, review, and commit first, then apply the committed migrations before deploying compatible application code. `alchemy deploy` does not replace `drizzle-kit migrate` in this guide.
+For subsequent schema changes, generate, review, and commit first, then apply the committed migrations before deploying compatible application code. While Drizzle owns migrations, `alchemy deploy` does not replace `drizzle-kit migrate`.
 
 ## Choose one migration owner
 
-`Fly.Postgres` also supports a `migrations` directory, but this guide deliberately leaves it unset and keeps Drizzle as the migration owner. Switching an existing database to Alchemy's migration history is a separate [migration adoption decision](/sql/drizzle/migrations#existing-migration-history), not a command substitution.
+`Fly.Postgres` also supports a `migrations` directory, but leave it unset and keep Drizzle as the migration owner. Switching an existing database to Alchemy's migration history is a separate [migration adoption decision](/sql/drizzle/migrations#existing-migration-history), not a command substitution.
 
 ## Continue
 

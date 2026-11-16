@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/workloads/jobs
      upstream: website/src/content/docs/kubernetes/workloads/jobs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Jobs & CronJobs
 
@@ -10,6 +10,22 @@
 finishes, such as migrations, seeds, smoke tests, and reports. It
 applies a **ServiceAccount** and a Kubernetes **Job**. When you set
 `schedule`, it applies a **CronJob** instead.
+
+<Timeline
+  end={10}
+  lanes={[
+    { id: "p1", label: "pod 1" },
+    { id: "p2", label: "pod 2", type: "retry" },
+    { id: "c1", label: "CronJob", type: "0 3 * * *" },
+  ]}
+  bars={[
+    { lane: "p1", start: 0, end: 2.4, label: "fails", tone: "danger" },
+    { lane: "p2", start: 3, end: 6, label: "succeeds" },
+    { lane: "c1", start: 7, end: 9, label: "tonight's Job" },
+  ]}
+  marks={[{ at: 0, label: "applied" }, { at: 7, label: "03:00" }]}
+  caption="A Job runs a pod until one succeeds, retrying up to backoffLimit. A CronJob creates a new Job on every schedule."
+/>
 
 A Job runs one of two things:
 
@@ -50,7 +66,7 @@ described in [Why the props are an Effect](#why-the-props-are-an-effect):
 
 ```typescript
 // src/Seed.ts
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 import { Api, Cluster } from "./infra.ts";
 
@@ -140,6 +156,22 @@ export default Backfill.make(
   }),
 );
 ```
+
+## Choose a container runtime
+
+`runtimeClassName` runs the Job's pod under a RuntimeClass the
+cluster defines. On EKS Auto Mode, `isolated-sandbox` runs it in its
+own Nitro Sandbox, a good fit for code you didn't write:
+
+```typescript
+yield* Kubernetes.Job("RunGeneratedCode", {
+  cluster,
+  image: "ghcr.io/acme/runner:1",
+  runtimeClassName: "isolated-sandbox",
+});
+```
+
+See [EKS: Run each pod in its own VM](/aws/compute/eks#run-each-pod-in-its-own-vm).
 
 ## When a Job runs
 

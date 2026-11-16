@@ -1,17 +1,19 @@
 # sql index
 
-14 pages. Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations.
+17 pages. Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | SQL | `_overview.md` | Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations. |
 | Databases | `databases.md` | Compare database engines, connection paths, and deployment guides across Alchemy's SQL providers. |
+| How SQL works in Alchemy | `what-is-sql.md` | The concepts behind SQL in Alchemy — databases and engines, clients, connections and pools, request scope, migrations and their history — and how they fit together on every cloud. |
 
 ## drizzle/
 
 | Page | File | Covers |
 | --- | --- | --- |
 | D1 | `drizzle/d1.md` | SQLite schemas and Effect-native Drizzle queries over a Cloudflare D1 binding. |
+| libSQL | `drizzle/libsql.md` | Use Drizzle with a libSQL database, such as Turso. |
 | Migrations | `drizzle/migrations.md` | Generate migrations when your schema changes, review and commit the SQL and snapshots, then deploy from Git. |
 | MySQL | `drizzle/mysql.md` | Provider-neutral MySQL schemas, Effect-native Drizzle queries, and connection configuration. |
 | Postgres | `drizzle/postgres.md` | Provider-neutral Postgres schemas, Effect-native Drizzle queries, and connections for Workers, Lambda, and servers. |
@@ -21,6 +23,7 @@
 | Page | File | Covers |
 | --- | --- | --- |
 | D1 | `effect-sql/d1.md` | SQL.D1 wraps a bound D1 database in an @effect/sql-d1 client — tagged-template queries with typed errors over the native binding. |
+| libSQL | `effect-sql/libsql.md` | Run SQL on a libSQL database, such as Turso, with Effect SQL. |
 | Connection lifecycle | `effect-sql/lifecycle.md` | SQL and Drizzle clients build lazily, reuse a client within the current execution scope, and release resources when that scope closes. |
 | Migrations | `effect-sql/migrations.md` | Commit ordered SQL files and apply them on database deploy or Durable Object activation, tracked in one Alchemy-owned table. |
 | MySQL | `effect-sql/mysql.md` | SQL.MySQL turns a connection string into an @effect/sql-mysql2 client — portable tagged-template queries with typed errors and one pool per execution. |

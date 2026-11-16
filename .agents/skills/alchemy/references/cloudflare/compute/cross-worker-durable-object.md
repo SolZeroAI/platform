@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/cross-worker-durable-object
      upstream: website/src/content/docs/cloudflare/compute/cross-worker-durable-object.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Bind to another Worker's Durable Object
 
@@ -12,9 +12,21 @@ you share state across Workers: one Worker hosts the DO, every
 other Worker addresses it by `scriptName` and gets a typed RPC
 stub.
 
-By the end of this part you'll have two Workers, `WorkerA` and
-`WorkerB`, sharing a single `Counter` Durable Object. Writes
+Take two Workers, `WorkerA` and `WorkerB`, sharing a single `Counter` Durable Object. Writes
 through either Worker are visible from the other.
+
+<Tree
+  nodes={[
+    { id: "acct", label: "my-company", type: "account", areas: ["b a"], colGap: 3 },
+    { id: "b", label: "WorkerB", type: "Worker", parent: "acct", specs: [["scriptName", "WorkerA"]] },
+    { id: "a", label: "WorkerA", type: "Worker · hosts Counter", parent: "acct" },
+    { id: "ns", label: "Counter", type: "Durable Object namespace", parent: "a", dashed: true },
+    { id: "alice", label: '"alice"', type: "object · count 3", parent: "ns", tone: "accent" },
+    { id: "bob", label: '"bob"', type: "object · count 1", parent: "ns", tone: "accent" },
+  ]}
+  links={[{ from: "b", to: "ns", label: "binds" }]}
+  caption="The objects live in WorkerA's namespace. WorkerB holds only a binding to it, so getByName('alice') from either Worker reaches the same object and the same count."
+/>
 
 ## Move the DO into its own module
 
@@ -25,7 +37,7 @@ implementation.
 ```typescript
 // src/object.ts
 import type { RuntimeContext } from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export class Counter extends Cloudflare.DurableObject<
@@ -98,7 +110,7 @@ The key move is the **third type argument** on `Cloudflare.Worker`:
 
 ```typescript
 // src/workerA.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Counter } from "./object.ts";
 
 export class WorkerA extends Cloudflare.Worker<WorkerA, {}, Counter>()(
@@ -126,7 +138,7 @@ WorkerA's bundle actually contains the DO class:
 
 ```diff lang="typescript"
 // src/workerA.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -165,7 +177,7 @@ to the existing namespace running under WorkerA's script:
 
 ```typescript
 // src/workerB.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -211,7 +223,7 @@ binding only:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import WorkerALive, { WorkerA } from "./src/workerA.ts";
 import WorkerB from "./src/workerB.ts";
@@ -241,8 +253,8 @@ Workers route to the same DO instance by name:
 
 ```typescript
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Vitest";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Vitest";
 import { expect } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as HttpClient from "effect/http/HttpClient";
@@ -260,10 +272,10 @@ test(
     const { urlA, urlB } = yield* stack;
     const client = yield* HttpClient.HttpClient;
 
-    yield* client.post(`${urlA}/`);
-    yield* client.post(`${urlA}/`);
+    yield* client.post(`${urlA}/foo`);
+    yield* client.post(`${urlA}/foo`);
 
-    const res = yield* client.get(`${urlB}/`);
+    const res = yield* client.get(`${urlB}/foo`);
     expect((yield* res.json) as { value: number }).toEqual({ value: 2 });
   }),
 );
@@ -315,9 +327,9 @@ own private set of DO instances using the same class.
 
 Hosting isn't forever — suppose `Counter` should now live under
 `WorkerB` instead of `WorkerA`. A Durable Object class can move
-between Workers **with its data intact**: Cloudflare's
-`transferred_classes` migration re-homes the namespace (same
-instances, same storage) onto the new host's script. Moves are
+between Workers **with its data intact**: Cloudflare transfers the
+namespace (same instances, same storage) onto the new host's
+script. Moves are
 always *declared* — a class that disappears from one Worker and
 appears on another is otherwise ambiguous between "transfer the
 data" and "delete it, start fresh" — so the class states where it
@@ -369,7 +381,7 @@ order correct (the new host uploads first).
 
 ```typescript
 // src/workerB.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -448,18 +460,31 @@ import WorkerALive, { WorkerA } from "./src/workerA.ts";
 
 ### Deploy the move
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 `WorkerA` references `WorkerB` through `Counter.from(WorkerB)`, so
-the engine deploys `WorkerB` first. Its upload carries the
-`transferred_classes` migration — the namespace and every stored
-object move to `WorkerB`'s script — and `WorkerA`'s deploy then
-converges on its own (no delete migration is emitted for a class
-that moved away). Every counter keeps its count. Afterwards the
+the engine deploys `WorkerB` first. Its deploy moves the
+namespace and every stored object to `WorkerB`'s script, and
+`WorkerA`'s deploy then converges on its own (nothing is deleted
+for a class that moved away). Every counter keeps its count. Afterwards the
 `transferredFrom` declaration is inert — on fresh stages and on
 every later deploy it does nothing — so leave it in place.
+
+<Timeline
+  end={10}
+  lanes={[
+    { id: "a", label: "WorkerA" },
+    { id: "b", label: "WorkerB" },
+  ]}
+  bars={[
+    { lane: "a", start: 0, end: 4.6, label: "hosts Counter · alice = 3" },
+    { lane: "a", start: 4.6, end: 10, label: "binds Counter from WorkerB", tone: "default" },
+    { lane: "b", start: 0, end: 4.6, label: "binds Counter from WorkerA", tone: "default" },
+    { lane: "b", start: 4.6, end: 10, label: "hosts Counter · alice = 3" },
+  ]}
+  marks={[{ at: 4.6, label: "deploy: WorkerB first, transferredFrom WorkerA" }]}
+  caption="One deploy moves the namespace and every stored object to WorkerB. The count is the same before and after, and both Workers keep reaching it."
+/>
 
 :::caution[Undeclared moves fail loudly]
 If you move the host without declaring `transferredFrom`, the former

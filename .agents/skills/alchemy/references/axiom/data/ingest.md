@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/axiom/data/ingest
      upstream: website/src/content/docs/axiom/data/ingest.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Datasets & ingest
 
@@ -14,7 +14,7 @@ same Stack as the Workers and Functions that emit the data.
 ## Create a dataset
 
 ```typescript
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 const logs = yield* Axiom.Dataset("logs", {
   name: "my-app-logs",
@@ -91,7 +91,8 @@ for the full pattern.
 - `otelEndpoint` — the root; most exporters auto-append the signal
   path.
 - `otelHeaders` — the non-secret headers Axiom expects, i.e.
-  `X-Axiom-Dataset: <name>`. The `Authorization: Bearer` header is
+  `X-Axiom-Dataset: <name>`, or `X-Axiom-Metrics-Dataset: <name>` for a
+  `otel:metrics:v1` dataset. The `Authorization: Bearer` header is
   deliberately excluded so no secret lives in dataset state — that's
   what the ingest token below is for.
 
@@ -150,7 +151,7 @@ own. `Stack.useSync` computes props from the resolved stage — handy
 at module scope where there's no `yield*` available:
 
 ```typescript
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 import { Stack } from "alchemy/Stack";
 
 export const Traces = Axiom.Dataset(

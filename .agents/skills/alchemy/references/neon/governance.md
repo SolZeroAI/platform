@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/governance
      upstream: website/src/content/docs/neon/governance.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Organization governance
 
@@ -80,7 +80,7 @@ page. These results contain personal information; keep them out of public logs.
 ## Issue a project-restricted management key
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const project = yield* Neon.Project("Application", {
   orgId: "org-example",

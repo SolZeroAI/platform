@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/frontend/waku
      upstream: website/src/content/docs/railway/frontend/waku.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Waku
 
@@ -23,9 +23,7 @@ The build integration is not bundled with alchemy. Install
 and `/waku/node` exports from your project at deploy time. It is only
 used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Waku
 
@@ -64,7 +62,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.Waku("Website");
 ```
@@ -142,9 +140,7 @@ export const getConfig = async () => ({ render: "dynamic" }) as const;
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Waku's own dev server (native HMR) instead of
 deploying; `site.url` is the local address and no Railway resources

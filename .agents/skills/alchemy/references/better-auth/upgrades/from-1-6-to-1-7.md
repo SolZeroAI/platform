@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/upgrades/from-1-6-to-1-7
      upstream: website/src/content/docs/better-auth/upgrades/from-1-6-to-1-7.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Upgrading from 1.6 to 1.7.5 or newer
 
@@ -39,9 +39,7 @@ Alchemy delays the new host deployment, but old instances keep running; use a ma
 Update the Alchemy Better Auth package to a release supporting 1.7.5, then
 align Better Auth and its synchronized plugins/adapters:
 
-```sh
-npx auth@1.7.5 upgrade
-```
+<PackageManagers script={`{dlx} auth@1.7.5 upgrade`} />
 
 Use Node.js 22.12 or newer and the CLI version matching your target release. Review workspace catalogs and overrides.
 
@@ -73,9 +71,7 @@ need no identity conversion when upgrading directly from 1.6.
 
 Drizzle users own schema migrations. Generate and review the auth schema:
 
-```sh
-npx auth@1.7.5 generate --config ./auth.cli.ts
-```
+<PackageManagers script={`{dlx} auth@1.7.5 generate --config ./auth.cli.ts`} />
 
 The CLI configuration exports an upstream Better Auth instance with the same
 plugins and schema options, using the Relations v2 adapter:

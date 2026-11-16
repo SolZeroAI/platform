@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/astro
      upstream: website/src/content/docs/fly/frontend/astro.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Astro
 
@@ -21,9 +21,7 @@ The build integration is not bundled with alchemy. Install
 and `/astro/node` exports from your project at deploy time. It is
 only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Astro
 
@@ -42,7 +40,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.Astro("Website");
 ```

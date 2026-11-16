@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-6
      upstream: website/src/content/docs/git/tutorial/part-6.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 6: Protect a branch
 
@@ -20,7 +20,7 @@ Create `src/branch-policy.ts`:
 
 ```typescript
 // src/branch-policy.ts
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import { Session } from "./session.ts";
 
@@ -49,8 +49,8 @@ Create `src/protocol.ts`:
 
 ```typescript
 // src/protocol.ts
-import * as Git from "alchemy/Git";
-import * as GitHttp from "alchemy/Git/Http";
+import * as Git from "@alchemy.run/git";
+import * as GitHttp from "@alchemy.run/git/Http";
 import * as Effect from "effect/Effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { checkRefChanges } from "./branch-policy.ts";
@@ -96,7 +96,7 @@ same function so it cannot bypass the push policy. Create `src/ref-writes.ts`:
 
 ```typescript
 // src/ref-writes.ts
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { checkRefChanges } from "./branch-policy.ts";
@@ -163,9 +163,7 @@ group against that actual API instead; see [HTTP routes](/git/blocks/server).
 
 ## Deploy the rule
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Use Dana's `$KEY` when Git prompts during the checks below. Keep the remote
 pointed at `$HOST/$OWNER/web.git` from Part 4.
@@ -209,9 +207,7 @@ accepted the caller; the application handler rejected the proposed change.
 
 When you finish experimenting:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 This removes the Worker, repositories' storage, R2 bucket contents, and account
 database from this tutorial stack. Keep your local `work` checkout if you want

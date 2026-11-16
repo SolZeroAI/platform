@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/tutorial/part-3
      upstream: website/src/content/docs/prisma/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Query Postgres
 
@@ -12,10 +12,7 @@ This query needs no tables or migrations.
 
 ## Install the SQL client
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add "@effect/sql-pg@${effectVersion}"`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install "@effect/sql-pg@${effectVersion}"`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add "@effect/sql-pg@${effectVersion}"`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add "@effect/sql-pg@${effectVersion}"`} lang="sh" /></TabItem>
+<PackageManagers add="@alchemy.run/sql @effect/sql-pg" />
 
 Alchemy's SQL helper uses the Effect Postgres client. Match its version to
 the other Effect packages.
@@ -26,7 +23,7 @@ Append to `src/Database.ts`, adding the Effect import at the top:
 
 ```diff lang="typescript"
 // src/Database.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 +import * as Effect from "effect/Effect";
 
 +export const Postgres = Prisma.Postgres(
@@ -83,7 +80,7 @@ connection URL available at runtime without placing credentials in source.
 
 ```diff lang="typescript"
 // src/Api.ts
-+import * as SQL from "alchemy/SQL/Postgres";
++import * as SQL from "@alchemy.run/sql/Postgres";
 
     const db = yield* Prisma.Connect(Connection);
 +    const sql = yield* SQL.Postgres({ url: db.databaseUrl });
@@ -130,10 +127,7 @@ Handling `SqlError` also satisfies the HTTP handler's typed error contract.
 
 ## Deploy the database and API
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy deploy" lang="sh" /></TabItem>
+<PackageManagers run="alchemy deploy" />
 
 Alchemy creates the database and connection before deploying the API with
 its binding. Existing resources retain their logical IDs.

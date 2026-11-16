@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/ci
      upstream: website/src/content/docs/environments/ci.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # CI
 
@@ -19,11 +19,9 @@ consumes, and `alchemy provider check-env` validates them against that
 contract. It prints one line per registered provider and exits with code 1
 when a required variable is missing:
 
-```sh
-$ bun alchemy provider check-env
+<PackageManagers script={`$ {run} alchemy provider check-env
 ok Cloudflare
-MISSING AWS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION | AWS_DEFAULT_REGION
-```
+MISSING AWS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION | AWS_DEFAULT_REGION`} />
 
 Run it as the first step of a deploy job to fail fast with a list of
 missing secrets instead of failing minutes later inside a provider API
@@ -67,7 +65,7 @@ By the end you'll have:
 
    ```diff lang="typescript"
    import * as Alchemy from "alchemy";
-   +import * as GitHub from "alchemy/GitHub";
+   +import * as GitHub from "@alchemy.run/github";
    +import * as Output from "alchemy/Output";
    import * as Effect from "effect/Effect";
 
@@ -161,6 +159,13 @@ alchemy profile create admin
 alchemy profile edit --profile admin
 ```
 
+For Cloudflare, choose **API Token or API Key** when asked for the
+authentication method, not the recommended OAuth: Cloudflare's OAuth
+scopes can't manage API tokens, so an OAuth `admin` profile fails
+when `stacks/github.ts` creates the CI token. See
+[required Cloudflare permissions](#cloudflare) for which key or token
+to use.
+
 :::danger[Heads up]
 The credentials stored under `--profile admin` can mint new tokens
 and roles with arbitrary scope. Treat it like root. Use it only
@@ -204,8 +209,8 @@ token-management token.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
@@ -332,8 +337,8 @@ your environment when deploying this stack.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -436,8 +441,8 @@ administration.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
-import * as GitHub from "alchemy/GitHub";
+import * as AWS from "@alchemy.run/aws";
+import * as GitHub from "@alchemy.run/github";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -568,7 +573,7 @@ AWS console.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as GitHub from "alchemy/GitHub";
+import * as GitHub from "@alchemy.run/github";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Redacted from "effect/Redacted";

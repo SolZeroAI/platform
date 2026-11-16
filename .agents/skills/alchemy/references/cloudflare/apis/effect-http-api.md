@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/apis/effect-http-api
      upstream: website/src/content/docs/cloudflare/apis/effect-http-api.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Effect HTTP API
 
@@ -9,7 +9,7 @@
 Effect HTTP is the trust-boundary modality: schema-validated REST
 endpoints — real URLs, path params, query strings, payloads — that
 any HTTP client can call, no Effect or TypeScript required on the
-consumer's side. This page deploys one to a Cloudflare Worker; the
+consumer's side. Deploy one to a Cloudflare Worker; the
 concept home is [Effect HTTP](/apis/effect-http), and
 [RPC](/apis) covers choosing between the modalities.
 
@@ -54,7 +54,7 @@ export class Task extends Schema.Class<Task>("Task")({
   completed: Schema.Boolean,
 }) {}
 
-export class TaskNotFound extends Schema.TaggedErrorClass<TaskNotFound>()(
+export class TaskNotFound extends Schema.TaggedError<TaskNotFound>()(
   "TaskNotFound",
   { id: Schema.String },
   { httpApiStatus: 404 },
@@ -62,7 +62,7 @@ export class TaskNotFound extends Schema.TaggedErrorClass<TaskNotFound>()(
 ```
 
 `Schema.Class` gives you a runtime-validated class with an inferred
-TypeScript type. `Schema.TaggedErrorClass` gives you a typed error you
+TypeScript type. `Schema.TaggedError` gives you a typed error you
 can return from handlers and discriminate against on the client —
 `httpApiStatus: 404` maps it to a 404 response instead of a generic 500.
 
@@ -110,7 +110,7 @@ export class TaskApi extends HttpApi.make("TaskApi").add(TasksGroup) {}
 
 Nothing executes yet — `TaskApi` is purely a value-level description.
 The same `TaskApi` constant is what we'll hand to the client at the
-end of this guide.
+end.
 
 ## 3. Build the Worker
 
@@ -118,7 +118,7 @@ Now we wire it up. Create `src/worker.ts` with an empty Construction phase:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Cloudflare.Worker(
@@ -138,14 +138,14 @@ binding factories like `R2.ReadWriteBucket(...)`, never per-request work.
 
 ### 3a. Bind an R2 bucket for storage
 
-Tasks need to live somewhere durable. Declare an `Bucket` resource
-and bind it inside the constructor — `bind()` returns a typed handle whose
-`get` / `put` / `delete` / `list` methods we'll call from the
-handlers below.
+Tasks need to live somewhere durable. Declare a `Bucket` resource
+and bind it inside the constructor — `Cloudflare.R2.ReadWriteBucket(Tasks)`
+returns a typed handle whose `get` / `put` / `delete` / `list` methods
+we'll call from the handlers below.
 
 ```typescript
 // src/bucket.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Tasks = Cloudflare.R2.Bucket("Tasks");
 ```
@@ -187,12 +187,14 @@ safe to call inside the constructor.
 +     handlers
 +       .handle("getTask", ({ params }) =>
 +         Effect.gen(function* () {
-+           const object = yield* tasks.get(params.id);
++           const object = yield* tasks.get(params.id).pipe(Effect.orDie);
 +           if (!object) {
 +             return yield* Effect.fail(new TaskNotFound({ id: params.id }));
 +           }
-+           return Schema.decodeUnknownSync(Task)(JSON.parse(yield* object.text()));
-+         }).pipe(Effect.orDie),
++           return Schema.decodeUnknownSync(Task)(
++             JSON.parse(yield* object.text().pipe(Effect.orDie)),
++           );
++         }),
 +       )
 +       .handle("createTask", ({ payload }) =>
 +         Effect.gen(function* () {
@@ -299,7 +301,7 @@ Here's the complete `src/worker.ts`:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -328,14 +330,14 @@ export default Cloudflare.Worker(
       handlers
         .handle("getTask", ({ params }) =>
           Effect.gen(function* () {
-            const object = yield* tasks.get(params.id);
+            const object = yield* tasks.get(params.id).pipe(Effect.orDie);
             if (!object) {
               return yield* Effect.fail(new TaskNotFound({ id: params.id }));
             }
             return Schema.decodeUnknownSync(Task)(
-              JSON.parse(yield* object.text()),
+              JSON.parse(yield* object.text().pipe(Effect.orDie)),
             );
-          }).pipe(Effect.orDie),
+          }),
         )
         .handle("createTask", ({ payload }) =>
           Effect.gen(function* () {
@@ -374,7 +376,7 @@ export default Cloudflare.Worker(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Worker from "./src/worker.ts";
 
@@ -500,7 +502,7 @@ instead of R2.
 
 ```typescript
 // src/object.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -509,7 +511,7 @@ import * as HttpPlatform from "effect/http/HttpPlatform";
 import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { TaskDOApi, decodeTask, encodeTask } from "./api.ts";
-import { Task } from "./task.ts";
+import { Task, TaskNotFound } from "./task.ts";
 
 const HttpPlatformStub = Layer.succeed(HttpPlatform.HttpPlatform, {
   fileResponse: () => Effect.die("HttpPlatform.fileResponse not supported"),
@@ -526,8 +528,11 @@ export default class TasksObject extends Cloudflare.DurableObject<TasksObject>()
         handlers
           .handle("getTask", ({ params }) =>
             state.storage.get<Task>(params.id).pipe(
-              Effect.flatMap(decodeTask),
-              Effect.orDie,
+              Effect.flatMap((task) =>
+                task
+                  ? decodeTask(task).pipe(Effect.orDie)
+                  : Effect.fail(new TaskNotFound({ id: params.id })),
+              ),
             ),
           )
           .handle("createTask", ({ payload }) => {

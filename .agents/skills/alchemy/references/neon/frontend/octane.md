@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/frontend/octane
      upstream: website/src/content/docs/neon/frontend/octane.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Octane
 
@@ -49,7 +49,7 @@ in place. `RenderRoute` and `ServerRoute` declarations stay in `octane.config.ts
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/postgres
      upstream: website/src/content/docs/better-auth/databases/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -10,9 +10,7 @@ This example serves Better Auth through a Lambda Function URL using an existing 
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely pg
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely pg" />
 
 Configure AWS through an [Alchemy profile](/environments/profiles) and set `DATABASE_URL` in the deploying environment. The connection layer does not create the database, credentials, or network access.
 
@@ -38,7 +36,7 @@ Configuration resolves during host construction and is bound into the Lambda env
 
 ```typescript title="src/function.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import { AuthDatabase } from "./auth-database.ts";
@@ -68,7 +66,7 @@ export default class AuthApi extends AWS.Lambda.Function<AuthApi>()(
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import AuthApi from "./src/function.ts";
 
@@ -89,9 +87,7 @@ Alchemy generates and binds the signing secret automatically. Preserve and prote
 
 ## Deploy and migrate
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Automatic migrations use the resolved URL before updating the function, so the deployer needs schema-changing permissions. The runtime pool defaults to one connection per invocation; migrations create auth tables, not the database itself.
 

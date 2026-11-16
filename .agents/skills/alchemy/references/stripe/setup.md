@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/stripe/setup
      upstream: website/src/content/docs/stripe/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -16,11 +16,17 @@ until you're ready to charge real cards. Copy the test secret key
 
 ## Register the provider
 
+Install `@alchemy.run/stripe`:
+
+<PackageManagers add="@alchemy.run/stripe" />
+
+Then add its providers to the stack:
+
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Stripe from "alchemy/Stripe";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Stripe from "@alchemy.run/stripe";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

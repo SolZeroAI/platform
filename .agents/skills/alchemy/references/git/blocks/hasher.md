@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/blocks/hasher
      upstream: website/src/content/docs/git/blocks/hasher.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Hasher
 
@@ -56,7 +56,7 @@ kilobyte pushes that make up almost all of a repository's life.
 ## In dynamically loaded Workers
 
 ```typescript
-import * as GitHasher from "alchemy/Git/Hasher";
+import * as GitHasher from "@alchemy.run/git/Hasher";
 
 Layer.provide(GitHasher.HasherWorkerLoader())
 ```
@@ -74,8 +74,8 @@ GitHasher.HasherWorkerLoader({ concurrency: 2 })
 ## On Lambda
 
 ```typescript
-import * as AWS from "alchemy/AWS";
-import * as GitHasher from "alchemy/Git/Hasher";
+import * as AWS from "@alchemy.run/aws";
+import * as GitHasher from "@alchemy.run/git/Hasher";
 
 Layer.provide(GitHasher.HasherLambda(GitHasher.HasherFunction)),
 Layer.provide(AWS.Lambda.InvokeFunctionHttp),

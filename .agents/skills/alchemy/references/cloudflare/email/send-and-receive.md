@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/email/send-and-receive
      upstream: website/src/content/docs/cloudflare/email/send-and-receive.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Send & receive email
 
@@ -10,7 +10,7 @@ Cloudflare Email Routing turns a zone you own into a mail endpoint:
 inbound mail to any address on the domain is matched by rules and
 forwarded, dropped, or handed to a Worker — and once routing is
 enabled, Workers can also *send* mail from that domain through a
-`send_email` binding. This guide wires up both directions. For the
+`send_email` binding. For the
 full Email surface — sending subdomains, Email Security — see
 [Email](/cloudflare/email).
 
@@ -22,7 +22,7 @@ Stack's `Effect.gen` body:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -38,7 +38,7 @@ export default Alchemy.Stack(
 ## Enable Email Routing on the zone
 
 `Email.Routing` flips Email Routing on for a zone. It's the
-prerequisite for everything else on this page — receiving mail
+prerequisite for both directions — receiving mail
 through rules *and* sending mail from a Worker:
 
 ```typescript
@@ -136,7 +136,7 @@ send time:
 
 ```typescript
 // src/email.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Email = Cloudflare.Email.SendEmail("Email", {
   allowedSenderAddresses: ["bot@example.com"],
@@ -182,7 +182,7 @@ provide `Email.SendBinding` as the implementation layer. The client's
 
 ```typescript
 // src/notifier.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Email } from "./email.ts";

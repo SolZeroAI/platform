@@ -1,26 +1,16 @@
 <!-- source: https://alchemy.run/aws/compute/microvms
      upstream: website/src/content/docs/aws/compute/microvms.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Lambda MicroVMs
 
 > Build a Firecracker MicroVM image from TypeScript or a Dockerfile, then launch and drive isolated stateful instances from a Lambda Function with typed lifecycle bindings and RPC.
 
-A Lambda **MicroVM image** is a Firecracker snapshot that boots a fully
-initialized application in milliseconds. The model is *image-then-launch*:
-`AWS.Lambda.MicrovmImage` builds the image once at deploy time, then a Lambda
-Function launches isolated, stateful MicroVM instances from it at runtime —
-one per end-user or session. That makes MicroVMs a natural fit for per-user
-sandboxes: code interpreters, agent workspaces, preview environments.
+A Lambda MicroVM is an isolated, stateful virtual machine you start on demand, one per user or session. It boots from a **MicroVM image**: a Firecracker snapshot of your application, already started and initialized, so a new MicroVM is ready in milliseconds. That makes MicroVMs a fit for per-user sandboxes: code interpreters, agent workspaces, preview environments.
 
-The build runs **server-side on AWS** — no local Docker. Alchemy produces the
-code artifact in one of three modes, selected by which prop you set:
+The model is image, then launch. `AWS.Lambda.MicrovmImage` builds the image once, at deploy time. A Lambda Function then launches MicroVMs from it while it runs, and drives each one over HTTP or typed RPC.
 
-- **Effectful** (`main`) — write the in-VM HTTP server in TypeScript; Alchemy
-  bundles it, generates a Dockerfile, and uploads the zip.
-- **External** (`context`/`dockerfile`) — bring your own Dockerfile and build
-  context in any language; Alchemy zips and uploads the directory.
-- **Prebuilt** (`codeArtifact`) — point at an existing S3 zip or ECR image URI.
+The image is built on AWS, so you need no local Docker, from one of three sources. Give it `main`, and Alchemy bundles your TypeScript server and writes its Dockerfile. Give it `context` and a `dockerfile`, and it builds your own app in any language. Or give it `codeArtifact`, a zip in S3 or an image in ECR you've already built.
 
 :::caution
 Lambda MicroVMs are a **preview feature**: your account must be onboarded to
@@ -42,7 +32,7 @@ contract every Function and Server returns:
 
 ```typescript
 // sandbox.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -89,7 +79,7 @@ VM, wait for `RUNNING`, mint an auth token, then call the typed RPC stub with
 
 ```typescript
 // api.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -191,7 +181,7 @@ is provided on the Stack so it gets built and deployed alongside:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import Api from "./api.ts";
 import SandboxLive from "./sandbox.ts";
@@ -217,7 +207,7 @@ the bare build Role and the image live directly in the Stack's `Effect.gen`:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -240,7 +230,9 @@ build-affecting prop changes; otherwise the image is left untouched.
 ## Where next
 
 - [Lambda](/aws/compute/lambda) — the Function model the orchestrator is built on.
-- [MicrovmImage API reference](/providers/aws/lambda/microvmimage) — all props,
+- [Nitro Sandboxes](/aws/compute/nitro-sandboxes) — the same VM isolation for ECS tasks and EKS pods on your own instances.
+- [ECS Sandboxes](/aws/compute/ecs-sandboxes) — a sandbox per user or session on instances in your own account.
+- [MicrovmImage API reference](/providers/aws/lambda#microvmimage) — all props,
   build modes, sizing, logging, and VPC egress via `NetworkConnector`.
-- [RunMicrovm](/providers/aws/lambda/runmicrovm) and the other per-instance
+- [RunMicrovm](/providers/aws/lambda#runmicrovm) and the other per-instance
   lifecycle bindings.

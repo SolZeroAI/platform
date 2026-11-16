@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/tanstack-start
      upstream: website/src/content/docs/cloudflare/frontend/tanstack-start.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # TanStack Start
 
@@ -62,9 +62,7 @@ export default defineConfig({
 
 Also drop the dependency:
 
-```sh
-bun remove @cloudflare/vite-plugin
-```
+<PackageManagers remove="@cloudflare/vite-plugin" />
 
 ## Declare the Website
 
@@ -74,7 +72,7 @@ Stack) and derive the typed shape of its bindings from it:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Backend, { Bucket } from "./src/backend.ts";
 
@@ -169,15 +167,11 @@ const res = await env.BACKEND.fetch(
 
 ## Deploy and dev
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 For local development:
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` boots TanStack Start's Vite dev server with HMR while the
 bindings stay attached to the **real** Alchemy-managed cloud resources —

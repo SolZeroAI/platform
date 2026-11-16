@@ -1,17 +1,18 @@
 <!-- source: https://alchemy.run/aws/frontend/sveltekit
      upstream: website/src/content/docs/aws/frontend/sveltekit.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SvelteKit
 
-> Deploy a SvelteKit app to AWS with AWS.Website.SvelteKit — SSR on a streaming Lambda Function URL, assets and prerendered pages on S3 + CloudFront, and Kit's own dev server under alchemy dev.
+> Deploy a SvelteKit app to AWS with AWS.Website.SvelteKit — SSR on a Lambda Web Function, assets and prerendered pages on S3 + CloudFront, and Kit's own dev server under alchemy dev.
 
 `AWS.Website.SvelteKit` deploys a
 [SvelteKit](https://svelte.dev/docs/kit) app to AWS. It builds the
 app with SvelteKit's own Vite pipeline and a wrangler-free in-memory
-AWS adapter emitting a streaming Lambda handler. Client assets and
+Node adapter; the server runs on a
+[Lambda Web Function](/aws/compute/web-functions). Client assets and
 prerendered pages are served from a private S3 bucket through
-CloudFront; dynamic routes stream from the Lambda Function URL. Your
+CloudFront; dynamic routes stream from the server. Your
 `vite.config.ts` loads natively; there is no `svelte.config.js` to
 write (kit v3 dropped it) and no adapter to install.
 
@@ -19,12 +20,10 @@ write (kit v3 dropped it) and no adapter to install.
 
 The build integration is not bundled with alchemy. Install
 `@alchemy.run/frontend-frameworks`; the resource loads its
-`/sveltekit` and `/sveltekit/aws` exports from your project at deploy
+`/sveltekit` and `/sveltekit/node` exports from your project at deploy
 time. It is only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure SvelteKit
 
@@ -45,7 +44,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.SvelteKit("Website");
 ```
@@ -74,7 +73,7 @@ export default Alchemy.Stack(
 
 Routes with `export const prerender = true` are uploaded to S3 and
 served from the edge without invoking the server; server routes
-(`+server.ts`) and server load functions stream from the Lambda.
+(`+server.ts`) and server load functions stream from the server.
 
 See
 [examples/aws-website-sveltekit](https://github.com/alchemy-run/alchemy/tree/main/examples/aws-website-sveltekit)
@@ -95,13 +94,13 @@ export const Website = AWS.Website.SvelteKit("Website", {
 });
 ```
 
-The values are set on the Lambda at deploy time and injected into the
+The values are set on the server at deploy time and injected into the
 dev server's process environment under `alchemy dev`, so server code
 reads the same values in both modes.
 
 ## Read the environment in server code
 
-The Kit server runs in a plain Node Lambda, so server routes read the
+The Kit server is a plain Node server, so server routes read the
 environment from `process.env` (or kit's `$env/dynamic/private`,
 which is initialized from it):
 
@@ -127,7 +126,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     sveltekit({
-      alias: { $lib: "src/lib" },
+      prerender: { handleHttpError: "warn" },
     }),
   ],
 });
@@ -153,11 +152,24 @@ call. Don't set `kit.adapter` — Alchemy injects its own wrangler-free
 AWS adapter (an adapter declared in your `sveltekit(...)` call is
 replaced with a warning).
 
+## Run on a Lambda Function
+
+Web Functions run in a subset of Regions. Elsewhere, set
+`server: "function"`: the app builds with the `/sveltekit/aws` deploy target
+and runs on a Lambda Function behind a streaming Function URL, tuned with
+`memorySize`, `architecture`, and `runtime`:
+
+```diff lang="typescript"
+// alchemy.run.ts
+export const Website = AWS.Website.SvelteKit("Website", {
++  server: "function",
++  memorySize: 2048,
+});
+```
+
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs SvelteKit's own Vite dev server — Node SSR with
 full HMR, which is already the AWS Lambda programming model

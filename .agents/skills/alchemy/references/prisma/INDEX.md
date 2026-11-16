@@ -1,11 +1,13 @@
 # prisma index
 
-29 pages. Prisma Postgres and Prisma Compute — projects, databases, connections, and deployed apps as Stack resources, with a zero-config local database in dev.
+31 pages. Declare Prisma Postgres databases, connections, branches and Compute apps as Stack resources with Alchemy, and run the same Stack against a local Postgres in dev.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Prisma | `_overview.md` | Prisma Postgres and Prisma Compute — projects, databases, connections, and deployed apps as Stack resources, with a zero-config local database in dev. |
+| Prisma | `_overview.md` | Declare Prisma Postgres databases, connections, branches and Compute apps as Stack resources with Alchemy, and run the same Stack against a local Postgres in dev. |
 | Setup | `setup.md` | Connect alchemy to Prisma — account, service tokens, and profiles. |
+| What is Prisma? | `what-is-prisma.md` | The concepts behind Prisma's data platform — workspaces, projects, Prisma Postgres, connections, branches, Compute apps, deployments and buckets — and how @alchemy.run/prisma models each of them. |
+| Workspaces and tokens | `workspaces-and-tokens.md` | How a Prisma workspace holds your projects and billing, how a service token decides where Alchemy deploys, and how apps get their own database connections. |
 
 ## compute/
 
@@ -29,11 +31,11 @@
 | Page | File | Covers |
 | --- | --- | --- |
 | Astro | `frontend/astro.md` | Deploy Astro SSR or a fully static site to Prisma Compute with Prisma.Website.Astro, running on Bun with native Astro dev locally. |
-| Foldkit | `frontend/foldkit.md` | Deploy Foldkit to Prisma Compute with Prisma.Website.Foldkit — a Vite SPA served on Bun, deep-link fallback, and native HMR locally. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Prisma Compute with native local development. |
 | Next.js | `frontend/nextjs.md` | Deploy Next.js to Prisma Compute with Prisma.Website.Nextjs — a normal Next server on Bun, not OpenNext, and next dev locally. |
 | Nuxt | `frontend/nuxt.md` | Deploy Nuxt to Prisma Compute with Prisma.Website.Nuxt — Nitro's Node target running on Bun and Nuxt's own dev server locally. |
 | Octane | `frontend/octane.md` | Deploy OctaneJS to Prisma Compute with Prisma.Website.Octane — the Node target on Bun, SSR plus client assets, and native Vite dev locally. |
-| React Router | `frontend/react-router.md` | Deploy React Router v7 framework apps to Prisma Compute with Prisma.Website.ReactRouter — SSR on Bun and native Vite dev locally. |
+| React Router | `frontend/react-router.md` | Deploy React Router v8 framework apps to Prisma Compute with Prisma.Website.ReactRouter — SSR on Bun and native Vite dev locally. |
 | SolidStart | `frontend/solidstart.md` | Deploy SolidStart to Prisma Compute with Prisma.Website.SolidStart — Nitro's Node target on Bun and SolidStart's native Vite dev server locally. |
 | Static sites | `frontend/static-site.md` | Deploy any static build to Prisma Compute with Prisma.Website.StaticSite — a shell command, output directory, and Bun static-file server. |
 | SvelteKit | `frontend/sveltekit.md` | Deploy SvelteKit to Prisma Compute with Prisma.Website.SvelteKit — SSR and prerendered assets on Bun, with native Vite dev locally. |

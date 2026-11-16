@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-code/action
      upstream: website/src/content/docs/infrastructure-as-code/action.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Actions
 
@@ -13,7 +13,7 @@ diffs the resolved input against the last persisted hash and either runs
 the body or skips it. If Outputs or the plan/persisted-state model are
 new to you, [Outputs](/infrastructure-as-code/outputs) and
 [Resource Lifecycle](/infrastructure-as-code/resource-lifecycle) are the
-background this page builds on.
+background Actions build on.
 
 Actions are useful for one-off deploy-time work that needs to be
 reproducible and dependency-aware: seeding a database, posting a

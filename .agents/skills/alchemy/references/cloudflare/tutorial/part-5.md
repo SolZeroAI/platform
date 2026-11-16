@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/tutorial/part-5
      upstream: website/src/content/docs/cloudflare/tutorial/part-5.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 5: CI/CD
 
@@ -60,7 +60,9 @@ alchemy profile create admin
 alchemy profile edit --profile admin --add Cloudflare
 ```
 
-When prompted for a Cloudflare credential, pick one of:
+When asked for the Cloudflare authentication method, choose **API
+Token or API Key**, not the recommended OAuth: Cloudflare's OAuth
+scopes can't manage API tokens. Then pick one of:
 
 - **API Key + Email** (the Global API Key) — has full account
   access, including the ability to mint tokens.
@@ -93,8 +95,8 @@ profile) to provision the Cloudflare API token CI will use.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
@@ -309,8 +311,8 @@ Post the live URL as a comment on every PR. Update `alchemy.run.ts`:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-+import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
++import * as GitHub from "@alchemy.run/github";
 +import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 +import * as Layer from "effect/Layer";
@@ -398,8 +400,8 @@ your environment when deploying this stack.
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

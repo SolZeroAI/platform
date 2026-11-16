@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-code/resource-lifecycle
      upstream: website/src/content/docs/infrastructure-as-code/resource-lifecycle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Resource Lifecycle
 
@@ -17,27 +17,17 @@ flags that drive these operations, see the
 
 ## The lifecycle, end-to-end
 
-```text
-Diagram (nodes and edges as authored):
-<DAG
-  nodes={[
-    { id: "Plan", tone: "accent" },
-    { id: "Reconcile (create)" },
-    { id: "Reconcile (update)" },
-    { id: "Replace", tone: "warn" },
-    { id: "Delete", tone: "danger" },
-    { id: "Noop" },
+<Records
+  columns={["in the Stack, the resource is", "the plan", "the provider runs"]}
+  rows={[
+    ["new", "create", "reconcile"],
+    ["changed", "update", "reconcile"],
+    ["changed in a way it can't update", "replace", "reconcile a new one, then delete the old"],
+    ["gone", "delete", "delete"],
+    ["the same", "no-op", "nothing"],
   ]}
-  edges={[
-    { from: "Plan", to: "Reconcile (create)", label: "new" },
-    { from: "Plan", to: "Reconcile (update)", label: "changed" },
-    { from: "Plan", to: "Replace", label: "breaking" },
-    { from: "Plan", to: "Delete", label: "removed" },
-    { from: "Plan", to: "Noop", label: "unchanged" },
-    { from: "Replace", to: "Delete", dashed: true },
-  ]}
+  caption="The plan sorts each resource into one of five actions. Create and update both run the provider's single reconcile."
 />
-```
 
 Both create and update intents resolve to the provider's single
 `reconcile` function. Replace runs `reconcile` against a fresh
@@ -182,6 +172,24 @@ that would remove it, and prefer moving irreplaceable data behind a
 retained resource.
 :::
 
+### Protecting a resource from replacement
+
+`retain` keeps the old cloud object, but a replacement still happens:
+dependents move to the new one. For a VPC, a cluster or a key that
+seals stored data, use `protect()` instead. A plan that would replace
+or delete the resource fails before anything is applied:
+
+```typescript
+const vpc = yield* AWS.EC2.Vpc("Vpc", { cidrBlock: "10.0.0.0/16" }).pipe(
+  RemovalPolicy.protect(),
+);
+```
+
+`alchemy plan`, `deploy` and `destroy` all refuse with a
+`ProtectedResource` error naming the resource. The policy is persisted
+like any other, so removing the declaration is refused too. To replace
+or delete it on purpose, deploy it without `protect()` first.
+
 ## Idempotency and recovery
 
 State persistence can fail after the cloud operation succeeds — the
@@ -242,7 +250,7 @@ The same engine powers all of these commands:
 See the [CLI reference](/cli) for the full set of flags
 (`--yes`, `--force`, `--dry-run`, `--stage`, `--profile`, ...).
 
-Every lifecycle operation on this page is implemented per resource
+Each of these lifecycle operations is implemented per resource
 type by a [Provider](/infrastructure-as-code/provider).
 
 ## Where next

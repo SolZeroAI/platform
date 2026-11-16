@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/tutorial/part-2
      upstream: website/src/content/docs/railway/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Deploy a Service
 
@@ -25,7 +25,7 @@ anywhere. Create `src/project.ts`:
 
 ```typescript
 // src/project.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Site = Railway.Project("Site");
 ```
@@ -41,7 +41,7 @@ Import the Project and yield it from the Stack:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 +import { Site } from "./src/project.ts";
 
@@ -72,7 +72,7 @@ Create `src/api.ts` with the smallest possible declaration:
 
 ```typescript
 // src/api.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 import { Site } from "./project.ts";
 
@@ -102,7 +102,7 @@ wired to an HTTP server listening on the Service's port:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Site } from "./project.ts";
@@ -193,7 +193,7 @@ Stack's Effect is what registers the resource and starts the deploy:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 +import Api from "./src/api.ts";
 import { Site } from "./src/project.ts";
@@ -223,9 +223,7 @@ id, region, and the public `url`.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

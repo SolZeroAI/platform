@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/tutorial/part-4
      upstream: website/src/content/docs/prisma/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: A Vite Frontend
 
@@ -11,10 +11,7 @@ queries the API, then run the frontend locally against the deployed backend.
 
 ## Install the frontend tooling
 
-  <TabItem label="bun" icon="bun"><Code code="bun add -d vite @vercel/nft" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npm install -D vite @vercel/nft" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm add -D vite @vercel/nft" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn add -D vite @vercel/nft" lang="sh" /></TabItem>
+<PackageManagers dev="vite @vercel/nft" />
 
 Vite builds the frontend. `@vercel/nft` traces the server dependencies that
 Alchemy includes in the deployment archive.
@@ -149,20 +146,14 @@ are embedded in the public browser bundle; only put public configuration there.
 
 ## Deploy the frontend
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy deploy" lang="sh" /></TabItem>
+<PackageManagers run="alchemy deploy" />
 
 Open `url` and click **Read database time**. The response should display a
 Postgres timestamp. Click again to execute a new query.
 
 ## Develop locally
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy dev" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy dev" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy dev" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy dev" lang="sh" /></TabItem>
+<PackageManagers run="alchemy dev" />
 
 Open the local website URL that Alchemy prints. Edit the heading and confirm
 Vite updates the page. Click the button to query the remote API. Provider-mode
@@ -174,10 +165,7 @@ A separate stage creates its own remote backend resources too.
 
 Stop the dev command, then destroy the Stack:
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy destroy" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy destroy" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy destroy" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy destroy" lang="sh" /></TabItem>
+<PackageManagers run="alchemy destroy" />
 
 Confirm the deletion. This removes the website, API, connection, database, and
 Project. Use the same profile and stage used to deploy; destroy every extra

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/observability/axiom-observability
      upstream: website/src/content/docs/cloudflare/observability/axiom-observability.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Ship Worker telemetry to Axiom
 
@@ -14,7 +14,7 @@ token, and the alert that pages you all live in the same Stack as
 the Worker they observe. A retention or threshold change is a
 reviewable diff, not a dashboard click.
 
-This guide wires a Worker's telemetry into Axiom two ways:
+A Worker's telemetry reaches Axiom two ways:
 
 1. **From the Worker** — the `Axiom.Telemetry` binding layer; the
    [built-in telemetry](/infrastructure-as-effects/telemetry) exports
@@ -34,8 +34,8 @@ provider layers in your Stack:
 
 ```typescript
 // alchemy.run.ts
-import * as Axiom from "alchemy/Axiom";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Axiom from "@alchemy.run/axiom";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Layer from "effect/Layer";
 
 providers: Layer.mergeAll(Cloudflare.providers(), Axiom.providers()),
@@ -54,7 +54,7 @@ Worker can import them:
 
 ```typescript
 // src/observability.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 export const Traces = Axiom.Dataset("Traces", {
   name: "app-traces",
@@ -129,7 +129,7 @@ Worker produces is exported, flushed as each request completes:
 
 ```typescript
 // src/worker.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 import { Ingest, Logs, Metrics, Traces } from "./observability.ts";
 
 export default Cloudflare.Worker(
@@ -157,8 +157,8 @@ Building the layer binds each dataset's OTLP endpoint and the ingest
 token onto the Worker: the endpoints bind as `plain_text` vars, and
 the token's `Authorization` header — `Redacted` — binds as
 `secret_text`, so the bearer never appears in plaintext Worker
-config. Axiom routes ingest by an `X-Axiom-Dataset` header, which
-the layer composes per signal from each dataset's name.
+config. Axiom routes ingest by an `X-Axiom-Dataset` header (`X-Axiom-Metrics-Dataset`
+for metrics), which the layer composes per signal from each dataset's name.
 
 ## Alternative: let Cloudflare push it
 
@@ -180,7 +180,7 @@ const ingest = yield* Ingest;
 yield* Cloudflare.Workers.ObservabilityDestination("TracesExport", {
   url: traces.otelTracesEndpoint,
   headers: {
-    authorization: Output.map(ingest.token, (t) => `Bearer ${Redacted.value(t)}`),
+    authorization: Output.map(ingest.token, (t) => Redacted.make(`Bearer ${Redacted.value(t)}`)),
     "x-axiom-dataset": traces.name,
   },
   logpushDataset: "opentelemetry-traces",
@@ -192,7 +192,8 @@ One destination exports one dataset — `opentelemetry-traces`,
 (like the name) is fixed at creation; changing either replaces the
 destination. `url`, `headers`, and `enabled` update in place. Note
 the headers are stored in the destination's Cloudflare-side config,
-so the token lives at Cloudflare too.
+so the token lives at Cloudflare too. Keep credential headers
+`Redacted` so they stay masked in plan output.
 
 Cloudflare verifies the endpoint with a preflight `POST` on create
 and on **every** in-place update, so the collector must answer `2xx`

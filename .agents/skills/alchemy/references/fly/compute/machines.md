@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/compute/machines
      upstream: website/src/content/docs/fly/compute/machines.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Machines
 
