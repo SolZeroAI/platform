@@ -10,15 +10,15 @@
     "typecheck": "tsrs --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@alchemy.run/cloudflare": "2.0.0-beta.85",
-    "@cloudflare/containers": "^0.3.7",
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
+    "@cloudflare/containers": "0.3.7",
     "@solzero/api": "workspace:*",
     "@solzero/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.85"
+    "alchemy": "2.0.0-beta.87"
   },
   "devDependencies": {
-    "effect": "4.1.2",
+    "effect": "4.1.4",
     "tsrs": "0.23.0-ts7.1.0-beta",
-    "typescript": "^7.0.2"
+    "typescript": "7.0.2"
   }
 }
