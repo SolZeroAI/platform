@@ -26,6 +26,7 @@ config/s0-prod.config.jsonc
 
 # misc
 .DS_Store
+apps/web/.og-render/
 
 # Alchemy
 .alchemy/

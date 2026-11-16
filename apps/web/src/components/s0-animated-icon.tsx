@@ -2,6 +2,7 @@
 
 import { GemSmoke } from "@paper-design/shaders-react"
 import { S0LogoSvg } from "@/components/s0-logo-svg"
+import { solzeroGemSmokeColors } from "@/components/s0-gem-smoke"
 import { usePaperShaderReady, usePrefersReducedMotion } from "@/hooks/use-paper-shader"
 import { useTheme } from "@/lib/theme"
 
@@ -41,7 +42,7 @@ export function S0AnimatedIcon({ size = 20, className = "" }: S0AnimatedIconProp
         width={size}
         height={size}
         image="/images/solzero-logo.svg"
-        colors={["#0078d7", "#4da6e8", "#ffffff"]}
+        colors={[...solzeroGemSmokeColors]}
         colorBack="rgba(0, 0, 0, 0)"
         colorInner={isDark ? "#000000" : "#FFFFFF"}
         innerDistortion={1}
