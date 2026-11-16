@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/python-workers
      upstream: website/src/content/docs/cloudflare/compute/python-workers.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Python Workers
 
@@ -31,7 +31,7 @@ Point `main` at the Python entry and declare bindings with `env`:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/email
      upstream: website/src/content/docs/cloudflare/email/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Email
 
@@ -16,6 +16,17 @@ Receiving needs a verified destination address (or a Worker); sending
 needs routing enabled on the sender's domain. The category also
 covers sending subdomains and the enterprise Email Security suite,
 both below.
+
+<Fanout
+  item={{ title: "inbound mail", lines: ["to: inbox@example.com", "from: ana@customer.example"] }}
+  group="example.com · Email Routing"
+  routes={[
+    { label: "rule", condition: ["to = inbox@example.com"], target: { label: "you@personal.example", type: "forward" } },
+    { label: "rule", condition: ["to = orders@example.com"], target: { label: "Orders", type: "Worker · email handler" }, match: false },
+    { label: "catch-all", condition: ["anything unmatched"], target: { label: "drop", type: "discard" }, match: false },
+  ]}
+  caption="Rules match each inbound message in priority order and forward it, hand it to a Worker, or drop it. Mail no rule matches falls to the catch-all."
+/>
 
 ## Enable routing on the zone
 
@@ -107,7 +118,7 @@ enforces at send time:
 
 ```typescript
 // src/email.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Email = Cloudflare.Email.SendEmail("Email", {
   allowedSenderAddresses: ["bot@example.com"],
@@ -127,7 +138,7 @@ provide `Email.SendBinding` as the implementation layer:
 
 ```typescript
 // src/notifier.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Email } from "./email.ts";

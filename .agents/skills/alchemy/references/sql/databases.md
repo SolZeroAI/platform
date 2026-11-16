@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/databases
      upstream: website/src/content/docs/sql/databases.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Databases
 
@@ -23,6 +23,7 @@ Choose the database independently from the application runtime where supported. 
 | Prisma Postgres | Postgres | Database connection URL | [Prisma Postgres](/prisma/data/postgres) |
 | Railway Postgres | Postgres | Private service URL or public TCP proxy | [Railway Postgres](/railway/data/postgres) |
 | Railway MySQL | MySQL | Private service URL or public TCP proxy | [Railway MySQL](/railway/data/mysql) |
+| Turso | SQLite (libSQL) | libSQL URL and token | [Turso databases](/turso/databases) · [Connections](/turso/connections) |
 
 [Hyperdrive](/cloudflare/data/hyperdrive) pools connections to a database; it is not a database itself. The [Hetzner guide](/hetzner/data/drizzle-postgres) hosts the application on Hetzner and the database on Neon.
 
@@ -33,6 +34,7 @@ Choose the database independently from the application runtime where supported. 
 | Postgres | [Drizzle.Postgres](/sql/drizzle/postgres) · [Prisma ORM](/sql/prisma/postgres) | [SQL.Postgres](/sql/effect-sql/postgres) |
 | MySQL | [Drizzle.MySQL](/sql/drizzle/mysql) | [SQL.MySQL](/sql/effect-sql/mysql) |
 | D1 | [Drizzle.D1](/sql/drizzle/d1) | [SQL.D1](/sql/effect-sql/d1) |
+| libSQL (Turso) | [Drizzle.LibSQL](/sql/drizzle/libsql) | [SQL.LibSQL](/sql/effect-sql/libsql) |
 | Durable Objects | [Drizzle.DurableObject](/sql/drizzle/migrations#durable-object-migrations) | [Instance SQL](/sql/effect-sql/migrations#durable-object-migrations) |
 
 Prisma ORM v8 requires PostgreSQL 17+. Aurora DSQL has its [own authentication and SQL constraints](/aws/data/drizzle-dsql); Postgres wire compatibility does not establish Prisma support or support for every PostgreSQL feature.

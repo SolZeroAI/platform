@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/secrets
      upstream: website/src/content/docs/environments/secrets.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Secrets & Config
 
@@ -15,8 +15,7 @@ Where those values come from is the stack's business. By default
 that is `.env` plus the shell; a stack can instead read them from
 [Doppler](/environments/doppler) or [Infisical](/environments/infisical),
 and layer several sources in a chosen order.
-See [Secret providers](/environments/secret-providers). This page is
-about what happens after a value is read.
+See [Secret providers](/environments/secret-providers).
 
 ## Bind a secret to your Worker
 
@@ -26,7 +25,7 @@ at deploy time. It is always bound as a secret (`secret_text` on
 Cloudflare) regardless of which `Config` constructor you use.
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Redacted from "effect/Redacted";
@@ -50,6 +49,8 @@ export default Cloudflare.Worker(
 :::tip
 See [Phases](/infrastructure-as-effects/phases) for why Construction and Runtime run separately.
 :::
+
+`Config.Redacted` gives a `Redacted<string>`, which prints as `<redacted>` in logs, errors and traces. Unwrap it with `Redacted.value` where you hand it to a client. Putting it straight into a template literal sends the literal text: `` `Bearer ${apiKey}` `` is `Bearer <redacted>`.
 
 ## Use the value during Construction
 
@@ -147,7 +148,7 @@ form, just declared statically:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Config from "effect/Config";
 
 export const Worker = Cloudflare.Worker("Worker", {

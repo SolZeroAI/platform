@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/vocs
      upstream: website/src/content/docs/fly/frontend/vocs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vocs
 
@@ -21,9 +21,7 @@ The build integration is not bundled with alchemy. Install
 `/vocs/node` from your project at deploy time. It is only used at
 build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 Your Vocs project already needs `vocs` installed.
 
@@ -63,7 +61,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.Vocs("Website", {
   rootDir: "./docs",

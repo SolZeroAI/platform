@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/sign-in-providers/email-password
      upstream: website/src/content/docs/better-auth/sign-in-providers/email-password.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Email and password
 
@@ -12,9 +12,7 @@ Create each named file when it first appears, append snippets only where instruc
 
 ## Add the authentication dependencies
 
-```sh
-bun add @alchemy.run/better-auth better-auth@1.7.5 kysely
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@1.7.5 kysely" />
 
 Keep `@alchemy.run/better-auth` aligned with your existing Alchemy release.
 
@@ -158,7 +156,7 @@ The service retains the inferred Better Auth API while leaving its database and 
 Create `src/database.ts`:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const AuthDb = Cloudflare.D1.Database("AuthDb");
 ```
@@ -198,7 +196,7 @@ Create `src/worker.ts`:
 
 ```typescript
 import { CloudflareD1 } from "@alchemy.run/better-auth/CloudflareD1";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
@@ -228,7 +226,7 @@ Use this `alchemy.run.ts` for the walkthrough, or add `AuthWorker` to your exist
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthWorker from "./src/worker.ts";
 
@@ -514,9 +512,7 @@ This produces the `/client.js` referenced by the HTML page. Re-run it whenever y
 
 ## Start local development
 
-```sh
-bunx alchemy dev --stage email-guide --env-file .env.local
-```
+<PackageManagers run="alchemy dev --stage email-guide --env-file .env.local" />
 
 Open the URL Alchemy prints, register with an inbox you control, and keep the server running while following verification or recovery links. No fixed port or OAuth application is required; if the origin changes, request fresh messages instead of reusing old links.
 
@@ -542,8 +538,6 @@ Replace the origin with the actual HTTPS Worker origin, without a trailing slash
 
 After bundling the browser module, deploy from the project root:
 
-```sh
-bunx alchemy deploy --stage production --env-file .env.production
-```
+<PackageManagers run="alchemy deploy --stage production --env-file .env.production" />
 
 Keep production state and credentials separate from development, and test delivery against the deployed origin. This walkthrough serves the page and API together; a separate browser origin requires explicit trusted origins, credentialed CORS, and compatible cookie settings—never disable origin or CSRF checks to work around a mismatch.

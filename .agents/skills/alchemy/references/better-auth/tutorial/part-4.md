@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/tutorial/part-4
      upstream: website/src/content/docs/better-auth/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Protect API endpoints
 

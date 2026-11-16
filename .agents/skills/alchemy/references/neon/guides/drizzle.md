@@ -1,12 +1,12 @@
 <!-- source: https://alchemy.run/neon/guides/drizzle
      upstream: website/src/content/docs/neon/guides/drizzle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Drizzle ORM with Neon
 
 > Configure Neon projects, branches, committed Drizzle migrations, and direct or pooled connections.
 
-Use the portable [Drizzle Postgres client](/sql/drizzle/postgres) with Neon; this page configures the database and its connections. For Worker deployment, follow [Add Drizzle ORM](/cloudflare/data/drizzle).
+Use the portable [Drizzle Postgres client](/sql/drizzle/postgres) with Neon. For Worker deployment, follow [Add Drizzle ORM](/cloudflare/data/drizzle).
 
 ## Configure migration generation
 
@@ -25,14 +25,12 @@ Use a `pg-core` schema as shown in [Drizzle Postgres](/sql/drizzle/postgres#defi
 
 ## Generate and review migrations
 
-```sh
-bunx drizzle-kit generate
+<PackageManagers script={`{run} drizzle-kit generate
 git diff -- src/schema.ts migrations
 git status --short
 git add src/schema.ts drizzle.config.ts migrations
 git diff --cached
-git commit -m "Add database migration"
-```
+git commit -m "Add database migration"`} />
 
 Run this when the schema changes, then review and commit the schema, generated SQL, and snapshots together before deploying. The optional [`Drizzle.Schema` resource](/providers/drizzle/schema) is a separate integration, not required for this workflow.
 
@@ -40,7 +38,7 @@ Run this when the schema changes, then review and commit the schema, generated S
 
 ```typescript
 // src/Db.ts
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export const NeonDb = Effect.gen(function* () {
@@ -59,16 +57,14 @@ With `Neon.providers()` registered in your Stack, `Neon.Branch` applies the comm
 
 ## Iterate
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Deploy the committed files; this configuration does not generate SQL during deployment. If you already use `drizzle-kit migrate`, keep that application workflow unless you deliberately choose Alchemy-managed migrations; see [migration ownership](/sql/drizzle/migrations).
 
 ## Connect at runtime
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Hyperdrive = Effect.gen(function* () {
   const { branch } = yield* NeonDb;

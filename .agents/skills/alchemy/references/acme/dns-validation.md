@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/dns-validation
      upstream: website/src/content/docs/acme/dns-validation.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # DNS validation
 
@@ -19,15 +19,15 @@ Inside the stack from [Getting started](/acme/getting-started):
 const certificate = yield* ACME.Certificate("Site", {
   account,
   identifiers: ["example.com"],
-  solver: Cloudflare.DNS.AcmeSolver({
+  solver: Cloudflare.ACME.ZoneSolver({
     zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
   }),
 });
 ```
 
-`AcmeSolver` returns serializable data containing the solver type and zone ID.
-Include both `ACME.providers()` and `Cloudflare.providers()` in the stack. The
-Cloudflare credentials must allow listing, creating, and deleting TXT records in
+`ZoneSolver` returns serializable data containing the solver type and zone ID.
+`Cloudflare.providers()` runs it with the profile's Cloudflare credentials, which
+must allow listing, creating, and deleting TXT records in
 that zone. The domain must already be delegated to that zone's nameservers.
 
 ## Use a managed zone instead
@@ -39,10 +39,10 @@ If your stack already owns a Cloudflare `Zone` resource, pass the resolved zone:
  const certificate = yield* ACME.Certificate("Site", {
    account,
    identifiers: ["example.com"],
--  solver: Cloudflare.DNS.AcmeSolver({
+-  solver: Cloudflare.ACME.ZoneSolver({
 -    zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
 -  }),
-+  solver: Cloudflare.DNS.AcmeSolver(zone),
++  solver: Cloudflare.ACME.ZoneSolver(zone),
  });
 ```
 
@@ -80,7 +80,7 @@ possible.
  const certificate = yield* ACME.Certificate("Site", {
    account,
    identifiers: ["example.com", "*.example.com"],
-   solver: Cloudflare.DNS.AcmeSolver(zone),
+   solver: Cloudflare.ACME.ZoneSolver(zone),
 +  propagation: {
 +    delay: "60 seconds",
 +    timeout: "90 seconds",
@@ -120,11 +120,11 @@ Inside a Worker's initialization Effect:
 
 ```typescript
 const dns = yield* Cloudflare.DNS.WriteDns(Zone);
-const solver = Cloudflare.DNS.acmeDnsSolver(dns);
+const solver = Cloudflare.ACME.zoneSolver(dns);
 ```
 
-The runtime helper is **`acmeDnsSolver`**, while the deploy-time helper is
-**`AcmeSolver`**. Provide `Cloudflare.DNS.WriteDnsHttp` on the host Effect. Its
+The runtime helper is **`zoneSolver`**, while the deploy-time helper is
+**`ZoneSolver`**. Provide `Cloudflare.DNS.WriteDnsHttp` on the host Effect. Its
 client uses a zone-scoped token created at deployment, rather than exposing the
 deployer's entire credential set to the application.
 
@@ -149,7 +149,7 @@ hosting and scheduling implications.
 A custom solver adapts an existing DNS client's idempotent operations:
 
 ```typescript
-import type * as ACME from "alchemy/ACME";
+import type * as ACME from "@alchemy.run/acme";
 import type * as Effect from "effect/Effect";
 
 export const makeSolver = <R>(dns: {
@@ -178,7 +178,7 @@ For an adapter whose client has no remaining Effect requirements, register a
 factory with this shape:
 
 ```typescript
-import * as ACME from "alchemy/ACME";
+import * as ACME from "@alchemy.run/acme";
 import type * as Effect from "effect/Effect";
 
 export const registerExampleDns = (

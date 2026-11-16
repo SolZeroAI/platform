@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/ai/ai-search
      upstream: website/src/content/docs/cloudflare/ai/ai-search.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Add AI Search (AutoRAG)
 
@@ -23,7 +23,7 @@ Create `src/Docs.ts` with a bucket definition.
 
 ```typescript
 // src/Docs.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Docs = Cloudflare.R2.Bucket("Docs", {});
 ```
@@ -38,7 +38,7 @@ field selects R2 as the data source.
 
 ```typescript
 // src/Search.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Docs } from "./Docs.ts";
 
 export const Search = Cloudflare.AI.Search("Search", {
@@ -195,7 +195,7 @@ Call it during the Worker's Construction phase.
 
 ```diff lang="typescript"
 // src/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { Search } from "./Search.ts";
 
@@ -277,16 +277,14 @@ metadata — no generated answer, because nothing was generated.
 
 Deploy, upload a document to the bucket, and ask a question.
 
-```sh
-bun alchemy deploy
+<PackageManagers script={`{run} alchemy deploy
 
 # upload a doc into the indexed bucket (via wrangler)
-echo "Alchemy deploys with 'bun alchemy deploy'." > faq.txt
-bunx wrangler r2 object put "$(bun alchemy stack output bucket)/faq.txt" --file faq.txt --remote
+echo "Alchemy deploys with '{run} alchemy deploy'." > faq.txt
+{dlx} wrangler r2 object put "$({run} alchemy stack output bucket)/faq.txt" --file faq.txt --remote
 
 # ask over it
-curl "$(bun alchemy stack output url)/ask?q=How%20do%20I%20deploy%3F"
-```
+curl "$({run} alchemy stack output url)/ask?q=How%20do%20I%20deploy%3F"`} />
 
 You can also drag files straight into the bucket from the Cloudflare
 dashboard → **R2** → your bucket — anything in there gets indexed.

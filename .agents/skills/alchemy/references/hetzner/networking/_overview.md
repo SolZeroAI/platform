@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/networking
      upstream: website/src/content/docs/hetzner/networking/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Networking
 
@@ -20,7 +20,7 @@ subnets per network zone (`eu-central`, `us-east`, `us-west`,
 `ap-southeast`). Attach Servers via their `networks` prop:
 
 ```typescript
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Net = Hetzner.Network("net", {
   ipRange: "10.0.0.0/16",

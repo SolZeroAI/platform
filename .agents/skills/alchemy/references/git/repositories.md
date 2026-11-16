@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/repositories
      upstream: website/src/content/docs/git/repositories.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Repositories
 
@@ -10,7 +10,7 @@ Repositories live at `/api/v1/repos`, declared as an Effect `HttpApi`.
 One schema types the server, the client, and your tests:
 
 ```typescript
-import { GitApi } from "alchemy/Git";
+import { GitApi } from "@alchemy.run/git";
 import * as HttpApiClient from "effect/http-api/HttpApiClient";
 
 const client = yield* HttpApiClient.make(GitApi, { baseUrl: host });

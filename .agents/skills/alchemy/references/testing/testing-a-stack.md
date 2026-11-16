@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/testing/testing-a-stack
      upstream: website/src/content/docs/testing/testing-a-stack.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Testing a Stack
 
@@ -14,10 +14,10 @@ Configure Providers and state once per file — `Test.make` returns everything t
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
-import * as Neon from "alchemy/Neon";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
+import * as Neon from "@alchemy.run/neon";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -33,7 +33,7 @@ const { test, beforeAll, afterAll, deploy, destroy } = Test.make({
 });
 ```
 
-Bun vs Vitest is a two-line import swap — see [Bun vs Vitest](/testing/test-harness#bun-vs-vitest).
+Switching to `alchemy-test` or Vitest is a two-line import swap — see [Runners](/testing/test-harness#runners).
 
 ## Deploy once with beforeAll
 
@@ -66,9 +66,9 @@ const stack = beforeAll(deploy(Stack), { timeout: 600_000 });
 
 Run the suite with your runner:
 
-```sh
-bun test test/integ.test.ts
-```
+<PackageManagers script={`bun test test/integ.test.ts            # @alchemy.run/test/Bun
+{run} alchemy-test test/integ.test.ts   # @alchemy.run/test/Alchemy
+{run} vitest run test/integ.test.ts      # @alchemy.run/test/Vitest`} />
 
 The first run deploys; re-runs diff and skip unchanged Resources, and tests default to the isolated `test_$USER` [stage](/environments/stages) so they never clobber your `live_$USER` / `dev_$USER` deployments.
 
@@ -138,6 +138,8 @@ const response = yield* HttpClient.get(`${url}/health`).pipe(
   Effect.retry({ schedule: Schedule.exponential("500 millis"), times: 10 }),
 );
 ```
+
+A Cloudflare Durable Object that stayed busy through a redeploy can answer with the old code for up to 5 minutes. Deploy test stages with `codeUpdateStrategy: { mode: "immediate" }`, or address a new object in each test. See [Tests can see the old code](/cloudflare/compute/code-updates#tests-can-see-the-old-code).
 
 ## Poll async effects
 

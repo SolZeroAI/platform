@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/project-structure/monorepo-multi-stack
      upstream: website/src/content/docs/project-structure/monorepo-multi-stack.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Multiple Stacks
 
@@ -55,7 +55,7 @@ reference it — so TypeScript enforces the contract in both directions.
 
 ```typescript
 // backend/alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Service from "./src/Service.ts";
 import { Backend } from "./src/Stack.ts";
@@ -84,7 +84,7 @@ output.
 ```typescript
 // frontend/alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Backend } from "backend";
 import * as Effect from "effect/Effect";
 

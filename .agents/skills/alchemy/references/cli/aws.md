@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cli/aws
      upstream: website/src/content/docs/cli/aws.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # aws
 
@@ -35,13 +35,15 @@ Re-running is a no-op:
 | Option                 | Description                                                                      |
 | ---------------------- | -------------------------------------------------------------------------------- |
 | `--aws-profile <name>` | AWS CLI/SSO profile to use for credentials (default: `default`)                  |
-| `--region <region>`    | AWS region to bootstrap. Defaults to the SSO profile's region, then `us-east-1`. |
+| `--region <region>`    | AWS region to bootstrap. Defaults to the AWS CLI profile's region, then `us-east-1`. |
 | `--env-file <path>`    | Load environment variables from a file                                           |
 
-Bootstrap requires an AWS **SSO profile** with `sso_account_id` set —
-it fails with a clear error if the profile is missing one.
+Bootstrap requires an AWS CLI profile that is either **SSO**
+(`sso_account_id`) or **console login** (`login_session` from
+`aws login`). It fails with a clear error if the profile is
+neither.
 
-Logs are written to `.alchemy/log/bootstrap.txt`.
+Logs are written to the run log under `~/.alchemy/logs` (see [Log output](/cli#log-output)).
 
 ## `provider aws teardown`
 

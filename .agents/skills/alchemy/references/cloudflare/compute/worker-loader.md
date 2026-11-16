@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/worker-loader
      upstream: website/src/content/docs/cloudflare/compute/worker-loader.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Worker Loader
 
@@ -20,7 +20,7 @@ returns the runtime handle in one step. There is no layer to provide:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 

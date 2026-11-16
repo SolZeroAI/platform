@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/frontend/vite
      upstream: website/src/content/docs/hetzner/frontend/vite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vite
 
@@ -35,9 +35,7 @@ The build integration is not bundled with alchemy. Install
 and `/vite/node` exports from your project at deploy time. It is
 only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -68,7 +66,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Website = Hetzner.Website.Vite("Website");
 ```

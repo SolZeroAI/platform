@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/frontend/static-site
      upstream: website/src/content/docs/neon/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static Site
 
@@ -30,7 +30,7 @@ pnpm add -D @alchemy.run/frontend-frameworks @vercel/nft
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

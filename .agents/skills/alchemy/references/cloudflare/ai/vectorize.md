@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/ai/vectorize
      upstream: website/src/content/docs/cloudflare/ai/vectorize.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vector search with Vectorize
 
@@ -12,6 +12,19 @@ holds the vectors, an optional `Vectorize.MetadataIndex` that makes
 a metadata property filterable, and a `Vectorize.SearchIndex`
 binding that gives a Worker a typed client to insert and query.
 
+<Records
+  title="Docs · Vectorize index · 768 dimensions · cosine"
+  columns={["id", "values", "metadata"]}
+  rows={[
+    ["doc-1#0", "[0.12, -0.08, 0.31, …]", '{ title: "Billing" }'],
+    ["doc-1#1", "[0.09, -0.11, 0.27, …]", '{ title: "Billing" }'],
+    ["doc-2#0", "[-0.44, 0.20, 0.03, …]", '{ title: "Deploys" }'],
+    ["doc-3#0", "[0.10, -0.05, 0.29, …]", '{ title: "Refunds" }'],
+  ]}
+  query={{ label: "query(embed(question), topK: 2)", rows: [3, 0] }}
+  caption="Each vector is the embedding of a piece of text. A query returns the vectors closest to the question's embedding, with their ids and metadata."
+/>
+
 ## Create an index
 
 Declare the index once at module scope so both the stack and the
@@ -19,7 +32,7 @@ Worker can reference it:
 
 ```typescript
 // src/embeddings.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Embeddings = Cloudflare.Vectorize.Index("Embeddings", {
   dimensions: 768,
@@ -68,7 +81,7 @@ to an Effect-native client at runtime:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -160,7 +173,7 @@ that binds them:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Embeddings } from "./src/embeddings.ts";
 import Worker from "./src/worker.ts";
@@ -184,9 +197,7 @@ export default Alchemy.Stack(
 );
 ```
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ## Where next
 

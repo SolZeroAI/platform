@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/stripe/guides/connect
      upstream: website/src/content/docs/stripe/guides/connect.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Onboard merchants with Connect
 
@@ -28,8 +28,8 @@ platform needs:
 4. **Gate on it.** Your app checks your stored `charges_enabled` before
    it lets the merchant sell.
 
-This guide walks through `examples/stripe-connect`, which implements
-all four on one Worker with a D1 table. Every snippet is a piece of
+Take `examples/stripe-connect`, which implements all four on one
+Worker with a D1 table. Every snippet is a piece of
 [`src/Api.ts`](https://github.com/alchemy-run/alchemy/blob/main/examples/stripe-connect/src/Api.ts);
 the full file is at the end.
 
@@ -39,6 +39,21 @@ account. Do that once at
 [dashboard.stripe.com/connect](https://dashboard.stripe.com/test/connect)
 — there is no API for it.
 :::
+
+<StateMachine
+  states={[
+    { id: "created", label: "created", type: "connected account", col: 0, row: 0, start: true },
+    { id: "onboarding", label: "onboarding", type: "on Stripe's form", col: 1, row: 0, tone: "warn" },
+    { id: "submitted", label: "details submitted", type: "Stripe verifying", col: 2, row: 0 },
+    { id: "enabled", label: "charges_enabled", type: "can take payments", col: 2, row: 1, tone: "accent", end: true },
+  ]}
+  transitions={[
+    { from: "created", to: "onboarding", label: "onboarding link" },
+    { from: "onboarding", to: "submitted", label: "merchant finishes" },
+    { from: "submitted", to: "enabled", label: "account.updated" },
+  ]}
+  caption="Your platform never sets these states. Stripe moves the account along and tells you with account.updated, and your app gates payments on the charges_enabled it stored."
+/>
 
 ## The merchant table
 
@@ -61,7 +76,7 @@ CREATE TABLE merchants (
 
 ```typescript
 // src/database.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Database = Cloudflare.D1.Database("Database", {
   migrations: "./migrations",
@@ -265,10 +280,8 @@ the onboarding path.
 
 ## Try it
 
-```sh
-cd examples/stripe-connect
-bun alchemy deploy
-```
+<PackageManagers script={`cd examples/stripe-connect
+{run} alchemy deploy`} />
 
 ```sh
 curl -X POST "$URL/merchants" -H 'content-type: application/json' \
@@ -308,9 +321,10 @@ same shape as above.
 <summary><code>examples/stripe-connect/src/Api.ts</code></summary>
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Stripe from "alchemy/Stripe";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Stripe from "@alchemy.run/stripe";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Database } from "./database.ts";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/compute/functions
      upstream: website/src/content/docs/railway/compute/functions.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Functions, templates & VMs
 
@@ -24,7 +24,7 @@ is the program that runs in it.
 
 ```typescript
 // src/ping.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Site } from "./project.ts";

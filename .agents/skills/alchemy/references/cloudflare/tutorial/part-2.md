@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/tutorial/part-2
      upstream: website/src/content/docs/cloudflare/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Add a Worker
 
@@ -18,7 +18,7 @@ expressed as an Effect.
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -55,7 +55,7 @@ Create `src/bucket.ts`:
 
 ```typescript
 // src/bucket.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Bucket = Cloudflare.R2.Bucket("Bucket");
 ```
@@ -65,7 +65,7 @@ Update `alchemy.run.ts` to import it instead of declaring it inline:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { Bucket } from "./src/bucket.ts";
 
@@ -95,7 +95,7 @@ Stack. You can safely import them from multiple files.
 Now the Worker can import `Bucket` and bind it in the Construction phase:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 +import { Bucket } from "./bucket.ts";
@@ -125,7 +125,7 @@ requires the `Cloudflare.R2.ReadWriteBucketBinding` service. Fix it by piping
 the outer Effect through `Cloudflare.R2.ReadWriteBucketBinding`:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Bucket } from "./bucket.ts";
@@ -156,7 +156,7 @@ objects in the bucket. Add `HttpServerRequest` to access the incoming
 request:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -197,7 +197,7 @@ Pipe the fetch Effect through `Effect.catchTag` to convert `R2Error`
 into a 500 response:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -244,7 +244,7 @@ Complete the fetch handler by reading objects from the bucket when the
 request isn't a PUT:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -302,7 +302,7 @@ output:
 
 ```diff lang="typescript"
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Bucket } from "./src/bucket.ts";
 +import Worker from "./src/worker.ts";
@@ -329,9 +329,7 @@ export default Alchemy.Stack(
 
 Deploy again. Alchemy detects the new Worker and the unchanged Bucket:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

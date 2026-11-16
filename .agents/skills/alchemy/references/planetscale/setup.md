@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/setup
      upstream: website/src/content/docs/planetscale/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -8,11 +8,15 @@
 
 Sign up at [planetscale.com](https://planetscale.com) and create a
 [service token](https://planetscale.com/docs/concepts/service-tokens).
-Register the provider next to your cloud's:
+Install `@alchemy.run/planetscale`:
+
+<PackageManagers add="@alchemy.run/planetscale" />
+
+Then register the provider next to your cloud's:
 
 ```typescript
 // alchemy.run.ts
-import * as Planetscale from "alchemy/Planetscale";
+import * as Planetscale from "@alchemy.run/planetscale";
 
 providers: Layer.mergeAll(Cloudflare.providers(), Planetscale.providers()),
 ```

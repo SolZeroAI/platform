@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/frontend/vite-spa
      upstream: website/src/content/docs/aws/frontend/vite-spa.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React SPA
 
@@ -22,9 +22,7 @@ The build integration is not bundled with alchemy. Install
 `/vite/aws` exports from your project at deploy time. It is only used
 at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Scaffold the app
 
@@ -64,7 +62,7 @@ Stack). `rootDir` points at the project directory — the one holding
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.Vite("Website", {
   rootDir: "./web",
@@ -96,9 +94,7 @@ export default Alchemy.Stack(
 );
 ```
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Alchemy runs `vite build` in `rootDir`, uploads `dist/` to a private
 S3 bucket, and serves it through CloudFront. `site.url` is the
@@ -113,9 +109,7 @@ and a `200` — the client router then handles the path.
 
 Add React Router and route on the client:
 
-```sh
-bun add react-router-dom
-```
+<PackageManagers add={routerDep} />
 
 ```tsx
 // web/src/main.tsx
@@ -245,9 +239,7 @@ pass `lockfile: true` to keep rebuilding when dependencies change.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Vite's own dev server — native HMR, instant module
 updates — instead of deploying. `site.url` is the local address and

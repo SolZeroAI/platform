@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/apis/schemaless
      upstream: website/src/content/docs/apis/schemaless.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Schemaless RPC
 
@@ -35,9 +35,7 @@ export default class Greeter extends Cloudflare.Worker<Greeter>()(
 ```
 
 The host class here happens to be `Cloudflare.Worker`, but the host
-is incidental — the pattern is identical on every runtime. This page
-covers what members are allowed, how the typed client arises, what
-crosses the wire, and where the limits are.
+is incidental — the pattern is identical on every runtime.
 
 ## What a member may be
 

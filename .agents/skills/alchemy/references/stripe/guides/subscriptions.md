@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/stripe/guides/subscriptions
      upstream: website/src/content/docs/stripe/guides/subscriptions.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Sell a subscription
 
@@ -20,10 +20,26 @@ it. The shape every SaaS lands on is:
    cancel gets sent to Stripe's hosted portal. You don't build those
    screens.
 
-This guide walks through `examples/stripe-billing`, which does exactly
-that on one Worker. Every snippet below is a piece of
+Take `examples/stripe-billing`, which does exactly that on one
+Worker. Every snippet below is a piece of
 [`src/Api.ts`](https://github.com/alchemy-run/alchemy/blob/main/examples/stripe-billing/src/Api.ts);
 the whole file is at the end.
+
+<StateMachine
+  states={[
+    { id: "none", label: "none", col: 0, row: 0, start: true },
+    { id: "active", label: "active", type: "or trialing", col: 1, row: 0, tone: "accent" },
+    { id: "pastdue", label: "past_due", type: "payment failed", col: 1, row: 1, tone: "warn" },
+    { id: "canceled", label: "canceled", col: 2, row: 0, end: true },
+  ]}
+  transitions={[
+    { from: "none", to: "active", label: "checkout" },
+    { from: "active", to: "pastdue", label: "payment fails", bend: 0.6 },
+    { from: "pastdue", to: "active", label: "paid", bend: 0.6 },
+    { from: "active", to: "canceled", label: "deleted" },
+  ]}
+  caption="Your app never decides these states. Stripe moves the subscription and tells you with a webhook: checkout.session.completed, invoice.payment_failed, customer.subscription.updated or .deleted. You write the new status to your own store, which the rest of the app reads."
+/>
 
 ## The catalog lives on the Worker
 
@@ -283,10 +299,8 @@ one `Effect.provide([...])`:
 
 ## Try it
 
-```sh
-cd examples/stripe-billing
-bun alchemy deploy
-```
+<PackageManagers script={`cd examples/stripe-billing
+{run} alchemy deploy`} />
 
 ```sh
 curl -X POST "$URL/checkout" -H 'content-type: application/json' \
@@ -316,9 +330,10 @@ reaches `active` and then `canceled`.
 <summary><code>examples/stripe-billing/src/Api.ts</code></summary>
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Stripe from "alchemy/Stripe";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Stripe from "@alchemy.run/stripe";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

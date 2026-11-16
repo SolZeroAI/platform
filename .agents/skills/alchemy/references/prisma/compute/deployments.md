@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/compute/deployments
      upstream: website/src/content/docs/prisma/compute/deployments.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Deployments
 
@@ -12,6 +12,24 @@ fail-closed sequence: upload the artifact, start the candidate, verify
 its preview health endpoint, promote it, confirm the app reports it as
 latest, verify the stable endpoint — and only then touch the previous
 deployment.
+
+<Timeline
+  end={10}
+  lanes={[
+    { id: "old", label: "previous", type: "stable deployment" },
+    { id: "new", label: "candidate", type: "new generation" },
+  ]}
+  bars={[
+    { lane: "old", start: 0, end: 7.6, label: "serving the stable endpoint" },
+    { lane: "old", start: 7.6, end: 9, label: "removed", tone: "muted" },
+    { lane: "new", start: 0.6, end: 2, label: "upload", tone: "default" },
+    { lane: "new", start: 2, end: 3.2, label: "start", tone: "warn" },
+    { lane: "new", start: 3.2, end: 5, label: "health", tone: "default" },
+    { lane: "new", start: 5, end: 10, label: "promoted · serving" },
+  ]}
+  marks={[{ at: 5, label: "promote" }, { at: 7.6, label: "stable endpoint verified" }]}
+  caption="The previous deployment keeps serving until the candidate is healthy, promoted, and verified on the stable endpoint. Only then is the old one touched."
+/>
 
 ## Health checks and promotion
 

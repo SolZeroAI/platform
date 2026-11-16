@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/tutorial/part-2
      upstream: website/src/content/docs/hetzner/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Deploy a Service
 
@@ -21,7 +21,7 @@ Part 1 into it:
 
 ```typescript
 // src/server.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Key = Hetzner.SshKey("laptop", {
   publicKey: "ssh-ed25519 AAAA... you@laptop",
@@ -49,7 +49,7 @@ Import the Server and yield it from the Stack:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 +import { Box } from "./src/server.ts";
 
@@ -91,7 +91,7 @@ Create `src/api.ts` with the smallest possible declaration:
 
 ```typescript
 // src/api.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 import { Box } from "./server.ts";
 
@@ -119,7 +119,7 @@ wired to an HTTP server listening on the Service's port:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Box } from "./server.ts";
@@ -193,7 +193,7 @@ Stack's Effect is what registers the resource and starts the deploy:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 +import Api from "./src/api.ts";
 import { Box } from "./src/server.ts";
@@ -222,9 +222,7 @@ unit name, the port, and the public `url` we surface from the Stack.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create

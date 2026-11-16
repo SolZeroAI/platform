@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/branch-from-shared-database
      upstream: website/src/content/docs/cloudflare/data/branch-from-shared-database.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Branch from a shared database
 
@@ -31,9 +31,9 @@ unconditionally creates its own `Neon.Project`:
 
 ```typescript
 // src/Db.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export const NeonDb = Effect.gen(function* () {
@@ -73,9 +73,9 @@ to every stack effect:
 
 ```diff lang="typescript"
 +import * as Alchemy from "alchemy";
- import * as Cloudflare from "alchemy/Cloudflare";
- import * as Drizzle from "alchemy/Drizzle";
- import * as Neon from "alchemy/Neon";
+ import * as Cloudflare from "@alchemy.run/cloudflare";
+ import * as Drizzle from "@alchemy.run/drizzle";
+ import * as Neon from "@alchemy.run/neon";
  import * as Effect from "effect/Effect";
 
  export const NeonDb = Effect.gen(function* () {
@@ -87,7 +87,7 @@ to every stack effect:
    });
 ```
 
-`stage` is whatever was passed to `bun alchemy deploy --stage <name>`
+`stage` is whatever was passed to `alchemy deploy --stage <name>`
 — `dev_sam`, `staging`, `prod`, or `pr-147`. We'll branch on
 `stage.startsWith("pr-")` to decide whether to create a project or
 reference one.
@@ -146,9 +146,9 @@ without paying for a whole Postgres cluster.
 ```typescript
 // src/Db.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export const NeonDb = Effect.gen(function* () {
@@ -186,9 +186,7 @@ export const Hyperdrive = Effect.gen(function* () {
 PR stages can only reference what `staging` has already deployed,
 so `staging` has to go first:
 
-```sh
-bun alchemy deploy --stage staging
-```
+<PackageManagers run="alchemy deploy --stage staging" />
 
 This runs the full path — creates `app-db` (the project),
 `app-branch` against it, and `app-hyperdrive` in front. The state
@@ -199,9 +197,7 @@ which is what PR stages will read against.
 
 Now deploy a PR-preview stage. The same code, different stage flag:
 
-```sh
-bun alchemy deploy --stage pr-147
-```
+<PackageManagers run="alchemy deploy --stage pr-147" />
 
 The plan is noticeably shorter:
 
@@ -225,9 +221,7 @@ under `{ stack, stage: "staging", id: "app-db" }` to read. Deploy
 
 ## Tear it down
 
-```sh
-bun alchemy destroy --stage pr-147
-```
+<PackageManagers run="alchemy destroy --stage pr-147" />
 
 Destroy removes the per-stage resources — the branch, the
 Hyperdrive, the Worker — but leaves the referenced project

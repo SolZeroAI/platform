@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/frontend/octane
      upstream: website/src/content/docs/hetzner/frontend/octane.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Octane
 
@@ -24,9 +24,7 @@ The build integration is not bundled with alchemy. Install
 `/octane` and `/octane/node` exports from your project at deploy
 time. It is only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Octane
 
@@ -69,7 +67,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Website = Hetzner.Website.Octane("Website");
 ```
@@ -162,9 +160,7 @@ the unit health check.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Octane's own Vite dev server — the plugin's
 in-process SSR middleware serves rendering, server routes, and RPC

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/infisical
      upstream: website/src/content/docs/environments/infisical.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Infisical
 
@@ -12,11 +12,10 @@ downloads one folder, with
 [secret references](https://infisical.com/docs/documentation/platform/secret-reference)
 expanded on the server, into the stack's
 [secret providers](/environments/secret-providers). It works exactly
-like [Doppler](/environments/doppler); this page covers only what
-differs.
+like [Doppler](/environments/doppler), and only its setup differs. It ships in the `@alchemy.run/infisical` package.
 
 ```typescript
-import * as Infisical from "alchemy/Infisical";
+import * as Infisical from "@alchemy.run/infisical";
 
 secrets: [
   Infisical.Secrets(({ stage }) => ({
@@ -32,7 +31,10 @@ Infisical only resolves slugs for machine identities. `environment`
 is the environment slug. Optional `path`, `recursive`, and
 `includeImports` narrow or widen what is read; imports are on by
 default and a secret defined directly in the folder wins over an
-imported one.
+imported one. With a user token, your
+[personal overrides](https://infisical.com/docs/documentation/platform/secrets-mgmt/project#personal-overrides)
+replace the shared values, as with `infisical run`. A machine identity
+has none, so it reads the shared values.
 
 ## Connect your account
 

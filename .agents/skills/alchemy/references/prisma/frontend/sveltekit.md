@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/sveltekit
      upstream: website/src/content/docs/prisma/frontend/sveltekit.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SvelteKit
 
@@ -17,10 +17,7 @@ container.
 Install the build-time integration; the resource loads its `/sveltekit`
 and `/sveltekit/node` exports from your project:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure SvelteKit
 
@@ -34,7 +31,7 @@ with a warning.
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.SvelteKit("Website");
 ```
@@ -100,7 +97,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit({ alias: { $lib: "src/lib" } })],
+  plugins: [tailwindcss(), sveltekit({ prerender: { handleHttpError: "warn" } })],
 });
 ```
 
@@ -116,7 +113,7 @@ Alchemy owns the adapter in both cases.
 
 ## Local dev
 
-`bun alchemy dev` starts SvelteKit's own Vite server with HMR.
+`alchemy dev` starts SvelteKit's own Vite server with HMR.
 `site.url` is local, and the Website creates no Prisma resources.
 `.pipe(Alchemy.remote())` opts into live deployment during dev.
 
@@ -128,8 +125,7 @@ const site = yield* Prisma.Website.SvelteKit("Web", {
 });
 ```
 
-This creates `Prisma.CustomDomain`; the app must be on the project's
-current default branch. Configure its returned DNS records yourself
+This creates `Prisma.CustomDomain`. Configure its returned DNS records yourself
 and check status before cutover. See
 [Custom domains](/prisma/frontend/websites#custom-domains).
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/tutorial/part-1
      upstream: website/src/content/docs/fly/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Service
 
@@ -15,7 +15,7 @@ image, and pushes it to `registry.fly.io`. No Dockerfile. No
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A Fly organization and an API token — see [Setup](/fly/setup) if
   you haven't created those yet
 - Docker running locally. Alchemy builds `linux/amd64` images and
@@ -31,17 +31,13 @@ down when you're done.
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install dependencies
 
-Install <code>alchemy@latest</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/fly`, and `effect`:
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -111,7 +107,7 @@ Create `src/api.ts` with the smallest possible declaration:
 
 ```typescript
 // src/api.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 
 export default class Api extends Fly.Service<Api>()(
@@ -137,7 +133,7 @@ wired to an HTTP server listening on the Service's port:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -203,7 +199,7 @@ error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Fly from "alchemy/Fly";
++import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 -import * as Layer from "effect/Layer";
 import Api from "./src/api.ts";
@@ -249,9 +245,7 @@ and `url` is `https://{appName}.fly.dev`.
 
 Run `alchemy deploy`:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The first time you deploy, Alchemy prompts for Fly credentials —
 paste the API token you generated in [Setup](/fly/setup). The token

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/frontend/vue
      upstream: website/src/content/docs/aws/frontend/vue.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vue
 
@@ -20,9 +20,7 @@ The build integration is not bundled with alchemy. Install
 `/vite/aws` exports from your project at deploy time. It is only used at
 build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Scaffold the app
 
@@ -61,7 +59,7 @@ name:
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.Vite("Vue");
 ```
@@ -88,9 +86,7 @@ export default Alchemy.Stack(
 );
 ```
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Alchemy runs `vite build`, uploads `dist` to S3, and serves it from
 CloudFront at the returned `url`. Input files are content-hashed, so a
@@ -104,9 +100,7 @@ deploy that changes nothing skips the build and the upload.
 so the router resolves the route on the client — that is the `spa`
 default and there is nothing to configure.
 
-```sh
-bun add vue-router
-```
+<PackageManagers add={routerDep} />
 
 ```typescript
 // src/main.ts
@@ -210,9 +204,7 @@ same S3 + CloudFront stack.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Vue's own Vite dev server with native HMR instead of
 deploying; `site.url` is the local address and no AWS resources are

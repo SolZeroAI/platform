@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/frontend/vite
      upstream: website/src/content/docs/neon/frontend/vite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vite
 
@@ -34,7 +34,7 @@ website's `env`.
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

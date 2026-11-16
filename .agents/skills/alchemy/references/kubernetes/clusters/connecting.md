@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/clusters/connecting
      upstream: website/src/content/docs/kubernetes/clusters/connecting.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Connecting to clusters
 
@@ -34,7 +34,7 @@ even after you delete the code that declared it.
 `Kubernetes.KubeConfig` authenticates exactly like `kubectl`:
 
 ```typescript
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 
 const cluster = Kubernetes.KubeConfig({ context: "prod-east" });
 

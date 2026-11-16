@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/data/branching
      upstream: website/src/content/docs/neon/data/branching.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Branching
 
@@ -10,6 +10,22 @@ A `Neon.Branch` is a copy-on-write fork of a parent branch. It shares
 storage with the parent until it starts diverging, so creating one
 takes seconds regardless of database size — cheap enough to fork a
 branch per stage, per pull request, or per experiment.
+
+<BranchGraph
+  end={10}
+  branches={[
+    { id: "main", label: "main", type: "production", tone: "accent" },
+    { id: "pr42", label: "pr-42", type: "preview", from: { branch: "main", at: 2.5 }, sharedUntil: 5, until: 8 },
+    { id: "pr43", label: "pr-43", type: "preview", from: { branch: "main", at: 6 }, sharedUntil: 9 },
+  ]}
+  points={[
+    { branch: "main", at: 1, label: "orders table" },
+    { branch: "main", at: 7, label: "new rows" },
+    { branch: "pr42", at: 5, label: "first write" },
+    { branch: "pr42", at: 8, label: "stage destroyed", below: true },
+  ]}
+  caption="A branch starts as a copy-on-write fork, dashed while it still shares its parent's storage and solid once it writes its own. A preview branch goes away with its stage."
+/>
 
 ## Create a branch
 

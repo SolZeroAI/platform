@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/vue
      upstream: website/src/content/docs/cloudflare/frontend/vue.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vue
 
@@ -38,7 +38,7 @@ a name:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Website = Cloudflare.Website.Vite("Vue");
 ```

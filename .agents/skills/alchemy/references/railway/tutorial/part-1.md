@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/tutorial/part-1
      upstream: website/src/content/docs/railway/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Project
 
@@ -12,7 +12,7 @@ Variables, and disks.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A Railway workspace and an account API token — see
   [Setup](/railway/setup) if you haven't created those yet
 
@@ -26,17 +26,13 @@ everything down when you're done.
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install dependencies
 
-Install <code>alchemy@next</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/railway`, and `effect`:
 
-```sh
-bun add "alchemy@next" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -108,7 +104,7 @@ Let's declare a Railway Project and observe the type error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Railway from "alchemy/Railway";
++import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -142,7 +138,7 @@ error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 -import * as Layer from "effect/Layer";
 
@@ -188,9 +184,7 @@ listening on the public internet yet — that's
 
 Run `alchemy deploy` to create the Project:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The first time you deploy, Alchemy prompts for Railway credentials —
 paste the account token you generated in [Setup](/railway/setup).

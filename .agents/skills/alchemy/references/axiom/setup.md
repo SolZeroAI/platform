@@ -1,18 +1,21 @@
 <!-- source: https://alchemy.run/axiom/setup
      upstream: website/src/content/docs/axiom/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
 > Connect alchemy to Axiom — account, credentials, and profiles.
 
 Sign up at [axiom.co](https://axiom.co) and create an API token in
-the [Axiom app](https://app.axiom.co). Register the provider next to
-your cloud's:
+the [Axiom app](https://app.axiom.co). Install `@alchemy.run/axiom`:
+
+<PackageManagers add="@alchemy.run/axiom" />
+
+Register the provider next to your cloud's:
 
 ```typescript
 // alchemy.run.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 providers: Layer.mergeAll(Cloudflare.providers(), Axiom.providers()),
 ```

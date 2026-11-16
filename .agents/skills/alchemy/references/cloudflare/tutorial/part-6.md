@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/tutorial/part-6
      upstream: website/src/content/docs/cloudflare/tutorial/part-6.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 6: Observability
 
@@ -34,8 +34,8 @@ provider layers in `alchemy.run.ts`:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Axiom from "alchemy/Axiom";
-import * as Cloudflare from "alchemy/Cloudflare";
++import * as Axiom from "@alchemy.run/axiom";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import * as Layer from "effect/Layer";
 
@@ -62,7 +62,7 @@ one-resource-per-file pattern as the Bucket, create
 
 ```typescript
 // src/observability.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 export const Traces = Axiom.Dataset("Traces", {
   name: "myapp-traces",
@@ -79,7 +79,7 @@ Each OTel signal gets its own dataset:
 
 ```diff lang="typescript"
 // src/observability.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 export const Traces = Axiom.Dataset("Traces", {
   name: "myapp-traces",
@@ -126,8 +126,8 @@ binding from Part 2. Merge it into the Worker's `Effect.provide`:
 
 ```diff lang="typescript"
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-+import * as Axiom from "alchemy/Axiom";
+import * as Cloudflare from "@alchemy.run/cloudflare";
++import * as Axiom from "@alchemy.run/axiom";
 import * as Effect from "effect/Effect";
 +import * as Layer from "effect/Layer";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
@@ -161,13 +161,11 @@ datasets and token deploy before the Worker, automatically.
 
 Deploy, then hit the Worker to produce telemetry:
 
-```sh
-bun alchemy deploy
+<PackageManagers script={`{run} alchemy deploy
 
-curl -X PUT https://myapp-worker-dev-you-abc123.workers.dev/hello.txt \
+curl -X PUT https://myapp-worker-dev-you-abc123.workers.dev/hello.txt \\
   -d 'Hello, observability!'
-curl https://myapp-worker-dev-you-abc123.workers.dev/hello.txt
-```
+curl https://myapp-worker-dev-you-abc123.workers.dev/hello.txt`} />
 
 Nothing in the handler code changed: the runtime builds the OTLP
 exporters from the bound configuration for each request, and flushes

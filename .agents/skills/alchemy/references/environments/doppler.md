@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/doppler
      upstream: website/src/content/docs/environments/doppler.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Doppler
 
@@ -10,10 +10,11 @@
 each with configs such as `dev`, `stg`, and `prd`. `Doppler.Secrets`
 downloads one config into the stack's
 [secret providers](/environments/secret-providers), without writing
-anything to `process.env` or to disk.
+anything to `process.env` or to disk. It ships in the
+`@alchemy.run/doppler` package.
 
 ```typescript
-import * as Doppler from "alchemy/Doppler";
+import * as Doppler from "@alchemy.run/doppler";
 
 secrets: [
   Doppler.Secrets(({ stage }) => ({

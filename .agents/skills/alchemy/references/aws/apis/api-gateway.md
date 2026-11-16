@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/apis/api-gateway
      upstream: website/src/content/docs/aws/apis/api-gateway.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # REST API (API Gateway v1)
 
@@ -16,8 +16,8 @@ The repo includes **`examples/aws-rest-api`**: a minimal **regional** REST API w
 
 ```sh
 cd examples/aws-rest-api
-bun install
-bun run deploy
+npm install
+npm run deploy
 ```
 
 After deploy, open the printed `invokeUrl` in a browser; you should see the Lambda’s text response.

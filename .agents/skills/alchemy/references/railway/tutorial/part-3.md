@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/tutorial/part-3
      upstream: website/src/content/docs/railway/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Persist Data with a Volume
 
@@ -17,7 +17,7 @@ the Project:
 
 ```diff lang="typescript"
 // src/project.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Site = Railway.Project("Site");
 +
@@ -41,7 +41,7 @@ runtime:
 
 ```diff lang="typescript"
 // src/api.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -168,9 +168,7 @@ return HttpServerResponse.text("Hello from Railway!");
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create, 1 to update

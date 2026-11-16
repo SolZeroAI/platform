@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/tutorial/part-2
      upstream: website/src/content/docs/prisma/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: An HTTP API
 
@@ -15,7 +15,7 @@ handler on Prisma's Bun runtime.
 Create `src/Api.ts`:
 
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Project } from "./Database.ts";
@@ -122,10 +122,7 @@ process is responding, independently of the database added in Part 3.
 
 ## Deploy the API
 
-  <TabItem label="bun" icon="bun"><Code code="bun alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code="npx alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code="pnpm exec alchemy deploy" lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code="yarn alchemy deploy" lang="sh" /></TabItem>
+<PackageManagers run="alchemy deploy" />
 
 The deployment prints `apiUrl` for the Compute service.
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/nuxt
      upstream: website/src/content/docs/fly/frontend/nuxt.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Nuxt
 
@@ -22,9 +22,7 @@ The build integration is not bundled with alchemy. Install
 and `/nuxt/node` exports from your project at deploy time. It is
 only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Nuxt
 
@@ -55,7 +53,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.Nuxt("Website");
 ```
@@ -149,9 +147,7 @@ runtime caching.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Nuxt's own dev server (nitro dev, full HMR)
 instead of deploying; `site.url` is the local address and no Fly

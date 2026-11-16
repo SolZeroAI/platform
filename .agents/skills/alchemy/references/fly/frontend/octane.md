@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/octane
      upstream: website/src/content/docs/fly/frontend/octane.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Octane
 
@@ -23,9 +23,7 @@ The build integration is not bundled with alchemy. Install
 `/octane` and `/octane/node` exports from your project at deploy
 time. It is only used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Octane
 
@@ -68,7 +66,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.Octane("Website");
 ```
@@ -156,9 +154,7 @@ the platform health check.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Octane's own Vite dev server — the plugin's
 in-process SSR middleware serves rendering, server routes, and RPC

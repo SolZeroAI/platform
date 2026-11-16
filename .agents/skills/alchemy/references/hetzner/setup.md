@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/setup
      upstream: website/src/content/docs/hetzner/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -11,7 +11,7 @@ package, a Hetzner project, and an API token stored in a profile.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A [Hetzner Cloud](https://console.hetzner.com) account
 
 ## Create a Hetzner project
@@ -39,15 +39,11 @@ Inside the project:
 
 ## Create a project directory
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Connect alchemy to Hetzner
 

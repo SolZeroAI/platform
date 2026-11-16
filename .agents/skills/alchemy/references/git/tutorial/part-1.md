@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-1
      upstream: website/src/content/docs/git/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Push your first repository
 
@@ -17,14 +17,14 @@ adds access control before you use the host for private work.
 
 ## Create the project
 
-You need Bun or Node.js 22+, Git, and a Cloudflare account with Workers, Durable Objects, and R2.
+You need [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh), Git, and a Cloudflare account with Workers, Durable Objects, and R2.
 Complete [Cloudflare setup](/cloudflare/setup) to connect your account.
 
 ```sh
 mkdir git-tutorial
 cd git-tutorial
 bun init -y
-bun add alchemy effect
+bun add alchemy @alchemy.run/cloudflare @alchemy.run/git effect
 mkdir src
 ```
 
@@ -38,7 +38,7 @@ Create `src/git.ts`:
 
 ```typescript
 // src/git.ts
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Layer from "effect/Layer";
 
 export const GitLive = Git.ApiLive.pipe(
@@ -92,8 +92,8 @@ verifies incoming objects in the Worker during a push.
 
 ```diff lang="typescript"
 // src/git.ts
-+import * as Cloudflare from "alchemy/Cloudflare";
-import * as Git from "alchemy/Git";
++import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Git from "@alchemy.run/git";
 import * as Layer from "effect/Layer";
 
 +const GitObjects = Cloudflare.R2.Bucket("GitObjects", { forceDestroy: true });
@@ -123,8 +123,8 @@ Create `src/host.ts`:
 
 ```typescript
 // src/host.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Git from "alchemy/Git";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Git from "@alchemy.run/git";
 import * as Http from "alchemy/Http";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -139,13 +139,15 @@ export default class GitHost extends Cloudflare.Worker<GitHost>()(
       GitLive.pipe(Layer.provide(Http.Platform)),
     );
     return { fetch };
-  }),
+  }).pipe(Effect.provide(Cloudflare.R2.ReadWriteBucketBinding)),
 ) {}
 ```
 
 `HttpRouter.toHttpEffect` turns the route layer into the Worker's `fetch` handler.
 `Http.Platform` provides its HTTP platform dependencies. `GIT_WORKER_OPTIONS`
 sets the Worker compatibility flags and CPU limit used by Git.
+`Cloudflare.R2.ReadWriteBucketBinding` binds the bucket to the Worker so
+`BlobStoreR2` can read and write it.
 
 ## Declare the stack
 
@@ -154,7 +156,7 @@ Create `alchemy.run.ts`:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import GitHost from "./src/host.ts";
 
@@ -173,9 +175,7 @@ stack. The output gives you the URL clients will use.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Copy the printed URL, including `https://`, without a trailing slash:
 
@@ -236,6 +236,4 @@ objects. You now have a working Git remote.
 Continue to [Part 2: Control access](/git/tutorial/part-2). If you stop here,
 remove the open learning deployment:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />

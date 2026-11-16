@@ -1,20 +1,20 @@
 <!-- source: https://alchemy.run/git
      upstream: website/src/content/docs/git/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Git
 
 > A pluggable, embeddable, self-hostable git server on Cloudflare Workers, Durable Objects, and R2. Smart HTTP for any client, a typed REST plane with pull requests, and a GitHub-compatible API.
 
-`alchemy/Git` is a pluggable, embeddable, self-hostable git server. It
+`@alchemy.run/git` is a pluggable, embeddable, self-hostable git server. It
 speaks git's smart HTTP to any client, serves a typed REST plane with
 pull requests, and answers the GitHub REST v3 API for `gh` and Octokit.
 It runs on Cloudflare Workers, Durable Objects, and R2, embeds in your
 own `HttpApi`, and each part of it is an Effect Layer you can replace:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Git from "alchemy/Git";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as HttpRouter from "effect/http/HttpRouter";
@@ -38,7 +38,7 @@ export default Cloudflare.Worker(
   Effect.gen(function* () {
     const fetch = yield* HttpRouter.toHttpEffect(GitLive.pipe(Layer.provide(Http.Platform)));
     return { fetch };
-  }),
+  }).pipe(Effect.provide(Cloudflare.R2.ReadWriteBucketBinding)),
 );
 ```
 
@@ -77,6 +77,8 @@ monorepo, 44,051 objects in a 67 MiB pack, is hosted on it and clones
 back byte-identical under `git fsck --strict`.
 
 ## Build one
+
+New to hosting git? [What is a git host?](/git/what-is-git) walks through objects, refs, packs, smart HTTP, push verification, names and pull requests, and how each becomes a Layer here.
 
 [Getting Started](/git/getting-started) is a complete shared-credential quickstart.
 The tutorial starts with a Git push and builds one behavior at a time. Every

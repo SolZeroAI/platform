@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/vocs
      upstream: website/src/content/docs/prisma/frontend/vocs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vocs
 
@@ -17,10 +17,7 @@ image. Extensionless pages such as `/about` retain their normal URLs.
 Install the build-time integration; the resource loads `/vocs/node`
 from your project. Keep `vocs` and its Waku peer dependencies installed.
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Vocs
 
@@ -52,7 +49,7 @@ build/
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Vocs("Website", {
   rootDir: "./docs",
@@ -106,7 +103,7 @@ HTML shell would drop that handler and leave dynamic pages empty.
 
 ## Local development
 
-`bun alchemy dev` runs Vocs' own dev server with HMR and creates no
+`alchemy dev` runs Vocs' own dev server with HMR and creates no
 Prisma resources for the Website. Opt into live deployment during dev:
 
 ```typescript
@@ -125,7 +122,7 @@ export const Website = Prisma.Website.Vocs("Website", {
 ```
 
 `domain` creates `Prisma.CustomDomain` and changes `site.url` to the
-HTTPS hostname. The app must be on the project's current default branch.
+HTTPS hostname.
 Configure returned DNS records yourself and verify status before cutover;
 see [Custom domains](/prisma/frontend/websites#custom-domains).
 

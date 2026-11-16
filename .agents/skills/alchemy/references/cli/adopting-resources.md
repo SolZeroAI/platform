@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cli/adopting-resources
      upstream: website/src/content/docs/cli/adopting-resources.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Adopting Resources
 
@@ -8,9 +8,7 @@
 
 Two situations put alchemy in front of a cloud resource it has no state for: existing infrastructure you want alchemy to start managing, and a fresh (or wiped) state store sitting in front of resources alchemy already created.
 
-```sh
-bun alchemy deploy --adopt
-```
+<PackageManagers run="alchemy deploy --adopt" />
 
 ## How the engine decides
 

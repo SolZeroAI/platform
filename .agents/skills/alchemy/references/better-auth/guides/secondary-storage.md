@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/guides/secondary-storage
      upstream: website/src/content/docs/better-auth/guides/secondary-storage.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Secondary storage
 
@@ -88,7 +88,7 @@ Automatic JSON deserialization is disabled because Better Auth stores strings, i
 // worker.ts
 import { BetterAuth } from "@alchemy.run/better-auth";
 import { CloudflareD1 } from "@alchemy.run/better-auth/CloudflareD1";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { RedisStorage } from "./storage.ts";
@@ -128,7 +128,7 @@ The explicit limiter also runs in development, with a 60-second window and a max
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthApi from "./worker.ts";
 
@@ -144,9 +144,7 @@ export default Alchemy.Stack(
 
 Use Bun, matching `alchemy` and `@alchemy.run/better-auth` releases, Better Auth 1.7.5, Effect 4, and `kysely`, in addition to the Redis SDK. Configure Cloudflare credentials and the external storage inputs before deployment; this stack provisions D1 and a stable signing secret, not the Redis service.
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Preserve the local Alchemy state and use the printed URL. A local run must use a separate storage database from production because the REST store is external, not emulated by `alchemy dev`.
 

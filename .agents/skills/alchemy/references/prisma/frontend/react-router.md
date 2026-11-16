@@ -1,13 +1,13 @@
 <!-- source: https://alchemy.run/prisma/frontend/react-router
      upstream: website/src/content/docs/prisma/frontend/react-router.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React Router
 
-> Deploy React Router v7 framework apps to Prisma Compute with Prisma.Website.ReactRouter — SSR on Bun and native Vite dev locally.
+> Deploy React Router v8 framework apps to Prisma Compute with Prisma.Website.ReactRouter — SSR on Bun and native Vite dev locally.
 
 `Prisma.Website.ReactRouter` builds [React Router](https://reactrouter.com)
-v7 in framework mode through your project's Vite pipeline. The shared
+v8 in framework mode through your project's Vite pipeline. The shared
 Node target wraps the server manifest with `createRequestHandler` and
 serves client assets first. The output runs on **Bun in Prisma Compute**
 from a `tar.gz` upload, without a Docker image or registry.
@@ -17,10 +17,7 @@ from a `tar.gz` upload, without a Docker image or registry.
 Install the build-time integration; the resource loads `/react-router`
 and `/react-router/node` from your project:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 Keep the framework scaffold's `react-router`, `@react-router/dev`,
 `@react-router/node`, `isbot`, and `vite`. Put `@react-router/node` and
@@ -65,7 +62,7 @@ export default defineConfig({
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.ReactRouter("Website", {
   rootDir: "./web",
@@ -146,7 +143,7 @@ uses the same runtime environment.
 
 ## Local dev
 
-`bun alchemy dev` runs React Router's Vite dev server with HMR; the
+`alchemy dev` runs React Router's Vite dev server with HMR; the
 Website creates no Prisma resources. Opt into live deployment during dev:
 
 ```typescript

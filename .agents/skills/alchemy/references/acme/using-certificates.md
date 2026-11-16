@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/using-certificates
      upstream: website/src/content/docs/acme/using-certificates.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Using certificates
 
@@ -28,7 +28,7 @@ consumer needs the **certificate's** private key, never the account's key.
 Start with the [Getting started](/acme/getting-started) stack and add Fly:
 
 ```diff lang="typescript"
-+import * as Fly from "alchemy/Fly";
++import * as Fly from "@alchemy.run/fly";
 
 -    providers: Layer.mergeAll(ACME.providers(), Cloudflare.providers()),
 +    providers: Layer.mergeAll(
@@ -79,9 +79,9 @@ with your own values:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as ACME from "alchemy/ACME";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Fly from "alchemy/Fly";
+import * as ACME from "@alchemy.run/acme";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Fly from "@alchemy.run/fly";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -106,7 +106,7 @@ export default Alchemy.Stack(
     const certificate = yield* ACME.Certificate("Site", {
       account,
       identifiers: ["example.com"],
-      solver: Cloudflare.DNS.AcmeSolver({
+      solver: Cloudflare.ACME.ZoneSolver({
         zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
       }),
     });

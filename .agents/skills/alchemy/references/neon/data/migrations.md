@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/data/migrations
      upstream: website/src/content/docs/neon/data/migrations.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Migrations
 
@@ -29,6 +29,20 @@ const featureBranch = yield* Neon.Branch("feature", {
   migrations: "./migrations",
 });
 ```
+
+<BranchGraph
+  end={10}
+  branches={[
+    { id: "main", label: "main", type: "production", tone: "accent" },
+    { id: "pr", label: "pr-42", type: "preview", from: { branch: "main", at: 4 }, until: 9 },
+  ]}
+  points={[
+    { branch: "main", at: 1, label: "0001_init" },
+    { branch: "main", at: 2.6, label: "0002_orders" },
+    { branch: "pr", at: 6, label: "0003_refunds" },
+  ]}
+  caption="pr-42 forks after 0002, so it already has both migrations and their rows in the tracking table. Its deploy applies only 0003, and main never sees it until the file merges."
+/>
 
 ## Ordering and hashing
 
@@ -63,7 +77,8 @@ is frozen. Projects deployed by older Alchemy versions (which used a
 `neon_migrations` table) are upgraded in place.
 
 On each deploy, files whose names already appear in the table are
-skipped. Use `migrations: { dir, table }` to put the bookkeeping in
+skipped, and their content hashes must still match. Use
+`migrations: { dir, table }` to put the bookkeeping in
 a differently-named table:
 
 ```typescript

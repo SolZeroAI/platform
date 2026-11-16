@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/apis/effect-rpc
      upstream: website/src/content/docs/cloudflare/apis/effect-rpc.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Effect RPC
 
@@ -96,7 +96,7 @@ Create `src/worker.ts` with an empty Construction phase:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Cloudflare.Worker(
@@ -115,14 +115,14 @@ an incoming request.
 
 ### 3a. Bind an R2 bucket for storage
 
-Tasks need durable storage. Declare an `Bucket` resource and bind
-it inside the constructor — `bind()` returns a typed handle whose `get` /
-`put` / `delete` / `list` methods we'll call from the handlers
-below.
+Tasks need durable storage. Declare a `Bucket` resource and bind
+it inside the constructor — `Cloudflare.R2.ReadWriteBucket(Tasks)`
+returns a typed handle whose `get` / `put` / `delete` / `list` methods
+we'll call from the handlers below.
 
 ```typescript
 // src/bucket.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Tasks = Cloudflare.R2.Bucket("Tasks");
 ```
@@ -163,12 +163,14 @@ is pure construction — it builds a value, it doesn't run the server.
 +   const handlersLayer = TaskRpcs.toLayer({
 +     getTask: ({ id }) =>
 +       Effect.gen(function* () {
-+         const object = yield* tasks.get(id);
++         const object = yield* tasks.get(id).pipe(Effect.orDie);
 +         if (!object) {
 +           return yield* Effect.fail(new TaskNotFound({ id }));
 +         }
-+         return Schema.decodeUnknownSync(Task)(JSON.parse(yield* object.text()));
-+       }).pipe(Effect.orDie),
++         return Schema.decodeUnknownSync(Task)(
++           JSON.parse(yield* object.text().pipe(Effect.orDie)),
++         );
++       }),
 +     createTask: ({ title }) =>
 +       Effect.gen(function* () {
 +         const task = new Task({
@@ -226,7 +228,7 @@ or `Etag.layer` — the RPC server handles message framing internally.
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
@@ -244,14 +246,14 @@ export default Cloudflare.Worker(
     const handlersLayer = TaskRpcs.toLayer({
       getTask: ({ id }) =>
         Effect.gen(function* () {
-          const object = yield* tasks.get(id);
+          const object = yield* tasks.get(id).pipe(Effect.orDie);
           if (!object) {
             return yield* Effect.fail(new TaskNotFound({ id }));
           }
           return Schema.decodeUnknownSync(Task)(
-            JSON.parse(yield* object.text()),
+            JSON.parse(yield* object.text().pipe(Effect.orDie)),
           );
-        }).pipe(Effect.orDie),
+        }),
       createTask: ({ title }) =>
         Effect.gen(function* () {
           const task = new Task({
@@ -284,7 +286,7 @@ export default Cloudflare.Worker(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Worker from "./src/worker.ts";
 
@@ -411,7 +413,7 @@ takes the `RpcGroup` directly in props and removes the `{ fetch }`
 wrapper:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { RpcSerialization, RpcServer } from "effect/rpc";
@@ -504,7 +506,7 @@ Return its handler Layer from the per-instance Effect:
 
 ```typescript
 // counter.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { CounterRpcs } from "./rpcs.ts";
 
@@ -595,7 +597,7 @@ forwards `/counters/alice` to `"alice"` and `/counters/bob` to `"bob"`:
 
 ```typescript
 // worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -640,7 +642,7 @@ Connect to the Worker's `/counters/alice` route and create the browser's
 Effect RPC client in a Layer. This client talks only to the `"alice"` object:
 
 ```typescript
-import * as RpcWebSocketClient from "alchemy/Cloudflare/RpcWebSocketClient";
+import * as RpcWebSocketClient from "@alchemy.run/cloudflare/Workers/RpcWebSocketClient";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -667,7 +669,7 @@ const program = Effect.gen(function* () {
 }).pipe(Effect.provide(CounterClientLive));
 ```
 
-The dedicated `alchemy/Cloudflare/RpcWebSocketClient` entrypoint imports only
+The dedicated `@alchemy.run/cloudflare/Workers/RpcWebSocketClient` entrypoint imports only
 Effect modules and is safe to bundle for browsers. The wrapper is optional;
 it composes Effect's RPC client, socket protocol, WebSocket, and JSON serializer.
 Client middleware remains an explicit Layer dependency. Its `socket`, `protocol`,
@@ -763,8 +765,8 @@ or lifecycle methods.
 ## Under the hood: the manual DO bridge
 
 `RpcDurableObject.getByName(id)` above returns a wired `RpcClient`
-directly — you rarely need more. This section shows what it does
-internally, and doubles as the escape hatch when the `RpcServer`
+directly — you rarely need more. Underneath, it does the following,
+which is also the escape hatch when the `RpcServer`
 runs inside a plain `Cloudflare.DurableObject` and you build the
 bridge yourself: `Cloudflare.toHttpClient(stub)` turns the DO stub
 into an `HttpClient` that plugs into `RpcClient.layerProtocolHttp`.
@@ -803,7 +805,7 @@ The DO's constructor returns `{ fetch }` produced by
 
 ```typescript
 // src/object.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
@@ -853,6 +855,15 @@ whole Worker — the R2-backed handlers are unchanged, the new
 
 ```typescript
 // src/worker.ts
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as HttpClient from "effect/http/HttpClient";
+import { RpcClient, RpcSerialization, RpcServer } from "effect/rpc";
+import { Tasks } from "./bucket.ts";
+import { InnerRpcs, TaskRpcs } from "./rpcs.ts";
+import TasksObject from "./object.ts";
+
 export default Cloudflare.Worker(
   "Worker",
   { main: import.meta.url },
@@ -919,7 +930,7 @@ still hit R2. One `TaskRpcs` value, one client, two storage backends.
 - **Internal calls** (Worker-to-Worker, Worker-to-DO) —
   [Schemaless RPC](/apis/schemaless): typed clients with no schema
   and no per-request validation cost.
-- **External Effect/TypeScript consumers** — this page.
+- **External Effect/TypeScript consumers** — Effect RPC, with a typed client.
 - **External plain-HTTP consumers** —
   [Effect HTTP](/cloudflare/apis/effect-http-api): the same typed
   interface over real REST endpoints.

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/memory
      upstream: website/src/content/docs/better-auth/databases/memory.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Memory
 
@@ -10,9 +10,7 @@ Use `Memory` for throwaway development and tests, not production authentication.
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5" />
 
 No optional database driver or `kysely` peer is required by the memory adapter.
 
@@ -30,7 +28,7 @@ Construct the layer once for the host, not inside `fetch`, so requests in the sa
 
 ```typescript title="src/worker.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { AuthDatabase } from "./auth-database.ts";
 
@@ -57,7 +55,7 @@ Better Auth instances remain request-scoped, while the layer retains the backing
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthApi from "./src/worker.ts";
 
@@ -78,9 +76,7 @@ Alchemy generates and binds a stable signing secret, persisted in local stack st
 
 ## Run locally
 
-```sh
-bunx alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 Use the printed URL rather than assuming a local port. Set `AUTH_ORIGIN` to that URL to check the auth endpoint:
 

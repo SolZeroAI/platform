@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/tutorial/part-2
      upstream: website/src/content/docs/fly/tutorial/part-2.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 2: Configure the Service
 
@@ -68,9 +68,7 @@ Add `/health` so you (and later, Fly checks) can probe the process:
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to update

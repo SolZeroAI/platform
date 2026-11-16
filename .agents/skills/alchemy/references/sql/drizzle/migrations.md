@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/drizzle/migrations
      upstream: website/src/content/docs/sql/drizzle/migrations.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Migrations
 
@@ -50,6 +50,21 @@ pnpm alchemy deploy
 
 This resource applies pending SQL from `./drizzle`. CI should deploy the
 committed files, not generate a new migration history.
+
+## Merge migrations from two branches
+
+drizzle-kit names each migration with the time it was generated. When
+two branches each add one, the older migration can merge after the
+newer one has already been deployed. That deploy fails with
+`NonLinearMigrationHistoryError`, because a fresh database would run the
+two in the other order. Rename the late directory so it sorts last:
+
+```sh
+git mv drizzle/20260919000000_add_tags drizzle/20260921000000_add_tags
+```
+
+A database that already ran it keeps it applied under the new name. See
+[Change migration history safely](/sql/effect-sql/migrations#change-migration-history-safely).
 
 For optional schema-generation automation, see the
 [`Drizzle.Schema` reference](/providers/drizzle/schema). The workflow above
@@ -110,8 +125,8 @@ CI uses these committed files when deploying.
 
 ```typescript
 // src/Users.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle/Cloudflare";
 import * as Effect from "effect/Effect";
 import { relations, users } from "./schema.ts";
 

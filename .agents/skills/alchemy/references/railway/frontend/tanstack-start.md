@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/frontend/tanstack-start
      upstream: website/src/content/docs/railway/frontend/tanstack-start.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # TanStack Start
 
@@ -23,9 +23,7 @@ The build integration is not bundled with alchemy. Install
 at deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -80,7 +78,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.TanStackStart("Website");
 ```
@@ -210,9 +208,7 @@ server and client output from `dist/server` and `dist/client`.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs TanStack Start's own Vite dev server (native HMR)
 instead of deploying; `site.url` is the local address and no Railway

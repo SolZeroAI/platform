@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/tutorial/part-1
      upstream: website/src/content/docs/cloudflare/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Stack
 
@@ -16,24 +16,20 @@ That was this part. Skip to [Part 2](/cloudflare/tutorial/part-2).
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A [Cloudflare](https://dash.cloudflare.com/sign-up) account
 
 ## Create a project
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install dependencies
 
-Install <code>alchemy@latest</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/cloudflare`, and `effect`:
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -73,7 +69,7 @@ in a Cloudflare-hosted Worker backed by a Durable Object:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Cloudflare from "alchemy/Cloudflare";
++import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -118,7 +114,7 @@ Let's add a Cloudflare R2 Bucket to our Stack and observe the type error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -147,7 +143,7 @@ type error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 -import * as Layer from "effect/Layer";
 
@@ -175,7 +171,7 @@ object from the generator to expose them:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -198,9 +194,7 @@ export default Alchemy.Stack(
 
 Run `alchemy deploy` to create the Bucket on Cloudflare:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 If you haven't connected Cloudflare yet, the deploy fails with the exact
 `alchemy profile edit` command to run. Use the `profile` command to sign in

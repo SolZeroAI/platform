@@ -1,16 +1,20 @@
 <!-- source: https://alchemy.run/github/setup
      upstream: website/src/content/docs/github/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
 > Connect alchemy to GitHub — account, credentials, and profiles.
 
-Register the provider next to your cloud's:
+Install `@alchemy.run/github`:
+
+<PackageManagers add="@alchemy.run/github" />
+
+Then register the provider next to your cloud's:
 
 ```typescript
 // alchemy.run.ts
-import * as GitHub from "alchemy/GitHub";
+import * as GitHub from "@alchemy.run/github";
 
 providers: Layer.mergeAll(Cloudflare.providers(), GitHub.providers()),
 ```
@@ -107,6 +111,23 @@ To read from the environment instead, `GitHub.fromEnv()` builds the
 same layer from `GITHUB_ACCESS_TOKEN` or `GITHUB_TOKEN` (and resolves
 the enterprise host from `GITHUB_BASE_URL` / `GITHUB_API_URL` /
 `GH_HOST` when set).
+
+To act as a GitHub App installation, `GitHub.fromApp` mints the
+installation access token with the App's private key and mints a new
+one before it expires:
+
+```typescript
+Effect.provide(
+  GitHub.fromApp({
+    appId: "123456",
+    privateKey: Redacted.make(pem),
+    installationId: 7890,
+  }),
+)
+```
+
+`privateKey` is the `.pem` file GitHub gave you. `repositories` and
+`permissions` narrow the token, and `baseUrl` targets GitHub Enterprise.
 
 ## Next steps
 

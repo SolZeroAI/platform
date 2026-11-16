@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/ai/workers-ai
      upstream: website/src/content/docs/cloudflare/ai/workers-ai.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Run Workers AI models
 
@@ -29,7 +29,7 @@ the constructor's layer chain, the same way every other Worker binding works:
 
 ```typescript
 // src/AiWorker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -144,6 +144,21 @@ gateway-fronted model later is a layer-level change — the handler
 code doesn't move. See [Effect AI](/cloudflare/ai/effect-ai) for the
 full pattern, including chat persistence.
 
+## Read the neurons a response billed
+
+Workers AI bills in neurons and reports the count with every
+response. The adapter carries it on the `finish` part, and
+`Cloudflare.AI.finishNeurons` reads it back as `number | undefined`:
+
+```typescript
+const response = yield* LanguageModel.generateText({ prompt });
+const finish = response.content.find((part) => part.type === "finish");
+const neurons = finish ? Cloudflare.AI.finishNeurons(finish) : undefined;
+```
+
+Streams carry it on their final `finish` part too. It is `undefined`
+for models that don't report neurons.
+
 ## Async Workers: bind via `env`
 
 A plain async Worker (no Effect runtime) declares the binding on
@@ -153,7 +168,7 @@ A plain async Worker (no Effect runtime) declares the binding on
 
 ```typescript
 // src/AiAsyncWorker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const AiAsyncWorker = Cloudflare.Worker("AiAsyncWorker", {
   main: "./src/handler.ts",

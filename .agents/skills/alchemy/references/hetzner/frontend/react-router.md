@@ -1,13 +1,13 @@
 <!-- source: https://alchemy.run/hetzner/frontend/react-router
      upstream: website/src/content/docs/hetzner/frontend/react-router.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # React Router
 
-> Deploy React Router v7 (framework mode) to Hetzner with Hetzner.Website.ReactRouter — SSR as a systemd unit on port 3000, client assets baked into the unit, and React Router's own Vite dev server under alchemy dev.
+> Deploy React Router v8 (framework mode) to Hetzner with Hetzner.Website.ReactRouter — SSR as a systemd unit on port 3000, client assets baked into the unit, and React Router's own Vite dev server under alchemy dev.
 
 `Hetzner.Website.ReactRouter` deploys a
-[React Router](https://reactrouter.com) v7 app in framework mode to a
+[React Router](https://reactrouter.com) v8 app in framework mode to a
 Hetzner Cloud Server. React Router builds through Vite, so Alchemy runs
 your project's own build: the SSR server runs as a systemd
 [`Hetzner.Service`](/hetzner/compute/services) on port 3000, and
@@ -23,9 +23,7 @@ The build integration is not bundled with alchemy. Install
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 The React Router side is whatever `npx create-react-router@latest`
 scaffolds — `react-router`, `@react-router/dev`, `@react-router/node`,
@@ -82,7 +80,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 export const Website = Hetzner.Website.ReactRouter("Website");
 ```
@@ -227,9 +225,7 @@ there is nothing to mirror on the resource.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs React Router's own Vite dev server (native HMR)
 instead of deploying; `site.url` is the local address and no Hetzner

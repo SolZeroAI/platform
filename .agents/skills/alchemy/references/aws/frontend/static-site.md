@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/frontend/static-site
      upstream: website/src/content/docs/aws/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static sites
 
@@ -20,7 +20,7 @@ output:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -48,9 +48,7 @@ CloudFront Function, and the distribution itself. `forceDestroy: true` lets
 `destroy` empty the bucket before deleting it; `site.url` resolves to the
 CloudFront domain (or `https://<your-domain>` when you pass `domain`).
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The deployed example lives at
 [`examples/aws-static-site`](https://github.com/alchemy-run/alchemy/tree/main/examples/aws-static-site)
@@ -118,7 +116,9 @@ distribution:
 
 ```typescript
 const router = yield* AWS.Website.Router("WebsiteRouter", {
-  // hosted zone inferred from the hostname; pass hostedZoneId to pin it
+  // hosted zone inferred from the hostname; pass hostedZoneId to pin it, or
+  // dns: Cloudflare.DNS.Adapter() for a domain on Cloudflare DNS
+  // (see /infrastructure-as-code/dns-adapters)
   domain: { name: "example.com" },
 });
 

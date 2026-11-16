@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/migrating-from-v1
      upstream: website/src/content/docs/migrating-from-v1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Migrating from v1
 
@@ -14,6 +14,13 @@ resource wiring. The v1 documentation lives at
 
 Your existing `async fetch` handlers **do not need to change** — you
 can keep them as-is and still get all the benefits of the new engine.
+
+## Install v2
+
+Each cloud provider is its own package in v2. Upgrade `alchemy` and add
+the provider you deploy to, here `@alchemy.run/cloudflare`:
+
+<PackageManagers add={pkgs} />
 
 ## Step 1: Replace the Stack
 
@@ -44,7 +51,7 @@ of `await`:
 ```typescript
 // v2 — alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export const Bucket = Cloudflare.R2.Bucket("Bucket");
@@ -136,7 +143,7 @@ When you didn't set `name` explicitly, v1 derived it as:
 - `{stage}` — the `--stage` value; defaults to `$ALCHEMY_STAGE`, then
   your OS username (`$USER`), then `dev`
 
-So the v1 example at the top of this page, deployed with
+So the v1 example at the top, deployed with
 `--stage prod`, created a bucket named `my-app-bucket-prod` and a
 worker named `my-app-worker-prod`. (Resources created inside a nested
 scope get the scope names between `{app}` and `{id}`, and Worker names
@@ -209,7 +216,7 @@ resources in the Worker's Construction phase using `yield*`:
 
 ```diff lang="typescript"
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -247,7 +254,7 @@ Stack just `yield*`-s the imported Worker:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Cloudflare from "alchemy/Cloudflare";
++import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 +import Worker from "./src/worker.ts";
 +import { Bucket } from "./src/bucket.ts";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/effect-sql/lifecycle
      upstream: website/src/content/docs/sql/effect-sql/lifecycle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Connection lifecycle
 
@@ -11,7 +11,7 @@
 ## Construction runs once, events run many times
 
 ```typescript
-import * as SQL from "alchemy/SQL/Postgres";
+import * as SQL from "@alchemy.run/sql/Postgres";
 import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 
@@ -24,7 +24,7 @@ export const makeQueries = (url: Redacted.Redacted<string>) =>
   });
 ```
 
-Construct the query service once during application initialization and call `listUsers()` from a handler; construction returns a lazy proxy, not a connected pool. This keeps disposable connections out of Worker isolate and Lambda instance initialization.
+Construct the query service once during application initialization and call `listUsers()` from a handler; construction returns a real client that has not connected: it builds and compiles statements, and opens its pool when one first runs. This keeps disposable connections out of Worker isolate and Lambda instance initialization.
 
 ## One client per execution
 
@@ -38,7 +38,7 @@ For each constructed client, queries in the same scope reuse one underlying clie
 ## Why not a global pool
 
 ```typescript
-// Resolve the proxy during initialization; execute queries in the handler.
+// Build the client during initialization; run queries in the handler.
 const sql = yield* SQL.Postgres({ url: connectionString });
 
 return {

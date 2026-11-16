@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/sqlite
      upstream: website/src/content/docs/better-auth/databases/sqlite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SQLite
 
@@ -10,9 +10,7 @@
 
 ## Install
 
-```sh
-bun add "@effect/platform-bun@4.0.0-rc.115" @alchemy.run/better-auth better-auth@^1.7.5 kysely
-```
+<PackageManagers add="@effect/platform-bun @alchemy.run/better-auth better-auth@^1.7.5 kysely" />
 
 Bun supplies the driver, while `kysely` supports the SQL adapter and schema migration. A standard Node.js Lambda cannot load `bun:sqlite`.
 
@@ -106,9 +104,7 @@ The stack generates a stable signing secret and passes it to the child process a
 
 ## Start locally
 
-```sh
-bunx alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 The server asks the OS for an available port and prints its URL, which Alchemy exposes as the stack output. `Command.Dev` runs only during development; `alchemy deploy` does not publish this local server.
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/troubleshooting
      upstream: website/src/content/docs/acme/troubleshooting.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Troubleshooting
 
@@ -14,15 +14,10 @@ values, and authorization headers out of logs.
 ## Missing DNS solver
 
 `ACME.DnsSolverNotRegistered` means the descriptor's `type` has no registered
-factory in the stack's provider context. For Cloudflare, register both providers:
-
-```typescript
-const providers = Layer.mergeAll(ACME.providers(), Cloudflare.providers());
-```
-
-Pass this layer as the stack's `providers`. For runtime issuance, use
-`acmeDnsSolver(dns)` with a bound DNS client instead of passing the deploy-time
-descriptor returned by `AcmeSolver`.
+factory in the stack's provider context. `ACME.providers()` registers the
+Cloudflare solver, so include it in the stack's `providers`. For runtime issuance, use
+`zoneSolver(dns)` with a bound DNS client instead of passing the deploy-time
+descriptor returned by `ZoneSolver`.
 
 ## DNS API access fails
 

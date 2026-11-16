@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-effects/phases
      upstream: website/src/content/docs/infrastructure-as-effects/phases.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Phases
 
@@ -11,7 +11,7 @@ runtime serves requests. [Runtime](/infrastructure-as-effects/runtime)
 resources — Workers, Lambdas, Containers — express both in a single
 program by **returning an Effect from inside an Effect**. Earlier
 pages named the two halves the Construction phase and the Runtime
-phase; this page pins down exactly when each one runs.
+phase. Here is exactly when each one runs.
 
 ## Construction vs Runtime
 
@@ -56,28 +56,23 @@ can run.
 
 ## What runs when
 
-```text
-Diagram (nodes and edges as authored):
-<DAG
-  caption="Plantime (top) records bindings and builds the plan. Runtime (bottom) starts on cold start and runs the handler per request."
-  nodes={[
-    { id: "Plan", label: "alchemy deploy", type: "plantime", tone: "accent" },
-    { id: "ConstructP", label: "construct()", type: "records bindings" },
-    { id: "Apply", label: "apply", type: "create / update" },
-    { id: "Deploy", label: "deployed", type: "Worker / Lambda" },
-    { id: "Cold", label: "cold start", type: "runtime", tone: "accent", layer: 0 },
-    { id: "ConstructR", label: "construct()", type: "builds SDK clients", layer: 1 },
-    { id: "Runtime", label: "fetch()", type: "per request", layer: 2 },
+<Timeline
+  end={9.6}
+  lanes={[
+    { id: "deploy", label: "alchemy deploy", type: "plantime" },
+    { id: "worker", label: "Worker", type: "runtime" },
   ]}
-  edges={[
-    { from: "Plan", to: "ConstructP" },
-    { from: "ConstructP", to: "Apply" },
-    { from: "Apply", to: "Deploy" },
-    { from: "Cold", to: "ConstructR" },
-    { from: "ConstructR", to: "Runtime" },
+  bars={[
+    { lane: "deploy", start: 0, end: 2.2, label: "Construction" },
+    { lane: "deploy", start: 2.2, end: 4.4, label: "create, update", tone: "muted" },
+    { lane: "worker", start: 5, end: 7.2, label: "Construction" },
+    { lane: "worker", start: 7.4, end: 8.3, label: "fetch", tone: "default" },
+    { lane: "worker", start: 8.5, end: 9.4, label: "fetch", tone: "default" },
   ]}
+  marks={[{ at: 5, label: "cold start" }]}
+  legend={[{ tone: "accent", label: "Construction: records bindings, then builds clients" }, { tone: "default", label: "handler, per request" }]}
+  caption="Construction runs twice: at plantime, to record the bindings, and at cold start, to build real clients. The handler only ever runs per request."
 />
-```
 
 - At **plantime**, the constructor runs to discover bindings — alchemy needs
   to know which resources the handler will use so it can wire

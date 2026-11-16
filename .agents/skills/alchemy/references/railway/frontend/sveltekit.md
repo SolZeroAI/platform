@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/frontend/sveltekit
      upstream: website/src/content/docs/railway/frontend/sveltekit.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SvelteKit
 
@@ -25,9 +25,7 @@ The build integration is not bundled with alchemy. Install
 deploy time. It is only used at build time, so a dev dependency is
 enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure SvelteKit
 
@@ -48,7 +46,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.SvelteKit("Website");
 ```
@@ -129,7 +127,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     sveltekit({
-      alias: { $lib: "src/lib" },
+      prerender: { handleHttpError: "warn" },
     }),
   ],
 });
@@ -153,9 +151,7 @@ warning).
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs SvelteKit's own Vite dev server — Node SSR with
 full HMR — instead of deploying; `site.url` is the local address and

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/workers-for-platforms
      upstream: website/src/content/docs/cloudflare/compute/workers-for-platforms.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Workers for Platforms
 
@@ -24,7 +24,7 @@ platform Worker can reference the same resource:
 
 ```typescript
 // src/namespace.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Customers = Cloudflare.WorkersForPlatforms.DispatchNamespace(
   "Customers",
@@ -44,7 +44,7 @@ a user Worker instead of as a routable account-level script:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { Customers } from "./src/namespace.ts";
 import PlatformWorker from "./src/platform.ts";
@@ -84,7 +84,7 @@ looks up a user Worker by script name and returns a `Fetcher`:
 
 ```typescript
 // src/platform.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -117,6 +117,16 @@ export default class PlatformWorker extends Cloudflare.Worker<PlatformWorker>()(
   }).pipe(Effect.provide(Cloudflare.WorkersForPlatforms.GetBinding)),
 ) {}
 ```
+
+<Fanout
+  item={{ title: "request", lines: ["GET /dispatch/customer-a/hello"] }}
+  group="Platform · Worker"
+  routes={[
+    { label: "dispatch", condition: ['dispatch.get("customer-a")'], target: { label: "customer-a", type: "user Worker" } },
+    { label: "dispatch", condition: ['dispatch.get("customer-b")'], target: { label: "customer-b", type: "user Worker" }, match: false },
+  ]}
+  caption="User Workers in the Customers namespace have no URL. Every request reaches the platform Worker, which picks one by script name and forwards the rest of the path."
+/>
 
 Provide `GetBinding` as a layer so the client resolves the native
 `dispatch_namespace` runtime binding. A request to

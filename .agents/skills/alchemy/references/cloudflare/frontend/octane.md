@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/octane
      upstream: website/src/content/docs/cloudflare/frontend/octane.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Octane
 
@@ -25,9 +25,7 @@ Add `@alchemy.run/frontend-frameworks` as a dev dependency; Alchemy loads
 its Octane integration at deploy time. `@octanejs/adapter-cloudflare` is
 optional:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Octane
 
@@ -76,7 +74,7 @@ Stack) and derive the typed shape of its bindings from it:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Website = Cloudflare.Website.Octane("Website");
 
@@ -203,9 +201,7 @@ export const OctaneApp = Cloudflare.Website.Vite("Octane", {
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs Octane's own Vite dev server — the plugin's
 in-process SSR middleware serves rendering, server routes, and RPC with

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-code/local-provider
      upstream: website/src/content/docs/infrastructure-as-code/local-provider.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Local Provider
 
@@ -11,7 +11,7 @@ Worker runs in a local `workerd`, a dev server is a child process on your
 machine. A **local provider** is the implementation that serves a resource
 type in dev, alongside the **live provider** used by `alchemy deploy`.
 
-This guide is about *building* one. For the user-facing dev model — and
+For the user-facing dev model — and
 opting a resource out of local emulation with `remote()` — see
 [Local development](/environments/local-development). If you haven't built
 a provider before, start with
@@ -225,10 +225,10 @@ test.provider("promotes a dev worker to a live worker", (stack) =>
 - [`Command/Dev.ts`](https://github.com/alchemy-run/alchemy/blob/main/packages/alchemy/src/Command/Dev.ts)
   — the smallest `LocalProvider.make` provider: spawn a command, extract
   its URL, restart on prop changes.
-- [`Cloudflare/Workers/LocalWorkerProvider.ts`](https://github.com/alchemy-run/alchemy/blob/main/packages/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts)
+- [`Cloudflare/Workers/LocalWorkerProvider.ts`](https://github.com/alchemy-run/alchemy/blob/main/packages/cloudflare/src/Workers/LocalWorkerProvider.ts)
   — the full-size one: bundler watch loop, `workerd` instances, a URL
   proxy torn down in `stop`.
-- [`Cloudflare/Queues/Queue.ts`](https://github.com/alchemy-run/alchemy/blob/main/packages/alchemy/src/Cloudflare/Queues/Queue.ts)
+- [`Cloudflare/Queues/Queue.ts`](https://github.com/alchemy-run/alchemy/blob/main/packages/cloudflare/src/Queues/Queue.ts)
   — the registry-style counter-example: a plain local provider under
   `dual`.
 

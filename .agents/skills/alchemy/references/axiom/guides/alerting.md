@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/axiom/guides/alerting
      upstream: website/src/content/docs/axiom/guides/alerting.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Alerting: monitors & notifiers
 
@@ -20,7 +20,7 @@ Everything below runs inside your Stack's `Effect.gen` — see
 ## Create a notifier
 
 ```typescript
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 const slack = yield* Axiom.Notifier("ops-slack", {
   name: "ops-channel",
@@ -66,6 +66,24 @@ an empty result counts as a problem.
 `notifierIds: [slack.id]` is the wiring: `slack.id` is an output
 attribute of the notifier flowing into the monitor's inputs, so
 alchemy deploys the notifier first and fills in the real id.
+
+<Timeline
+  end={10}
+  lanes={[
+    { id: "runs", label: "error-rate", type: "every 5 minutes" },
+    { id: "alert", label: "notifier", type: "Slack" },
+  ]}
+  bars={[
+    { lane: "runs", start: 0.2, end: 1.1, label: "42", tone: "default" },
+    { lane: "runs", start: 2.2, end: 3.1, label: "87", tone: "default" },
+    { lane: "runs", start: 4.2, end: 5.1, label: "131", tone: "danger" },
+    { lane: "runs", start: 6.2, end: 7.1, label: "156", tone: "danger" },
+    { lane: "runs", start: 8.2, end: 9.1, label: "64", tone: "default" },
+    { lane: "alert", start: 4.4, end: 5.4, label: "triggered", tone: "warn" },
+  ]}
+  marks={[{ at: 4.2, label: "above 100" }]}
+  caption="Each run queries the last 5 minutes and compares the result with the threshold. The first run above 100 triggers the monitor, and its notifier posts to Slack."
+/>
 
 ## MatchEvent: alert on every matching event
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/nuxt
      upstream: website/src/content/docs/prisma/frontend/nuxt.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Nuxt
 
@@ -16,10 +16,7 @@ assets, and prerendered pages are uploaded as `tar.gz` and run on
 Install the build integration in your project; the resource loads its
 `/nuxt` and `/nuxt/node` exports:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Nuxt
 
@@ -40,7 +37,7 @@ rejects foreign presets. That build target still runs on Bun on Prisma.
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Nuxt("Website");
 ```
@@ -114,7 +111,7 @@ ISR behavior from Vercel or Netlify does not carry over to this target.
 
 ## Local dev
 
-`bun alchemy dev` starts Nuxt's native server with HMR and creates no
+`alchemy dev` starts Nuxt's native server with HMR and creates no
 Prisma resources for the Website. Use `.pipe(Alchemy.remote())` to
 opt into the live deployment during dev.
 
@@ -126,8 +123,7 @@ export const Website = Prisma.Website.Nuxt("Website", {
 });
 ```
 
-`Prisma.CustomDomain` requires the project's current default branch.
-Configure its returned DNS records yourself and check provisioning
+Configure the returned DNS records yourself and check provisioning
 status before cutover. See
 [Custom domains](/prisma/frontend/websites#custom-domains).
 

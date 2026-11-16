@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/vite-spa
      upstream: website/src/content/docs/cloudflare/frontend/vite-spa.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Add a React SPA
 
@@ -43,9 +43,7 @@ A minimal React SPA looks like:
 
 ### Install React
 
-```sh
-bun add react react-dom\nbun add -d @types/react @types/react-dom @vitejs/plugin-react
-```
+<PackageManagers add={deps} dev={devDeps} />
 
 ### Create vite.config.ts
 
@@ -120,7 +118,7 @@ Yield `Cloudflare.Website.Vite("Website")` from your Stack:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Worker from "./src/worker.ts";
 
@@ -283,9 +281,7 @@ export default defineConfig({
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Alchemy runs Vite on `rootDir`, uploads the assets, creates a
 Worker that serves them, and prints the new `webUrl` stack output:
@@ -314,8 +310,8 @@ Or add an integration test alongside the existing ones:
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as HttpClient from "effect/http/HttpClient";
@@ -342,9 +338,7 @@ const stack = beforeAll(deploy(Stack));
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 `alchemy dev` runs the whole Stack locally with hot reloading.
 For a `Cloudflare.Website.Vite` worker that means Alchemy boots
@@ -383,8 +377,7 @@ how `dev` differs from `deploy`.
 
 ## Use a different framework
 
-This page is the plain React SPA path. Other frameworks have
-their own landing pages, each flowing from the same
+Other frameworks have their own landing pages, each flowing from the same
 [`Cloudflare.Website.Vite` resource](/cloudflare/frontend/vite):
 
 - [TanStack Start](/cloudflare/frontend/tanstack-start) — full-stack
@@ -392,6 +385,8 @@ their own landing pages, each flowing from the same
 - [React Router](/cloudflare/frontend/react-router) — SPA or React
   Server Components
 - [Vue](/cloudflare/frontend/vue) — Vue 3 SPA
+- [Foldkit](/cloudflare/frontend/foldkit) — client-only,
+  server-rendered, or prerendered Foldkit
 - [SolidStart](/cloudflare/frontend/solidstart) — SSR Solid
 
 For frameworks whose build isn't driven by Vite alone, deploy the
@@ -416,7 +411,7 @@ Start with the simplest backend: an R2 bucket.
 
 ```typescript
 // src/backend.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Bucket = Cloudflare.R2.Bucket("Bucket");
 ```
@@ -450,9 +445,7 @@ the resource. `env.BUCKET` is now typed as `Bucket` end to end.
 `@cloudflare/workers-types`. Add it to your `tsconfig.json` so the
 TypeScript checker can find them:
 
-```sh
-bun add -d @cloudflare/workers-types
-```
+<PackageManagers dev={typesDep} />
 
 ```diff lang="json"
 // tsconfig.json
@@ -509,7 +502,7 @@ concurrency), factor it into its own Worker:
 
 ```diff lang="typescript"
 // src/backend.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 +import * as Effect from "effect/Effect";
 +import { HttpServerRequest } from "effect/http/HttpServerRequest";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -611,7 +604,7 @@ API:
 ```diff lang="typescript"
 // src/routes/api.hello.ts
 import { createFileRoute } from "@tanstack/react-router";
-+import * as Cloudflare from "alchemy/Cloudflare/Bridge";
++import * as Cloudflare from "@alchemy.run/cloudflare/Bridge";
 +import type Backend from "../backend.ts";
 import { env } from "../env.ts";
 

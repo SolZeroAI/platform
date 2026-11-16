@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/previews
      upstream: website/src/content/docs/cloudflare/compute/previews.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Worker Previews
 
@@ -14,6 +14,44 @@ state. The parent's live deployment is untouched.
 This is the branch and pull-request path. It is **not** a Worker
 version. Versions are for gradual rollouts and canaries — see
 [Gradual deployments](/cloudflare/compute/gradual-deployments).
+
+<Tree
+  nodes={[
+    { id: "w", label: "Api", type: "Worker" },
+    {
+      id: "live",
+      label: "live",
+      type: "deployment",
+      parent: "w",
+      tone: "accent",
+      specs: [
+        ["url", "api.example.com"],
+        ["DO state", "production"],
+      ],
+    },
+    {
+      id: "pr",
+      label: "pr-123",
+      type: "Preview",
+      parent: "w",
+      specs: [
+        ["url", "pr-123-api.….workers.dev"],
+        ["DO state", "its own"],
+      ],
+    },
+    {
+      id: "feat",
+      label: "feat-login",
+      type: "Preview",
+      parent: "w",
+      specs: [
+        ["url", "feat-login-api.….workers.dev"],
+        ["DO state", "its own"],
+      ],
+    },
+  ]}
+  caption="Previews live under the Worker next to its live deployment, each with its own URL, bindings and Durable Object state. Destroying one leaves the rest alone."
+/>
 
 ## Preview another stage's Worker
 

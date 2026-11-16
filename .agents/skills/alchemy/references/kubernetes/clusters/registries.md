@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/clusters/registries
      upstream: website/src/content/docs/kubernetes/clusters/registries.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Container registries
 
@@ -26,6 +26,23 @@ const worker = yield* Kubernetes.Job(
   }),
 );
 ```
+
+<Boundaries
+  nodes={[
+    { id: "you", label: "alchemy deploy", type: "builds api:<hash>", col: 0, row: 0 },
+    { id: "reg", label: "ghcr.io/acme", type: "registry", col: 1, row: 0, tone: "accent" },
+    { id: "node", label: "node", type: "pulls api:<hash>", col: 2, row: 0 },
+  ]}
+  zones={[
+    { id: "machine", label: "your machine", nodes: ["you"] },
+    { id: "cluster", label: "cluster", nodes: ["node"], tone: "warn" },
+  ]}
+  links={[
+    { from: "you", to: "reg", label: "push" },
+    { from: "reg", to: "node", label: "pull" },
+  ]}
+  caption="The image is built where you deploy and pulled by the node that runs it, so the registry has to be one both can reach."
+/>
 
 On deploy, Alchemy bundles the program, builds the image with your
 local Docker, pushes it to `ghcr.io/acme/<name>:<hash>`, and points

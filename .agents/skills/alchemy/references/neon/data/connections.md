@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/data/connections
      upstream: website/src/content/docs/neon/data/connections.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Connections
 
@@ -16,7 +16,7 @@ Both `Neon.Project` and `Neon.Branch` expose the same four
 attributes:
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const project = yield* Neon.Project("app-db");
 const branch = yield* Neon.Branch("preview", { project });
@@ -34,6 +34,15 @@ The direct URI connects straight to the branch's compute endpoint.
 The pooled URI routes through Neon's pgbouncer-based pooler, which
 lets many short-lived clients share a small number of Postgres
 connections.
+
+<Tree
+  nodes={[
+    { id: "branch", label: "main", type: "branch" },
+    { id: "pool", label: "pooler", type: "pgbouncer · ep-…-pooler host", parent: "branch", tone: "accent", specs: [["URI", "pooled"], ["for", "Workers, Lambdas, short clients"]] },
+    { id: "ep", label: "compute endpoint", type: "Postgres · ep-… host", parent: "branch", specs: [["URI", "direct"], ["for", "migrations, long sessions"]] },
+  ]}
+  caption="Both URIs reach the same branch. The pooled one shares a few Postgres connections among many short-lived clients. The direct one is a real session, for work that needs one."
+/>
 
 ## The origin shape
 
@@ -70,7 +79,7 @@ const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("app-hyperdrive", {
 });
 ```
 
-The `dev` override matters because `bun alchemy dev` doesn't create
+The `dev` override matters because `alchemy dev` doesn't create
 a Hyperdrive config at all — the local Worker connects to the
 database directly. With Hyperdrive out of the path, nothing pools
 those connections, so `pooledOrigin` sends local dev through Neon's
@@ -92,8 +101,11 @@ Guides:
   provision Neon, front it with Hyperdrive, bind it into a Worker.
 - [Branching](/neon/data/branching) — copy-on-write branches, each with
   its own connection outputs.
+- [Roles](/neon/data/roles) — connect as your own Postgres role instead
+  of the owner.
 
 Reference:
 
 - [Project API reference](/providers/neon/project)
 - [Branch API reference](/providers/neon/branch)
+- [Role API reference](/providers/neon/role)

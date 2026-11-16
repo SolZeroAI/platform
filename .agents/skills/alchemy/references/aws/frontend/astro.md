@@ -1,15 +1,16 @@
 <!-- source: https://alchemy.run/aws/frontend/astro
      upstream: website/src/content/docs/aws/frontend/astro.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Astro
 
-> Deploy an Astro app to AWS with AWS.Website.Astro — SSR on a streaming Lambda Function URL, static output on S3 + CloudFront, and Astro's own dev server under alchemy dev.
+> Deploy an Astro app to AWS with AWS.Website.Astro — SSR on a Lambda Web Function, static output on S3 + CloudFront, and Astro's own dev server under alchemy dev.
 
 `AWS.Website.Astro` deploys an [Astro](https://astro.build) project
-to AWS. It runs Astro's programmatic build with a wrangler-free AWS
-Lambda adapter: server-rendered pages stream from a Lambda Function
-URL, prerendered pages and client assets are served from a private S3
+to AWS. It runs Astro's programmatic build with a wrangler-free Node
+adapter: server-rendered pages stream from a
+[Lambda Web Function](/aws/compute/web-functions), prerendered pages
+and client assets are served from a private S3
 bucket through CloudFront, routed at the edge. Your `astro.config.*`
 loads natively — there is no adapter to install into it and no
 CloudFormation to write.
@@ -18,19 +19,17 @@ CloudFormation to write.
 
 The build integration is not bundled with alchemy. Install
 `@alchemy.run/frontend-frameworks`; the resource loads its `/astro`
-and `/astro/aws` exports from your project at deploy time. It is only
+and `/astro/node` exports from your project at deploy time. It is only
 used at build time, so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Astro
 
 Your `astro.config.*` file loads natively — integrations, Vite
 plugins, and any other non-serializable options work exactly as they
 do outside Alchemy. Alchemy merges a programmatic config *over* it:
-the AWS Lambda adapter is injected for you (don't declare an
+Alchemy's Node adapter is injected for you (don't declare an
 `adapter` in your config — that fails the build with an actionable
 error), and options passed via the `astro` prop override the file's —
 see [Astro configuration](#astro-configuration) below for the
@@ -43,7 +42,7 @@ Stack):
 
 ```typescript
 // alchemy.run.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 export const Website = AWS.Website.Astro("Website");
 ```
@@ -93,13 +92,13 @@ export const Website = AWS.Website.Astro("Website", {
 });
 ```
 
-The values are set on the Lambda at deploy time and injected into the
+The values are set on the server at deploy time and injected into the
 dev server's process environment under `alchemy dev`, so server code
 reads the same values in both modes.
 
 ## Read the environment in server code
 
-The Astro server runs in a plain Node Lambda, so server-rendered
+The Astro server is a plain Node server, so server-rendered
 pages and endpoints read the environment from `process.env`:
 
 ```astro
@@ -183,13 +182,28 @@ export const Website = AWS.Website.Astro("Website", {
 
 Two options are managed for you regardless of the config file:
 
-- `adapter` — Alchemy injects its wrangler-free AWS Lambda adapter.
+- `adapter` — Alchemy injects its wrangler-free Node adapter.
   Declaring an adapter in `astro.config.*` fails the build with an
   actionable error.
 - `output` — Alchemy defaults it to `"server"` (superseding a
-  file-level `output`), so pages render on demand in the Lambda.
+  file-level `output`), so pages render on demand on the server.
   Opt into a fully prerendered site with `astro: { output: "static" }`
   on the resource.
+
+## Run on a Lambda Function
+
+Web Functions run in a subset of Regions. Elsewhere, set
+`server: "function"`: the app builds with the `/astro/aws` deploy target
+and runs on a Lambda Function behind a streaming Function URL, tuned with
+`memorySize`, `architecture`, and `runtime`:
+
+```diff lang="typescript"
+// alchemy.run.ts
+export const Website = AWS.Website.Astro("Website", {
++  server: "function",
++  memorySize: 2048,
+});
+```
 
 ## Local dev
 

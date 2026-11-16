@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/cloudflare-hyperdrive
      upstream: website/src/content/docs/better-auth/databases/cloudflare-hyperdrive.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Cloudflare Hyperdrive
 
@@ -10,9 +10,7 @@ This example provisions a Neon Postgres database, a Hyperdrive connection, and a
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely pg
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely pg" />
 
 Configure Cloudflare and Neon through [Alchemy profiles](/environments/profiles), or supply `NEON_API_KEY` for Neon. If you only need direct Neon access, the [Neon serverless layer](/better-auth/databases/neon) avoids Hyperdrive and `pg`.
 
@@ -20,8 +18,8 @@ Configure Cloudflare and Neon through [Alchemy profiles](/environments/profiles)
 
 ```typescript title="src/auth-database.ts"
 import { CloudflareHyperdrive } from "@alchemy.run/better-auth/CloudflareHyperdrive";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -47,7 +45,7 @@ Keep Hyperdrive caching disabled so session and verification reads cannot return
 
 ```typescript title="src/worker.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { AuthDatabase } from "./auth-database.ts";
 
@@ -73,8 +71,8 @@ The layer registers Hyperdrive's native binding and opens a driver pool inside e
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import AuthApi from "./src/worker.ts";
@@ -96,9 +94,7 @@ Preserve and protect the local `.alchemy` state directory so later deployments r
 
 ## Deploy and migrate through the origin
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The deployer must reach the origin with schema-changing permissions; the migration completes before the Worker is updated. Set `AUTH_ORIGIN` to the printed URL and verify the endpoint:
 
@@ -112,9 +108,7 @@ Omitting the database layer's `migrate` source disables automatic migration supp
 
 For an existing MySQL origin, install its driver instead of `pg`:
 
-```sh
-bun add mysql2
-```
+<PackageManagers add="mysql2" />
 
 Configure the Hyperdrive resource with that MySQL origin, select `dialect: "mysql"` in `CloudflareHyperdrive`, and supply the origin's deploy-resolvable URL as `migrate`. Keep caching disabled; changing the dialect alone neither converts the Neon origin above nor moves existing auth records.
 

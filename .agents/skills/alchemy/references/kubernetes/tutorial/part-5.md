@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/tutorial/part-5
      upstream: website/src/content/docs/kubernetes/tutorial/part-5.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 5: Deploy to Your Own Cluster
 
@@ -60,7 +60,7 @@ replace the `Cluster` declaration:
 
 ```diff lang="typescript"
 +import { Stage } from "alchemy";
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 
 -export const Cluster = Kubernetes.LocalCluster("Cluster", {
@@ -112,9 +112,7 @@ return {
 
 ## Deploy to prod
 
-```sh
-bun alchemy deploy --stage prod
-```
+<PackageManagers run="alchemy deploy --stage prod" />
 
 ```text
 Plan: 5 to create
@@ -158,7 +156,7 @@ where it's missing:
 
 ```diff lang="typescript"
 +import { Stage } from "alchemy";
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 ```
 
 ```diff lang="typescript"
@@ -184,9 +182,7 @@ Deploying `prod` again now plans the chart for deletion there.
 Destroy your own stage to remove everything on your machine,
 including the kind cluster and its registry:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 Alchemy deletes the resources in reverse dependency order and the
 cluster last. The next `alchemy deploy` recreates it in about 30

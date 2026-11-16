@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/recipes/cloudflare-aws
      upstream: website/src/content/docs/git/recipes/cloudflare-aws.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Bytes in S3, hashing on Lambda
 
@@ -15,10 +15,10 @@ hashed on its own Lambda:
 
 ```typescript
 // src/git.ts
-import * as AWS from "alchemy/AWS";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Git from "alchemy/Git";
-import * as GitHasher from "alchemy/Git/Hasher";
+import * as AWS from "@alchemy.run/aws";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Git from "@alchemy.run/git";
+import * as GitHasher from "@alchemy.run/git/Hasher";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as HttpRouter from "effect/http/HttpRouter";
@@ -49,8 +49,8 @@ export default class GitHost extends Cloudflare.Worker<GitHost>()(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as AWS from "@alchemy.run/aws";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import GitHost from "./src/git.ts";
@@ -68,9 +68,7 @@ export default Alchemy.Stack(
 );
 ```
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ## What gets created
 

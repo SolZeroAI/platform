@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/compute/sprites
      upstream: website/src/content/docs/fly/compute/sprites.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Sprites
 
@@ -18,6 +18,21 @@ image.
 Auth is `FLY_API_TOKEN`. Alchemy mints a Sprites bearer from that
 token. There is no extra token to store.
 
+<Timeline
+  end={10}
+  lanes={[{ id: "s", label: "Sprite", type: "your program" }]}
+  bars={[
+    { lane: "s", start: 0, end: 2.2, label: "running" },
+    { lane: "s", start: 2.2, end: 5.6, label: "hibernated · idle", tone: "muted" },
+    { lane: "s", start: 5.6, end: 6.1, tone: "warn" },
+    { lane: "s", start: 6.1, end: 8, label: "running" },
+    { lane: "s", start: 8, end: 10, label: "hibernated", tone: "muted" },
+  ]}
+  marks={[{ at: 5.6, label: "a request wakes it" }]}
+  legend={[{ tone: "warn", label: "waking" }, { tone: "muted", label: "hibernated" }]}
+  caption="A Sprite hibernates when nothing uses it and wakes on the next request, so an idle sandbox costs little."
+/>
+
 ## Declare a Sprite
 
 A Sprite is a class. Props describe the sandbox. The Effect is the
@@ -25,7 +40,7 @@ program that runs on it.
 
 ```typescript
 // src/box.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 
 export default class Box extends Fly.Sprite<Box>()(
@@ -47,7 +62,7 @@ Return `fetch` from the constructor Effect to boot an HTTP server. The
 Sprite URL proxies to `port`.
 
 ```diff lang="typescript"
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

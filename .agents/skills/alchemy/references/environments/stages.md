@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/environments/stages
      upstream: website/src/content/docs/environments/stages.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Stages
 
@@ -21,7 +21,9 @@ separate local-dev sandbox without any config — so a bare `alchemy
 dev` cannot replace resources you deployed. Existing default `alchemy
 dev` stacks keep the `dev_$USER` name. **`Test.make`** uses
 **`test_$USER`** the same way, so two people running the suite
-against one account don't collide.
+against one account don't collide. Running from several git
+worktrees at once? Give each its own stages — see
+[Worktrees](/environments/worktrees).
 
 ```sh
 $ whoami

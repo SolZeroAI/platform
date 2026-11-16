@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/command/memoization
      upstream: website/src/content/docs/command/memoization.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Memoization: builds & one-off commands
 

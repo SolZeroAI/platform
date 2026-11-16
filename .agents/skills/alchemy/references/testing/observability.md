@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/testing/observability
      upstream: website/src/content/docs/testing/observability.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Observability
 
@@ -52,7 +52,7 @@ OTLP endpoints as outputs:
 
 ```typescript
 // src/observability.ts
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 
 export const Traces = Axiom.Dataset("Traces", {
   name: "app-traces",
@@ -164,7 +164,7 @@ topics, and dashboards are structured documents — all declared next
 to the resources they observe:
 
 ```typescript
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 
 const alerts = yield* AWS.SNS.Topic("Alerts");
 

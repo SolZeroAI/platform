@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/runtime
      upstream: website/src/content/docs/acme/runtime.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Runtime issuance
 
@@ -40,7 +40,7 @@ issuance allowance.
 Create `resources.ts`:
 
 ```typescript
-import * as ACME from "alchemy/ACME";
+import * as ACME from "@alchemy.run/acme";
 import * as Config from "effect/Config";
 
 export const Issuer = ACME.Account("Issuer", {
@@ -63,7 +63,7 @@ Add a zone resource to `resources.ts`:
 
 ```typescript
 import { adopt } from "alchemy/AdoptPolicy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { retain } from "alchemy/RemovalPolicy";
 
 export const Zone = Cloudflare.Zone.Zone("DnsZone", {
@@ -117,7 +117,7 @@ serialization; possession of a DNS token alone is not tenant authorization.
 ```typescript
 const issued = yield* issuer.issue({
   identifiers: ["api.example.com"],
-  solver: Cloudflare.DNS.acmeDnsSolver(dns),
+  solver: Cloudflare.ACME.zoneSolver(dns),
 });
 ```
 
@@ -142,8 +142,8 @@ Create `issuer-worker.ts`. This complete file combines the bindings, authorizati
 and two operations above:
 
 ```typescript
-import * as ACME from "alchemy/ACME";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as ACME from "@alchemy.run/acme";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Config from "effect/Config";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -176,7 +176,7 @@ export default class IssuerWorker extends Cloudflare.Worker<IssuerWorker>()(
         if (pathname === "/issue") {
           const issued = yield* issuer.issue({
             identifiers: ["api.example.com"],
-            solver: Cloudflare.DNS.acmeDnsSolver(dns),
+            solver: Cloudflare.ACME.zoneSolver(dns),
           });
           return yield* HttpServerResponse.json(
             {
@@ -242,8 +242,8 @@ Create `alchemy.run.ts`:
 
 ```typescript
 import * as Alchemy from "alchemy";
-import * as ACME from "alchemy/ACME";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as ACME from "@alchemy.run/acme";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import IssuerWorker from "./issuer-worker.ts";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/vite
      upstream: website/src/content/docs/prisma/frontend/vite.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vite
 
@@ -24,10 +24,7 @@ apps. Use the dedicated [Astro](/prisma/frontend/astro),
 The build integration is separate from alchemy. Install it in the Vite
 project; the resource loads its `/vite` and `/vite/node` exports:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Vite
 
@@ -49,7 +46,7 @@ export default defineConfig({
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Vite("Website");
 ```
@@ -130,7 +127,7 @@ export const Website = Prisma.Website.Vite("Website", {
 
 ## Local development
 
-`bun alchemy dev` runs Vite's own server with HMR. The Website creates
+`alchemy dev` runs Vite's own server with HMR. The Website creates
 no Prisma project, database, app, or domain. Use `.pipe(Alchemy.remote())`
 to deploy the live path during dev instead.
 
@@ -143,7 +140,7 @@ export const Website = Prisma.Website.Vite("Website", {
 ```
 
 This creates `Prisma.CustomDomain` and makes `site.url` the HTTPS hostname.
-The app must be on the project's current default branch. Configure the
+Configure the
 returned DNS records yourself and verify provisioning status before
 cutover; see [Custom domains](/prisma/frontend/websites#custom-domains).
 

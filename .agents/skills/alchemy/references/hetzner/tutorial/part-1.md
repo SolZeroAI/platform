@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/tutorial/part-1
      upstream: website/src/content/docs/hetzner/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Server
 
@@ -12,7 +12,7 @@ five minutes.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A Hetzner project and an API token — see [Setup](/hetzner/setup)
   if you haven't created those yet
 
@@ -27,17 +27,13 @@ done.
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install dependencies
 
-Install <code>alchemy@latest</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/hetzner`, and `effect`:
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -110,7 +106,7 @@ type error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-+import * as Hetzner from "alchemy/Hetzner";
++import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -148,7 +144,7 @@ error:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 import * as Effect from "effect/Effect";
 -import * as Layer from "effect/Layer";
 
@@ -223,9 +219,7 @@ object from the generator to expose the server's public addresses:
 
 Run `alchemy deploy` to create the key and the server:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The first time you deploy, Alchemy prompts for Hetzner credentials —
 paste the API token you generated in [Setup](/hetzner/setup). The

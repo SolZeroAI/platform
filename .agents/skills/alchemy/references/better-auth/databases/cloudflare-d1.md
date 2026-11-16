@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/cloudflare-d1
      upstream: website/src/content/docs/better-auth/databases/cloudflare-d1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Cloudflare D1
 
@@ -10,9 +10,7 @@ This example creates a D1 database and a Worker serving Better Auth at `/api/aut
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely" />
 
 `kysely` is the SQL adapter peer; D1 needs no separate database driver. Configure Cloudflare credentials through an [Alchemy profile](/environments/profiles) before deployment.
 
@@ -21,7 +19,7 @@ bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely
 ```typescript title="src/worker.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
 import { CloudflareD1 } from "@alchemy.run/better-auth/CloudflareD1";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 const AuthDb = Cloudflare.D1.Database("AuthDb");
@@ -48,7 +46,7 @@ export default class AuthApi extends Cloudflare.Worker<AuthApi>()(
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthApi from "./src/worker.ts";
 
@@ -69,15 +67,11 @@ Omitting `secret` provisions and binds a stable signing secret automatically. Pr
 
 ## Deploy or develop locally
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Deployment creates D1 and applies the auth schema through its HTTP API before updating the Worker. Requests use the native binding and never run migrations.
 
-```sh
-bunx alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 Development uses the local D1 simulator, including migrations; use the URL printed by Alchemy. The Worker still runs in workerd, so replacing this layer with Bun's `SQLite` is not supported.
 

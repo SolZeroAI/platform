@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/frontend/waku
      upstream: website/src/content/docs/cloudflare/frontend/waku.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Waku
 
@@ -21,9 +21,7 @@ The build integration is not bundled with alchemy. Install
 export from your project at deploy time. It is only used at build time,
 so a dev dependency is enough:
 
-```sh
-bun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers dev={devDeps} />
 
 ## Configure Waku
 
@@ -72,7 +70,7 @@ Stack) and derive the typed shape of its bindings from it:
 
 ```typescript
 // alchemy.run.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Website = Cloudflare.Website.Waku("Website");
 

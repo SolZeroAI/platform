@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/networking/domains
      upstream: website/src/content/docs/cloudflare/networking/domains.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Domains & DNS
 
@@ -17,12 +17,24 @@ the years. Adoption is designed for exactly that — Alchemy takes
 over an existing zone or record only when you explicitly opt in,
 so a deploy can never clobber DNS it doesn't own.
 
+<Tree
+  nodes={[
+    { id: "zone", label: "example.com", type: "zone · name servers on Cloudflare" },
+    { id: "a", label: "api.example.com", type: "A · proxied", parent: "zone" },
+    { id: "c", label: "app.example.com", type: "CNAME · proxied", parent: "zone" },
+    { id: "mx", label: "example.com", type: "MX · mail", parent: "zone" },
+    { id: "w", label: "shop.example.com", type: "Worker custom domain", parent: "zone", tone: "accent" },
+  ]}
+  scopes={[{ on: "zone", label: "DNSSEC · zone settings" }]}
+  caption="A zone holds one domain's DNS records and its settings. A Worker's custom domain is a hostname in the zone that the Worker answers."
+/>
+
 ## Create a zone
 
 A zone is one resource declaration:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 const zone = yield* Cloudflare.Zone.Zone("MyZone", {
   name: "example.com",
@@ -101,18 +113,24 @@ yield* Cloudflare.DNS.Record("AppCname", {
 });
 ```
 
-Cloudflare treats `(name, type)` as a record's identity: changing
-`content`, `ttl`, `proxied`, or `comment` patches the record in
-place, while changing `name` or `type` replaces it (a new record
-is created, then the old one deleted).
+A record is tracked by its Cloudflare record id, so changing its
+`name`, `type`, `content`, `ttl`, `proxied`, or `comment` updates it
+in place. Only moving it to another zone replaces it. Unless you set
+`comment`, Alchemy labels each record `Managed by Alchemy (<FQN>)` in
+the dashboard.
 
-Records get the same adoption safety as zones. If a record with
-the same `(name, type)` already exists in the zone — a
-hand-edited apex `A` record, an email DKIM/SPF entry — the deploy
-refuses to take it over unless you pipe `adopt(true)`. This is
-deliberate: DNS is where "already configured in the dashboard"
-lives, and overwriting it silently would be the worst possible
-default.
+Records get the same adoption safety as zones. If a record with the
+same name, type and `content` (and `priority`, for MX and URI)
+already exists in the zone — a hand-edited apex `A` record, an email
+DKIM/SPF entry — the deploy refuses to take it over unless you pipe
+`adopt(true)`. A record with different content is left alone and a
+new one is created beside it, so adding a second TXT or MX record
+never overwrites the first. For an `A` or `AAAA` record that means
+traffic is split between the old and new address until you remove
+the old record or adopt it. To adopt a record and then change it,
+declare its current `content` first, then change it in a later
+deploy. A CNAME is the exception: a name holds only one, so
+`adopt(true)` takes over an existing CNAME whatever it points at.
 
 ## Worker custom domains
 
@@ -179,10 +197,14 @@ Related:
   at.
 - [Email](/cloudflare/email) — route mail on the zone and send from
   Workers.
+- [DNS Adapters](/infrastructure-as-code/dns-adapters) — publish another
+  platform's custom-domain records (AWS, Fly, Railway, …) in a Cloudflare
+  zone.
 
 Reference:
 
 - [Zone API reference](/providers/cloudflare/zone/zone)
 - [Record API reference](/providers/cloudflare/dns/record)
+- [Records API reference](/providers/cloudflare/dns/records)
 - [Setting API reference](/providers/cloudflare/zone/setting)
 - [Dnssec API reference](/providers/cloudflare/dns/dnssec)

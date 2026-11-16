@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/sql/effect-sql/mysql
      upstream: website/src/content/docs/sql/effect-sql/mysql.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # MySQL
 
@@ -8,16 +8,14 @@
 
 `SQL.MySQL` provides tagged-template queries over a MySQL connection. Queries are Effects with typed `SqlError` failures, interruption, and tracing.
 
-Install the optional MySQL driver:
+Install `@alchemy.run/sql` and the Effect MySQL client:
 
-```sh
-bun add @effect/sql-mysql2 mysql2
-```
+<PackageManagers add={deps} />
 
 ## Connect
 
 ```typescript
-import * as SQL from "alchemy/SQL/MySQL";
+import * as SQL from "@alchemy.run/sql/MySQL";
 import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 
@@ -46,7 +44,7 @@ const workersDefaults = {
 };
 ```
 
-These defaults avoid Hyperdrive's unsupported prepared-statement protocol and Workers' prohibition on eval-based row parsers. Direct connections from Node or Bun retain prepared statements and mysql2's normal parsers by default. See [Hyperdrive](/cloudflare/data/hyperdrive#use-effect-sql) for Worker connection setup.
+These defaults avoid Hyperdrive's unsupported prepared-statement protocol and Workers' prohibition on eval-based row parsers. Direct connections from Node or Bun retain prepared statements and mysql2's normal parsers by default. See [Hyperdrive](/cloudflare/data/hyperdrive#bind-hyperdrive-to-your-worker) for Worker connection setup.
 
 ## Override driver options
 

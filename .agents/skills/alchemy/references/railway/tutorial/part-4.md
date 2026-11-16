@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/tutorial/part-4
      upstream: website/src/content/docs/railway/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Variables and Cleanup
 
@@ -20,7 +20,7 @@ Add a Variable next to the Project. Wrap the value with
 
 ```diff lang="typescript"
 // src/project.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 +import * as Redacted from "effect/Redacted";
 
 export const Site = Railway.Project("Site");
@@ -98,9 +98,7 @@ const file = `${mount.path}${url.pathname}`;
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 1 to create, 1 to update
@@ -134,9 +132,7 @@ the private network stay on `{name}.railway.internal`; a
 You're done — tear everything down so Service and Volume billing
 stops:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 Alchemy deletes everything in reverse dependency order — Service,
 Variable, Volume, Project.

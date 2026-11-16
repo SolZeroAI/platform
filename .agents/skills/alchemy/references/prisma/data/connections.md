@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/data/connections
      upstream: website/src/content/docs/prisma/data/connections.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Connections
 
@@ -13,7 +13,7 @@ connections stay unambiguous — and every secret output is `Redacted`
 so nothing prints in logs or plan output.
 
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 const connection = yield* Prisma.Connection("api", {
   database: postgres,
@@ -110,8 +110,7 @@ friends read them back as `Redacted` values.
 A container is a real process with no workerd bindings, so env vars
 are its only channel — which is exactly why `Prisma.Connect` reaches
 it and `Cloudflare.Hyperdrive.Connect` does not. Start the container
-with `Cloudflare.Containers.layer(Api, { enableInternet: true })` so
-it can reach the database. See
+with `api.start({ enableInternet: true })` so it can reach the database. See
 [Which capabilities reach a container](/cloudflare/compute/containers#which-capabilities-reach-a-container).
 
 ## Rotation

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/setup
      upstream: website/src/content/docs/neon/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -64,6 +64,12 @@ place a management key in Function/Website `env`, browser code, or a runtime
 binding. See [governance permissions](/neon/governance#prepare-the-deployment-identity)
 for administrative controls.
 
+## Install the package
+
+<PackageManagers add="@alchemy.run/neon" />
+
+Installing it makes Neon available to `alchemy profile` and to your stack.
+
 ## Configure a local profile
 
 ```sh
@@ -88,12 +94,12 @@ pasting them into shell history.
 
 ## Register the provider
 
-Add `Neon.providers()` to your stack's provider layer. For example, when combining
-Cloudflare and Neon:
+Add `Neon.providers()` to your stack's provider
+layer. For example, when combining Cloudflare and Neon:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Layer from "effect/Layer";
 
 const providers = Layer.mergeAll(Cloudflare.providers(), Neon.providers());

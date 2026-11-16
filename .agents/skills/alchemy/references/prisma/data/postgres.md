@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/data/postgres
      upstream: website/src/content/docs/prisma/data/postgres.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Postgres
 
@@ -13,7 +13,7 @@ other resource.
 ## Project
 
 ```typescript
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 const project = yield* Prisma.Project("app", {
   createDatabase: false,
@@ -70,7 +70,7 @@ patterns and default-branch promotion.
 
 ## Local dev
 
-Under `bun alchemy dev`, the database resolves to a local
+Under `alchemy dev`, the database resolves to a local
 `@prisma/dev` Postgres instead of the cloud — same outputs, zero
 provisioning. The `dev` prop tunes it:
 

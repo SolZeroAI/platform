@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/recipes/scaling
      upstream: website/src/content/docs/git/recipes/scaling.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Scaling
 
@@ -67,7 +67,7 @@ Ingest dominates. Every object was inflated and hashed on the one
 thread that received the body. Swap the hasher and deploy:
 
 ```diff lang="typescript"
-+import * as GitHasher from "alchemy/Git/Hasher";
++import * as GitHasher from "@alchemy.run/git/Hasher";
 
 const GitLive = Git.ApiLive.pipe(
   Layer.provide(Git.ApiHandlersLive),

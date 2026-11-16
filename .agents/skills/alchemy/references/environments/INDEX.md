@@ -1,6 +1,6 @@
 # environments index
 
-10 pages. Stages, per-environment config, secrets, local dev, and CI.
+11 pages. Stages, per-environment config, secrets, local dev, and CI.
 
 | Page | File | Covers |
 | --- | --- | --- |
@@ -14,3 +14,4 @@
 | Secret providers | `secret-providers.md` | Configure a stack with dotenv files, environment variables, Doppler, or Infisical. |
 | Secrets & Config | `secrets.md` | Use effect/Config to read env vars at Construction time and have Alchemy automatically bind them onto the deploy target. |
 | Stages | `stages.md` | Stages are isolated instances of a Stack — live_sam, dev_sam, staging, prod, pr-42 — each with their own state and physical names. |
+| Worktrees | `worktrees.md` | Run alchemy deploy, dev, and tests from several git worktrees at once — one stage per worktree, so parallel agents never touch each other's resources. |

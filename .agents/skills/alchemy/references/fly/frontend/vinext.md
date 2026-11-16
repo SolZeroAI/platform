@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/vinext
      upstream: website/src/content/docs/fly/frontend/vinext.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Vinext
 
@@ -17,10 +17,7 @@ Keep `vinext`, `react`, `react-dom`, and `react-server-dom-webpack` in your
 application dependencies, with `vite` and `@vitejs/plugin-rsc` for building.
 Add the Alchemy integration:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure vinext
 
@@ -42,7 +39,7 @@ No Alchemy plugin is required in `vite.config.ts`; deployment settings belong on
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.Vinext("Website", {
   rootDir: ".",
@@ -109,9 +106,7 @@ const site = yield* Fly.Website.Vinext("Web", { redis });
 
 ## Local development
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 The Website runs `vinext dev` with native HMR and creates no cloud resources.
 Other resources declared in the Stack retain their own provider behavior.

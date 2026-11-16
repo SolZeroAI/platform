@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/tutorial/part-3
      upstream: website/src/content/docs/cloudflare/tutorial/part-3.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 3: Testing
 
@@ -9,6 +9,12 @@
 In [Part 2](/cloudflare/tutorial/part-2) you deployed a Worker with R2 Bucket
 bindings. Now you'll write integration tests that deploy the stack,
 hit the live Worker over HTTP, and verify it works.
+
+## Install the test harness
+
+`Test.make` ships in `@alchemy.run/test`. Add it as a dev dependency:
+
+<PackageManagers dev="@alchemy.run/test" />
 
 ## Create the test file
 
@@ -19,8 +25,8 @@ with `Test.make({...})` — the same `Cloudflare.providers()` /
 
 ```typescript
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import Stack from "../alchemy.run.ts";
@@ -42,8 +48,8 @@ tests run:
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import Stack from "../alchemy.run.ts";
@@ -67,8 +73,8 @@ returned from your Stack in Part 2:
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import Stack from "../alchemy.run.ts";
@@ -110,8 +116,8 @@ actually handles requests:
 
 ```diff lang="typescript"
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 +import * as HttpBody from "effect/http/HttpBody";
@@ -174,7 +180,7 @@ objects on destroy with `forceDestroy: true`:
 
 ```diff lang="typescript"
 // src/bucket.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 -export const Bucket = Cloudflare.R2.Bucket("Bucket");
 +export const Bucket = Cloudflare.R2.Bucket("Bucket", {
@@ -197,8 +203,8 @@ Add `afterAll` with `destroy`, using `skipIf` to only tear down when
 `CI` is set:
 
 ```diff lang="typescript"
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as HttpBody from "effect/http/HttpBody";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/tutorial/part-5
      upstream: website/src/content/docs/better-auth/tutorial/part-5.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 5: Add GitHub sign-in
 
@@ -23,7 +23,7 @@ Use a separate OAuth application for production so its credentials remain indepe
 
 ## Keep credentials out of Git
 
-```gitignore
+```txt
 # .gitignore
 .env
 .env.*
@@ -136,10 +136,8 @@ Better Auth handles failed callbacks on its built-in error page. No custom error
 
 Stop the running development command, rebuild the client, and start it again:
 
-```sh
-bun build ./src/ui.ts --target browser --outdir ./public
-bunx alchemy dev --stage tutorial
-```
+<PackageManagers script={`bun build ./src/ui.ts --target browser --outdir ./public
+{run} alchemy dev --stage tutorial`} />
 
 Try GitHub sign-in and call the protected API. Then sign out, retry, and cancel at GitHub to check the error path.
 

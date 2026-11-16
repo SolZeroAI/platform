@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/workflows
      upstream: website/src/content/docs/cloudflare/compute/workflows.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Workflows
 
@@ -20,6 +20,33 @@ state, a [Durable Object](/cloudflare/compute/durable-objects); buffered
 fan-out of messages, [Queues](/cloudflare/messaging/queues); a fixed schedule,
 [cron](/cloudflare/messaging/cron).
 
+## How a Workflow runs
+
+Each run of a Workflow is an **instance**, started with an input. Its body is a series of **steps**. When a step finishes, its result is saved. If the instance fails or the machine running it goes away, Cloudflare runs the body again from the top, and every step that already finished returns its saved result instead of running again.
+
+<Timeline
+  end={10}
+  lanes={[
+    { id: "charge", label: "charge card", type: "step" },
+    { id: "sleep", label: "sleep 24h", type: "step" },
+    { id: "email", label: "send reminder", type: "step" },
+  ]}
+  bars={[
+    { lane: "charge", start: 0, end: 1, label: "runs, result saved" },
+    { lane: "charge", start: 7.2, end: 7.4, label: "returns saved result" },
+    { lane: "sleep", start: 1, end: 6, label: "no compute while it waits", tone: "muted" },
+    { lane: "sleep", start: 7.4, end: 7.6, label: "already done" },
+    { lane: "email", start: 6, end: 6.8, label: "fails", tone: "danger" },
+    { lane: "email", start: 7.6, end: 9.2, label: "runs again" },
+  ]}
+  marks={[{ at: 7.2, label: "body reruns" }]}
+  legend={[{ tone: "accent", label: "runs" }, { tone: "muted", label: "waits" }, { tone: "danger", label: "fails" }]}
+  ticks={[{ at: 0, label: "day 1" }, { at: 6, label: "day 2" }, { at: 10, label: "" }]}
+  caption="When the run fails, the body runs again from the top. Finished steps return their saved results at once, and only the step that failed runs again."
+/>
+
+So the work inside a step happens once, even if the body runs many times. Keep anything with side effects, a charge, an email, a write, inside a step. A sleep or a wait for an event costs nothing while it lasts, whether it's seconds or weeks.
+
 ## Define a workflow
 
 The outer `Effect.gen` resolves dependencies; the returned
@@ -28,7 +55,7 @@ Effect:
 
 ```typescript
 // src/workflow.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default class MyWorkflow extends Cloudflare.Workflow<MyWorkflow>()(
@@ -262,7 +289,7 @@ handle:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/workloads/object-lifecycle
      upstream: website/src/content/docs/kubernetes/workloads/object-lifecycle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # How objects are managed
 
@@ -11,8 +11,8 @@ Kubernetes objects. That includes
 [`Deployment`](/kubernetes/workloads/deployments),
 [`Job`](/kubernetes/workloads/jobs),
 [`Manifest`](/kubernetes/objects/manifests), and
-[`HelmChart`](/kubernetes/objects/helm-charts). This page describes
-what happens to those objects across deploys.
+[`HelmChart`](/kubernetes/objects/helm-charts). Here is what happens to
+those objects across deploys.
 
 - `Deployment` creates a ServiceAccount, a Deployment, and a Service.
 - `Job` creates a ServiceAccount and a Job or CronJob.

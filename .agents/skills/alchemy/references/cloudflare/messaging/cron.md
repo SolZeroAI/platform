@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/messaging/cron
      upstream: website/src/content/docs/cloudflare/messaging/cron.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Scheduled jobs with Cron Triggers
 
@@ -24,7 +24,7 @@ Call `cron` in the Worker's Construction phase and provide
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -67,6 +67,26 @@ yield* Cloudflare.Workers.cron("*/5 * * * *", () => syncFeeds);
 yield* Cloudflare.Workers.cron("0 0 * * *", () => purgeExpired);
 ```
 
+<Timeline
+  end={12}
+  lanes={[
+    { id: "a", label: "*/5 * * * *", type: "syncFeeds" },
+    { id: "b", label: "0 0 * * *", type: "purgeExpired" },
+  ]}
+  bars={[
+    { lane: "a", start: 0.2, end: 1.2, label: "run" },
+    { lane: "a", start: 2.2, end: 3.2, label: "run" },
+    { lane: "a", start: 4.2, end: 5.2, label: "run" },
+    { lane: "a", start: 6.2, end: 7.2, label: "run" },
+    { lane: "a", start: 8.2, end: 9.2, label: "run" },
+    { lane: "a", start: 10.2, end: 11.2, label: "run" },
+    { lane: "b", start: 6.2, end: 9.6, label: "purgeExpired" },
+  ]}
+  marks={[{ at: 6.2, label: "00:00 UTC" }]}
+  ticks={[{ at: 0.2, label: "23:50" }, { at: 6.2, label: "00:00" }, { at: 12, label: "00:10" }]}
+  caption="Both expressions fire the same Worker's scheduled handler. At midnight both fire, and each fire runs only the handler registered for its expression."
+/>
+
 The listener checks `controller.cron` against the expression it was
 registered with, so a fire of `0 0 * * *` never runs the `*/5`
 handler and vice versa.
@@ -86,7 +106,7 @@ as outputs:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Worker from "./src/worker.ts";
 
@@ -109,9 +129,7 @@ export default Alchemy.Stack(
 `worker.crons` is an output attribute listing every cron expression
 attached to the deployed Worker — the test below asserts against it.
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ## Test it: record each fire in a Durable Object
 
@@ -122,7 +140,7 @@ perfect:
 
 ```typescript
 // src/cron-counter.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default class CronCounter extends Cloudflare.DurableObject<CronCounter>()(
@@ -159,7 +177,7 @@ Cloudflare supports — so the test doesn't wait long:
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -209,8 +227,8 @@ reset shows up:
 
 ```typescript
 // test/cron.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Vitest";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Vitest";
 import { expect } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Schedule from "effect/Schedule";

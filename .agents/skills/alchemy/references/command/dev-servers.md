@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/command/dev-servers
      upstream: website/src/content/docs/command/dev-servers.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Dev servers
 
@@ -10,7 +10,7 @@
 started during [`alchemy dev`](/cli/dev), restarted when its inputs
 change, and a literal no-op during `alchemy deploy` — the deploy
 provider returns `{ url: undefined }` without spawning anything.
-This page assumes the [Command provider](/command) is registered.
+Register the [Command provider](/command) first.
 
 ## Declare a dev server
 

@@ -1,14 +1,14 @@
 <!-- source: https://alchemy.run/aws/apis/schemaless-rpc
      upstream: website/src/content/docs/aws/apis/schemaless-rpc.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Schemaless RPC
 
 > Typed RPC from a Lambda Function into a MicroVM with no schema — declare the image's Shape, connect, get the client.
 
 The pattern — what a Shape member may be, how the typed client arises, what
-crosses the wire — lives at [Schemaless RPC](/apis/schemaless). This page
-covers the AWS pairings. There is one today: **Lambda → Firecracker MicroVM**,
+crosses the wire — lives at [Schemaless RPC](/apis/schemaless). On AWS
+there is one pairing today: **Lambda → Firecracker MicroVM**,
 riding the generic fetch transport — each call is a
 `POST https://<endpoint>/__rpc__/{name}`.
 
@@ -16,7 +16,7 @@ riding the generic fetch transport — each call is a
 
 ```typescript
 // sandbox.ts — the MicroVM image
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

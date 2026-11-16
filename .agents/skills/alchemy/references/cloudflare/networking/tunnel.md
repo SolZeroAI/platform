@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/networking/tunnel
      upstream: website/src/content/docs/cloudflare/networking/tunnel.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Expose private origins with Tunnel
 
@@ -12,10 +12,30 @@ to Cloudflare's edge. No open inbound ports, no public address. In
 alchemy the tunnel, its routing rules, and the DNS record that
 publishes it are all ordinary resources in one stack.
 
+<Boundaries
+  nodes={[
+    { id: "visitor", label: "visitor", type: "anywhere", col: 0, row: 0 },
+    { id: "edge", label: "app.example.com", type: "proxied CNAME", col: 1, row: 0 },
+    { id: "cfd", label: "cloudflared", type: "dialed out", col: 1, row: 1, tone: "accent" },
+    { id: "api", label: "api", type: "localhost:8080", col: 2, row: 1 },
+  ]}
+  zones={[
+    { id: "cf", label: "Cloudflare", type: "edge", nodes: ["edge"] },
+    { id: "net", label: "your network", type: "no inbound ports", nodes: ["cfd", "api"], tone: "warn", labelAt: "right" },
+  ]}
+  links={[
+    { from: "visitor", to: "edge", label: "GET" },
+    { from: "edge", to: "cfd", kind: "tunnel", label: "tunnel" },
+    { from: "cfd", to: "api", label: "ingress" },
+    { from: "visitor", to: "net", kind: "blocked", label: "refused" },
+  ]}
+  caption="cloudflared opens the tunnel from inside your network, so the only way in is through Cloudflare. A visitor's request rides the tunnel down, and an ingress rule sends it to the service."
+/>
+
 ## Create a tunnel
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 const tunnel = yield* Cloudflare.Tunnel.Tunnel("MyTunnel");
 // Run the connector on your origin:

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/compute/services
      upstream: website/src/content/docs/fly/compute/services.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Services
 
@@ -18,7 +18,7 @@ program that runs on it.
 
 ```typescript
 // src/api.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 
 export default class Api extends Fly.Service<Api>()(
@@ -43,7 +43,7 @@ this file with Rolldown, builds a Docker image (default
 Return `fetch` from the constructor Effect to boot an HTTP server.
 
 ```diff lang="typescript"
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 +import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
@@ -267,8 +267,8 @@ export default class Gateway extends Fly.Service<Gateway>()(
 ```
 
 Binding makes `Gateway` deploy after `Users` and hands it the address
-and caller token of `Users`. Only Services that bind `Users` receive
-its token, so only they can call its methods. The caller must be on
+of `Users`. `Users` answers method calls only from the Apps that bind
+it, named by the `Fly-Src` header Fly's proxy signs. The caller must be on
 the same network as the target; otherwise its deploy fails with
 `Fly.ServiceUnreachable`.
 
@@ -354,7 +354,11 @@ can be unavailable during deployment; this is not blue/green deployment.
 ## Config
 
 Yield `Config` in the constructor. Alchemy reads the value from the env of
-whoever deploys and writes it onto the Machine.
+whoever deploys and stores it as a secret on the Service's App, under a
+name scoped to the Service, so it never appears in the Machine config and
+never collides with another secret on the App. A Service in a shared App (`app`) writes it
+into the Machine env instead, because Fly gives every App secret to every
+Machine in the App.
 
 ```typescript
 import * as Config from "effect/Config";
@@ -398,7 +402,7 @@ Return a `run` Effect for a long-running loop:
 
 ```typescript
 // src/worker.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 import * as Effect from "effect/Effect";
 
 export default class Worker extends Fly.Service<Worker>()(

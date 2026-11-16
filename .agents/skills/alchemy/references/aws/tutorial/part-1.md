@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/tutorial/part-1
      upstream: website/src/content/docs/aws/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Stack
 
@@ -11,7 +11,7 @@ with an AWS S3 Bucket, and deploy it — all in under five minutes.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - An AWS account and an IAM identity with permission to create the
   resources you plan to deploy
 
@@ -19,17 +19,13 @@ with an AWS S3 Bucket, and deploy it — all in under five minutes.
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install dependencies
 
-Install <code>alchemy@latest</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/aws`, and `effect`:
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -41,7 +37,7 @@ Create an `alchemy.run.ts` file:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -70,11 +66,10 @@ keys with `alchemy profile edit --add AWS`. See
 
 ## Where state lives
 
-`state: AWS.state()` stores deploy state in an account-regional S3
-bucket (`alchemy-state-{accountId}-{region}-an`), created lazily on
+`state: AWS.state()` stores deploy state in a DynamoDB table
+(`alchemy-state`) in your account, created lazily on
 the first deploy. Because the state lives in your AWS account rather
-than on disk, the same configuration works locally and in CI with no
-extra setup.
+than on disk, the same configuration works locally and in CI.
 
 :::note[Other state stores]
 For purely local iteration you can use `Alchemy.localState()`
@@ -93,7 +88,7 @@ Add an S3 Bucket:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -136,21 +131,20 @@ rest of the stack outputs.
 
 Run `alchemy deploy` to create the Bucket on AWS:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Connect AWS first with `alchemy profile edit --add AWS` and pick a
-local authentication method: **SSO** (recommended) or **stored access
-keys**. The choice is saved to your **`default`**
-[profile](/environments/profiles); the region and account come from
-whichever method you pick, and a deploy with nothing configured fails
-with that exact command to run. CI instead reads AWS environment
-credentials directly. See [Setup](/aws/setup) for the full walkthrough.
+local authentication method: **console login** (recommended,
+`aws login`), **SSO** through IAM Identity Center, or **stored access keys**. The choice is saved to your
+**`default`** [profile](/environments/profiles); the region and account
+come from whichever method you pick, and a deploy with nothing
+configured fails with that exact command to run. CI instead reads AWS
+environment credentials directly. See [Setup](/aws/setup) for the full
+walkthrough.
 
 :::tip
 To re-run the credential prompt later (e.g. to switch from stored
-keys to SSO), use `alchemy profile edit --reconfigure AWS`. For a
+keys to SSO or console login), use `alchemy profile edit --reconfigure AWS`. For a
 separate profile, run `alchemy profile create prod` followed by
 `alchemy profile edit --profile prod`.
 :::
@@ -200,11 +194,9 @@ Alchemy figures out what changed.
 The inverse of `deploy` is `destroy` — it plans against an empty
 desired state and deletes everything the stack created:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
-Try it if you like, then run `bun alchemy deploy` again to bring the
+Try it if you like, then run `alchemy deploy` again to bring the
 bucket back — we'll build on it in Part 2.
 
 ## Recap

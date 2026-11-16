@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/drizzle
      upstream: website/src/content/docs/cloudflare/data/drizzle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Add Drizzle ORM
 
@@ -10,9 +10,7 @@ This walkthrough connects a Worker to Postgres through Hyperdrive; [SQL](/sql) o
 
 ## Install the client and generator
 
-```sh
-bun add drizzle-orm@1.0.0-rc.5-ab785fc @effect/sql-pg pg\nbun add -d drizzle-kit@1.0.0-rc.5-ab785fc @types/pg
-```
+<PackageManagers add={drizzleDeps} dev={drizzleDevDeps} />
 
 Keep the exact Drizzle prerelease pins together for the Effect integration; `drizzle-kit` is a development dependency.
 
@@ -63,14 +61,12 @@ The generator writes SQL and snapshots to `migrations`; it does not need databas
 
 ## Generate and review migrations
 
-```sh
-bunx drizzle-kit generate
+<PackageManagers script={`{run} drizzle-kit generate
 git diff -- src/schema.ts migrations
 git status --short
 git add src/schema.ts drizzle.config.ts migrations
 git diff --cached
-git commit -m "Add database migration"
-```
+git commit -m "Add database migration"`} />
 
 Generate whenever the schema changes, review the schema, SQL, and snapshots together, and commit them before deployment. The optional [`Drizzle.Schema` resource](/providers/drizzle/schema) is a separate integration, not part of this workflow.
 
@@ -82,7 +78,7 @@ Use [Neon's database configuration](/neon/guides/drizzle#feed-migrations-from-th
 
 ```typescript
 // src/Hyperdrive.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { NeonDb } from "./Db.ts";
 
@@ -101,8 +97,8 @@ Hyperdrive pools the direct Neon origin; local development uses the pooled origi
 
 ```typescript
 // src/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle/Postgres";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle/Postgres";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Hyperdrive } from "./Hyperdrive.ts";
@@ -128,15 +124,15 @@ export default class Api extends Cloudflare.Worker<Api>()(
 ) {}
 ```
 
-`nodejs_compat` enables the Node APIs used by `pg`, and `ConnectBinding` supplies the Worker's Hyperdrive binding. Queries yield directly as Effects and acquire their pool only within the request's [scope](/sql/effect-sql/lifecycle).
+`nodejs_compat` enables the Node socket and TLS APIs `@effect/sql-pg` uses, and `ConnectBinding` supplies the Worker's Hyperdrive binding. Queries yield directly as Effects and acquire their pool only within the request's [scope](/sql/effect-sql/lifecycle).
 
 ## Register the providers
 
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import Api from "./src/Api.ts";
@@ -158,9 +154,7 @@ Only the runtime and database providers are needed; committed migration files do
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 The configured branch applies pending committed SQL before the Worker serves queries; deployment does not generate new migrations. Keep an existing `drizzle-kit migrate` workflow unless you deliberately choose Alchemy-managed application, as described in [migration ownership](/sql/drizzle/migrations).
 
@@ -213,13 +207,11 @@ The returned client now exposes `db.query.Users` and `db.query.Posts` with typed
 
 ## Iterate on the schema
 
-```sh
-bunx drizzle-kit generate
+<PackageManagers script={`{run} drizzle-kit generate
 git add src/schema.ts migrations
 git diff --cached
 git commit -m "Update database schema"
-bun alchemy deploy
-```
+{run} alchemy deploy`} />
 
 Review each generated change before committing and deploy only those committed files. Reverting a TypeScript schema does not undo applied SQL; author and review a new migration or follow your database's restore procedure.
 
@@ -227,8 +219,8 @@ Review each generated change before committing and deploy only those committed f
 
 ```diff lang="typescript"
 // alchemy.run.ts
--import * as Neon from "alchemy/Neon";
-+import * as Planetscale from "alchemy/Planetscale";
+-import * as Neon from "@alchemy.run/neon";
++import * as Planetscale from "@alchemy.run/planetscale";
 
 -    providers: Layer.mergeAll(Cloudflare.providers(), Neon.providers()),
 +    providers: Layer.mergeAll(Cloudflare.providers(), Planetscale.providers()),
@@ -240,7 +232,7 @@ Use the [PlanetScale guide](/planetscale/guides/drizzle) to export `PlanetscaleD
 
 ```typescript
 // src/Hyperdrive.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { PlanetscaleDb } from "./Db.ts";
 
@@ -271,14 +263,12 @@ Select the MySQL resource variant in the [PlanetScale guide](/planetscale/guides
 
 ## Select the MySQL client
 
-```sh
-bun add @effect/sql-mysql2 mysql2
-```
+<PackageManagers add="@effect/sql-mysql2" />
 
 ```diff lang="typescript"
 // src/Api.ts
--import * as Drizzle from "alchemy/Drizzle/Postgres";
-+import * as Drizzle from "alchemy/Drizzle/MySQL";
+-import * as Drizzle from "@alchemy.run/drizzle/Postgres";
++import * as Drizzle from "@alchemy.run/drizzle/MySQL";
 
 -const db = yield* Drizzle.Postgres(hd.connectionString, { relations });
 +const db = yield* Drizzle.MySQL(hd.connectionString, { relations });

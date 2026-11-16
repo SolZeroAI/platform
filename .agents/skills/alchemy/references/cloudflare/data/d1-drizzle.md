@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/d1-drizzle
      upstream: website/src/content/docs/cloudflare/data/d1-drizzle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Drizzle on D1
 
@@ -11,8 +11,8 @@ D1 uses a native Worker binding, so it needs neither a connection string nor Hyp
 ## Install
 
 ```sh
-pnpm add drizzle-orm@1.0.0-rc.5-ab785fc @effect/sql-d1
-pnpm add -D drizzle-kit@1.0.0-rc.5-ab785fc
+pnpm add @alchemy.run/drizzle drizzle-orm@1.0.0-rc.5 @effect/sql-d1
+pnpm add -D drizzle-kit@1.0.0-rc.5
 ```
 
 These versions match Alchemy's current Effect-compatible Drizzle integration.
@@ -57,7 +57,7 @@ Generate migrations when the schema changes; CI deploys these committed files.
 
 ```typescript
 // src/Db.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Database = Cloudflare.D1.Database("Database", {
   migrations: "./drizzle",
@@ -70,8 +70,8 @@ D1 applies pending SQL during deployment. [D1 migrations](/cloudflare/data/d1#mi
 
 ```typescript
 // src/Api.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { Database } from "./Db.ts";
@@ -100,7 +100,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import Api from "./src/Api.ts";
 

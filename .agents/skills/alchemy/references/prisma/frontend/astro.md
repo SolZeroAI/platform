@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/astro
      upstream: website/src/content/docs/prisma/frontend/astro.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Astro
 
@@ -17,10 +17,7 @@ paths upload a `tar.gz` artifact, not a container image.
 Install the build-time integration in your Astro project. The resource
 loads its `/astro` and `/astro/node` exports:
 
-  <TabItem label="bun" icon="bun"><Code code={`bun add -d ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="npm" icon="npm"><Code code={`npm install -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="pnpm" icon="pnpm"><Code code={`pnpm add -D ${devDeps}`} lang="sh" /></TabItem>
-  <TabItem label="yarn" icon="seti:yarn"><Code code={`yarn add -D ${devDeps}`} lang="sh" /></TabItem>
+<PackageManagers dev={devDeps} />
 
 ## Configure Astro
 
@@ -33,7 +30,7 @@ not a Node container.
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.Astro("Website");
 ```
@@ -138,7 +135,7 @@ The bag also exposes `base`, `srcDir`, `publicDir`, `outDir`, and
 
 ## Local dev
 
-`bun alchemy dev` starts Astro's own server with HMR; the Website
+`alchemy dev` starts Astro's own server with HMR; the Website
 creates no Prisma resources. `site.url` is the local address.
 `.pipe(Alchemy.remote())` opts into the live deployment during dev.
 
@@ -150,8 +147,7 @@ export const Website = Prisma.Website.Astro("Website", {
 });
 ```
 
-`Prisma.CustomDomain` requires the app to be on the project's current
-default branch. Configure its returned `dnsRecords` yourself and verify
+Configure the returned `dnsRecords` yourself and verify
 status before routing traffic. See
 [Custom domains](/prisma/frontend/websites#custom-domains).
 

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/testing/testing-providers
      upstream: website/src/content/docs/testing/testing-providers.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Testing Providers
 
@@ -71,7 +71,7 @@ For end-to-end tests against a real deployed Stack, see [Testing a Stack](/testi
 
 ## Where next
 
-- [Build a custom provider](/infrastructure-as-code/custom-provider) — the provider this page tests, end to end.
+- [Build a custom provider](/infrastructure-as-code/custom-provider) — the provider under test, built end to end.
 - [Providers](/infrastructure-as-code/provider) — the operation contract under test.
 - [Test harness](/testing/test-harness) — everything `Test.make` returns.
 - [Testing](/testing) — the full harness reference.

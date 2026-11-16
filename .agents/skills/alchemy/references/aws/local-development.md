@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/local-development
      upstream: website/src/content/docs/aws/local-development.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Local development
 
@@ -100,6 +100,17 @@ const site = yield* AWS.Website.Vite("Web");
 // deploy: site.url = the CloudFront distribution
 ```
 
+A bare `AWS.Lambda.WebFunction` runs in the emulator instead. Its
+server answers at a local endpoint URL whose certificate the
+emulator signs with the authority in `~/.floci/ca.pem`, which
+`curl --cacert` or your system keychain can trust:
+
+```typescript
+const api = yield* AWS.Lambda.WebFunction("Api", { main: "./src/server.ts" });
+// dev:    api.url = https://<id>.001.lambda-web.us-east-1.localhost:4566
+// deploy: api.url = https://<id>.<shard>.lambda-web.<region>.on.aws
+```
+
 The same stack deploys unchanged: `alchemy deploy` runs
 `vite build` and serves the output from S3 through CloudFront. For
 SSR frameworks, `server.environment` is delivered to the dev
@@ -156,7 +167,7 @@ local emulator in dev:
 
 | Category            | Services                                                                                                            |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Compute             | Lambda (functions, layers, versions, aliases, event source mappings, permissions), ECS, ECR, Batch, Auto Scaling, Application Auto Scaling |
+| Compute             | Lambda (functions, Web Functions, layers, versions, aliases, event source mappings, permissions), ECS, ECR, Batch, Auto Scaling, Application Auto Scaling |
 | APIs & delivery     | API Gateway (REST), API Gateway v2 (HTTP & WebSocket), AppSync, CloudFront (Distributions, Functions, KeyValueStore), WAFv2, ACM |
 | Storage & databases | S3, DynamoDB, RDS, Glue, Athena, S3 Vectors                                                                          |
 | Messaging & events  | SQS, SNS, EventBridge, Kinesis, Firehose, Pipes, Scheduler, Step Functions                                           |
@@ -210,9 +221,7 @@ The default image is our patched release
 To wipe everything inside the emulator without recreating the
 container, point [`nuke`](/cli/nuke) at the local providers:
 
-```sh
-bun alchemy unsafe nuke --local --include 'AWS.*'
-```
+<PackageManagers run="alchemy unsafe nuke --local --include 'AWS.*'" />
 
 `--local` enumerates and deletes through each provider's local
 implementation, so it only ever sees emulated resources — no

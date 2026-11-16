@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-5
      upstream: website/src/content/docs/git/tutorial/part-5.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 5: Add your application's API
 
@@ -118,9 +118,7 @@ Your application's API definition and handlers stay in `src/api.ts`.
 
 ## Deploy the application endpoint
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 No new storage resource is needed for this change.
 

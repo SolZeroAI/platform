@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/frontend/static-site
      upstream: website/src/content/docs/fly/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static sites
 
@@ -21,7 +21,7 @@ as a module-level const:
 
 ```typescript
 // alchemy.run.ts
-import * as Fly from "alchemy/Fly";
+import * as Fly from "@alchemy.run/fly";
 
 export const Website = Fly.Website.StaticSite("Website", {
   build: { command: "hugo --minify", output: "public" },

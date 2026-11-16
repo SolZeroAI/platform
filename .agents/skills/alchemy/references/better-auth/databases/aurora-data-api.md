@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/databases/aurora-data-api
      upstream: website/src/content/docs/better-auth/databases/aurora-data-api.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Aurora Data API
 
@@ -10,16 +10,14 @@ This example creates Aurora PostgreSQL and serves Better Auth through a Lambda F
 
 ## Install
 
-```sh
-bun add @alchemy.run/better-auth better-auth@^1.7.5 kysely @distilled.cloud/aws
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth@^1.7.5 kysely @distilled.cloud/aws" />
 
 Configure AWS through an [Alchemy profile](/environments/profiles) in a region supporting Aurora PostgreSQL's Data API. No `pg` driver or TCP connection pool is required.
 
 ## Define the database and network
 
 ```typescript title="src/database.ts"
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export const AuthDb = Effect.gen(function* () {
@@ -47,7 +45,7 @@ The Aurora composite creates the cluster, writer, and database-credentials secre
 ```typescript title="src/function.ts"
 import { BetterAuth } from "@alchemy.run/better-auth";
 import { AuroraDataApi } from "@alchemy.run/better-auth/AuroraDataApi";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import { AuthDb } from "./database.ts";
@@ -76,7 +74,7 @@ The database layer binds cluster and secret identifiers and grants the function 
 
 ```typescript title="alchemy.run.ts"
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import AuthApi from "./src/function.ts";
 
@@ -97,9 +95,7 @@ The auth signing secret is generated and bound automatically, separately from Au
 
 ## Deploy and migrate
 
-```sh
-bunx alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Automatic migrations wait for the writer and use the Data API with deploy-time AWS credentials. Those credentials need database and secret access too; the function's IAM bindings do not grant permissions to the deployer.
 

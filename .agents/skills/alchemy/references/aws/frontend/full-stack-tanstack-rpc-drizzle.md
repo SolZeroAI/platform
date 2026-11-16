@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/frontend/full-stack-tanstack-rpc-drizzle
      upstream: website/src/content/docs/aws/frontend/full-stack-tanstack-rpc-drizzle.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Full-stack TanStack Start + RPC + Drizzle
 
@@ -30,9 +30,7 @@ The browser calls a same-origin `/rpc` route; the frontend Lambda forwards reque
 
 ## Install
 
-```sh
-bun add @distilled.cloud/aws @effect/atom-react @effect/sql-pg drizzle-orm effect pg\nbun add -d @alchemy.run/frontend-frameworks
-```
+<PackageManagers add={deps} dev={devDeps} />
 
 ## 1. The shared RPC contract
 
@@ -82,7 +80,7 @@ Copy `database.ts`, `bootstrap.ts`, and `client.ts` from the [DSQL example](http
 Copy the example's [`schema.ts`](https://github.com/alchemy-run/alchemy/blob/main/examples/aws-dsql-drizzle/src/schema.ts) into `src/backend/`. It targets `app.todos` with application-generated UUIDs, matching the bootstrap and role grants. Check [DSQL compatibility](/aws/data/drizzle-dsql#define-the-table) before extending it.
 
 :::note
-`AWS.DSQL.Cluster` has no `migrations` prop. The Action in step 5 bootstraps the database without an HTTP `/setup` route; it is not a versioned migrator. Whenever the schema changes, explicitly generate migration files using the [DSQL migration workflow](/aws/data/drizzle-dsql#evolve-the-schema), with schema path `./src/backend/schema.ts`. Stage the schema, config, SQL, and snapshots, review with `git diff --cached`, and commit before release. The migration step consumes committed SQL, not SQL generated during deployment.
+The Action in step 5 bootstraps the database without an HTTP `/setup` route; it is not a versioned migrator. To evolve the schema, generate migration files with the [DSQL migration workflow](/aws/data/drizzle-dsql#evolve-the-schema) (schema path `./src/backend/schema.ts`) and pass the directory to the cluster's `migrations` prop, which applies them on deploy.
 :::
 
 ## 4. The backend RPC Lambda
@@ -91,7 +89,7 @@ Copy the example's [`schema.ts`](https://github.com/alchemy-run/alchemy/blob/mai
 
 ```typescript
 // src/backend/api.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import { eq } from "drizzle-orm";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -105,7 +103,6 @@ export default class Backend extends AWS.Lambda.Function<Backend>()(
   {
     main: import.meta.url,
     functionUrl: true,
-    build: { install: ["pg"] },
   },
   Effect.gen(function* () {
     const db = yield* connectDatabase;
@@ -182,7 +179,7 @@ export default class Backend extends AWS.Lambda.Function<Backend>()(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import Backend from "./src/backend/api.ts";
 import { BootstrapDatabase } from "./src/backend/bootstrap.ts";
@@ -378,17 +375,13 @@ function TodoList() {
 
 [AWS setup](/aws/setup)
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Open `websiteUrl` to create, toggle, and delete todos.
 
 ## Local dev
 
-```sh
-bun alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 The frontend runs locally; the backend Lambda and DSQL remain on AWS and incur charges.
 

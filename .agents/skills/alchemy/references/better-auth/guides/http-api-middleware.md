@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/better-auth/guides/http-api-middleware
      upstream: website/src/content/docs/better-auth/guides/http-api-middleware.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # HTTP API middleware
 
@@ -13,7 +13,7 @@
 import { BetterAuth } from "@alchemy.run/better-auth";
 import { CloudflareD1 } from "@alchemy.run/better-auth/CloudflareD1";
 import { RuntimeContext } from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Http from "alchemy/Http";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -149,7 +149,7 @@ The private group requires authentication, while the health group and Better Aut
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import AuthApi from "./worker.ts";
 
@@ -165,9 +165,7 @@ export default Alchemy.Stack(
 
 Use Bun, matching `alchemy` and `@alchemy.run/better-auth` releases, Better Auth 1.7.5, Effect 4, and `kysely`, with Cloudflare credentials configured. This stack owns its D1 database, migrations, and stable signing secret; preserve its local state.
 
-```sh
-bunx alchemy dev
-```
+<PackageManagers run="alchemy dev" />
 
 Alchemy selects an available port and prints the origin. In another shell, enter that origin without a trailing slash after `read`:
 

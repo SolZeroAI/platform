@@ -1,10 +1,14 @@
 <!-- source: https://alchemy.run/sql
      upstream: website/src/content/docs/sql/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # SQL
 
 > Choose a database, connect with Effect SQL, Drizzle, or Prisma ORM, and deploy committed migrations.
+
+`@alchemy.run/sql` is how Alchemy apps use SQL databases, on every cloud. You declare the database, its migrations run on deploy, and your code queries it with Effect SQL, Drizzle or Prisma ORM over a connection that lasts one request.
+
+**New here?** [How SQL works in Alchemy](/sql/what-is-sql) walks through databases, clients, connections, pools and migrations, once each.
 
 <span id="databases" />
 
@@ -21,8 +25,8 @@ See [Databases](/sql/databases) to compare engines and connection paths, with li
 
 | Client | Guides |
 | --- | --- |
-| Effect SQL | [Postgres](/sql/effect-sql/postgres) · [MySQL](/sql/effect-sql/mysql) · [D1](/sql/effect-sql/d1) · [Durable Objects](/sql/effect-sql/migrations#durable-object-migrations) |
-| Drizzle | [Postgres](/sql/drizzle/postgres) · [MySQL](/sql/drizzle/mysql) · [D1](/sql/drizzle/d1) · [Durable Objects](/sql/drizzle/migrations#durable-object-migrations) |
+| Effect SQL | [Postgres](/sql/effect-sql/postgres) · [MySQL](/sql/effect-sql/mysql) · [D1](/sql/effect-sql/d1) · [libSQL](/sql/effect-sql/libsql) · [Durable Objects](/sql/effect-sql/migrations#durable-object-migrations) |
+| Drizzle | [Postgres](/sql/drizzle/postgres) · [MySQL](/sql/drizzle/mysql) · [D1](/sql/drizzle/d1) · [libSQL](/sql/drizzle/libsql) · [Durable Objects](/sql/drizzle/migrations#durable-object-migrations) |
 | Prisma ORM v8 | [Contracts](/sql/prisma/contracts) · [Postgres](/sql/prisma/postgres) · [Migrations](/sql/prisma/migrations) |
 
 Prisma ORM v8 requires PostgreSQL 17+ and is separate from the [Prisma hosting provider](/prisma).
@@ -37,6 +41,7 @@ Prisma ORM v8 requires PostgreSQL 17+ and is separate from the [Prisma hosting p
 | Lambda + Aurora DSQL + Drizzle | [AWS](/aws/data/drizzle-dsql) |
 | Workers + Neon or PlanetScale + Drizzle | [Cloudflare](/cloudflare/data/drizzle) |
 | Workers + D1 + Drizzle | [Cloudflare](/cloudflare/data/d1-drizzle) |
+| Workers + Turso + Drizzle | [Turso](/turso/tutorial/part-1) |
 | Durable Objects + SQLite | [Cloudflare](/cloudflare/compute/durable-objects#sql-migrations) |
 | Fly Service + Postgres + Drizzle | [Fly](/fly/data/drizzle-postgres) |
 | Hetzner Service + external Postgres + Drizzle | [Hetzner](/hetzner/data/drizzle-postgres) |
@@ -52,7 +57,7 @@ See [runnable examples](https://github.com/alchemy-run/alchemy/blob/main/example
 ## Already have a database?
 
 ```typescript
-import * as SQL from "alchemy/SQL/Postgres";
+import * as SQL from "@alchemy.run/sql/Postgres";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 

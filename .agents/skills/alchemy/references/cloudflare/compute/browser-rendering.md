@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/compute/browser-rendering
      upstream: website/src/content/docs/cloudflare/compute/browser-rendering.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Browser rendering
 
@@ -21,7 +21,7 @@ streams, and the raw binding is one accessor away for
 
 ```typescript
 // src/worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

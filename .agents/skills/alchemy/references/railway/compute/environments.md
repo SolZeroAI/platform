@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/compute/environments
      upstream: website/src/content/docs/railway/compute/environments.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Environments
 
@@ -79,7 +79,7 @@ Declare the Project once. Pass it into every child.
 
 ```typescript
 // src/project.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Site = Railway.Project("Site");
 export const Staging = Railway.Environment("Staging", {

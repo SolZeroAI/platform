@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-effects/circular-bindings
      upstream: website/src/content/docs/infrastructure-as-effects/circular-bindings.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Circular Bindings
 
@@ -15,9 +15,9 @@ needs B's URL, but B needs A's URL too. Alchemy resolves the
 deadlock by separating **identity** (a class used as a Tag) from
 **implementation** (a Layer attached via `.make()`).
 
-This guide builds on [Bindings](/infrastructure-as-effects/binding) and
-[Layers](/infrastructure-as-effects/layers): two Workers that call each
-other, one step at a time.
+Take two Workers that call each other, built one step at a time on
+[Bindings](/infrastructure-as-effects/binding) and
+[Layers](/infrastructure-as-effects/layers).
 
 ## Sketch the cycle
 
@@ -47,7 +47,7 @@ declares the shape A's runtime will expose — here, a `work` method.
 
 ```typescript
 // src/A.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export class A extends Cloudflare.Worker<A, { work: () => Effect.Effect<string> }>()("A") {}
@@ -65,7 +65,7 @@ this point — no runtime.
 
 ```typescript
 // src/B.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export class B extends Cloudflare.Worker<B, { work: () => Effect.Effect<string> }>()("B") {}
@@ -83,7 +83,7 @@ own `work` RPC method so B can call back into it.
 
 ```diff lang="typescript"
   // src/A.ts
-  import * as Cloudflare from "alchemy/Cloudflare";
+  import * as Cloudflare from "@alchemy.run/cloudflare";
   import * as Effect from "effect/Effect";
 + import * as HttpServerResponse from "effect/http/HttpServerResponse";
 + import { B } from "./B.ts";
@@ -117,7 +117,7 @@ binds it.
 
 ```diff lang="typescript"
   // src/B.ts
-  import * as Cloudflare from "alchemy/Cloudflare";
+  import * as Cloudflare from "@alchemy.run/cloudflare";
   import * as Effect from "effect/Effect";
 + import * as HttpServerResponse from "effect/http/HttpServerResponse";
 + import { A } from "./A.ts";
@@ -151,7 +151,7 @@ the Layers to the generator so the Tags resolve to real Workers.
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import ALive, { A } from "./src/A.ts";
@@ -176,22 +176,23 @@ the call site.
 
 Under the hood, alchemy plans the cycle in two passes:
 
-```text
-Diagram (nodes and edges as authored):
-<DAG
-  nodes={[
-    { id: "Decl", label: "declare", type: "A & B Tags" },
-    { id: "Pre", label: "precreate", type: "reserve URLs", tone: "accent" },
-    { id: "Create", label: "create", type: "deferred Outputs" },
-    { id: "Wire", label: "update", type: "wire bindings", tone: "accent" },
+<Sequence
+  actors={[
+    { id: "alchemy", label: "alchemy deploy", type: "the plan", tone: "accent" },
+    { id: "a", label: "Worker A", type: "binds B" },
+    { id: "b", label: "Worker B", type: "binds A" },
   ]}
-  edges={[
-    { from: "Decl", to: "Pre" },
-    { from: "Pre", to: "Create" },
-    { from: "Create", to: "Wire" },
+  steps={[
+    { note: "both Tags registered: A and B exist", over: ["alchemy", "b"] },
+    { from: "alchemy", to: "a", label: "precreate: reserve URL" },
+    { from: "alchemy", to: "b", label: "precreate: reserve URL" },
+    { from: "alchemy", to: "a", label: "create, B's URL deferred" },
+    { from: "alchemy", to: "b", label: "create, A's URL deferred" },
+    { from: "alchemy", to: "a", label: "update: wire B's URL" },
+    { from: "alchemy", to: "b", label: "update: wire A's URL" },
   ]}
+  caption="Neither Worker waits for the other: each is reserved and created first, then a second pass wires in the real URLs."
 />
-```
 
 1. The **Tags** are registered up front, so the graph knows that A
    and B both exist.

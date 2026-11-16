@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/github/actions-config
      upstream: website/src/content/docs/github/actions-config.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Actions secrets & variables
 
@@ -23,7 +23,7 @@ resources.
 wrapped with `Redacted.make` so it never appears in logs or state:
 
 ```typescript
-import * as GitHub from "alchemy/GitHub";
+import * as GitHub from "@alchemy.run/github";
 import * as Redacted from "effect/Redacted";
 
 yield* GitHub.Secret("deploy-token", {
@@ -191,8 +191,8 @@ token never touches your terminal or the GitHub UI:
 ```typescript
 // stacks/github.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

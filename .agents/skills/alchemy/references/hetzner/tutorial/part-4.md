@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/hetzner/tutorial/part-4
      upstream: website/src/content/docs/hetzner/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Networking & Load Balancing
 
@@ -24,7 +24,7 @@ Add a Network to `src/server.ts` and attach the Server to it:
 
 ```diff lang="typescript"
 // src/server.ts
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 
 +export const Net = Hetzner.Network("net", {
 +  ipRange: "10.0.0.0/16",
@@ -125,7 +125,7 @@ instead of the Server's:
 ```diff lang="typescript"
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Hetzner from "alchemy/Hetzner";
+import * as Hetzner from "@alchemy.run/hetzner";
 +import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 import Api from "./src/api.ts";
@@ -153,9 +153,7 @@ after deploy.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 3 to create, 1 to update
@@ -205,9 +203,7 @@ and a `Hetzner.RecordSet` pointing at `lb.ipv4`, and add a managed
 
 You're done — tear everything down so the hourly billing stops:
 
-```sh
-bun alchemy destroy
-```
+<PackageManagers run="alchemy destroy" />
 
 Alchemy deletes everything in reverse dependency order — Service,
 Load Balancer, Firewall, Volume, Server, Network, SSH key.

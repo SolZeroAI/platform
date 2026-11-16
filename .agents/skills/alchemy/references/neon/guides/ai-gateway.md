@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/neon/guides/ai-gateway
      upstream: website/src/content/docs/neon/guides/ai-gateway.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # AI Gateway setup
 
@@ -25,7 +25,7 @@ can access. The examples use the supported `aws-us-east-2` region.
 Inside your stack, using an existing `branch`:
 
 ```typescript
-import * as Neon from "alchemy/Neon";
+import * as Neon from "@alchemy.run/neon";
 
 const gateway = yield* Neon.AIGateway("AI", { branch });
 ```

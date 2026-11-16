@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/data/artifacts
      upstream: website/src/content/docs/cloudflare/data/artifacts.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Store Git Repos with Artifacts
 
@@ -19,7 +19,7 @@ binding marker. Repos are created at runtime through the binding.
 
 ```typescript
 // src/Repos.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const Repos = Cloudflare.Artifacts.Namespace("Repos");
 ```
@@ -32,7 +32,7 @@ Bind the namespace in the Worker's Construction phase, then call
 
 ```typescript
 // src/Worker.ts
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -50,7 +50,7 @@ export default class Worker extends Cloudflare.Worker<Worker>()(
     return {
       fetch: Effect.gen(function* () {
         const request = yield* HttpServerRequest;
-        const name = new URL(request.url).pathname.slice(1);
+        const name = new URL(request.url, "http://localhost").pathname.slice(1);
 
         const repo = yield* artifacts.create(name, { setDefaultBranch: "main" });
 
@@ -78,7 +78,7 @@ recreating the repo, look it up with `artifacts.get(name)` and call
 ```diff lang="typescript"
  fetch: Effect.gen(function* () {
    const request = yield* HttpServerRequest;
-   const name = new URL(request.url).pathname.slice(1);
+   const name = new URL(request.url, "http://localhost").pathname.slice(1);
 
 +  if (request.method === "GET") {
 +    const repo = yield* artifacts.get(name);
@@ -104,8 +104,8 @@ Deploy the Stack once and hit both routes over HTTP:
 
 ```typescript
 // test/integ.test.ts
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Test from "alchemy/Test/Bun";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as HttpClient from "effect/http/HttpClient";

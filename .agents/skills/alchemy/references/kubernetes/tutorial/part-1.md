@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/kubernetes/tutorial/part-1
      upstream: website/src/content/docs/kubernetes/tutorial/part-1.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 1: Your First Deployment
 
@@ -16,7 +16,7 @@ cloud account. Everything you build works on any Kubernetes cluster.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - [Docker](https://docs.docker.com/get-started/get-docker/),
   [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation),
   and [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
@@ -28,17 +28,13 @@ you, but it must be installed. On macOS, run `brew install kind`.
 
 Start with an empty directory and initialize a `package.json`:
 
-```sh
-mkdir my-cluster && cd my-cluster && bun init -y
-```
+<PackageManagers init dir="my-cluster" />
 
 ## Install dependencies
 
-Install <code>alchemy@latest</code> and <code>effect@{effectVersion}</code>:
+Install `alchemy@latest`, `@alchemy.run/kubernetes`, and `effect`:
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create the Stack
 
@@ -49,7 +45,7 @@ remembers what was deployed. Create `alchemy.run.ts`:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Kubernetes from "alchemy/Kubernetes";
+import * as Kubernetes from "@alchemy.run/kubernetes";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -158,9 +154,7 @@ cluster, which you'll pass to `kubectl`.
 
 ## Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 ```text
 Plan: 2 to create

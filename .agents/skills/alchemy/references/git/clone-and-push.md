@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/clone-and-push
      upstream: website/src/content/docs/git/clone-and-push.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Cloning & pushing
 
@@ -30,11 +30,9 @@ The host from [Getting Started](/git/getting-started) accepts one
 secret, an `Alchemy.Random` the stack outputs. `alchemy deploy` prints
 it:
 
-```sh
-bun alchemy deploy
+<PackageManagers script={`{run} alchemy deploy
 # { url: "https://…workers.dev", secret: "9f2c…" }
-export TOKEN=9f2c…
-```
+export TOKEN=9f2c…`} />
 
 ### A Better Auth API key
 

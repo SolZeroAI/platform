@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/planetscale/guides/preview-branches
      upstream: website/src/content/docs/planetscale/guides/preview-branches.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Preview branches per PR
 
@@ -39,7 +39,7 @@ PR stages reference the database with `PostgresDatabase.ref`; every
 other stage creates it:
 
 ```typescript
-import * as Planetscale from "alchemy/Planetscale";
+import * as Planetscale from "@alchemy.run/planetscale";
 
 const database = stage.startsWith("pr-")
   ? yield* Planetscale.PostgresDatabase.ref("app-db", {

@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/testing
      upstream: website/src/content/docs/testing/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Testing
 
@@ -35,6 +35,22 @@ For the full walkthrough, see [Testing a Stack](/testing/testing-a-stack).
 
 For every option, hook, and variant, see the [Test harness](/testing/test-harness) reference.
 
+## Pick a runner
+
+`Test.make` ships in `@alchemy.run/test` and runs on three test runners with the same API:
+
+<PackageManagers dev="@alchemy.run/test" />
+
+Import it from the adapter for your runner:
+
+```typescript
+import * as Test from "@alchemy.run/test/Alchemy"; // alchemy-test
+import * as Test from "@alchemy.run/test/Bun";     // bun test
+import * as Test from "@alchemy.run/test/Vitest";  // Vitest
+```
+
+`alchemy-test` runs every file in one bun process with tests in flight concurrently, built for slow tests against real clouds. Install and run each one as shown in [Test harness → Runners](/testing/test-harness#runners).
+
 ## Stage isolation
 
 Tests default to `test_$USER` (e.g. `test_sam`), matching how
@@ -48,7 +64,12 @@ account:
 Test.make({ providers, stage: "ci-pr-42" });
 ```
 
-The per-call form is covered in [Test harness → stage](/testing/test-harness#stage).
+Or set it for the whole run from the command line:
+
+<PackageManagers script={`{run} alchemy-test --stage ci-pr-42
+ALCHEMY_TEST_STAGE=ci-pr-42 bun test`} />
+
+Running several git worktrees at once? See [Worktrees](/environments/worktrees). The per-call form is covered in [Test harness → stage](/testing/test-harness#stage).
 
 ## Local mode (`dev: true`)
 

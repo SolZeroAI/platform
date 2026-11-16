@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/prisma/frontend/static-site
      upstream: website/src/content/docs/prisma/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static sites
 
@@ -21,7 +21,7 @@ to a global CDN or remove the runtime. For Vite apps, prefer
 
 ```typescript
 // alchemy.run.ts
-import * as Prisma from "alchemy/Prisma";
+import * as Prisma from "@alchemy.run/prisma";
 
 export const Website = Prisma.Website.StaticSite("Website", {
   command: "hugo --minify",
@@ -156,7 +156,7 @@ export const Website = Prisma.Website.StaticSite("Website", {
 ```
 
 `domain` creates `Prisma.CustomDomain` and changes `site.url` to the
-HTTPS hostname. The app must be on the project's current default branch.
+HTTPS hostname.
 Configure its returned DNS records yourself and check status before
 cutover; see [Custom domains](/prisma/frontend/websites#custom-domains).
 

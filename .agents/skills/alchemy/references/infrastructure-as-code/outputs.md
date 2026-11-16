@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/infrastructure-as-code/outputs
      upstream: website/src/content/docs/infrastructure-as-code/outputs.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Inputs & Outputs
 
@@ -17,7 +17,7 @@ properties off it, transform it with `pipe`, combine it with other
 outputs, and feed it as input to the next resource. The resource
 graph is built from these dependencies.
 
-This page is a reference for every operator. For the bigger picture
+For the bigger picture
 of how the graph deploys, see
 [Resource Lifecycle](/infrastructure-as-code/resource-lifecycle).
 

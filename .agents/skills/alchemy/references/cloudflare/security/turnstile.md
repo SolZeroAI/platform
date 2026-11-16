@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/cloudflare/security/turnstile
      upstream: website/src/content/docs/cloudflare/security/turnstile.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Turnstile CAPTCHA
 
@@ -12,12 +12,26 @@ Cloudflare assigns two keys in return — a public `sitekey` you embed
 in HTML and a `secret` your server uses to verify the tokens the
 widget produces.
 
+<Boundaries
+  nodes={[
+    { id: "bot", label: "bot", type: "no valid token", col: 0, row: 0 },
+    { id: "browser", label: "browser", type: "widget token", col: 0, row: 1 },
+    { id: "signup", label: "POST /signup", type: "handled", col: 1, row: 1, tone: "accent" },
+  ]}
+  zones={[{ id: "worker", label: "Signup", type: "Worker · siteverify with the secret", nodes: ["signup"], tone: "warn" }]}
+  links={[
+    { from: "browser", to: "signup", label: "form + token" },
+    { from: "bot", to: "worker", kind: "blocked", label: "rejected" },
+  ]}
+  caption="The sitekey in the page only renders the widget. The Worker holds the secret and checks each token with Cloudflare before it trusts the form."
+/>
+
 ## Create a widget
 
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(

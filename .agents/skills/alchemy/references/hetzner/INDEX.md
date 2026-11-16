@@ -1,11 +1,13 @@
 # hetzner index
 
-27 pages. Build applications on Hetzner Cloud with Alchemy — Servers running your Effect programs as Services, plus volumes, networks, firewalls, load balancers, and DNS, all in one typed program.
+29 pages. Run Effect programs on Hetzner Cloud Servers with Alchemy. Declare Servers, Services, Volumes, networks, firewalls, load balancers and DNS in one TypeScript program.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Hetzner | `_overview.md` | Build applications on Hetzner Cloud with Alchemy — Servers running your Effect programs as Services, plus volumes, networks, firewalls, load balancers, and DNS, all in one typed program. |
+| Hetzner | `_overview.md` | Run Effect programs on Hetzner Cloud Servers with Alchemy. Declare Servers, Services, Volumes, networks, firewalls, load balancers and DNS in one TypeScript program. |
+| Projects, tokens and SSH keys | `projects-and-tokens.md` | How a Hetzner Cloud project isolates your Servers, how its API token decides where Alchemy deploys, and how SSH keys reach your Servers. |
 | Setup | `setup.md` | Install Alchemy and connect it to Hetzner Cloud — create a project, generate an API token, and store it in a profile. |
+| What is Hetzner? | `what-is-hetzner.md` | The concepts behind Hetzner Cloud — projects, locations, Servers, images, SSH keys, Volumes, private networks, firewalls, load balancers, IPs and DNS — and how @alchemy.run/hetzner models each of them. |
 
 ## compute/
 
@@ -26,11 +28,11 @@
 | Page | File | Covers |
 | --- | --- | --- |
 | Astro | `frontend/astro.md` | Deploy an Astro app to Hetzner with Hetzner.Website.Astro — Node SSR as a systemd unit on a Server, static output as a file server, and Astro's own dev server under alchemy dev. |
-| Foldkit | `frontend/foldkit.md` | Deploy a Foldkit app to Hetzner with Hetzner.Website.Foldkit — a client-only Vite SPA as a systemd unit on a Cloud Server, and Vite's own dev server under alchemy dev. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Hetzner with native local development. |
 | Next.js | `frontend/nextjs.md` | Deploy a Next.js app to Hetzner with Hetzner.Website.Nextjs — next build plus a Node next({ dev: false }) systemd unit, and next dev under alchemy dev. |
 | Nuxt | `frontend/nuxt.md` | Deploy a Nuxt app to Hetzner with Hetzner.Website.Nuxt — nitro's node preset as a systemd unit on port 3000, and Nuxt's own dev server under alchemy dev. |
 | Octane | `frontend/octane.md` | Deploy an OctaneJS app to Hetzner with Hetzner.Website.Octane — SSR as a systemd unit on port 3000, client assets baked into the unit, and Octane's own Vite dev server under alchemy dev. |
-| React Router | `frontend/react-router.md` | Deploy React Router v7 (framework mode) to Hetzner with Hetzner.Website.ReactRouter — SSR as a systemd unit on port 3000, client assets baked into the unit, and React Router's own Vite dev server under alchemy dev. |
+| React Router | `frontend/react-router.md` | Deploy React Router v8 (framework mode) to Hetzner with Hetzner.Website.ReactRouter — SSR as a systemd unit on port 3000, client assets baked into the unit, and React Router's own Vite dev server under alchemy dev. |
 | SolidStart | `frontend/solidstart.md` | Deploy a SolidStart app to Hetzner with Hetzner.Website.SolidStart — nitro's node preset as a systemd unit on port 3000, prerendered pages baked into the unit, and SolidStart's own Vite dev server under alchemy dev. |
 | Static sites | `frontend/static-site.md` | Deploy a static site to Hetzner with Hetzner.Website.StaticSite — a build command, a systemd unit on a Server, and http://{ipv4}:3000 (or your hostname) on deploy. |
 | SvelteKit | `frontend/sveltekit.md` | Deploy a SvelteKit app to Hetzner with Hetzner.Website.SvelteKit — kit SSR as a systemd unit on port 3000, prerendered assets baked into the unit, and Kit's own dev server under alchemy dev. |

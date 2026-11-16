@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/apis
      upstream: website/src/content/docs/apis/index.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # APIs
 
@@ -13,7 +13,7 @@ half: plain functions returning `Effect` or `Stream`, no schema, no
 decorators:
 
 ```typescript
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

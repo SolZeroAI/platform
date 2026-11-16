@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/getting-started
      upstream: website/src/content/docs/getting-started.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Getting started
 
@@ -14,20 +14,16 @@ next page.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A [Cloudflare](https://dash.cloudflare.com/sign-up) account
 
 ## Create a project
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Create your Stack
 
@@ -36,7 +32,7 @@ Every Alchemy program starts with a Stack — create `alchemy.run.ts`:
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export default Alchemy.Stack(
@@ -59,9 +55,7 @@ export default Alchemy.Stack(
 
 Run `alchemy deploy` to create the Bucket on Cloudflare:
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Connect Cloudflare first with `alchemy profile edit --add Cloudflare`.
 Sign in with OAuth in the browser or paste an API token. The
@@ -109,7 +103,7 @@ Cloudflare, starting from this exact Stack.
 
 <a href="/what-is-alchemy" class="next-card next-card--recommended">
   <strong>What is Alchemy?</strong>
-  <span>Infrastructure as Code built in Effect, with Infrastructure as Effects on top.</span>
+  <span>Your infrastructure and the code that runs on it, built with Effects and Layers.</span>
 </a>
 
 <a href="/cloudflare/tutorial/part-1" class="next-card">

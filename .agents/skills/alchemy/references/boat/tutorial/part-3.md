@@ -1,0 +1,56 @@
+<!-- source: https://alchemy.run/boat/tutorial/part-3
+     upstream: website/src/content/docs/boat/tutorial/part-3.mdx
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
+
+# Part 3: A Copy per User
+
+> Give each user a Boat sandbox started from the Golden snapshot, which keeps their changes and resumes when they come back.
+
+## Start a user's sandbox from Golden
+
+```diff lang="typescript"
+// src/Api.ts
++    const userSandbox = Effect.fn("userSandbox")(function* (user: string) {
++      const [existing] = yield* sandboxes.list({ labels: { user } });
++      if (existing === undefined) {
++        return yield* sandboxes.create({ noEnv: true, autoStop: "10 minutes", labels: { user } });
++      }
++      const sandbox = yield* sandboxes.connect(existing.id);
++      yield* sandbox.resume({ autoStop: "10 minutes" });
++      return sandbox;
++    });
+```
+
+A user's first request starts their sandbox from `Golden`, with the repository already cloned. The label finds it again on their next request.
+
+## Their changes stay in their copy
+
+```diff lang="typescript"
+// src/Api.ts
+        if (request.method === "POST" && url.pathname === "/run") {
+          const result = yield* run(yield* request.text).pipe(Effect.scoped);
+          return yield* HttpServerResponse.json(result);
+        }
++        const match = /^\/users\/([a-z0-9-]+)\/files\/(.+)$/.exec(url.pathname);
++        if (match !== null) {
++          const sandbox = yield* userSandbox(match[1]!);
++          if (request.method === "PUT") yield* sandbox.files.write(`repo/${match[2]}`, yield* request.text);
++          return yield* HttpServerResponse.json({ content: yield* sandbox.files.readText(`repo/${match[2]}`) });
++        }
+```
+
+Each user edits their own copy of the repository. `Golden` never changes, so the next sandbox started from it doesn't see their edits.
+
+## Resume where they left off
+
+The sandbox stops after ten idle minutes and Boat saves its disk. `resume` on their next request brings it back with their files, for up to 14 days.
+
+<PackageManagers
+  script={`{run} alchemy deploy
+curl -X PUT "$URL/users/ana/files/notes.md" -d 'hello'
+curl "$URL/users/ana/files/notes.md"`}
+/>
+
+## Next
+
+[Part 4](/boat/tutorial/part-4) changes the snapshot.

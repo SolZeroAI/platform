@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/fly/setup
      upstream: website/src/content/docs/fly/setup.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Setup
 
@@ -11,7 +11,7 @@ a Fly organization, and an API token stored in a profile.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) or Node.js 22+
+- [Node.js](https://nodejs.org) 24.11.1+ or [Bun](https://bun.sh)
 - A [Fly.io](https://fly.io) account
 - [Docker](https://docs.docker.com/get-docker/) for
   [Services](/fly/compute/services) (Alchemy builds and pushes an
@@ -44,15 +44,11 @@ Sprite.
 
 ## Create a project directory
 
-```sh
-mkdir my-app && cd my-app && bun init -y
-```
+<PackageManagers init dir="my-app" />
 
 ## Install
 
-```sh
-bun add "alchemy@latest" "effect@rc" "@effect/platform-bun@rc" "@effect/platform-node@rc"
-```
+<PackageManagers add={pkgs} />
 
 ## Connect alchemy to Fly
 

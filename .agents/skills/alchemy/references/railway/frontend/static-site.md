@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/railway/frontend/static-site
      upstream: website/src/content/docs/railway/frontend/static-site.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Static sites
 
@@ -22,7 +22,7 @@ module-level const:
 
 ```typescript
 // alchemy.run.ts
-import * as Railway from "alchemy/Railway";
+import * as Railway from "@alchemy.run/railway";
 
 export const Website = Railway.Website.StaticSite("Website", {
   command: "hugo --minify",

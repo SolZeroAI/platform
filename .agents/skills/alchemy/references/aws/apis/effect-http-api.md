@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/aws/apis/effect-http-api
      upstream: website/src/content/docs/aws/apis/effect-http-api.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Effect HTTP API on Lambda
 
@@ -9,8 +9,7 @@
 Effect HTTP defines real REST endpoints — URLs, path params, query
 strings, typed bodies — behind an RPC-like typed interface, which
 makes it the natural fit when your consumers aren't Effect (or
-aren't TypeScript at all) and want a plain HTTP client. This page is
-the Lambda wiring; the concept lives at
+aren't TypeScript at all) and want a plain HTTP client. The concept lives at
 [Effect HTTP](/apis/effect-http), and [RPC](/apis) covers choosing
 between the RPC styles.
 
@@ -25,7 +24,7 @@ schemas for payloads, responses, and errors, then implement handlers
 against those schemas. The result is an `HttpEffect` — the same type
 a Lambda's `fetch` expects — so it plugs in directly. It's the exact
 same module used in the
-[Workers version of this guide](/cloudflare/apis/effect-http-api);
+[Workers version](/cloudflare/apis/effect-http-api);
 the spec and handlers are portable, only the host changes.
 
 The mental model:
@@ -113,8 +112,7 @@ export const JobApi = HttpApi.make("JobApi").add(
 ```
 
 Nothing executes yet — `JobApi` is purely a value-level description.
-The same constant is what we'll hand to the client at the end of
-this guide.
+The same constant is what we'll hand to the client at the end.
 
 ## 3. Build the Function
 
@@ -123,7 +121,7 @@ phase and a public Function URL:
 
 ```typescript
 // src/JobFunction.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 
 export default class JobFunction extends AWS.Lambda.Function<JobFunction>()(
@@ -280,7 +278,7 @@ Here's the complete `src/JobFunction.ts`:
 
 ```typescript
 // src/JobFunction.ts
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Etag from "effect/http/Etag";
@@ -356,7 +354,7 @@ export default class JobFunction extends AWS.Lambda.Function<JobFunction>()(
 ```typescript
 // alchemy.run.ts
 import * as Alchemy from "alchemy";
-import * as AWS from "alchemy/AWS";
+import * as AWS from "@alchemy.run/aws";
 import * as Effect from "effect/Effect";
 import JobFunction from "./src/JobFunction.ts";
 
@@ -379,9 +377,7 @@ with the two table-scoped statements, and the Function URL.
 
 ## 5. Deploy
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Hit the URL from the deploy output with `curl`:
 
@@ -408,8 +404,8 @@ end-to-end:
 
 ```typescript
 // test/api.test.ts
-import * as AWS from "alchemy/AWS";
-import * as Test from "alchemy/Test/Bun";
+import * as AWS from "@alchemy.run/aws";
+import * as Test from "@alchemy.run/test/Bun";
 import { expect } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as Schedule from "effect/Schedule";

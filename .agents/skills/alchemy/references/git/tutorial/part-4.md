@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/tutorial/part-4
      upstream: website/src/content/docs/git/tutorial/part-4.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Part 4: Give users their own credentials
 
@@ -16,9 +16,7 @@ transfer the existing `acme/web` repository to a user.
 
 ## Install Better Auth
 
-```sh
-bun add @alchemy.run/better-auth better-auth @better-auth/api-key
-```
+<PackageManagers add="@alchemy.run/better-auth better-auth @better-auth/api-key" />
 
 Better Auth will manage accounts and credentials. Git will continue to store
 repositories.
@@ -30,7 +28,7 @@ Create `src/auth.ts`:
 ```typescript
 // src/auth.ts
 import { BetterAuth } from "@alchemy.run/better-auth";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 
 export const AuthDb = Cloudflare.D1.Database("AuthDb");
 
@@ -275,9 +273,7 @@ longer authorize requests after the next deploy.
 
 ## Deploy accounts and credentials
 
-```sh
-bun alchemy deploy
-```
+<PackageManagers run="alchemy deploy" />
 
 Install `jq` for the following shell checks if you do not already have it.
 Continue using the same `$HOST`.

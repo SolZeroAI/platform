@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/acme/certificate-authorities
      upstream: website/src/content/docs/acme/certificate-authorities.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.86 @ 21c6012 -->
 
 # Certificate authorities
 
@@ -61,7 +61,7 @@ account. Obtain a matching key ID and HMAC key from ZeroSSL and put them in your
 secret configuration as `ZEROSSL_EAB_KID` and `ZEROSSL_EAB_HMAC_KEY`.
 
 ```typescript
-import * as ACME from "alchemy/ACME";
+import * as ACME from "@alchemy.run/acme";
 import * as Config from "effect/Config";
 
 export const Issuer = ACME.Account("Issuer", {
@@ -86,7 +86,7 @@ const account = yield* Issuer;
 const certificate = yield* ACME.Certificate("Api", {
   account,
   identifiers: ["api.example.com"],
-  solver: Cloudflare.DNS.AcmeSolver({
+  solver: Cloudflare.ACME.ZoneSolver({
     zoneId: Config.String("CLOUDFLARE_ZONE_ID"),
   }),
 });
