@@ -74,59 +74,59 @@
     "test:e2e:mcp": "e2e mcp"
   },
   "dependencies": {
-    "@effect/platform-node": "4.1.2",
-    "alchemy": "2.0.0-beta.85",
-    "dotenv": "^17.4.2",
+    "@effect/platform-node": "4.1.4",
+    "alchemy": "2.0.0-beta.87",
+    "dotenv": "17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.1.2"
+    "effect": "4.1.4"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "4.0.99",
-    "@ai-sdk/openai": "4.0.111",
-    "@ai-sdk/typesafe-ai": "3.0.35",
-    "@cloudflare/workers-types": "^4.20260702.1",
-    "@e2e-dev/decision": "0.3.2",
-    "@e2e-dev/github": "0.4.4",
-    "@e2e-dev/web": "0.15.5",
-    "@electric-sql/pglite": "0.4.6",
-    "@electric-sql/pglite-socket": "0.1.6",
-    "@modelcontextprotocol/sdk": "1.32.0",
+    "@ai-sdk/anthropic": "4.0.104",
+    "@ai-sdk/openai": "4.0.117",
+    "@ai-sdk/typesafe-ai": "3.0.40",
+    "@cloudflare/workers-types": "4.20260702.1",
+    "@e2e-dev/decision": "0.3.3",
+    "@e2e-dev/github": "0.4.5",
+    "@e2e-dev/web": "0.16.0",
+    "@electric-sql/pglite": "0.5.16",
+    "@electric-sql/pglite-socket": "0.2.19",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@mpsuesser/oxlint-plugin-effect": "0.6.0",
     "@types/node": "24.19.2",
     "@types/semver": "7.8.0",
     "@yielded/effect-tsrs": "0.2.3",
-    "ai": "7.0.166",
+    "ai": "7.0.172",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "e2e": "0.23.0",
+    "e2e": "0.23.1",
     "esbuild": "0.28.2",
-    "jsonc-parser": "^3.3.1",
-    "lefthook": "^2.2.2",
+    "jsonc-parser": "3.3.1",
+    "lefthook": "2.2.2",
     "miniflare": "5.20261101.0-beta",
     "oxfmt": "0.78.0",
     "oxlint": "1.93.0",
-    "oxlint-plugin-solzero": "^0.1.0",
+    "oxlint-plugin-solzero": "0.1.0",
     "postgres": "3.4.9",
     "semver": "7.8.6",
     "tegami": "1.5.0",
     "tsrs": "0.23.0-ts7.1.0-beta",
-    "tsx": "^4.23.13",
-    "turbo": "2.11.10",
-    "typescript": "^7.0.2",
-    "wrangler": "4.156.1"
+    "tsx": "4.23.15",
+    "turbo": "2.11.11",
+    "typescript": "7.0.2",
+    "wrangler": "4.161.0"
   },
   "overrides": {
-    "@ai-sdk/provider": "4.0.37",
-    "@cloudflare/codemode": "0.5.5",
-    "@effect/platform-node": "4.1.2",
-    "@effect/platform-node-shared": "4.1.2",
-    "@effect/sql-d1": "4.1.2",
-    "@effect/sql-pg": "4.1.2",
-    "@effect/sql-sqlite-do": "4.1.2",
-    "@effect/vitest": "4.1.2",
-    "@modelcontextprotocol/sdk": "1.32.0",
-    "ai": "7.0.166",
-    "chat": "4.40.0",
-    "effect": "4.1.2"
+    "@ai-sdk/provider": "4.0.38",
+    "@cloudflare/codemode": "0.5.6",
+    "@effect/platform-node": "4.1.4",
+    "@effect/platform-node-shared": "4.1.4",
+    "@effect/sql-d1": "4.1.4",
+    "@effect/sql-pg": "4.1.4",
+    "@effect/sql-sqlite-do": "4.1.4",
+    "@effect/vitest": "4.1.4",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "ai": "7.0.172",
+    "chat": "4.45.0",
+    "effect": "4.1.4"
   },
   "devEngines": {
     "packageManager": {
@@ -136,11 +136,11 @@
     },
     "runtime": {
       "name": "node",
-      "version": "24.15.0"
+      "version": "24.22.3"
     }
   },
   "engines": {
-    "node": ">=24.15.0 <25"
+    "node": "v24.22.3"
   },
   "packageManager": "nub@0.10.0",
   "allowScripts": {
