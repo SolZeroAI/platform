@@ -249,6 +249,7 @@ const listMcpcfTools = Effect.fn("mcp.mcpcf.listTools")(function* (context: Mcpc
 
         const toolsByServer = yield* Effect.all(
           context.servers.map((server) => listMcpcfServerTools(context, config, server)),
+          { concurrency: 1 },
         )
 
         return toolsByServer.flat()

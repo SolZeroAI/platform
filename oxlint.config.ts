@@ -84,6 +84,8 @@ export default defineConfig({
         "effect/throw-in-effect-gen": "error",
         "effect/prefer-duration-constructors": "error",
         "effect/avoid-ts-ignore": "error",
+        // Effect.all and Effect.forEach default to sequential. Name that choice at the call.
+        "effect/require-effect-concurrency": "error",
       },
     },
     {

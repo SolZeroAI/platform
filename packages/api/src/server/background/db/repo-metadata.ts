@@ -135,15 +135,19 @@ export class RepoMetadataStore {
         normalizeRepoKey(left.owner, left.name) === normalizeRepoKey(right.owner, right.name),
     )
 
-    const entries = yield* Effect.forEach(normalizedRepos, (repo) =>
-      this.getRow(repo.owner, repo.name).pipe(
-        Effect.map((row) =>
-          Option.map(
-            row,
-            (resolved) => [normalizeRepoKey(repo.owner, repo.name), toMetadata(resolved)] as const,
+    const entries = yield* Effect.forEach(
+      normalizedRepos,
+      (repo) =>
+        this.getRow(repo.owner, repo.name).pipe(
+          Effect.map((row) =>
+            Option.map(
+              row,
+              (resolved) =>
+                [normalizeRepoKey(repo.owner, repo.name), toMetadata(resolved)] as const,
+            ),
           ),
         ),
-      ),
+      { concurrency: 1 },
     )
 
     return new Map(Arr.getSomes(entries))

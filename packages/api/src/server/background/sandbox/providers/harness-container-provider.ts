@@ -652,7 +652,10 @@ export class HarnessContainerProvider implements SandboxProvider {
         Effect.map((polled) => polled as RuntimePollResponse),
         Effect.tap((payload) => Ref.set(cursor, payload.cursor)),
         Effect.tap((payload) =>
-          Effect.forEach(eventsThroughFinish(payload.events), deliver, { discard: true }),
+          Effect.forEach(eventsThroughFinish(payload.events), deliver, {
+            concurrency: 1,
+            discard: true,
+          }),
         ),
         Effect.map((payload) => pollOutcome(payload.events)),
       )

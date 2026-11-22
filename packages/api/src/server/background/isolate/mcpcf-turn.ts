@@ -248,7 +248,7 @@ function emitSkippedMcpServers(
           serverName: skippedServer.name,
           error: skippedServer.error,
         }),
-      { discard: true },
+      { concurrency: 1, discard: true },
     )
   })
 }

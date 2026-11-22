@@ -779,6 +779,7 @@ export const resolveMcpcfRuntimeCredentials = Effect.fn("mcp.mcpcf.runtimeCreden
           userConfig: Option.fromNullishOr(userConfigByServerId.get(server.id)),
         }).pipe(Effect.map((token) => [server.id, token] as const)),
       ),
+      { concurrency: 1 },
     )
 
     const accessTokensByServerId: Record<string, string> = Object.fromEntries([
