@@ -18,8 +18,6 @@ import {
 import { useState, type ReactNode } from "react"
 import { squareIconButton } from "@/components/ui/kumo-icon-button"
 
-const EMPTY_SELECT_VALUE = "__s0_admin_empty__"
-
 const ADAPTER_OPTIONS = [
   "@ai-sdk/openai",
   "@ai-sdk/anthropic",
@@ -461,77 +459,6 @@ export function Field({
     <div className="grid w-full gap-2">
       {labelNode}
       {inputGroup}
-      {error ? <p className="text-sm leading-snug text-kumo-danger">{error}</p> : null}
-    </div>
-  )
-}
-
-export function SelectField({
-  label,
-  helpText,
-  value,
-  options,
-  onChange,
-  placeholder,
-  disabled,
-  disabledEnvVarName,
-  error,
-  portalContainer,
-}: {
-  label: string
-  helpText?: string
-  value: string
-  options: Array<{ value: string; label: string }>
-  onChange: (value: string) => void
-  placeholder: string
-  disabled?: boolean
-  disabledEnvVarName?: string | null
-  error?: string
-  portalContainer?: HTMLElement | null
-}) {
-  const selectedValue = value || EMPTY_SELECT_VALUE
-  const envVarName = disabled ? disabledEnvVarName : null
-  const labelNode = <LockedLabel label={label} helpText={helpText} envVarName={envVarName} />
-  const hasExternalLabel = Boolean(helpText || envVarName)
-
-  const select = (
-    <KumoSelect
-      label={hasExternalLabel ? undefined : labelNode}
-      aria-label={hasExternalLabel ? label : undefined}
-      value={selectedValue}
-      onValueChange={(nextValue) =>
-        onChange(nextValue === EMPTY_SELECT_VALUE ? "" : String(nextValue ?? ""))
-      }
-      renderValue={(nextValue) => {
-        if (nextValue === EMPTY_SELECT_VALUE) {
-          return placeholder
-        }
-
-        return options.find((option) => option.value === nextValue)?.label ?? String(nextValue)
-      }}
-      disabled={disabled}
-      placeholder={placeholder}
-      error={error ? { message: error, match: true } : undefined}
-      container={portalContainer ?? undefined}
-      className="w-full"
-    >
-      <KumoSelect.Option value={EMPTY_SELECT_VALUE}>{placeholder}</KumoSelect.Option>
-      {options.map((option) => (
-        <KumoSelect.Option key={option.value} value={option.value}>
-          {option.label}
-        </KumoSelect.Option>
-      ))}
-    </KumoSelect>
-  )
-
-  if (!hasExternalLabel) {
-    return select
-  }
-
-  return (
-    <div className="grid w-full gap-2">
-      {labelNode}
-      {select}
       {error ? <p className="text-sm leading-snug text-kumo-danger">{error}</p> : null}
     </div>
   )

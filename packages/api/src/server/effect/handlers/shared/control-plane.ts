@@ -46,7 +46,7 @@ import {
   type ControlPlaneDb,
 } from "../../db/control-plane-db"
 import { getCloudflareBindings } from "../../services/middleware"
-import { authenticateControlPlaneRequest, requestFromSource } from "../../services/auth"
+import { requestFromSource } from "../../services/auth"
 import {
   annotateCurrentUserIdentity,
   EffectRequestLogger,
@@ -60,7 +60,6 @@ import {
   type GitHubProviderService,
   type IdentityProviderService,
 } from "../../services/providers"
-import { requireSessionAccess } from "./control-plane/sessions"
 
 export { requestFromSource }
 
@@ -710,46 +709,5 @@ export function runControlPlane<A, E, R>(handler: ControlPlaneHandler<A, E, R>) 
     ),
     Effect.catch(respondUnhandledError),
     Effect.map(toEffectResponse),
-  )
-}
-
-const authorizeSessionProxy = Effect.fn("controlPlane.authorizeSessionProxy")(function* (
-  request: Request,
-  env: ApiEnv,
-  sessionId: string,
-) {
-  const principal = yield* authenticateControlPlaneRequest(request, env)
-  yield* requireSessionAccess(request, env, principal, sessionId)
-
-  return null
-})
-
-/**
- * Promise bridge for the raw Worker preview-proxy router (a non-Effect boundary): authenticates
- * and authorizes a session request, resolving to a short-circuit Response on failure or `null`
- * when access is granted.
- */
-export function authorizeSessionProxyRequest(
-  request: Request,
-  env: ApiEnv,
-  sessionId: string,
-): Promise<Response | null> {
-  // oxlint-disable-next-line effect/effect-run-in-body -- Promise boundary for the non-Effect Worker preview-proxy router, which cannot import Effect without re-gating its imperative request plumbing.
-  return Effect.runPromise(
-    authorizeSessionProxy(request, env, sessionId).pipe(
-      Effect.catchIf(
-        (cause): cause is ControlPlaneFailure => cause instanceof ControlPlaneFailure,
-        (failure) =>
-          Effect.succeed<Response | null>(failureResponse(failure.payload, failure.status)),
-      ),
-      Effect.catchIf(UnauthorizedError.is, (cause) =>
-        Effect.succeed<Response | null>(error(cause.message, 401)),
-      ),
-      Effect.catchIf(
-        (cause): cause is InternalServerError => cause instanceof InternalServerError,
-        (cause) => Effect.succeed<Response | null>(error(cause.message, 500)),
-      ),
-      Effect.catch((cause) => Effect.succeed<Response | null>(error(describeError(cause), 500))),
-    ),
   )
 }

@@ -336,34 +336,6 @@ export function AdminDenied({ email }: { email: string }) {
   )
 }
 
-export const ADMIN_VIEW_TABS: Array<{ value: AdminView; label: string }> = [
-  { value: "sessions", label: "Agents" },
-  { value: "workflows", label: "Workflows" },
-  { value: "ai-search", label: "AI Search" },
-  { value: "integrations", label: "Integrations" },
-]
-
-export function AdminViewTabs({
-  view,
-  onChange,
-}: {
-  view: AdminView
-  onChange: (view: AdminView) => void
-}) {
-  return (
-    <Tabs
-      value={view}
-      onValueChange={(value) => {
-        if (isAdminView(value)) {
-          onChange(value)
-        }
-      }}
-      tabs={ADMIN_VIEW_TABS}
-      variant="segmented"
-    />
-  )
-}
-
 export const INTEGRATION_TABS: Array<{
   value: AdminIntegrationTab
   label: string
@@ -391,15 +363,6 @@ export function IntegrationTabs({
       tabs={INTEGRATION_TABS}
       variant="segmented"
     />
-  )
-}
-
-export function isAdminView(value: string): value is AdminView {
-  return (
-    value === "sessions" ||
-    value === "workflows" ||
-    value === "ai-search" ||
-    value === "integrations"
   )
 }
 

@@ -696,5 +696,3 @@ function createAgentContainerNamespace(
 // SAFETY: ApiWorker is a type-only placeholder and is never read at runtime; it exists so binding declarations can name the createApi resource type.
 // oxlint-disable-next-line effect/avoid-any, anti-slop/no-chained-type-assertions -- ReturnType of createApi is an Alchemy Effect resource type that null does not overlap, and this placeholder is never read at runtime.
 export const ApiWorker = null as unknown as ReturnType<typeof createApi>
-
-export type ApiWorkerResource = ReturnType<typeof createApi>

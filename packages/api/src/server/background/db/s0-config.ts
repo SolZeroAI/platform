@@ -8,7 +8,6 @@ import type { SecretReference } from "@solzero/shared"
 import { decryptSecret, encryptSecret } from "../auth/crypto"
 import { toError } from "../../lib/effect-errors"
 import { parseJson, stringifyJson } from "../../lib/json"
-import { runEffectPromise } from "../../lib/effect-promise"
 import type { Env } from "../types"
 
 export const S0_CONFIG_KEYS = {
@@ -262,25 +261,4 @@ export class S0ConfigStore {
 
     return Option.flatMap(parsed, readEncryptedSecretRecord)
   })
-}
-
-export interface S0ConfigStorePromise {
-  getJson<T = unknown>(key: string): Promise<Option.Option<T>>
-  putJson(key: string, value: unknown): Promise<void>
-  encryptedSecretConfigured(key: string): Promise<boolean>
-  getEncryptedSecret(key: string): Promise<Option.Option<string>>
-  setEncryptedSecret(key: string, plaintext: string): Promise<void>
-}
-
-export function createS0ConfigStore(kv: KVNamespace, encryptionKey?: string): S0ConfigStorePromise {
-  const store = new S0ConfigStore(kv, encryptionKey)
-
-  return {
-    getJson: (key) => runEffectPromise(store.getJson(key)),
-    putJson: (key, value) => runEffectPromise(store.putJson(key, value)),
-    encryptedSecretConfigured: (key) => runEffectPromise(store.encryptedSecretConfigured(key)),
-    getEncryptedSecret: (key) => runEffectPromise(store.getEncryptedSecret(key)),
-    setEncryptedSecret: (key, plaintext) =>
-      runEffectPromise(store.setEncryptedSecret(key, plaintext)),
-  }
 }
