@@ -247,22 +247,25 @@ export function createAgentResources(options: CreateAgentResourcesOptions) {
         }),
       ),
       Match.orElse(() =>
-        Effect.all({
-          aiSearchNamespace: Cloudflare.AI.SearchNamespace("ai-search-global", {
-            name: getAiSearchNamespaceName({
-              appName,
-              stageName: stageMetadata.name,
+        Effect.all(
+          {
+            aiSearchNamespace: Cloudflare.AI.SearchNamespace("ai-search-global", {
+              name: getAiSearchNamespaceName({
+                appName,
+                stageName: stageMetadata.name,
+              }),
+              description: `${appName} global AI Search instances for ${stageMetadata.name}`,
             }),
-            description: `${appName} global AI Search instances for ${stageMetadata.name}`,
-          }),
-          workflowAiSearchNamespace: Cloudflare.AI.SearchNamespace("ai-search-workflow", {
-            name: getWorkflowAiSearchNamespaceName({
-              appName,
-              stageName: stageMetadata.name,
+            workflowAiSearchNamespace: Cloudflare.AI.SearchNamespace("ai-search-workflow", {
+              name: getWorkflowAiSearchNamespaceName({
+                appName,
+                stageName: stageMetadata.name,
+              }),
+              description: `${appName} workflow AI Search instances for ${stageMetadata.name}`,
             }),
-            description: `${appName} workflow AI Search instances for ${stageMetadata.name}`,
-          }),
-        }),
+          },
+          { concurrency: 1 },
+        ),
       ),
     )
 

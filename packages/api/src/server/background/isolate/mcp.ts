@@ -747,6 +747,7 @@ export function syncIsolateMcpServers(
       .filter((row) => shouldRemoveRow(row, desiredById))
 
     yield* Effect.forEach(rowsToRemove, (row) => attempt(() => manager.removeServer(row.id)), {
+      concurrency: 1,
       discard: true,
     })
 
@@ -757,8 +758,11 @@ export function syncIsolateMcpServers(
         .map((row) => [row.id, row] as const),
     )
 
-    const outcomes = yield* Effect.forEach(registrations, (registration) =>
-      applyRegistrationSync(manager, registration, currentRowsById.get(registration.id)),
+    const outcomes = yield* Effect.forEach(
+      registrations,
+      (registration) =>
+        applyRegistrationSync(manager, registration, currentRowsById.get(registration.id)),
+      { concurrency: 1 },
     )
 
     return {

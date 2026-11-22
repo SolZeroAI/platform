@@ -334,15 +334,18 @@ export class WorkflowLifecycle {
       })
       yield* Match.value(workflow.status).pipe(
         Match.when("active", () =>
-          Effect.all([
-            this.scheduleDateTriggers({
-              env: this.env,
-              workflowId: input.workflow.id,
-              userId: input.workflow.user_id,
-              nodes: manifest.nodes,
-            }),
-            this.registerSlackTriggers({ env: this.env, workflow, manifest }),
-          ]),
+          Effect.all(
+            [
+              this.scheduleDateTriggers({
+                env: this.env,
+                workflowId: input.workflow.id,
+                userId: input.workflow.user_id,
+                nodes: manifest.nodes,
+              }),
+              this.registerSlackTriggers({ env: this.env, workflow, manifest }),
+            ],
+            { concurrency: 1 },
+          ),
         ),
         Match.orElse(() =>
           this.disableSlackTriggers({ env: this.env, workflowId: input.workflow.id }),

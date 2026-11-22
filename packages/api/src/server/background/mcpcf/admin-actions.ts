@@ -102,8 +102,10 @@ export const exportMcpcfConfig = Effect.fn("mcpcf.exportConfig")(function* (env:
     ],
   })
 
-  const tokenAssignment = yield* Effect.forEach(Option.toArray(adminApiTokenValue), (resolved) =>
-    dotenvAssignment(tokenEnvironmentVariable, resolved),
+  const tokenAssignment = yield* Effect.forEach(
+    Option.toArray(adminApiTokenValue),
+    (resolved) => dotenvAssignment(tokenEnvironmentVariable, resolved),
+    { concurrency: 1 },
   )
 
   const tokenLines = tokenAssignment.flatMap((assignment) => [

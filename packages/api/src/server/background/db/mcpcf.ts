@@ -759,7 +759,9 @@ export class McpcfRegistryStore {
 
     // Process discovered servers sequentially: slug uniqueness threads through the shared
     // `claimedSlugs` map, so order must be preserved.
-    yield* Effect.forEach(discovered, (server) => this.processDiscoveredServer(ctx, server))
+    yield* Effect.forEach(discovered, (server) => this.processDiscoveredServer(ctx, server), {
+      concurrency: 1,
+    })
 
     const missingServers = existingServers.filter(
       (existing) => !ctx.seenIds.has(existing.id) && existing.sourceStatus !== "missing",

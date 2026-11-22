@@ -138,8 +138,10 @@ export class GlobalSecretsStore {
 
     // Process sequentially: duplicate keys within an entry list resolve to the same scoped row,
     // whose read-then-write must stay ordered.
-    const outcomes = yield* Effect.forEach(entries, (entry) =>
-      this.writeSecretEntry(entry, now, options),
+    const outcomes = yield* Effect.forEach(
+      entries,
+      (entry) => this.writeSecretEntry(entry, now, options),
+      { concurrency: 1 },
     )
 
     return {

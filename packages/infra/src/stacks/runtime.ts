@@ -133,10 +133,13 @@ function resolveSecretReference(reference: SecretReference) {
 
 // Sequential resolution keeps the Alchemy random-secret outputs in a stable order.
 function resolveConfigSecrets(config: S0ResolvedConfig) {
-  return Effect.forEach(uniqueSecretReferences(s0ActiveSecretReferences(config)), (reference) =>
-    resolveSecretReference(reference).pipe(
-      Effect.map((value): [string, ApiSecretInput] => [reference.env, value]),
-    ),
+  return Effect.forEach(
+    uniqueSecretReferences(s0ActiveSecretReferences(config)),
+    (reference) =>
+      resolveSecretReference(reference).pipe(
+        Effect.map((value): [string, ApiSecretInput] => [reference.env, value]),
+      ),
+    { concurrency: 1 },
   ).pipe(Effect.map(Object.fromEntries<ApiSecretInput>))
 }
 

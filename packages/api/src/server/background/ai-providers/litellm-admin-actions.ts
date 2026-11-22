@@ -104,8 +104,10 @@ export const exportLitellmProviderConfig = Effect.fn("aiProviders.litellm.export
       ],
     })
 
-    const secretAssignment = yield* Effect.forEach(Option.toArray(apiKeyValue), (resolved) =>
-      dotenvAssignment(apiKeyEnvironmentVariable, resolved),
+    const secretAssignment = yield* Effect.forEach(
+      Option.toArray(apiKeyValue),
+      (resolved) => dotenvAssignment(apiKeyEnvironmentVariable, resolved),
+      { concurrency: 1 },
     )
 
     const secretLines = secretAssignment.flatMap((assignment) => [

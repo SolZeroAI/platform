@@ -376,16 +376,19 @@ const processRegistrationsWithActor = Effect.fn("workflows.slack.processRegistra
     actor: SlackWorkflowActor
     setUserIdentity?: (identity: { userId: string; oktaUserId: string | null }) => void
   }) {
-    return yield* Effect.forEach(input.registrations, (registration) =>
-      processSlackRegistration({
-        env: input.env,
-        appId: input.appId,
-        payload: input.payload,
-        commandId: input.commandId,
-        registration,
-        actor: input.actor,
-        setUserIdentity: input.setUserIdentity,
-      }),
+    return yield* Effect.forEach(
+      input.registrations,
+      (registration) =>
+        processSlackRegistration({
+          env: input.env,
+          appId: input.appId,
+          payload: input.payload,
+          commandId: input.commandId,
+          registration,
+          actor: input.actor,
+          setUserIdentity: input.setUserIdentity,
+        }),
+      { concurrency: 1 },
     )
   },
 )
@@ -432,6 +435,7 @@ const startSlackWorkflowRuns = Effect.fn("workflows.slack.startRuns")(function* 
     Arr.filter(registrationDetails, (details) => !details.matched),
     (details) =>
       log("slack.registration.filtered", registrationFilteredLogFields(details, input.payload)),
+    { concurrency: 1 },
   )
   yield* log("slack.registrations.matched", {
     appId: input.appId,
