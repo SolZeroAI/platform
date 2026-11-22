@@ -26,7 +26,7 @@ The Worker binding is also `DATABASE`.
 
 ## D1 default
 
-`bun alchemy deploy` / `nub run infra:deploy:*` with no `DATABASE` value and no PlanetScale tokens
+`nub run infra:deploy:*` with no `DATABASE` value and no PlanetScale tokens
 stays on D1.
 
 - Binding: `DB`

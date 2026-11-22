@@ -58,7 +58,7 @@ export default {
         environment: "test",
         command: {
           executable: "nub",
-          args: ["exec", "tsx", "scripts/e2e/dev.ts"],
+          args: ["scripts/e2e/dev.ts"],
           env: appEnvironment,
           startupTimeout: process.env.E2E_CONTAINER_RUNTIME === "1" ? 600_000 : 180_000,
           shutdownTimeout: 120_000,
