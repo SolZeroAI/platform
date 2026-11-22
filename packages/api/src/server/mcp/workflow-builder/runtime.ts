@@ -289,10 +289,3 @@ export const readLatestWorkflowBuilderDraft = Effect.fn("mcp.workflowBuilder.rea
     })
   },
 )
-
-/** Synchronous validation for callers that cannot thread Effect (e.g. schema decode boundaries). */
-export function validateWorkflowBuilderManifestSync(input: {
-  manifest: unknown
-}): WorkflowDraftValidationResult {
-  return validateWorkflowDraft(unwrapWorkflowManifestInput(input.manifest))
-}

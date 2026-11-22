@@ -1,7 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import { type LanguageModel, type ModelMessage } from "ai"
+import { type LanguageModel } from "ai"
 import type { CompiledOpenCodeConfig } from "@solzero/shared"
 import * as Effect from "effect/Effect"
 import * as Match from "effect/Match"
@@ -406,36 +406,6 @@ export const compileIsolateModelContext = Effect.fn("isolate.model.compileContex
     } satisfies IsolateModelContext
   },
 )
-
-function buildUserPrompt(input: { prompt: string; repoWarning?: string | null }): string {
-  return Option.match(
-    Option.fromNullishOr(input.repoWarning).pipe(Option.filter((warning) => warning.length > 0)),
-    {
-      onNone: () => input.prompt.trim(),
-      onSome: (warning) =>
-        [
-          "User request:",
-          input.prompt.trim(),
-          ["Repository warning:", warning.trim()].join("\n"),
-        ].join("\n\n"),
-    },
-  )
-}
-
-export function buildIsolateModelMessages(input: {
-  prompt: string
-  repoWarning?: string | null
-}): ModelMessage[] {
-  return [
-    {
-      role: "user",
-      content: buildUserPrompt({
-        prompt: input.prompt,
-        repoWarning: input.repoWarning,
-      }),
-    },
-  ]
-}
 
 /** Avoid the native GPT-OSS 256-token default while preserving explicit turn budgets. */
 export function resolveIsolateOutputTokenLimit(

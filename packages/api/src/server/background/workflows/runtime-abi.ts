@@ -42,18 +42,10 @@ function updateFingerprint(fingerprint: number, value: string): number {
   return next >>> 0
 }
 
-export function isWorkflowRuntimeAbiVersion(value: unknown): value is WorkflowRuntimeAbiVersion {
-  return WORKFLOW_RUNTIME_ABI_VERSIONS.some((version) => version === value)
-}
-
 export function getWorkflowRuntimeKernel(
   version: WorkflowRuntimeAbiVersion,
 ): WorkflowRuntimeKernelModule {
   return WORKFLOW_RUNTIME_KERNELS[version]
-}
-
-export function getCurrentWorkflowRuntimeKernel(): WorkflowRuntimeKernelModule {
-  return getWorkflowRuntimeKernel(CURRENT_WORKFLOW_RUNTIME_ABI_VERSION)
 }
 
 export function getWorkflowRuntimeKernelModuleName(

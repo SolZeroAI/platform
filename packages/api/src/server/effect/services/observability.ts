@@ -30,14 +30,6 @@ import {
   type CloudflareTracing,
 } from "../../background/observability/span"
 
-const SENSITIVE_HEADER_NAMES = new Set([
-  "authorization",
-  "cookie",
-  "set-cookie",
-  "x-api-key",
-  "cf-access-jwt-assertion",
-])
-
 export type TracedExecutionContext = ExecutionContext & {
   readonly tracing: CloudflareTracing
 }
@@ -191,18 +183,6 @@ export function setRequestUserIdentity(
       observability.oktaUserId = identity.oktaUserId?.trim() || null
     }),
     Match.orElse(() => undefined),
-  )
-}
-
-export function redactHeaders(headers: Headers): Record<string, string> {
-  return Object.fromEntries(
-    Array.from(headers.entries(), ([key, value]) => [
-      key,
-      Match.value(SENSITIVE_HEADER_NAMES.has(key.toLowerCase())).pipe(
-        Match.when(true, () => "[REDACTED]"),
-        Match.orElse(() => value),
-      ),
-    ]),
   )
 }
 

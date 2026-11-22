@@ -24,7 +24,6 @@ import { normalizeWorkflowManifest } from "./manifest"
 import { startWorkflowRun, type WorkflowTriggerPayload } from "./runner"
 import { disableWorkflowSlackTriggers, registerWorkflowSlackTriggers } from "./slack-apps"
 import * as Effect from "effect/Effect"
-import { runEffectPromise } from "../../lib/effect-promise"
 import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -573,22 +572,4 @@ export class WorkflowLifecycle {
       })
     })
   }
-}
-
-/**
- * Promise-facing webhook entry that runs a workflow via {@link WorkflowLifecycle} for the
- * non-Effect public router (Worker request entry), which stays Effect-free to keep its imperative
- * request-handling path lint-clean. Runs the underlying Effect at this boundary.
- */
-export function startWorkflowRunFromWebhook(
-  env: Env,
-  input: {
-    workflow: WorkflowRecord
-    trigger: WorkflowTriggerPayload
-    userId?: string
-    oktaUserId?: string | null
-    log?: RequestLogger
-  },
-): Promise<WorkflowRunRecord> {
-  return runEffectPromise(new WorkflowLifecycle(env).startWorkflowRun(input))
 }
