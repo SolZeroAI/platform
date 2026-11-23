@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { SessionsListQuery } from "@solzero/api"
 import { AGENT_RUNTIMES, formatAgentRuntimeLabel, resolveAgentRuntime } from "@solzero/shared"
 import { S0Loader, TableCellState } from "@/components/s0-loader"
+import { primaryNavLabels } from "@/components/primary-nav-labels"
 import {
   archiveSession,
   formatSessionLabel,
@@ -487,7 +488,9 @@ export function PreviousSessionsTable() {
     <section className="mx-auto w-full max-w-6xl px-6 py-14 sm:px-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-kumo-default">Previous sessions</h2>
+          <h2 className="text-2xl font-semibold text-kumo-default">
+            {primaryNavLabels.previousSessions}
+          </h2>
           <p className="mt-1 text-sm text-kumo-subtle">
             Search, filter, sort, and reopen prior agent sessions.
           </p>

@@ -15,6 +15,13 @@ import {
 import { S0Loader } from "@/components/s0-loader"
 import { S0AnimatedIcon } from "@/components/s0-animated-icon"
 import {
+  homeComposerPlaceholder,
+  homePreparingAgentLabel,
+  homeStartNewAgentLabel,
+  homeWelcomeHeading,
+} from "@/components/home-hero-copy"
+import { primaryNavLabels } from "@/components/primary-nav-labels"
+import {
   HomeToolbarIconButton,
   TOOLS_TOOLBAR_CLASS_NAME,
 } from "@/components/home-toolbar-icon-button"
@@ -319,7 +326,7 @@ export function HomeContent({
           className="pointer-events-auto invisible flex -translate-y-2 items-center gap-2 rounded-full bg-kumo-elevated px-4 py-2 text-sm text-kumo-subtle opacity-0 shadow-lg ring-1 ring-kumo-hairline transition hover:bg-kumo-tint hover:text-kumo-default focus:outline-none focus:ring-2 focus:ring-kumo-brand"
         >
           <ArrowUp className="h-4 w-4" aria-hidden />
-          Start a new Agent
+          {homeStartNewAgentLabel}
         </button>
       </div>
 
@@ -331,7 +338,7 @@ export function HomeContent({
               <h1
                 className={`${manrope.className} mb-2 text-3xl font-normal leading-9 text-kumo-default`}
               >
-                Welcome to {brand.name}
+                {homeWelcomeHeading(brand.name)}
               </h1>
               {!isAuthenticated ? (
                 <p className="text-kumo-subtle">Sign in to start a new agent</p>
@@ -425,7 +432,7 @@ export function HomeContent({
                     value={prompt}
                     onChange={(e) => handlePromptChange(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Chat, build, and automate with project context"
+                    placeholder={homeComposerPlaceholder}
                     disabled={creating}
                     className="session-composer-textarea session-composer-textarea--ringed min-h-28 w-full resize-none bg-transparent px-4 py-4 text-kumo-default placeholder:text-kumo-placeholder focus:outline-none disabled:opacity-50"
                     rows={3}
@@ -536,7 +543,7 @@ export function HomeContent({
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {isCreatingSession && (
                         <span className="text-xs text-kumo-brand whitespace-nowrap">
-                          Preparing {selectedAgentRuntimeLabel} agent...
+                          {homePreparingAgentLabel(selectedAgentRuntimeLabel)}
                         </span>
                       )}
                       {modelControlLoading ? (
@@ -591,11 +598,11 @@ export function HomeContent({
             <button
               ref={scrollCueRef}
               type="button"
-              aria-label="Previous sessions"
+              aria-label={primaryNavLabels.previousSessions}
               onClick={scrollToPreviousSessions}
               className="pointer-events-auto flex flex-col items-center gap-1 rounded-full px-4 py-2 text-sm text-kumo-subtle transition hover:text-kumo-default focus:outline-none focus:ring-2 focus:ring-kumo-brand"
             >
-              <span>Previous sessions</span>
+              <span>{primaryNavLabels.previousSessions}</span>
               <ChevronDown className="h-5 w-5" aria-hidden />
             </button>
           </div>

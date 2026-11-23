@@ -91,7 +91,23 @@ rendered GitHub Markdown, so the full release note remains available below the c
 The renderer runs as a native Node function in GitHub Actions. Its inputs come from the repository
 checkout and the Tegami draft.
 
+## Open Graph concepts
+
+The `og` folder holds seven exploration scenes for a 1200 by 630 share image and a five-second
+loop. The scenes read the SolZero logo, Manrope, Kumo tokens, the home hero copy, the GemSmoke
+color list, the loader piece motion, and the workflow node labels from the rest of the app.
+
+```sh
+nub run creative:og
+nub run creative:og -- --concept hero-smoke --output apps/web/.og-render
+```
+
+Each concept writes a PNG still, an MP4, and a GIF. A full run also writes `contact-sheet.png`.
+The default directory is `apps/web/.og-render`, which is gitignored. Takumi samples the scene with
+`renderAnimation()` for the GIF and with `render()` plus `timeMs` for the video frames. ffmpeg
+encodes those raw frames as MP4, which is the video path in Takumi's keyframe guide.
+
 ## Planned extensions
 
-- Add keyframe-driven product clips and video-frame export through Takumi.
+- Choose one Open Graph concept and serve it from the web app.
 - Expose the typed template controls through an MCP server and a small template editor.
