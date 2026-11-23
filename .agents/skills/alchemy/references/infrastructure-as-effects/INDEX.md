@@ -1,6 +1,6 @@
 # infrastructure-as-effects index
 
-9 pages. One Effect program models runtime code and infrastructure: Runtimes carry code, Bindings wire resources into them, Phases split deploy from runtime, and Layers package it behind typed services.
+10 pages. One Effect program models runtime code and infrastructure: Runtimes carry code, Bindings wire resources into them, Phases split deploy from runtime, and Layers package it behind typed services.
 
 | Page | File | Covers |
 | --- | --- | --- |
@@ -8,6 +8,7 @@
 | Circular Bindings | `circular-bindings.md` | How to model two services that reference each other (Worker A ↔ Worker B, Lambda ↔ Lambda) using tagged classes and Layers. |
 | Custom Runtime | `custom-runtime.md` | Implement your own Runtime resource on the Platform type — a Provider that provisions the compute and bundles the runtime Effect. |
 | Event Sources | `event-sources.md` | An event source is a binding that runs your Function when something happens on a resource — one call wires the event-source mapping, the permissions, and a typed handler. |
+| Identity Federation | `identity-federation.md` | How a binding reaches another cloud with the identity the host's platform already signs, instead of a long-lived key, and which runtimes and clouds support it. |
 | Layers | `layers.md` | A Layer defines a service contract with swappable implementations. In Alchemy, a Layer can encapsulate Resources and Bindings, so shared services carry their own infrastructure and permissions. |
 | Phases | `phases.md` | Alchemy programs run in two phases — Construction drives the deploy, Runtime handles requests. Knowing which is which is the key to writing Workers and Lambda Functions. |
 | Runtime | `runtime.md` | A Runtime is a Resource that carries the code it runs — a Worker, Lambda Function, Container, or Server declared with the Effectful Constructor pattern. Bind what you need, return what you expose. |

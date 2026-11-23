@@ -1,12 +1,14 @@
 # railway index
 
-36 pages. Deploy Effect programs to Railway as Projects, Services, databases, Volumes, and Buckets.
+38 pages. Run Effect programs on Railway with Alchemy. Declare Projects, Services, Functions, Postgres, MySQL, Redis, Volumes and Buckets in one TypeScript program.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Railway | `_overview.md` | Deploy Effect programs to Railway as Projects, Services, databases, Volumes, and Buckets. |
+| Railway | `_overview.md` | Run Effect programs on Railway with Alchemy. Declare Projects, Services, Functions, Postgres, MySQL, Redis, Volumes and Buckets in one TypeScript program. |
 | Custom domains, TCP & private networks | `networking.md` | Reach a Railway Service on your own hostname, expose databases over public TCP, and name private-mesh DNS. |
 | Setup | `setup.md` | Create a Railway workspace, generate an account API token, and store it in a profile. |
+| What is Railway? | `what-is-railway.md` | The concepts behind Railway — workspaces, projects, environments, services, deployments, databases, volumes, variables, private networking and domains — and how @alchemy.run/railway models each of them. |
+| Workspaces and tokens | `workspaces-and-tokens.md` | How a Railway workspace holds your projects and billing, which tokens Alchemy can deploy with, and how to keep production apart. |
 
 ## compute/
 
@@ -37,11 +39,11 @@
 | Page | File | Covers |
 | --- | --- | --- |
 | Astro | `frontend/astro.md` | Deploy an Astro app to Railway with Railway.Website.Astro — Node SSR on a Service container, static output as a file server, and Astro's own dev server under alchemy dev. |
-| Foldkit | `frontend/foldkit.md` | Deploy a Foldkit app to Railway with Railway.Website.Foldkit — a client-only Vite SPA on a container Service, and Vite's own dev server under alchemy dev. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Railway with native local development. |
 | Next.js | `frontend/nextjs.md` | Deploy a Next.js app to Railway with Railway.Website.Nextjs — next build plus a Node next({ dev: false }) container, and next dev under alchemy dev. |
 | Nuxt | `frontend/nuxt.md` | Deploy a Nuxt app to Railway with Railway.Website.Nuxt — nitro's node preset on a Service, and Nuxt's own dev server under alchemy dev. |
 | Octane | `frontend/octane.md` | Deploy an OctaneJS app to Railway with Railway.Website.Octane — SSR plus client assets on one Service, and Octane's own Vite dev server under alchemy dev. |
-| React Router | `frontend/react-router.md` | Deploy React Router v7 (framework mode) to Railway with Railway.Website.ReactRouter — SSR on a container Service, client assets in the image, and React Router's own Vite dev server under alchemy dev. |
+| React Router | `frontend/react-router.md` | Deploy React Router v8 (framework mode) to Railway with Railway.Website.ReactRouter — SSR on a container Service, client assets in the image, and React Router's own Vite dev server under alchemy dev. |
 | SolidStart | `frontend/solidstart.md` | Deploy a SolidStart app to Railway with Railway.Website.SolidStart — nitro's node preset on a container Service, prerendered pages in the image, and SolidStart's own Vite dev server under alchemy dev. |
 | Static sites | `frontend/static-site.md` | Deploy a static site to Railway with Railway.Website.StaticSite — a build command, a container Service. |
 | SvelteKit | `frontend/sveltekit.md` | Deploy a SvelteKit app to Railway with Railway.Website.SvelteKit — kit SSR plus prerendered assets on one Service, and Kit's own dev server under alchemy dev. |

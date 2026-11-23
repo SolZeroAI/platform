@@ -1,6 +1,6 @@
 <!-- source: https://alchemy.run/git/blocks/server
      upstream: website/src/content/docs/git/blocks/server.mdx
-     alchemy 2.0.0-beta.79 @ e354a45 -->
+     alchemy 2.0.0-beta.87 @ d1f364a -->
 
 # HTTP routes
 
@@ -15,7 +15,7 @@ implementations.
 Build groups against the API that actually serves them:
 
 ```typescript
-import * as Git from "alchemy/Git";
+import * as Git from "@alchemy.run/git";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as HttpApi from "effect/http-api/HttpApi";

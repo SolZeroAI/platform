@@ -1,11 +1,13 @@
 # axiom index
 
-6 pages. Observability as resources — OTEL datasets, ingest tokens, monitors, notifiers, and dashboards declared next to the code that emits the data.
+8 pages. Observability as resources — OTEL datasets, ingest tokens, monitors, notifiers, and dashboards declared next to the code that emits the data.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | Axiom | `_overview.md` | Observability as resources — OTEL datasets, ingest tokens, monitors, notifiers, and dashboards declared next to the code that emits the data. |
+| Organizations and tokens | `organizations-and-tokens.md` | How an Axiom organization holds your datasets, how Alchemy deploys with a personal token, and how your Stack mints API tokens that can only ingest or only query. |
 | Setup | `setup.md` | Connect alchemy to Axiom — account, credentials, and profiles. |
+| What is Axiom? | `what-is-axiom.md` | The concepts behind Axiom — organizations, datasets, OpenTelemetry ingest, API tokens, APL queries, monitors, notifiers, dashboards, views and annotations — and how @alchemy.run/axiom models each of them. |
 
 ## data/
 

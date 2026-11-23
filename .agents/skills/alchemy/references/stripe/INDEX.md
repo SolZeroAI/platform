@@ -1,11 +1,13 @@
 # stripe index
 
-5 pages. Sell subscriptions and onboard merchants from a Cloudflare Worker — catalog, Checkout, the Billing Portal, Connect, and webhooks declared next to the code that uses them.
+7 pages. Sell subscriptions and onboard merchants from a Cloudflare Worker — catalog, Checkout, the Billing Portal, Connect, and webhooks declared next to the code that uses them.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | Stripe | `_overview.md` | Sell subscriptions and onboard merchants from a Cloudflare Worker — catalog, Checkout, the Billing Portal, Connect, and webhooks declared next to the code that uses them. |
+| Accounts and API keys | `accounts-and-keys.md` | How a Stripe account and its test mode keep data apart, how secret and restricted keys differ, and which key Alchemy deploys with and which your runtimes hold. |
 | Setup | `setup.md` | Connect alchemy to Stripe — secret key, profiles, CI, and how Worker bindings get their credentials. |
+| What is Stripe? | `what-is-stripe.md` | The concepts behind Stripe — accounts and test mode, API keys, products and prices, customers, Checkout, subscriptions, the Billing Portal, webhooks and Connect — and how @alchemy.run/stripe models each of them. |
 
 ## guides/
 

@@ -1,12 +1,15 @@
 # fly index
 
-35 pages. Deploy Effect programs to Fly.io as Apps, Machines, Services, and Sprites.
+38 pages. Run Effect programs on Fly.io with Alchemy. Declare Services, Machines, Volumes, Postgres, Redis and Tigris in TypeScript, in the regions near your users.
 
 | Page | File | Covers |
 | --- | --- | --- |
-| Fly | `_overview.md` | Deploy Effect programs to Fly.io as Apps, Machines, Services, and Sprites. |
+| Fly | `_overview.md` | Run Effect programs on Fly.io with Alchemy. Declare Services, Machines, Volumes, Postgres, Redis and Tigris in TypeScript, in the regions near your users. |
+| Federated identity | `federated-identity.md` | How a Fly Service reaches AWS and GCP with the OIDC tokens its Machines sign, instead of a stored access key or service account key. |
 | IPs & certificates | `networking.md` | Public and private Fly Services, App addresses, and certificates for your own hostname. |
+| Organizations and tokens | `organizations-and-tokens.md` | How a Fly organization holds your Apps and billing, how an organization token decides where Alchemy deploys, and how to keep production in its own organization. |
 | Setup | `setup.md` | Create a Fly org, generate an API token, and store it in a profile. |
+| What is Fly? | `what-is-fly.md` | The concepts behind Fly.io — organizations, Apps, Machines, regions, the Fly proxy, private networking, Volumes, managed data, secrets and certificates — and how @alchemy.run/fly models each of them. |
 
 ## compute/
 
@@ -36,11 +39,11 @@
 | Page | File | Covers |
 | --- | --- | --- |
 | Astro | `frontend/astro.md` | Deploy an Astro app to Fly with Fly.Website.Astro — Node SSR on a Machine, static output as a file server, and Astro's own dev server under alchemy dev. |
-| Foldkit | `frontend/foldkit.md` | Deploy a Foldkit app to Fly with Fly.Website.Foldkit — a client-only Vite SPA on a Node static-file Service, fly.dev over shared IPv4, and Vite's own dev server under alchemy dev. |
+| Foldkit | `frontend/foldkit.md` | Deploy Foldkit SPA, SSR, SSG, and hybrid applications to Fly with native local development. |
 | Next.js | `frontend/nextjs.md` | Deploy a Next.js app to Fly with Fly.Website.Nextjs — next build plus a Node next({ dev: false }) Machine, and next dev under alchemy dev. |
 | Nuxt | `frontend/nuxt.md` | Deploy a Nuxt app to Fly with Fly.Website.Nuxt — nitro's node preset on a Machine, assets baked into the image, and Nuxt's own dev server under alchemy dev. |
 | Octane | `frontend/octane.md` | Deploy an OctaneJS app to Fly with Fly.Website.Octane — SSR on a Machine, client assets baked into the image, and Octane's own Vite dev server under alchemy dev. |
-| React Router | `frontend/react-router.md` | Deploy React Router v7 (framework mode) to Fly with Fly.Website.ReactRouter — SSR on a Machine, client assets baked into the image, and React Router's own Vite dev server under alchemy dev. |
+| React Router | `frontend/react-router.md` | Deploy React Router v8 (framework mode) to Fly with Fly.Website.ReactRouter — SSR on a Machine, client assets baked into the image, and React Router's own Vite dev server under alchemy dev. |
 | SolidStart | `frontend/solidstart.md` | Deploy a SolidStart app to Fly with Fly.Website.SolidStart — nitro's node preset on a Machine, prerendered pages baked into the image, and SolidStart's own Vite dev server under alchemy dev. |
 | Static sites | `frontend/static-site.md` | Deploy a static site to Fly with Fly.Website.StaticSite — a build command, a Node static-file server on a Machine, and https://{app}.fly.dev (or your hostname) on deploy. |
 | SvelteKit | `frontend/sveltekit.md` | Deploy a SvelteKit app to Fly with Fly.Website.SvelteKit — kit SSR on a Machine, prerendered assets baked into the image, and Kit's own dev server under alchemy dev. |

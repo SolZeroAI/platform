@@ -1,40 +1,70 @@
 ---
 name: tegami
-description: Use Tegami to write changelog entries and run version and publish commands. Use when a change needs a release note, when editing files under .tegami, or when running the Tegami CLI.
+description: >-
+  Version and publish with Tegami. Use when a project depends on the tegami
+  package, has a .tegami directory, or runs a tegami script. Covers the
+  library API, CLI commands, and changelog files.
 ---
 
-# Tegami
+# Use Tegami
 
-Tegami prepares versions and publishes releases. This repository already uses it.
-The official reference is [Tegami](https://tegami.fuma-nama.dev).
+Tegami versions packages from changelog files and publishes from a publish lock. Configure it with the `tegami` package. Drive the CLI through `runCli`.
 
-## Use the repository script
+## Configure
 
-`scripts/tegami.mts` is the entry point. It builds the release with `tegami()` from `tegami`,
-runs it with `runCli` from `tegami/cli`, and registers `github()` from `tegami/plugins/github`.
+```ts
+import { tegami } from "tegami"
+import { runCli } from "tegami/cli"
+import { github } from "tegami/plugins/github"
 
-Run Tegami through that script:
+const release = tegami({
+  npm: { client: "nub" },
+  plugins: [github({ repo: "owner/name" })],
+})
 
-- `nub run tegami` creates a changelog entry.
-- `nub run tegami version` drafts version changes and writes the publish lock.
-- `nub run tegami ci` versions pending changelogs, or publishes from the existing publish lock.
+await runCli(release)
+```
 
-The release workflow owns `nub run tegami version` and `nub run tegami ci`. On a feature branch
-those commands rewrite `VERSION`, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`.
+Read the project's Tegami config before changing release behavior. Keep version pull requests, tags, and publish steps in that config and its plugins. Plugin entry points include `tegami/plugins/github`, `tegami/plugins/git`, `tegami/plugins/gitlab`, `tegami/plugins/cargo`, and `tegami/plugins/go`. Set `npm.client` to the repository's package manager.
 
-## Changelog entries
+## Commands
 
-Read `docs/releasing.md` and the `manage-solzero-releases` skill before choosing a version or
-writing an entry.
+Run the project's Tegami script. With nub, that is `nub run tegami`.
 
-A user-visible change adds one Markdown file under `.tegami/`. The frontmatter `packages` map
-targets `release:solzero` with `patch`, `minor`, or `major`. The heading and body describe the
-outcome for users and operators.
+| Command | What it does |
+| --- | --- |
+| *(none)* | Create changelog files interactively |
+| `version` | Apply pending changelogs and write the publish lock |
+| `ci` | Version when changelogs are pending; otherwise publish from the lock |
+| `publish` | Publish packages recorded in the lock. `--dry-run` validates and does not publish |
+| `check-publish` | Exit 0 when a publish is pending, and 1 otherwise |
+| `cleanup` | Remove the publish lock after every package is published |
+| `init-agent` | Append changelog instructions to `AGENTS.md` |
 
-A change with no observable effect uses the `release:none` label. The pull request explains why
-it has no `.tegami/` entry.
+Tegami writes `CHANGELOG.md` and the publish lock. Leave those files for Tegami to update.
 
-## Native API
+## Changelog files
 
-Add Tegami behavior in `scripts/tegami.mts` by passing plugins to `tegami()`. Keep version and
-publish work on the `runCli` commands above.
+Pending notes live in `.tegami/` unless `changelogDir` says otherwise. Each file has YAML frontmatter and at least one `#`, `##`, or `###` heading. The changelog format is documented at https://tegami.fuma-nama.dev/changelog.
+
+Explicit bump:
+
+```md
+---
+packages:
+  "npm:my-pkg":
+    type: patch
+---
+
+## What changed
+
+One paragraph a user of the package can read.
+```
+
+`type` is `major`, `minor`, or `patch`. A short form is also valid: `"@scope/name": patch`.
+
+Implicit style lists packages and takes the bump from heading depth: `#` is major, `##` is minor, and `###` is patch. Every listed package receives the highest bump in the file.
+
+A `packages` value is a package name, a package id such as `npm:name`, or a group such as `group:name`.
+
+A private package is versioned. Tegami does not publish it to npm. Leave `package.json` versions and git tags to the Tegami run. When the repository's contributing guide says a change has no release, follow that guide and skip the changelog file.

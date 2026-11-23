@@ -1,0 +1,68 @@
+<!-- source: https://alchemy.run/digitalocean/frontend/solidstart
+     upstream: website/src/content/docs/digitalocean/frontend/solidstart.mdx
+     alchemy 2.0.0-beta.87 @ d1f364a -->
+
+# SolidStart
+
+> Deploy a SolidStart app to DigitalOcean App Platform with DigitalOcean.Website.SolidStart, built on your machine and served by an App, with SolidStart's own dev server under alchemy dev.
+
+`DigitalOcean.Website.SolidStart` deploys a [SolidStart](https://start.solidjs.com) project to [App Platform](/digitalocean/compute/app-platform). Deploy builds it on your machine, puts the output in one image, and the App runs SolidStart's server.
+
+## Install
+
+The build integration ships separately. It runs only at build time, so a dev dependency is enough:
+
+<PackageManagers dev="@alchemy.run/frontend-frameworks" />
+
+## Declare the site
+
+```typescript title="alchemy.run.ts"
+import * as DigitalOcean from "@alchemy.run/digitalocean";
+import * as Alchemy from "alchemy";
+import * as Effect from "effect/Effect";
+
+export const Website = DigitalOcean.Website.SolidStart("Website", { rootDir: "./web" });
+
+export default Alchemy.Stack(
+  "MySite",
+  { providers: DigitalOcean.providers(), state: Alchemy.localState() },
+  Effect.gen(function* () {
+    const site = yield* Website;
+    return { url: site.url };
+  }),
+);
+```
+
+`rootDir` is the directory with the project's `package.json`. `site.url` is the App's HTTPS address. Deploy needs Docker and the team's Container Registry, or a `registry` you declare.
+
+## Add environment variables
+
+```diff lang="typescript"
+// alchemy.run.ts
+export const Website = DigitalOcean.Website.SolidStart("Website", {
+  rootDir: "./web",
++  env: { GREETING: "Hello from DigitalOcean" },
+});
+```
+
+`env` is set before the build and on the App, so build-time and run-time code see the same values:
+
+```typescript title="src/routes/api/hello.ts"
+export function GET() {
+  return new Response(process.env.GREETING ?? "hello");
+}
+```
+
+## Size the App
+
+`region`, `instanceSizeSlug` and `instanceCount` are passed to the App. See [Websites](/digitalocean/frontend/websites#size-it).
+
+## Local dev
+
+`alchemy dev` runs SolidStart's own dev server with the same `env` instead of deploying, and `site.url` is its local address.
+
+## Where next
+
+- [`DigitalOcean.Website.SolidStart` reference](/providers/digitalocean/website): every prop.
+- [Websites](/digitalocean/frontend/websites): what every site on DigitalOcean shares.
+- [App Platform](/digitalocean/compute/app-platform): the App the site runs on.

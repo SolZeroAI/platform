@@ -23,8 +23,8 @@ const manifest = JSON.parse(
 ) as { source: { effectVersion: string } };
 const pin = manifest.source.effectVersion;
 
-/** Prerelease v4 versions as the effect-ts skill writes them (`4.0.0-rc.117`). */
-const V4_VERSION = /\b4\.\d+\.\d+-(?:alpha|beta|rc)\.\d+\b/g;
+/** v4 versions as the effect-ts skill writes them, stable or prerelease (`4.1.4`, `4.0.0-rc.117`). */
+const V4_VERSION = /\b4\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\b/g;
 
 /**
  * Hidden paths are local-only (the gitignored `.source/` upstream checkout)
