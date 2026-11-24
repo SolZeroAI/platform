@@ -1,6 +1,6 @@
 # git index
 
-25 pages. A pluggable, embeddable, self-hostable git server on Cloudflare Workers, Durable Objects, and R2. Smart HTTP for any client, a typed REST plane with pull requests, and a GitHub-compatible API.
+26 pages. A pluggable, embeddable, self-hostable git server on Cloudflare Workers, Durable Objects, and R2. Smart HTTP for any client, a typed REST plane with pull requests, and a GitHub-compatible API.
 
 | Page | File | Covers |
 | --- | --- | --- |
@@ -10,6 +10,7 @@
 | GitHub API compatibility | `github-api.md` | Point the gh CLI and Octokit at your host with the /api/v3 facade. |
 | Pull requests | `pull-requests.md` | Server-side merge base, tree diffs, and fast-forward or three-way merges, computed inside the repository. |
 | Repositories | `repositories.md` | Create, fork, import, and manage repositories over the typed REST plane. |
+| What is a git host? | `what-is-git.md` | The concepts behind hosting git — objects, refs, packs, the smart HTTP protocol, pushes and their verification, repositories, names and pull requests — and how @alchemy.run/git builds a host from them. |
 
 ## blocks/
 

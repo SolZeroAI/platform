@@ -1,6 +1,6 @@
 # acme index
 
-8 pages. Manage TLS certificates independently of your hosting provider, at deploy time or from an application.
+9 pages. Manage TLS certificates independently of your hosting provider, at deploy time or from an application.
 
 | Page | File | Covers |
 | --- | --- | --- |
@@ -12,3 +12,4 @@
 | Runtime issuance | `runtime.md` | Deploy an authenticated Worker that issues and revokes certificates using a bound ACME account. |
 | Troubleshooting | `troubleshooting.md` | Diagnose failed DNS challenges, rejected orders, rate limits, and runtime certificate operations. |
 | Using certificates | `using-certificates.md` | Upload an ACME certificate to Fly or pass its chain and private key to another TLS consumer. |
+| What is ACME? | `what-is-acme.md` | The concepts behind ACME certificates — certificate authorities, accounts, orders, challenges and DNS-01 validation, certificates and keys, renewal and revocation — and how @alchemy.run/acme models each of them. |

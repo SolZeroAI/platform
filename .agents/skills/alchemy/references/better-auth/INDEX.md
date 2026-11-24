@@ -1,10 +1,11 @@
 # better-auth index
 
-28 pages. Build authentication with an Effect service, automatic database bindings, and deploy-time migrations.
+29 pages. Build authentication with an Effect service, automatic database bindings, and deploy-time migrations.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | Better Auth | `_overview.md` | Build authentication with an Effect service, automatic database bindings, and deploy-time migrations. |
+| What is Better Auth? | `what-is-better-auth.md` | The concepts behind Better Auth — the auth server, users, accounts, sessions and cookies, sign-in providers, the signing secret, the database and its migrations, and middleware — and how @alchemy.run/better-auth models each of them. |
 
 ## databases/
 

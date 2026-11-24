@@ -1,11 +1,12 @@
 # kubernetes index
 
-19 pages. Run containers and Effect programs on any Kubernetes cluster with Alchemy. Declare Deployments, Jobs, raw manifests, and Helm charts in the same typed program as the rest of your infrastructure. No YAML, no kubectl apply.
+20 pages. Run containers and Effect programs on any Kubernetes cluster with Alchemy. Declare Deployments, Jobs, raw manifests, and Helm charts in the same typed program as the rest of your infrastructure. No YAML, no kubectl apply.
 
 | Page | File | Covers |
 | --- | --- | --- |
 | Kubernetes | `_overview.md` | Run containers and Effect programs on any Kubernetes cluster with Alchemy. Declare Deployments, Jobs, raw manifests, and Helm charts in the same typed program as the rest of your infrastructure. No YAML, no kubectl apply. |
 | Setup | `setup.md` | Install Alchemy and connect it to a Kubernetes cluster, whether a local cluster on your machine, any cluster in your kubeconfig, or an explicit connection for CI. Then add a registry for images built from your code. |
+| What is Kubernetes? | `what-is-kubernetes.md` | The concepts behind Kubernetes — clusters, nodes, the API server, namespaces, Pods, Deployments, Services, Jobs, ConfigMaps and Secrets, images, manifests, server-side apply and Helm — and how @alchemy.run/kubernetes models each of them. |
 
 ## clusters/
 
